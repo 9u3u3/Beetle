@@ -43,15 +43,17 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {
-            EnterImmersiveMode()
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFF181818))
-            ) {
-                AppNavigation()
-                TopBar(modifier = Modifier .height(15.dp))
-                BottomBar(modifier = Modifier .height(10.dp) .align(Alignment.BottomCenter))
+            BananaSpaghettiTheme {
+                EnterImmersiveMode()
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF181818))
+                ) {
+                    AppNavigation()
+                    TopBar(modifier = Modifier .height(15.dp))
+                    BottomBar(modifier = Modifier .height(10.dp) .align(Alignment.BottomCenter))
+                }
             }
         }
     }
