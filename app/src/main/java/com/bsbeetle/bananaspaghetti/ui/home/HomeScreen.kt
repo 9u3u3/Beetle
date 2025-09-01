@@ -49,7 +49,8 @@ fun HomeScreen(modifier: Modifier = Modifier, navController: NavController) {
                 // Menu Items
                 MenuItem(
                     iconRes = R.drawable.note_add_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
-                    label = "New File"
+                    label = "New File",
+                    onClick = { navController.navigate(Screen.NewFile.route)}
                 )
 
                 MenuItem(
