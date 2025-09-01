@@ -10,11 +10,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.bsbeetle.bananaspaghetti.ui.home.HomeScreen
 import com.bsbeetle.bananaspaghetti.ui.home.NewFileScreen
+import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 
 @Composable
 fun AppNavigation() {
@@ -38,7 +40,8 @@ fun AppNavigation() {
             }
         }
         composable(Screen.NewFile.route) {
-          NewFileScreen()
+            val keyboardViewModel: KeyboardViewModel = viewModel()
+            NewFileScreen(viewModel=KeyboardViewModel())
         }
     }
 }
