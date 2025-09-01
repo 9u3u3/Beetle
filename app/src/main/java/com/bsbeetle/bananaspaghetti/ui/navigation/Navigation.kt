@@ -14,7 +14,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.bsbeetle.bananaspaghetti.ui.home.HomeScreen
-import com.bsbeetle.bananaspaghetti.ui.home.NewFileScreen
+import com.bsbeetle.bananaspaghetti.ui.home.InitialEditorUI
 
 @Composable
 fun AppNavigation() {
@@ -27,18 +27,10 @@ fun AppNavigation() {
         }
 
         composable(Screen.OpenFile.route) {
-            Box(modifier = Modifier.fillMaxSize()
-                .background(Color(0xFF181818)),
-                contentAlignment = Alignment.Center) {
-                Text(text = "Open File <Now focus on Main Core>",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontSize = 30.sp,
-                    color = Color.White
-                    )
-            }
+            InitialEditorUI()
         }
         composable(Screen.NewFile.route) {
-          NewFileScreen()
+            InitialEditorUI()
         }
     }
 }
