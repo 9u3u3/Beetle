@@ -15,17 +15,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.bsbeetle.bananaspaghetti.ui.home.HomeScreen
-<<<<<<< HEAD
 import com.bsbeetle.bananaspaghetti.ui.home.InitialEditorUI
-=======
-import com.bsbeetle.bananaspaghetti.ui.home.NewFileScreen
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
->>>>>>> origin/main
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
-
     // Default page is home screen
     NavHost(navController = navController, startDestination = Screen.Home.route) {
         composable(Screen.Home.route) {
@@ -35,13 +30,9 @@ fun AppNavigation() {
         composable(Screen.OpenFile.route) {
             InitialEditorUI()
         }
+
         composable(Screen.NewFile.route) {
-<<<<<<< HEAD
             InitialEditorUI()
-=======
-            val keyboardViewModel: KeyboardViewModel = viewModel()
-            NewFileScreen(viewModel=KeyboardViewModel())
->>>>>>> origin/main
         }
     }
 }
