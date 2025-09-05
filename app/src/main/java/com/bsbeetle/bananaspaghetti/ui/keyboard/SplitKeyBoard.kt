@@ -4,7 +4,7 @@ package com.bsbeetle.bananaspaghetti.ui.keyboard
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -57,7 +57,7 @@ fun SplitKeyboard(
                 val rightHalf = rowOfKeys.subList(splitIndex, rowOfKeys.size)
 
                 // Left Keyboard
-                LeftKeyboard(
+                KeyboardHalf(
                     keys = leftHalf,
                     isCapsLockOn = isCapsLockOn,
                     viewModel = viewModel,
@@ -66,11 +66,12 @@ fun SplitKeyboard(
                         top.linkTo(parent.top)
                         bottom.linkTo(parent.bottom)
                         width = Dimension.percent(0.2f)
-                    }
+                    },
+                    Arrangement.End
                 )
 
                 // Right Keyboard
-                RightKeyboard(
+                KeyboardHalf(
                     keys = rightHalf,
                     isCapsLockOn = isCapsLockOn,
                     viewModel = viewModel,
@@ -79,7 +80,8 @@ fun SplitKeyboard(
                         top.linkTo(parent.top)
                         bottom.linkTo(parent.bottom)
                         width = Dimension.percent(0.2f)
-                    }
+                    },
+                    Arrangement.Start
                 )
             }
         }
@@ -87,49 +89,16 @@ fun SplitKeyboard(
 }
 
 @Composable
-fun LeftKeyboard(
+fun KeyboardHalf(
     keys: List<Key>,
     isCapsLockOn: Boolean,
     viewModel: KeyboardViewModel,
-    modifier: Modifier = Modifier
-) {
+    modifier: Modifier = Modifier,
+    arrangement:Arrangement.Horizontal
+){
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.End
-    ) {
-        keys.forEach { key ->
-            KeyboardKey(
-                key,
-                isCapsLockOn,
-                onKeyPress = { text ->
-                    when (key.type) {
-                        KeyType.ACTION_TOGGLE -> viewModel.toggleKeyboardVisibility()
-                        KeyType.ACTION_BACKSPACE -> viewModel.onBackspace()
-                        KeyType.ACTION_ENTER -> viewModel.onKeyPress('\n')
-                        KeyType.ACTION_SPACE -> viewModel.onKeyPress(' ')
-                        KeyType.ACTION_SHIFT -> viewModel.onToggleCapsLock()
-                        else -> viewModel.onKeyPress(text.first())
-                    }
-                },
-                modifier.background(
-                    shape = RectangleShape,
-                    color = Color.Black
-                )
-            )
-        }
-    }
-}
-
-@Composable
-fun RightKeyboard(
-    keys: List<Key>,
-    isCapsLockOn: Boolean,
-    viewModel: KeyboardViewModel,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.Start
+        horizontalArrangement = arrangement
     ) {
         keys.forEach { key ->
             KeyboardKey(
@@ -146,10 +115,11 @@ fun RightKeyboard(
                     }
                 },
                 modifier.background(
-                    shape = RoundedCornerShape(50.dp),
+                    shape = RectangleShape,
                     color = Color.Black
                 )
             )
         }
     }
 }
+

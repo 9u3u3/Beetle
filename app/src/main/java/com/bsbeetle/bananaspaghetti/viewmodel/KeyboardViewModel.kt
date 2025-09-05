@@ -24,6 +24,8 @@ class KeyboardViewModel : ViewModel() {
     private val _editorAction = MutableSharedFlow<EditorAction>()
     val editorAction = _editorAction.asSharedFlow()
 
+
+
     fun onKeyPress(key: Char) {
         viewModelScope.launch {
             // Logic to determine upper/lower case remains the same
