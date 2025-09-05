@@ -14,18 +14,22 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
+import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier, navController: NavController) {
+fun HomeScreen(modifier: Modifier = Modifier, navController: NavController,  keyboardViewModel: KeyboardViewModel = viewModel()) {
+    val uiState = keyboardViewModel.uiState.collectAsState()
     Box(
         modifier = modifier.background(color = Color(0xFF181818)),
         contentAlignment = Alignment.Center
@@ -50,23 +54,24 @@ fun HomeScreen(modifier: Modifier = Modifier, navController: NavController) {
                 MenuItem(
                     iconRes = R.drawable.note_add_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
                     label = "New File",
-                    onClick = { navController.navigate(Screen.NewFile.route)}
+                    onClick = { navController.navigate(Screen.NewFile.route)},
+                    keyboardViewModel = keyboardViewModel
                 )
 
                 MenuItem(
                     iconRes = R.drawable.file_open_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
                     label = "Open File",
-                    onClick = { navController.navigate(Screen.OpenFile.route)}
+                    onClick = { navController.navigate(Screen.OpenFile.route)},
                 )
 
                 MenuItem(
                     iconRes = R.drawable.folder_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
-                    label = "Open Folder"
+                    label = "Open Folder",
                 )
 
                 MenuItem(
                     iconRes = R.drawable.terminal_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
-                    label = "Open Terminal"
+                    label = "Open Terminal",
                 )
             }
         }
@@ -74,7 +79,12 @@ fun HomeScreen(modifier: Modifier = Modifier, navController: NavController) {
 }
 
 @Composable
-fun MenuItem(iconRes: Int, label: String, onClick: () -> Unit = {}) {
+fun MenuItem(
+    iconRes: Int,
+    label: String,
+    onClick: () -> Unit = {},
+    keyboardViewModel: KeyboardViewModel? = null
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier

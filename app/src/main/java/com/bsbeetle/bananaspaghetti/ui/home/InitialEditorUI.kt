@@ -7,26 +7,56 @@ import android.webkit.WebView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
+<<<<<<< HEAD:app/src/main/java/com/bsbeetle/bananaspaghetti/ui/home/InitialEditorUI.kt
 import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
 
 @Composable
 fun InitialEditorUI(){
+=======
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
+import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboard
+import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
+
+
+@Composable
+fun NewFileScreen(
+    viewModel: KeyboardViewModel = viewModel()
+){
+
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // for selecting the layout.
+    val layout = if (uiState.toggleKeyboard) {
+        KeyboardLayout.developerLayout
+    } else {
+        KeyboardLayout.qwertyLayout
+    }
+>>>>>>> origin/main:app/src/main/java/com/bsbeetle/bananaspaghetti/ui/home/NewFileScreen.kt
 
         ConstraintLayout(modifier = Modifier.fillMaxSize()) {
             val (codeEditor, keyboardRef) = createRefs()
 
+<<<<<<< HEAD:app/src/main/java/com/bsbeetle/bananaspaghetti/ui/home/InitialEditorUI.kt
             // WebView Editor field spans full height and middle 60% width
             Editor(
+=======
+            //Code Editor spans full height and middle 60% width
+            Box(
+>>>>>>> origin/main:app/src/main/java/com/bsbeetle/bananaspaghetti/ui/home/NewFileScreen.kt
                 modifier = Modifier
                     .constrainAs(codeEditor) {
                         // This is to have full height from top to bottom
@@ -45,6 +75,7 @@ fun InitialEditorUI(){
             )
 
             // Split keyboard Constraint layout(overlaying)
+<<<<<<< HEAD:app/src/main/java/com/bsbeetle/bananaspaghetti/ui/home/InitialEditorUI.kt
             Box(
                 modifier = Modifier
                     .constrainAs(keyboardRef) {
@@ -56,6 +87,20 @@ fun InitialEditorUI(){
                         // The keyboard will naturally overlay on top of the text field
                     }
                     .background(color = Color.White)
+=======
+            SplitKeyboard(
+                layout = layout,
+                isCapsLockOn = uiState.isCapsLockOn,
+                viewModel = viewModel,
+                modifier = Modifier.constrainAs(keyboardRef) {
+                    // Keyboard positioned at the bottom
+                    bottom.linkTo(parent.bottom)
+                    start.linkTo(parent.start)
+                    end.linkTo(parent.end)
+                    width = Dimension.fillToConstraints // Fills available width
+                    // The keyboard will naturally overlay on top of the text field
+                }
+>>>>>>> origin/main:app/src/main/java/com/bsbeetle/bananaspaghetti/ui/home/NewFileScreen.kt
             )
         }
 }

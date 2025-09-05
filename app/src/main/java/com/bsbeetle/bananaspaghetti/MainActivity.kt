@@ -24,11 +24,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bsbeetle.bananaspaghetti.ui.components.BottomBar
 import com.bsbeetle.bananaspaghetti.ui.components.TopBar
 import com.bsbeetle.bananaspaghetti.ui.home.HomeScreen
 import com.bsbeetle.bananaspaghetti.ui.navigation.AppNavigation
 import com.bsbeetle.bananaspaghetti.ui.theme.BananaSpaghettiTheme
+import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,6 +45,9 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {
+            // Created the view model in the parent composable so its passed down throughout the childrens
+            val keyboardViewModel: KeyboardViewModel = viewModel()
+
             BananaSpaghettiTheme {
                 EnterImmersiveMode()
                 Box(
