@@ -5,38 +5,64 @@ import android.os.Build
 import android.webkit.WebSettings
 import android.webkit.WebView
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import com.bsbeetle.bananaspaghetti.viewmodel.EditorAction
+import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun Editor(modifier: Modifier = Modifier) {
-    AndroidView(
-        factory = { context ->
-            WebView(context).apply {
+fun Editor(modifier: Modifier = Modifier, viewModel: KeyboardViewModel) {
+   // to get the local context
+    val context = LocalContext.current
 
-                // Enable debugging (use chrome://inspect)
-                WebView.setWebContentsDebuggingEnabled(true)
+    // variable to make the Android view mode readable does the same work as before ut AndroidView is not cluttlered
+    val webView = remember {
+        WebView(context).apply {
+            // Enable debugging (use chrome://inspect)
+            WebView.setWebContentsDebuggingEnabled(true)
 
-                // Keep the focusing part, disabled the keyboard in JS (editor.js)
-                isFocusable = true
-                isFocusableInTouchMode = true
+            settings.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                allowFileAccess = true
+                cacheMode = WebSettings.LOAD_NO_CACHE
+                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                useWideViewPort = true
+                loadWithOverviewMode = true
+                setSupportZoom(false)
+            }
+            loadUrl("file:///android_asset/editor/index.html")
+        }
+    }
 
-                settings.apply {
-                    javaScriptEnabled = true // Turns on JS execution inside WebView as it is NEEDED by codemirror6
-                    domStorageEnabled = true // Needed by codemirror6
-                    allowFileAccess = true // Lets the WebView load files from assets
-                    cacheMode = WebSettings.LOAD_NO_CACHE // Don't use cache to load files, fetch fresh resources to use
-                    mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW // Allows both HTTPS and HTTP resources to load
-                    // useWideViewPort = true // To use CSS viewport width (to look like desktop)
-                    // loadWithOverviewMode = true // Fit the whole content to screen width initially
-                    setSupportZoom(false) // No pinch to zoom allowed
+    // 2. The LaunchedEffect uses webview variable to listen for EditorAction events
+    LaunchedEffect(Unit) {
+        viewModel.editorAction.collect { action ->
+            when (action) {
+                is EditorAction.InsertText -> {
+                    val escapedText = action.text.replace("'", "\\'")
+                    webView.evaluateJavascript("window.insertText('$escapedText');", null)
+                }
+                is EditorAction.Backspace -> {
+                    webView.evaluateJavascript("window.performBackspace();", null)
                 }
 
-                loadUrl("file:///android_asset/editor/index.html")
+                is EditorAction.Enter -> {
+                    webView.evaluateJavascript("window.performEnter();", null)
+                }
             }
-        },
+        }
+    }
+
+    // 3. The AndroidView factory now just provides the instance webview
+    AndroidView(
+        factory = { webView },
         modifier = modifier
     )
+
+
 }

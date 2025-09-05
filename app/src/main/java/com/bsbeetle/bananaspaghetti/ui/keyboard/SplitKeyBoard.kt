@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -14,7 +13,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsbeetle.bananaspaghetti.model.Key
 import com.bsbeetle.bananaspaghetti.model.KeyType
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
@@ -37,8 +35,6 @@ fun SplitKeyboard(
     val availableHeight = keyboardHeight - totalVerticalPadding
     val rowHeight = availableHeight / numberOfRows
 
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
 
     Column(
         modifier = modifier
@@ -53,7 +49,7 @@ fun SplitKeyboard(
                     .fillMaxWidth()
                     .height(rowHeight)
             ) {
-                val (leftRef, middleRef, rightRef) = createRefs()
+                val (leftRef, rightRef) = createRefs()
 
                 // Split keys into halves
                 val splitIndex = (rowOfKeys.size + 1) / 2
@@ -143,7 +139,7 @@ fun RightKeyboard(
                     when (key.type) {
                         KeyType.ACTION_TOGGLE -> viewModel.toggleKeyboardVisibility()
                         KeyType.ACTION_BACKSPACE -> viewModel.onBackspace()
-                        KeyType.ACTION_ENTER -> viewModel.onKeyPress('\n')
+                        KeyType.ACTION_ENTER -> viewModel.onEnter()
                         KeyType.ACTION_SPACE -> viewModel.onKeyPress(' ')
                         KeyType.ACTION_SHIFT -> viewModel.onToggleCapsLock()
                         else -> viewModel.onKeyPress(text.first())
