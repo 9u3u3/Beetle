@@ -26850,14 +26850,14 @@
   */
   const oneDark = [oneDarkTheme, /*@__PURE__*/syntaxHighlighting(oneDarkHighlightStyle)];
 
-  new EditorView({
+  let editor = new EditorView({
     state: EditorState.create({
       extensions: [
         basicSetup, 
         cpp(),
         oneDark,
         EditorView.contentAttributes.of({
-          'inputmode': 'none'
+          'inputmode': 'none' // disable the soft keyboard
         })
       ],
       doc: `#include<iostream>
@@ -26869,10 +26869,27 @@ int main() {
     parent: document.body
   });
 
-  // get the theme color and apply it to the webview bg
+  // Set the background color
   const editorEl = document.querySelector('.cm-editor');
-  // getComputedStyle gets the actual value which is being shown on the screen of the selected property, when all the css rules and things are applied
-  const bg = window.getComputedStyle(editorEl).backgroundColor;
+  const bg = getComputedStyle(editorEl).backgroundColor;
   document.body.style.backgroundColor = bg;
+
+  // Added to insert text
+  window.insertText = function(text) {
+    editor.dispatch(editor.state.replaceSelection(text));
+    editor.focus();
+  };
+
+  // Added for backspace
+  window.performBackspace = function() {
+    deleteCharBackward(editor);
+    editor.focus();
+  };
+
+  // Added for enter
+  window.performEnter = function() {
+     insertNewlineAndIndent(editor);
+     editor.focus();
+  };
 
 })();

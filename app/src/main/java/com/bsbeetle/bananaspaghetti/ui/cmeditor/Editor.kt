@@ -19,7 +19,7 @@ fun Editor(modifier: Modifier = Modifier, viewModel: KeyboardViewModel) {
    // to get the local context
     val context = LocalContext.current
 
-    // variable to make the Android view mode readable does the same work as before ut AndroidView is not cluttlered
+    // variable to make the Android view mode readable does the same work as before it AndroidView is not cluttered
     val webView = remember {
         WebView(context).apply {
             // Enable debugging (use chrome://inspect)
