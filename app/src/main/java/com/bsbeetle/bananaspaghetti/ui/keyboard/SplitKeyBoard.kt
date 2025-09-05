@@ -143,7 +143,7 @@ fun RightKeyboard(
                     when (key.type) {
                         KeyType.ACTION_TOGGLE -> viewModel.toggleKeyboardVisibility()
                         KeyType.ACTION_BACKSPACE -> viewModel.onBackspace()
-                        KeyType.ACTION_ENTER -> viewModel.onKeyPress('\n')
+                        KeyType.ACTION_ENTER -> viewModel.onEnter()
                         KeyType.ACTION_SPACE -> viewModel.onKeyPress(' ')
                         KeyType.ACTION_SHIFT -> viewModel.onToggleCapsLock()
                         else -> viewModel.onKeyPress(text.first())

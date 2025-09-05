@@ -61,7 +61,8 @@ fun InitialEditorUI(
                         // Fill the total available height on the screen
                         height = Dimension.fillToConstraints
                         centerHorizontallyTo(parent) // Center the 60% width element
-                    }
+                    },
+                viewModel
             )
 
             // Split keyboard Constraint layout(overlaying)

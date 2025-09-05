@@ -1,32 +1,53 @@
 package com.bsbeetle.bananaspaghetti.viewmodel
 
-
-
-
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
+// Keyboard commands
+sealed class EditorAction {
+    data class InsertText(val text: String) : EditorAction()
+    object Backspace : EditorAction()
+    object Enter: EditorAction()
+}
 class KeyboardViewModel : ViewModel() {
 
     private val _uiState = MutableStateFlow(KeyboardUiState())
     val uiState: StateFlow<KeyboardUiState> = _uiState.asStateFlow()
 
+    private val _editorAction = MutableSharedFlow<EditorAction>()
+    val editorAction = _editorAction.asSharedFlow()
+
     fun onKeyPress(key: Char) {
-        _uiState.update { currentState ->
-            val text = if (currentState.isCapsLockOn) key.uppercaseChar() else key
-            currentState.copy(currentText = currentState.currentText + text)
+        viewModelScope.launch {
+            // Logic to determine upper/lower case remains the same
+            val textToInsert = if (_uiState.value.isCapsLockOn) {
+                key.uppercase()
+            } else {
+                key.toString()
+            }
+            // Instead of updating local state, EMIT AN EVENT
+            _editorAction.emit(EditorAction.InsertText(textToInsert))
         }
     }
 
     fun onBackspace() {
-        _uiState.update { currentState ->
-            currentState.copy(
-                currentText = currentState.currentText.takeIf { it.isNotEmpty() }?.dropLast(1) ?: ""
+        viewModelScope.launch {
+            // Instead of updating local state, EMIT AN EVENT
+            _editorAction.emit(EditorAction.Backspace)
+        }
+    }
 
-            )
+    fun onEnter() {
+        viewModelScope.launch {
+            // Instead of updating local state, EMIT AN EVENT
+            _editorAction.emit(EditorAction.Enter)
         }
     }
 

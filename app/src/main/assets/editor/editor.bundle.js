@@ -26742,7 +26742,7 @@
       return new LanguageSupport(cppLanguage);
   }
 
-  new EditorView({
+  let editor = new EditorView({
     state: EditorState.create({
       extensions: [basicSetup, cpp()],
       doc: ` #include<iostream>
@@ -26754,5 +26754,24 @@ int main() {
     }),
     parent: document.body
   });
+
+  //window.insertText = function(text) {
+  //  editor.dispatch({
+  //    changes: { from: editor.state.selection.main.head, insert: text }  });
+  //  editor.focus();
+  //};
+  window.insertText = function(text) {
+    editor.dispatch(editor.state.replaceSelection(text));
+    editor.focus();
+  };
+  window.performBackspace = function() {
+    deleteCharBackward(editor);
+    editor.focus();
+  };
+
+  window.performEnter = function() {
+     insertNewlineAndIndent(editor);
+     editor.focus();
+  };
 
 })();
