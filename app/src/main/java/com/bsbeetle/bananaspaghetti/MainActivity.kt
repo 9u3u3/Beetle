@@ -5,6 +5,7 @@ package com.bsbeetle.bananaspaghetti
 
 import android.content.pm.ActivityInfo
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -43,6 +44,11 @@ class MainActivity : ComponentActivity() {
         // Hide the status bar
         // This allows app to draw behind the status bar
         WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        // Disable the softKeyboard
+        window.setSoftInputMode(
+            WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING
+        )
 
         setContent {
             // Created the view model in the parent composable so its passed down throughout the childrens
