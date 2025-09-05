@@ -3,26 +3,42 @@ package com.bsbeetle.bananaspaghetti.ui.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
-import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
-import com.bsbeetle.bananaspaghetti.ui.theme.BananaSpaghettiTheme
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
+import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboard
+import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
+
 
 @Composable
-fun NewFileScreen(){
+fun NewFileScreen(
+    viewModel: KeyboardViewModel = viewModel()
+){
+
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // for selecting the layout.
+    val layout = if (uiState.toggleKeyboard) {
+        KeyboardLayout.developerLayout
+    } else {
+        KeyboardLayout.qwertyLayout
+    }
 
         ConstraintLayout(modifier = Modifier.fillMaxSize()) {
             val (codeEditor, keyboardRef) = createRefs()
 
-            // Text field spans full height and middle 60% width
+            //Code Editor spans full height and middle 60% width
             Box(
                 modifier = Modifier
                     .constrainAs(codeEditor) {
@@ -46,7 +62,10 @@ fun NewFileScreen(){
             )
 
             // Split keyboard Constraint layout(overlaying)
-            Box(
+            SplitKeyboard(
+                layout = layout,
+                isCapsLockOn = uiState.isCapsLockOn,
+                viewModel = viewModel,
                 modifier = Modifier.constrainAs(keyboardRef) {
                     // Keyboard positioned at the bottom
                     bottom.linkTo(parent.bottom)
@@ -55,7 +74,6 @@ fun NewFileScreen(){
                     width = Dimension.fillToConstraints // Fills available width
                     // The keyboard will naturally overlay on top of the text field
                 }
-                    .background(color = Color.White)
             )
         }
 }
