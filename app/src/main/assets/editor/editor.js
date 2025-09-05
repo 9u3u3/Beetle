@@ -15,20 +15,19 @@ int main() {
   parent: document.body
 });
 
-//window.insertText = function(text) {
-//  editor.dispatch({
-//    changes: { from: editor.state.selection.main.head, insert: text }  });
-//  editor.focus();
-//};
+// Added to insert text
 window.insertText = function(text) {
   editor.dispatch(editor.state.replaceSelection(text));
   editor.focus();
 };
+
+// Added for backspace
 window.performBackspace = function() {
   deleteCharBackward(editor);
   editor.focus();
 };
 
+// Added for enter
 window.performEnter = function() {
    insertNewlineAndIndent(editor);
    editor.focus();

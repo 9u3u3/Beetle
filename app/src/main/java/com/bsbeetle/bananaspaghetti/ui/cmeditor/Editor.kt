@@ -73,8 +73,10 @@ import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun Editor(modifier: Modifier = Modifier, viewModel: KeyboardViewModel) {
-    // 1. Create and remember the WebView instance here, outside of AndroidView.
+   // to get the local context
     val context = LocalContext.current
+
+    // variable to make the Android view mode readable does the same work as before ut AndroidView is not cluttlered
     val webView = remember {
         WebView(context).apply {
             // Enable debugging (use chrome://inspect)
@@ -94,7 +96,7 @@ fun Editor(modifier: Modifier = Modifier, viewModel: KeyboardViewModel) {
         }
     }
 
-    // 2. The LaunchedEffect can now see the 'webView' variable.
+    // 2. The LaunchedEffect uses webview variable to listen for EditorAction events
     LaunchedEffect(Unit) {
         viewModel.editorAction.collect { action ->
             when (action) {
@@ -113,7 +115,7 @@ fun Editor(modifier: Modifier = Modifier, viewModel: KeyboardViewModel) {
         }
     }
 
-    // 3. The AndroidView factory now just provides the instance we already created.
+    // 3. The AndroidView factory now just provides the instance webview
     AndroidView(
         factory = { webView },
         modifier = modifier
