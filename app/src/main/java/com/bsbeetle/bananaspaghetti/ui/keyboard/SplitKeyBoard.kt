@@ -37,8 +37,6 @@ fun SplitKeyboard(
     val availableHeight = keyboardHeight - totalVerticalPadding
     val rowHeight = availableHeight / numberOfRows
 
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
 
     Column(
         modifier = modifier
@@ -53,7 +51,7 @@ fun SplitKeyboard(
                     .fillMaxWidth()
                     .height(rowHeight)
             ) {
-                val (leftRef, middleRef, rightRef) = createRefs()
+                val (leftRef, rightRef) = createRefs()
 
                 // Split keys into halves
                 val splitIndex = (rowOfKeys.size + 1) / 2
