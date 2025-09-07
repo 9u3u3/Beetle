@@ -1,25 +1,36 @@
 package com.bsbeetle.bananaspaghetti.ui.cmeditor
 
 import android.annotation.SuppressLint
+import android.net.Uri
 import android.os.Build
 import android.webkit.WebSettings
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.ViewModel
+import com.bsbeetle.bananaspaghetti.data.OpenedFiles
+import com.bsbeetle.bananaspaghetti.utils.getFileName
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorAction
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
+import org.json.JSONObject
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun Editor(modifier: Modifier = Modifier, viewModel: KeyboardViewModel) {
+fun Editor(modifier: Modifier = Modifier, viewModel: KeyboardViewModel, uri: Uri) {
+
+
    // to get the local context
     val context = LocalContext.current
 
-    // variable to make the Android view mode readable does the same work as before it AndroidView is not cluttered
+    println("EDITOR: ${getFileName(context, uri)}")
+
+    // variable to make the Android view mode readable does the same work as before it AndroidView
+    //...is not cluttered
     val webView = remember {
         WebView(context).apply {
             // Enable debugging (use chrome://inspect)
@@ -35,6 +46,7 @@ fun Editor(modifier: Modifier = Modifier, viewModel: KeyboardViewModel) {
                 loadWithOverviewMode = true
                 setSupportZoom(false)
             }
+
             loadUrl("file:///android_asset/editor/index.html")
         }
     }
@@ -45,14 +57,22 @@ fun Editor(modifier: Modifier = Modifier, viewModel: KeyboardViewModel) {
             when (action) {
                 is EditorAction.InsertText -> {
                     val escapedText = action.text.replace("'", "\\'")
-                    webView.evaluateJavascript("window.insertText('$escapedText');", null)
+                    webView.evaluateJavascript(
+                        "window.insertText('$escapedText');",
+                        null
+                    )
                 }
                 is EditorAction.Backspace -> {
-                    webView.evaluateJavascript("window.performBackspace();", null)
+                    webView.evaluateJavascript(
+                        "window.performBackspace();",
+                        null
+                    )
                 }
-
                 is EditorAction.Enter -> {
-                    webView.evaluateJavascript("window.performEnter();", null)
+                    webView.evaluateJavascript(
+                        "window.performEnter();",
+                        null
+                    )
                 }
             }
         }
@@ -63,6 +83,4 @@ fun Editor(modifier: Modifier = Modifier, viewModel: KeyboardViewModel) {
         factory = { webView },
         modifier = modifier
     )
-
-
 }

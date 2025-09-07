@@ -1,14 +1,17 @@
 // Author : Harsh Gaonker
-// Project started on : 18 - 08 - 2025
+// Project started on : 18 - August - 2025
 
 package com.bsbeetle.bananaspaghetti
 
+import android.app.Activity
+import android.content.Context
 import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,26 +35,28 @@ import com.bsbeetle.bananaspaghetti.ui.home.HomeScreen
 import com.bsbeetle.bananaspaghetti.ui.navigation.AppNavigation
 import com.bsbeetle.bananaspaghetti.ui.theme.BananaSpaghettiTheme
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
+import android.net.Uri
+import com.bsbeetle.bananaspaghetti.data.OpenedFiles
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Forced to landscape mode
-        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-
-        // Hide the status bar
-        // This allows app to draw behind the status bar
+        // Window Settings
+        // Hides the status bar and blocks the IME
         WindowCompat.setDecorFitsSystemWindows(window, false)
-
-        // Disable the softKeyboard
-        window.setSoftInputMode(
-            WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING
+        window.setSoftInputMode( // Disables soft keyboard popup
+            WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN or
+                    WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING
         )
 
         setContent {
-            // Created the view model in the parent composable so its passed down throughout the childrens
+
+            // Created the view model in the parent composable so its passed down throughout
+            //...the children
             val keyboardViewModel: KeyboardViewModel = viewModel()
 
             BananaSpaghettiTheme {

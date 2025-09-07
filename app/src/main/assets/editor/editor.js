@@ -8,21 +8,21 @@ let editor = new EditorView({
     extensions: [
       basicSetup, 
       cpp(),
-      oneDark
+      oneDark,
+      EditorView.contentAttributes.of({ // disables the virtual keyboard
+        inputmode: "none",
+        readonly: "true"
+      })
     ],
-    doc: `#include<iostream>
-int main() {
-  std::cout << "Banana Spaghetti";
-  return 0;
-}
-`
+    doc: "",
   }),
   parent: document.body
 })
 
 // get the theme color and apply it to the webview bg
+// getComputedStyle gets the actual value which is being shown on the screen of the selected property,
+//...when all the css rules and things are applied
 const editorEl = document.querySelector('.cm-editor')
-// getComputedStyle gets the actual value which is being shown on the screen of the selected property, when all the css rules and things are applied
 const bg = window.getComputedStyle(editorEl).backgroundColor
 document.body.style.backgroundColor = bg
 

@@ -20733,7 +20733,7 @@
   Delete the selection, or, for cursor selections, the character or
   indentation unit before the cursor.
   */
-  const deleteCharBackward = view => deleteByChar(view, false, true);
+  const deleteCharBackward$1 = view => deleteByChar(view, false, true);
   /**
   Delete the selection or the character after the cursor.
   */
@@ -20948,7 +20948,7 @@
   matching brackets, an additional newline will be inserted after
   the cursor.
   */
-  const insertNewlineAndIndent = /*@__PURE__*/newlineAndIndent(false);
+  const insertNewlineAndIndent$1 = /*@__PURE__*/newlineAndIndent(false);
   /**
   Create a blank, indented line below the current line.
   */
@@ -21098,7 +21098,7 @@
       { key: "Ctrl-a", run: cursorLineStart, shift: selectLineStart },
       { key: "Ctrl-e", run: cursorLineEnd, shift: selectLineEnd },
       { key: "Ctrl-d", run: deleteCharForward },
-      { key: "Ctrl-h", run: deleteCharBackward },
+      { key: "Ctrl-h", run: deleteCharBackward$1 },
       { key: "Ctrl-k", run: deleteToLineEnd },
       { key: "Ctrl-Alt-h", run: deleteGroupBackward },
       { key: "Ctrl-o", run: splitLine },
@@ -21157,9 +21157,9 @@
       { key: "Mod-Home", run: cursorDocStart, shift: selectDocStart },
       { key: "End", run: cursorLineBoundaryForward, shift: selectLineBoundaryForward, preventDefault: true },
       { key: "Mod-End", run: cursorDocEnd, shift: selectDocEnd },
-      { key: "Enter", run: insertNewlineAndIndent, shift: insertNewlineAndIndent },
+      { key: "Enter", run: insertNewlineAndIndent$1, shift: insertNewlineAndIndent$1 },
       { key: "Mod-a", run: selectAll },
-      { key: "Backspace", run: deleteCharBackward, shift: deleteCharBackward },
+      { key: "Backspace", run: deleteCharBackward$1, shift: deleteCharBackward$1 },
       { key: "Delete", run: deleteCharForward },
       { key: "Mod-Backspace", mac: "Alt-Backspace", run: deleteGroupBackward },
       { key: "Mod-Delete", mac: "Alt-Delete", run: deleteGroupForward },
@@ -26856,22 +26856,21 @@
         basicSetup, 
         cpp(),
         oneDark,
-        EditorView.contentAttributes.of({
-          'inputmode': 'none' // disable the soft keyboard
+        EditorView.contentAttributes.of({ // disables the virtual keyboard
+          inputmode: "none",
+          readonly: "true"
         })
       ],
-      doc: `#include<iostream>
-int main() {
-  std::cout << "Banana Spaghetti";
-  return 0;
-}`
+      doc: "",
     }),
     parent: document.body
   });
 
-  // Set the background color
+  // get the theme color and apply it to the webview bg
+  // getComputedStyle gets the actual value which is being shown on the screen of the selected property,
+  //...when all the css rules and things are applied
   const editorEl = document.querySelector('.cm-editor');
-  const bg = getComputedStyle(editorEl).backgroundColor;
+  const bg = window.getComputedStyle(editorEl).backgroundColor;
   document.body.style.backgroundColor = bg;
 
   // Added to insert text

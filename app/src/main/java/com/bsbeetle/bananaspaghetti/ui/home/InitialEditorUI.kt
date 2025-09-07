@@ -1,9 +1,7 @@
-// Earlier called NewFileScreen: @draco remove this line when you read this
-// Changed because its reusable: this line too
-
 package com.bsbeetle.bananaspaghetti.ui.home
 
-
+import android.content.Context
+import android.net.Uri
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -19,9 +17,10 @@ import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboard
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 
 @Composable
-fun InitialEditorUI(
+fun InitialEditorUI (
+    uri: Uri,
     viewModel: KeyboardViewModel = viewModel()
-){
+) {
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -44,7 +43,6 @@ fun InitialEditorUI(
                         top.linkTo(parent.top)
                         bottom.linkTo(parent.bottom)
 
-                        // This tells to fill the 50% width from start to end (Im getting correct ration for 60%, hence changed ~ @yuki)
                         start.linkTo(parent.start)
                         end.linkTo(parent.end)
                         width = Dimension.percent(0.6f)
@@ -53,7 +51,8 @@ fun InitialEditorUI(
                         height = Dimension.fillToConstraints
                         centerHorizontallyTo(parent) // Center the 60% width element
                     },
-                viewModel
+                viewModel,
+                uri
             )
 
             // Split keyboard Constraint layout(overlaying)
