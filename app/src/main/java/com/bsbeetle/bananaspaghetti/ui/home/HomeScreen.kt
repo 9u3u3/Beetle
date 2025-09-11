@@ -40,6 +40,7 @@ import com.bsbeetle.bananaspaghetti.data.FileData
 import com.bsbeetle.bananaspaghetti.data.OpenedFiles
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.getFileName
+import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 
 @SuppressLint("RestrictedApi")
@@ -47,9 +48,10 @@ import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 fun HomeScreen(
     modifier: Modifier = Modifier,
     navController: NavController,
+    fileViewModel: FileViewModel,
     keyboardViewModel: KeyboardViewModel = viewModel()
 ) {
-    val uiState = keyboardViewModel.uiState.collectAsState()
+    // val uiState = keyboardViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
     // File Picker
@@ -73,8 +75,8 @@ fun HomeScreen(
                             uri
                         )
                     )
-                    val encodedUri = Uri.encode(uri.toString())
-                    navController.navigate(Screen.OpenFile.route + "/$encodedUri")
+                    fileViewModel.selectedUri = uri
+                    navController.navigate(Screen.OpenFile.route)
                 }
             }
         }

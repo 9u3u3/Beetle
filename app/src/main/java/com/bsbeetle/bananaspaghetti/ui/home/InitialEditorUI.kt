@@ -14,11 +14,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
 import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboard
+import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 
 @Composable
 fun InitialEditorUI (
-    uri: Uri,
+    fileViewModel: FileViewModel,
     viewModel: KeyboardViewModel = viewModel()
 ) {
 
@@ -30,6 +31,8 @@ fun InitialEditorUI (
     } else {
         KeyboardLayout.qwertyLayout
     }
+
+    println()
 
         ConstraintLayout(modifier = Modifier.fillMaxSize()) {
             val (codeEditor, keyboardRef) = createRefs()
@@ -52,7 +55,7 @@ fun InitialEditorUI (
                         centerHorizontallyTo(parent) // Center the 60% width element
                     },
                 viewModel,
-                uri
+                fileViewModel
             )
 
             // Split keyboard Constraint layout(overlaying)

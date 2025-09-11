@@ -37,6 +37,7 @@ import com.bsbeetle.bananaspaghetti.ui.theme.BananaSpaghettiTheme
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import android.net.Uri
 import com.bsbeetle.bananaspaghetti.data.OpenedFiles
+import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 
 
 class MainActivity : ComponentActivity() {
@@ -57,7 +58,10 @@ class MainActivity : ComponentActivity() {
 
             // Created the view model in the parent composable so its passed down throughout
             //...the children
-            val keyboardViewModel: KeyboardViewModel = viewModel()
+            // val keyboardViewModel: KeyboardViewModel = viewModel()
+
+            // File view model
+            val fileViewModel: FileViewModel = viewModel()
 
             BananaSpaghettiTheme {
                 EnterImmersiveMode()
@@ -66,7 +70,7 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .background(Color(0xFF181818))
                 ) {
-                    AppNavigation()
+                    AppNavigation(fileViewModel)
                     //TopBar(modifier = Modifier .height(15.dp))
                     //BottomBar(modifier = Modifier .height(10.dp) .align(Alignment.BottomCenter))
                 }

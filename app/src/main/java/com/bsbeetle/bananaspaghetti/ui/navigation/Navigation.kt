@@ -23,27 +23,21 @@ import com.bsbeetle.bananaspaghetti.ui.home.HomeScreen
 import com.bsbeetle.bananaspaghetti.ui.home.InitialEditorUI
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import androidx.core.net.toUri
+import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(fileViewModel: FileViewModel) {
     val navController = rememberNavController()
     // Default page is home screen
     NavHost(navController = navController, startDestination = Screen.Home.route) {
         composable(Screen.Home.route) {
-            HomeScreen(modifier = Modifier.fillMaxSize(), navController = navController)
+            HomeScreen(modifier = Modifier.fillMaxSize(), navController = navController, fileViewModel)
         }
 
         composable(
-            Screen.OpenFile.route + "/{fileUri}",
-            // In this arguments we can define all the arguments we are passing
-            arguments = listOf(navArgument("fileUri") {type = NavType.StringType})
-        ) { backStackEntry ->
-            // Get the string based on the keys
-            val uriString = backStackEntry.arguments?.getString("fileUri")
-            uriString?.let {
-                val fileUri = Uri.decode(it).toUri()
-                InitialEditorUI(fileUri)
-            }
+            Screen.OpenFile.route,
+        ) {
+                InitialEditorUI(fileViewModel)
         }
 
         composable(Screen.NewFile.route) {

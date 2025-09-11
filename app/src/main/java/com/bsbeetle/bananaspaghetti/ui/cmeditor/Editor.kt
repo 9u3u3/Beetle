@@ -3,6 +3,9 @@ package com.bsbeetle.bananaspaghetti.ui.cmeditor
 import android.annotation.SuppressLint
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -15,19 +18,30 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.ViewModel
 import com.bsbeetle.bananaspaghetti.data.OpenedFiles
 import com.bsbeetle.bananaspaghetti.utils.getFileName
+import com.bsbeetle.bananaspaghetti.utils.readFromFile
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorAction
+import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import org.json.JSONObject
+import kotlin.math.log
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun Editor(modifier: Modifier = Modifier, viewModel: KeyboardViewModel, uri: Uri) {
+fun Editor(
+    modifier: Modifier = Modifier,
+    viewModel: KeyboardViewModel,
+    fileViewModel: FileViewModel
+) {
 
 
    // to get the local context
     val context = LocalContext.current
 
-    println("EDITOR: ${getFileName(context, uri)}")
+    if(fileViewModel.selectedUri == null) {
+        Log.wtf("NULLURI", "URI IS NULL")
+    } else {
+        println("EDITOR: ${getFileName(context, fileViewModel.selectedUri)}")
+    }
 
     // variable to make the Android view mode readable does the same work as before it AndroidView
     //...is not cluttered
@@ -45,6 +59,17 @@ fun Editor(modifier: Modifier = Modifier, viewModel: KeyboardViewModel, uri: Uri
                 useWideViewPort = true
                 loadWithOverviewMode = true
                 setSupportZoom(false)
+            }
+
+            // Load the content only when the page is loaded
+            webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    fileViewModel.selectedUri?.let { uri ->
+                        val fileContent = readFromFile(context, uri)
+                        loadContentWhenReady(view, fileContent)
+                    }
+                }
             }
 
             loadUrl("file:///android_asset/editor/index.html")
@@ -83,4 +108,23 @@ fun Editor(modifier: Modifier = Modifier, viewModel: KeyboardViewModel, uri: Uri
         factory = { webView },
         modifier = modifier
     )
+}
+
+fun loadContentWhenReady(webView: WebView?, content: String) {
+    val jsCheck = "window.isEditorReady === true;"
+    webView?.evaluateJavascript(jsCheck) { result ->
+        if (result == "true") {
+            val jsCommand = """
+                window.editor.dispatch({
+                    changes: { from: 0, to: window.editor.state.doc.length, insert: ${JSONObject.quote(content)} }
+                });
+            """.trimIndent()
+            webView.evaluateJavascript(jsCommand, null)
+        } else {
+            // Wait a bit and try again
+            Handler(Looper.getMainLooper()).postDelayed({
+                loadContentWhenReady(webView, content)
+            }, 50)
+        }
+    }
 }

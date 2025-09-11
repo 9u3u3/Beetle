@@ -26850,7 +26850,7 @@
   */
   const oneDark = [oneDarkTheme, /*@__PURE__*/syntaxHighlighting(oneDarkHighlightStyle)];
 
-  let editor = new EditorView({
+  window.editor = new EditorView({
     state: EditorState.create({
       extensions: [
         basicSetup, 
@@ -26865,6 +26865,8 @@
     }),
     parent: document.body
   });
+
+  window.isEditorReady = true;
 
   // get the theme color and apply it to the webview bg
   // getComputedStyle gets the actual value which is being shown on the screen of the selected property,

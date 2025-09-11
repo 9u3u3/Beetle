@@ -3,7 +3,7 @@ import { EditorState } from "@codemirror/state"
 import { cpp } from "@codemirror/lang-cpp"
 import { oneDark } from "@codemirror/theme-one-dark"
 
-let editor = new EditorView({
+window.editor = new EditorView({
   state: EditorState.create({
     extensions: [
       basicSetup, 
@@ -18,6 +18,8 @@ let editor = new EditorView({
   }),
   parent: document.body
 })
+
+window.isEditorReady = true;
 
 // get the theme color and apply it to the webview bg
 // getComputedStyle gets the actual value which is being shown on the screen of the selected property,
