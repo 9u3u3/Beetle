@@ -3,7 +3,9 @@ import { EditorState } from "@codemirror/state"
 import { cpp } from "@codemirror/lang-cpp"
 import { oneDark } from "@codemirror/theme-one-dark"
 
-window.editor = new EditorView({
+// Currently the editor is hardcoded for cpp
+// It will be made dynamic later
+window.editor = new EditorView({ // add the editor to window
   state: EditorState.create({
     extensions: [
       basicSetup, 
@@ -19,7 +21,7 @@ window.editor = new EditorView({
   parent: document.body
 })
 
-window.isEditorReady = true;
+window.isEditorReady = true; // Declare that editor is loaded successfully
 
 // get the theme color and apply it to the webview bg
 // getComputedStyle gets the actual value which is being shown on the screen of the selected property,

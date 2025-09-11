@@ -49,13 +49,12 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     navController: NavController,
     fileViewModel: FileViewModel,
-    keyboardViewModel: KeyboardViewModel = viewModel()
 ) {
-    // val uiState = keyboardViewModel.uiState.collectAsState()
+
     val context = LocalContext.current
 
     // File Picker
-    // Will make it generic later
+    // Will make it generic later (To pick a file/folder/create new file(maybe))
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
         { result -> // onResult only executes after the Result received
@@ -86,13 +85,11 @@ fun HomeScreen(
         modifier = modifier.background(color = Color(0xFF181818)),
         contentAlignment = Alignment.Center
     ) {
-        // Centered content
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
         ) {
             Column() {
-                // Heading
                 Text(
                     text = "Banana Spaghetti",
                     fontSize = 30.sp,
@@ -108,7 +105,6 @@ fun HomeScreen(
                     iconRes = R.drawable.note_add_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
                     label = "New File",
                     onClick = { navController.navigate(Screen.NewFile.route) },
-                    keyboardViewModel = keyboardViewModel
                 )
 
                 // Open file
@@ -116,11 +112,6 @@ fun HomeScreen(
                     iconRes = R.drawable.file_open_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
                     label = "Open File",
                     onClick = {
-                        //launcher.launch(arrayOf("*/*")) // Launch the file picker
-                        //... Non blocking call, asynchronous
-                        //for(element in OpenedFiles.files) println(getFileName(context, element.uri))
-                        //println("Hello world")
-                        //navController.navigate(Screen.OpenFile.route)
                         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                             addCategory(Intent.CATEGORY_OPENABLE)
                             type = "*/*"
@@ -129,11 +120,13 @@ fun HomeScreen(
                     },
                 )
 
+                // Open folder
                 MenuItem(
                     iconRes = R.drawable.folder_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
                     label = "Open Folder",
                 )
 
+                // Open terminal
                 MenuItem(
                     iconRes = R.drawable.terminal_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
                     label = "Open Terminal",
@@ -148,7 +141,6 @@ fun MenuItem(
     iconRes: Int,
     label: String,
     onClick: () -> Unit = {},
-    keyboardViewModel: KeyboardViewModel? = null
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,

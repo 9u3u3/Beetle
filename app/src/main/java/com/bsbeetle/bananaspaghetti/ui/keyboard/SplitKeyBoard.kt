@@ -111,10 +111,6 @@ fun LeftKeyboard(
                         else -> viewModel.onKeyPress(text.first())
                     }
                 },
-                modifier.background(
-                    shape = RectangleShape,
-                    color = Color.Black
-                )
             )
         }
     }
@@ -145,10 +141,6 @@ fun RightKeyboard(
                         else -> viewModel.onKeyPress(text.first())
                     }
                 },
-                modifier.background(
-                    shape = RoundedCornerShape(50.dp),
-                    color = Color.Black
-                )
             )
         }
     }

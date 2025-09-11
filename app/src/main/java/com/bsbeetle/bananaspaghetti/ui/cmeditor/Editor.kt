@@ -18,6 +18,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.ViewModel
 import com.bsbeetle.bananaspaghetti.data.OpenedFiles
 import com.bsbeetle.bananaspaghetti.utils.getFileName
+import com.bsbeetle.bananaspaghetti.utils.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.utils.readFromFile
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorAction
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
@@ -33,21 +34,11 @@ fun Editor(
     fileViewModel: FileViewModel
 ) {
 
-
-   // to get the local context
     val context = LocalContext.current
 
-    if(fileViewModel.selectedUri == null) {
-        Log.wtf("NULLURI", "URI IS NULL")
-    } else {
-        println("EDITOR: ${getFileName(context, fileViewModel.selectedUri)}")
-    }
-
-    // variable to make the Android view mode readable does the same work as before it AndroidView
-    //...is not cluttered
     val webView = remember {
         WebView(context).apply {
-            // Enable debugging (use chrome://inspect)
+
             WebView.setWebContentsDebuggingEnabled(true)
 
             settings.apply {
@@ -62,12 +53,18 @@ fun Editor(
             }
 
             // Load the content only when the page is loaded
-            webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView?, url: String?) {
+            webViewClient = object : WebViewClient() { // Creates an anonymous subclass of webView
+                //... client
+                // Handles callback related to the lifecycle of the webView's page loading
+                override fun onPageFinished(view: WebView?, url: String?) { // called when webView
+                    //... finishes loading the page
+                    // view -> webView instance, url -> url of the loaded page
                     super.onPageFinished(view, url)
-                    fileViewModel.selectedUri?.let { uri ->
+                    fileViewModel.selectedUri?.let { uri -> // check is selectedUri is not null,
+                        //... if not null then executes the below code
                         val fileContent = readFromFile(context, uri)
-                        loadContentWhenReady(view, fileContent)
+                        loadContentWhenReady(view, fileContent) // loads the code to the
+                        //... to the webView
                     }
                 }
             }
@@ -76,7 +73,7 @@ fun Editor(
         }
     }
 
-    // 2. The LaunchedEffect uses webview variable to listen for EditorAction events
+    // The LaunchedEffect uses webview variable to listen for EditorAction events
     LaunchedEffect(Unit) {
         viewModel.editorAction.collect { action ->
             when (action) {
@@ -103,28 +100,9 @@ fun Editor(
         }
     }
 
-    // 3. The AndroidView factory now just provides the instance webview
+    // The AndroidView factory now just provides the instance webview
     AndroidView(
         factory = { webView },
         modifier = modifier
     )
-}
-
-fun loadContentWhenReady(webView: WebView?, content: String) {
-    val jsCheck = "window.isEditorReady === true;"
-    webView?.evaluateJavascript(jsCheck) { result ->
-        if (result == "true") {
-            val jsCommand = """
-                window.editor.dispatch({
-                    changes: { from: 0, to: window.editor.state.doc.length, insert: ${JSONObject.quote(content)} }
-                });
-            """.trimIndent()
-            webView.evaluateJavascript(jsCommand, null)
-        } else {
-            // Wait a bit and try again
-            Handler(Looper.getMainLooper()).postDelayed({
-                loadContentWhenReady(webView, content)
-            }, 50)
-        }
-    }
 }
