@@ -16,10 +16,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun BottomBar(modifier: Modifier = Modifier) {
+fun BottomBar(modifier: Modifier = Modifier, color: Color) {
     Box(
         modifier = modifier
-            .background(color = Color(0xFF101010))
+            .background(color)
             .fillMaxWidth()
     ) {
         // Here there will be a row of buttons
@@ -27,14 +27,7 @@ fun BottomBar(modifier: Modifier = Modifier) {
             modifier = Modifier.padding(start = 30.dp),
             horizontalArrangement = Arrangement.Center
         ) {
-            for(i in 0..5) {
-                Text(
-                    text = "Banana Spaghetti",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White,
-                )
-                Spacer(modifier = Modifier.width(5.dp))
-            }
+            // Display the information
         }
     }
 }

@@ -26,7 +26,6 @@ fun RowScope.KeyboardKey(
     key: Key,
     isCapsLockOn: Boolean,
     onKeyPress: (String) -> Unit,
-    modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()

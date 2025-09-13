@@ -26850,28 +26850,38 @@
   */
   const oneDark = [oneDarkTheme, /*@__PURE__*/syntaxHighlighting(oneDarkHighlightStyle)];
 
-  let editor = new EditorView({
+  window.code_ = "";
+
+  // Currently the editor is hardcoded for cpp
+  // It will be made dynamic later
+  window.editor = new EditorView({ // add the editor to window
     state: EditorState.create({
       extensions: [
         basicSetup, 
         cpp(),
         oneDark,
-        EditorView.contentAttributes.of({
-          'inputmode': 'none' // disable the soft keyboard
+        EditorView.contentAttributes.of({ // disables the virtual keyboard
+          inputmode: "none",
+          readonly: "true"
+        }),
+        EditorView.updateListener.of(update => {
+          if(update.docChanged) {
+              window.code_ = update.state.doc.toString();
+          }
         })
       ],
-      doc: `#include<iostream>
-int main() {
-  std::cout << "Banana Spaghetti";
-  return 0;
-}`
+      doc: "",
     }),
     parent: document.body
   });
 
-  // Set the background color
+  window.isEditorReady = true; // Declare that editor is loaded successfully
+
+  // get the theme color and apply it to the webview bg
+  // getComputedStyle gets the actual value which is being shown on the screen of the selected property,
+  //...when all the css rules and things are applied
   const editorEl = document.querySelector('.cm-editor');
-  const bg = getComputedStyle(editorEl).backgroundColor;
+  const bg = window.getComputedStyle(editorEl).backgroundColor;
   document.body.style.backgroundColor = bg;
 
   // Added to insert text
