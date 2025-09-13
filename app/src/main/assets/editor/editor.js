@@ -2,6 +2,9 @@ import { EditorView, basicSetup } from "codemirror"
 import { EditorState } from "@codemirror/state"
 import { cpp } from "@codemirror/lang-cpp"
 import { oneDark } from "@codemirror/theme-one-dark"
+import {insertNewlineAndIndent, deleteCharBackward } from "@codemirror/commands";
+
+window.code_ = ""
 
 // Currently the editor is hardcoded for cpp
 // It will be made dynamic later
@@ -14,6 +17,11 @@ window.editor = new EditorView({ // add the editor to window
       EditorView.contentAttributes.of({ // disables the virtual keyboard
         inputmode: "none",
         readonly: "true"
+      }),
+      EditorView.updateListener.of(update => {
+        if(update.docChanged) {
+            window.code_ = update.state.doc.toString()
+        }
       })
     ],
     doc: "",

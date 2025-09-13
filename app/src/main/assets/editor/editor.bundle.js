@@ -20733,7 +20733,7 @@
   Delete the selection, or, for cursor selections, the character or
   indentation unit before the cursor.
   */
-  const deleteCharBackward$1 = view => deleteByChar(view, false, true);
+  const deleteCharBackward = view => deleteByChar(view, false, true);
   /**
   Delete the selection or the character after the cursor.
   */
@@ -20948,7 +20948,7 @@
   matching brackets, an additional newline will be inserted after
   the cursor.
   */
-  const insertNewlineAndIndent$1 = /*@__PURE__*/newlineAndIndent(false);
+  const insertNewlineAndIndent = /*@__PURE__*/newlineAndIndent(false);
   /**
   Create a blank, indented line below the current line.
   */
@@ -21098,7 +21098,7 @@
       { key: "Ctrl-a", run: cursorLineStart, shift: selectLineStart },
       { key: "Ctrl-e", run: cursorLineEnd, shift: selectLineEnd },
       { key: "Ctrl-d", run: deleteCharForward },
-      { key: "Ctrl-h", run: deleteCharBackward$1 },
+      { key: "Ctrl-h", run: deleteCharBackward },
       { key: "Ctrl-k", run: deleteToLineEnd },
       { key: "Ctrl-Alt-h", run: deleteGroupBackward },
       { key: "Ctrl-o", run: splitLine },
@@ -21157,9 +21157,9 @@
       { key: "Mod-Home", run: cursorDocStart, shift: selectDocStart },
       { key: "End", run: cursorLineBoundaryForward, shift: selectLineBoundaryForward, preventDefault: true },
       { key: "Mod-End", run: cursorDocEnd, shift: selectDocEnd },
-      { key: "Enter", run: insertNewlineAndIndent$1, shift: insertNewlineAndIndent$1 },
+      { key: "Enter", run: insertNewlineAndIndent, shift: insertNewlineAndIndent },
       { key: "Mod-a", run: selectAll },
-      { key: "Backspace", run: deleteCharBackward$1, shift: deleteCharBackward$1 },
+      { key: "Backspace", run: deleteCharBackward, shift: deleteCharBackward },
       { key: "Delete", run: deleteCharForward },
       { key: "Mod-Backspace", mac: "Alt-Backspace", run: deleteGroupBackward },
       { key: "Mod-Delete", mac: "Alt-Delete", run: deleteGroupForward },
@@ -26850,6 +26850,8 @@
   */
   const oneDark = [oneDarkTheme, /*@__PURE__*/syntaxHighlighting(oneDarkHighlightStyle)];
 
+  window.code_ = "";
+
   // Currently the editor is hardcoded for cpp
   // It will be made dynamic later
   window.editor = new EditorView({ // add the editor to window
@@ -26861,6 +26863,11 @@
         EditorView.contentAttributes.of({ // disables the virtual keyboard
           inputmode: "none",
           readonly: "true"
+        }),
+        EditorView.updateListener.of(update => {
+          if(update.docChanged) {
+              window.code_ = update.state.doc.toString();
+          }
         })
       ],
       doc: "",
