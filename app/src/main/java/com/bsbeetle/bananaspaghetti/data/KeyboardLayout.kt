@@ -2,6 +2,7 @@ package com.bsbeetle.bananaspaghetti.data
 
 import com.bsbeetle.bananaspaghetti.model.Key
 import com.bsbeetle.bananaspaghetti.model.KeyType
+import com.bsbeetle.bananaspaghetti.model.StableKeyboardLayout
 
 
 object KeyboardLayout {
@@ -23,7 +24,7 @@ object KeyboardLayout {
 
 
 
-    val qwertyLayout = listOf(
+    val qwertyLayout = StableKeyboardLayout( listOf(
         // Row 1
         listOf(
             Key("1", "!", NORMAL_KEY), Key("2", "@", NORMAL_KEY), Key("3", "#", NORMAL_KEY),
@@ -63,10 +64,10 @@ object KeyboardLayout {
             Key("↵", type = KeyType.ACTION_ENTER, weight = ENTER_KEY),
             Key("⌫", type = KeyType.ACTION_BACKSPACE, weight = NORMAL_KEY),
         )
-    )
+    ))
 
 
-    val developerLayout = listOf(
+    val developerLayout = StableKeyboardLayout(listOf(
         //Row 1
         listOf(
             Key("{", "{", NORMAL_KEY), Key("}", "}", NORMAL_KEY), Key("(", "(", NORMAL_KEY),
@@ -94,8 +95,8 @@ object KeyboardLayout {
         // Row 4
         listOf(
             Key("@", "@", NORMAL_KEY), Key(":", ":", NORMAL_KEY), Key("_", "_", NORMAL_KEY),
-            Key("?", "?", NORMAL_KEY), Key("&&", "&&", NORMAL_KEY), Key("\t", "\t", NORMAL_KEY), // tab/indent
-            Key("\n", "\n", NORMAL_KEY), Key("=>", "=>", NORMAL_KEY),Key("→", "→", NORMAL_KEY),
+            Key("?", "?", NORMAL_KEY), Key("&&", "&&", NORMAL_KEY), Key("tab", "\t", NORMAL_KEY), // tab/indent
+            Key("nL", "\n", NORMAL_KEY), Key("=>", "=>", NORMAL_KEY),Key("→", "→", NORMAL_KEY),
             Key("*", "*", NORMAL_KEY)
         ),
 
@@ -105,5 +106,5 @@ object KeyboardLayout {
 
             Key("=>", "=>", NORMAL_KEY),Key("→", "→", NORMAL_KEY), Key("*", "*", NORMAL_KEY)
         )
-    )
+    ))
 }

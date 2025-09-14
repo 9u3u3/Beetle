@@ -10,8 +10,9 @@ private const val CONTINUOUS_PRESS_INITIAL_DELAY_MS: Long = 500  // The delay fo
 private const val CONTINUOUS_PRESS_REPEAT_INTERVAL_MS: Long = 100 // The delay between the consecutive hold like the delay between first backspace and the next when the backspace is held
 
 fun Modifier.continuousPress(
+    key: Any?,
     onGesture: (KeyGesture) -> Unit
-): Modifier = this.pointerInput(Unit) {
+): Modifier = this.pointerInput(key) { // Use that key here instead of Unit
     detectTapGestures(
         onPress = {
             // Send immediate press

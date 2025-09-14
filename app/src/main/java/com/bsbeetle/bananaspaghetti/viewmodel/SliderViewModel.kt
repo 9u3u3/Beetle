@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class SliderViewModel : ViewModel() {
-    private val _sliderValue = MutableStateFlow(25f)
+    private val _sliderValue = MutableStateFlow(20f)
     val sliderValue: StateFlow<Float> = _sliderValue
 
     fun setSliderValue(value: Float) {

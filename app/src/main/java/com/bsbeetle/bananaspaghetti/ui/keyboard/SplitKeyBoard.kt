@@ -7,7 +7,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import com.bsbeetle.bananaspaghetti.model.Key
-import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
+import com.bsbeetle.bananaspaghetti.model.StableKeyboardLayout
+import com.bsbeetle.bananaspaghetti.viewmodel.KeyGesture
 
 enum class KeyboardSide {
     LEFT, RIGHT
@@ -16,18 +17,18 @@ enum class KeyboardSide {
 @SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
 fun SplitKeyboardHalf(
-    layout: List<List<Key>>,
+    layout: StableKeyboardLayout,
     side: KeyboardSide,
     isCapsLockOn: Boolean,
     isShiftOn: Boolean,
-    viewModel: KeyboardViewModel,
+    onKeyEvent: (Key, KeyGesture) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val configuration = LocalConfiguration.current
     val screenHeightDp = configuration.screenHeightDp.dp
     val keyboardHeight = screenHeightDp / 2f
 
-    val numberOfRows = layout.size
+    val numberOfRows = layout.rows.size
     val totalVerticalPadding = 16.dp
     val availableHeight = keyboardHeight - totalVerticalPadding
     val rowHeight = availableHeight / numberOfRows
@@ -39,7 +40,7 @@ fun SplitKeyboardHalf(
             .padding(vertical = 4.dp, horizontal = 2.dp),
         verticalArrangement = Arrangement.SpaceEvenly
     ) {
-        layout.forEach { rowOfKeys ->
+        layout.rows.forEach { rowOfKeys ->
             // Split keys into halves
             val splitIndex = (rowOfKeys.size + 1) / 2
             val keysToShow = when (side) {
@@ -52,7 +53,7 @@ fun SplitKeyboardHalf(
                 side = side,
                 isCapsLockOn = isCapsLockOn,
                 isShiftOn=isShiftOn,
-                viewModel = viewModel,
+                onKeyEvent = onKeyEvent,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(rowHeight)
@@ -67,7 +68,7 @@ fun KeyboardHalfRow(
     side: KeyboardSide,
     isCapsLockOn: Boolean,
     isShiftOn: Boolean,
-    viewModel: KeyboardViewModel,
+    onKeyEvent: (Key, KeyGesture) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -82,7 +83,7 @@ fun KeyboardHalfRow(
                 key = key,
                 isShiftOn,
                 isCapsLockOn,
-                onKeyEvent = viewModel::onKeyEvent,
+                onKeyEvent = onKeyEvent,
             )
         }
     }

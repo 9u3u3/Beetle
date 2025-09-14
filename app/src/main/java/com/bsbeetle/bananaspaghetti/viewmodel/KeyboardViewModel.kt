@@ -146,6 +146,18 @@ class KeyboardViewModel : ViewModel() {
         }
     }
 
+    fun toggleLeftKeyboardVisibility() {
+        _uiState.update { currentState ->
+            currentState.copy(isLeftKeyboardVisible = !currentState.isLeftKeyboardVisible)
+        }
+
+    }
+    fun toggleRightKeyboardVisibility() {
+        _uiState.update { currentState ->
+            currentState.copy(isRightKeyboardVisible = !currentState.isRightKeyboardVisible)
+        }
+    }
+
 
     // Emitter functions -> Basic it helps to implements better things
 

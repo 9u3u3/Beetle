@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -130,20 +131,20 @@ fun InitialEditorUI (
             val (topLeftBarRef,topMiddleBarRef,topRightBarRef,topLeftRef, topRightRef, leftKeyboardRef, codeEditor, rightKeyboardRef, bottomBarRef) = createRefs()
 
             // Top Left box
-            Box(modifier = Modifier.constrainAs(topLeftRef) {
-                top.linkTo(topLeftBarRef.bottom)
-                bottom.linkTo(leftKeyboardRef.top)
-                start.linkTo(parent.start)
-                end.linkTo(codeEditor.start)
-                width = Dimension.fillToConstraints
-                height = Dimension.fillToConstraints
-            }
+            Box(modifier = Modifier
+                .constrainAs(topLeftRef) {
+                    top.linkTo(topLeftBarRef.bottom)
+                    bottom.linkTo(leftKeyboardRef.top)
+                    start.linkTo(parent.start)
+                    end.linkTo(codeEditor.start)
+                    width = Dimension.fillToConstraints
+                    height = Dimension.fillToConstraints
+                }
                 .background(color = Color.DarkGray)
 
             ) {
 
-                SmoothSlider(sliderViewModel = sliderViewModel)
-
+                SmoothSlider(sliderViewModel)
             }
 
             // TopBars
@@ -194,29 +195,36 @@ fun InitialEditorUI (
         )
 
             // Top Right box
-            Box(modifier = Modifier.constrainAs(topRightRef) {
-                top.linkTo(topRightBarRef.bottom)
-                bottom.linkTo(rightKeyboardRef.top)
-                start.linkTo(codeEditor.start)
-                end.linkTo(parent.end)
-                width = Dimension.fillToConstraints
-                height = Dimension.fillToConstraints
-            }
+            Box(modifier = Modifier
+                .constrainAs(topRightRef) {
+                    top.linkTo(topRightBarRef.bottom)
+                    bottom.linkTo(rightKeyboardRef.top)
+                    start.linkTo(codeEditor.start)
+                    end.linkTo(parent.end)
+                    width = Dimension.fillToConstraints
+                    height = Dimension.fillToConstraints
+                }
                 .background(color = Color.DarkGray)
             ) {}
+
+        if (uiState.isLeftKeyboardVisible) {
             // Left Keyboard - positioned at bottom left
-            SplitKeyboardHalf(
-                layout = layout,
-                side = KeyboardSide.LEFT,
-                isCapsLockOn = uiState.isCapsLockOn,
-                isShiftOn = uiState.isShiftOn,
-                viewModel = viewModel,
-                modifier = Modifier.constrainAs(leftKeyboardRef) {
-                    start.linkTo(parent.start)
-                    bottom.linkTo(parent.bottom)
-                    width = Dimension.percent(sliderValue/100f) // 20% width for left keyboard
-                }
-            )
+            // Key is helped to listen to any changes thatoccur and recompose the UI accordingly
+            key(sliderValue) {
+                SplitKeyboardHalf(
+                    layout = layout,
+                    side = KeyboardSide.LEFT,
+                    isCapsLockOn = uiState.isCapsLockOn,
+                    isShiftOn = uiState.isShiftOn,
+                    onKeyEvent = viewModel::onKeyEvent,
+                    modifier = Modifier.constrainAs(leftKeyboardRef) {
+                        start.linkTo(parent.start)
+                        bottom.linkTo(parent.bottom)
+                        width = Dimension.percent(sliderValue / 100f) // 20% width for left keyboard
+                    }
+                )
+            }
+        }
 
             // Code Editor - positioned in the center, full height
             Editor(
@@ -224,8 +232,21 @@ fun InitialEditorUI (
                     .constrainAs(codeEditor) {
                         top.linkTo(topMiddleBarRef.bottom)  // Now linked to TopBar
                         bottom.linkTo(parent.bottom)
-                        start.linkTo(leftKeyboardRef.end)
-                        end.linkTo(rightKeyboardRef.start)
+//                        start.linkTo(leftKeyboardRef.end)
+//                        end.linkTo(rightKeyboardRef.start)
+                        // Dynamically set the start constraint
+                        if (uiState.isLeftKeyboardVisible) {
+                            start.linkTo(leftKeyboardRef.end)
+                        } else {
+                            start.linkTo(parent.start)
+                        }
+
+                        // Dynamically set the end constraint
+                        if (uiState.isRightKeyboardVisible) {
+                            end.linkTo(rightKeyboardRef.start)
+                        } else {
+                            end.linkTo(parent.end)
+                        }
                         width = Dimension.fillToConstraints // Takes remaining 60% width
                         height = Dimension.fillToConstraints
                     },
@@ -235,19 +256,25 @@ fun InitialEditorUI (
             )
 
             // Right Keyboard - positioned at bottom right
-            SplitKeyboardHalf(
-                layout = layout,
-                side = KeyboardSide.RIGHT,
-                isCapsLockOn = uiState.isCapsLockOn,
-                isShiftOn = uiState.isShiftOn,
-                viewModel = viewModel,
-                modifier = Modifier.constrainAs(rightKeyboardRef) {
-                    end.linkTo(parent.end)
-                    bottom.linkTo(parent.bottom)
-                    width = Dimension.percent(sliderValue/100f) // 20% width for right keyboard
-                }
-            )
+        // Key is helped to listen to any changes thatoccur and recompose the UI accordingly
 
+          if(uiState.isRightKeyboardVisible)  {
+                key(sliderValue) {
+                    SplitKeyboardHalf(
+                        layout = layout,
+                        side = KeyboardSide.RIGHT,
+                        isCapsLockOn = uiState.isCapsLockOn,
+                        isShiftOn = uiState.isShiftOn,
+                        onKeyEvent = viewModel::onKeyEvent,
+                        modifier = Modifier.constrainAs(rightKeyboardRef) {
+                            end.linkTo(parent.end)
+                            bottom.linkTo(parent.bottom)
+                            width =
+                                Dimension.percent(sliderValue / 100f) // 20% width for right keyboard
+                        }
+                    )
+                }
+            }
 
             BottomBar(
                 modifier = Modifier

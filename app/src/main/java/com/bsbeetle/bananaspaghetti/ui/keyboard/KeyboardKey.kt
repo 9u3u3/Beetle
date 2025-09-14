@@ -61,8 +61,9 @@ fun RowScope.KeyboardKey(
         else -> baseColor
     }
 
+
     val gestureModifier = when (key.type) {
-        // The Shift key is special key
+                // The Shift key is special key
         // Press is buggy so commented out
         KeyType.ACTION_SHIFT -> Modifier.pointerInput(key) {
             detectTapGestures(
@@ -77,7 +78,7 @@ fun RowScope.KeyboardKey(
 //                },
 
         // All other keys get the fast, continuous-press treatment
-        else -> Modifier.continuousPress { gesture ->
+        else -> Modifier.continuousPress(key = key) { gesture -> // Pass the key object here
             onKeyEvent(key, gesture)
         }
     }
