@@ -26,10 +26,10 @@ object KeyboardLayout {
     val qwertyLayout = listOf(
         // Row 1
         listOf(
-            Key("1", "1", NORMAL_KEY), Key("2", "2", NORMAL_KEY), Key("3", "3", NORMAL_KEY),
-            Key("4", "4", NORMAL_KEY), Key("5", "5", NORMAL_KEY), Key("6", "6", NORMAL_KEY),
-            Key("7", "7", NORMAL_KEY), Key("8", "8", NORMAL_KEY), Key("9", "9", NORMAL_KEY),
-            Key("0", "0", NORMAL_KEY)
+            Key("1", "!", NORMAL_KEY), Key("2", "@", NORMAL_KEY), Key("3", "#", NORMAL_KEY),
+            Key("4", "$", NORMAL_KEY), Key("5", "%", NORMAL_KEY), Key("6", "^", NORMAL_KEY),
+            Key("7", "&", NORMAL_KEY), Key("8", "*", NORMAL_KEY), Key("9", "(", NORMAL_KEY),
+            Key("0", ")", NORMAL_KEY)
         ),
         // Row 2
         listOf(

@@ -8,13 +8,16 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.bsbeetle.bananaspaghetti.ui.home.HomeScreen
 import com.bsbeetle.bananaspaghetti.ui.home.InitialEditorUI
+import com.bsbeetle.bananaspaghetti.ui.home.SettingsScreen
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
+import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 
 @Composable
 fun AppNavigation(
     fileViewModel: FileViewModel,
-    keyboardViewModel: KeyboardViewModel
+    keyboardViewModel: KeyboardViewModel,
+    sliderViewModel: SliderViewModel
 ) {
 
     val navController = rememberNavController()
@@ -38,7 +41,9 @@ fun AppNavigation(
         ) {
                 InitialEditorUI(
                     fileViewModel,
-                    keyboardViewModel
+                    keyboardViewModel,
+                    sliderViewModel,
+                    navController
                 )
         }
 
@@ -48,9 +53,16 @@ fun AppNavigation(
         ) {
             InitialEditorUI(
                 fileViewModel,
-                keyboardViewModel
+                keyboardViewModel,
+                sliderViewModel,
+                navController
             )
+        }
+
+        composable(route=Screen.Settings.route){
+            SettingsScreen()
         }
 
     }
 }
+

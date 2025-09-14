@@ -17,11 +17,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bsbeetle.bananaspaghetti.ui.DisableDefaultKeyboard
 import com.bsbeetle.bananaspaghetti.ui.EnterImmersiveMode
-import com.bsbeetle.bananaspaghetti.ui.components.TopBar
 import com.bsbeetle.bananaspaghetti.ui.navigation.AppNavigation
 import com.bsbeetle.bananaspaghetti.ui.theme.BananaSpaghettiTheme
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
+import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 
 
 class MainActivity : ComponentActivity() {
@@ -37,6 +37,8 @@ class MainActivity : ComponentActivity() {
             val keyboardViewModel: KeyboardViewModel = viewModel()
             // File view model
             val fileViewModel: FileViewModel = viewModel()
+            // Slider view model
+            val sliderViewModel: SliderViewModel = viewModel()
 
             BananaSpaghettiTheme {
 
@@ -51,7 +53,8 @@ class MainActivity : ComponentActivity() {
                 ) {
                     AppNavigation(
                         fileViewModel,
-                        keyboardViewModel
+                        keyboardViewModel,
+                        sliderViewModel
                     )
                 }
             }

@@ -1,8 +1,4 @@
-// Earlier called NewFileScreen: @draco remove this line when you read this
-// Changed because its reusable: this line too
-
 package com.bsbeetle.bananaspaghetti.ui.home
-
 
 import androidx.compose.foundation.layout.Box
 import android.webkit.WebSettings
@@ -22,27 +18,36 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
+import androidx.navigation.Navigation
 import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
 import com.bsbeetle.bananaspaghetti.ui.components.BottomBar
 import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
 import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboardHalf
 import com.bsbeetle.bananaspaghetti.data.TopBarButtons
-import com.bsbeetle.bananaspaghetti.ui.components.BottomBar
 import com.bsbeetle.bananaspaghetti.ui.components.TopBar
+import com.bsbeetle.bananaspaghetti.ui.keyboard.SmoothSlider
 import com.bsbeetle.bananaspaghetti.utils.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.utils.readFromFile
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
+import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 import java.io.FileNotFoundException
 import java.io.OutputStreamWriter
+
 
 @Composable
 fun InitialEditorUI (
     fileViewModel: FileViewModel,
-    viewModel: KeyboardViewModel
+    viewModel: KeyboardViewModel,
+    sliderViewModel: SliderViewModel,
+    navController: NavController
 ) {
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
+
+
     val context = LocalContext.current
 
     // for selecting the layout.
@@ -51,6 +56,7 @@ fun InitialEditorUI (
     } else {
         KeyboardLayout.qwertyLayout
     }
+
 
     val webView = remember {
         WebView(context).apply {
@@ -88,8 +94,7 @@ fun InitialEditorUI (
             loadUrl("file:///android_asset/editor/index.html")
         }
     }
-
-    val buttons = listOf(
+    val buttonsForLeftTopBar = listOf(
         TopBarButtons("Save") {
             // Get the code from code mirror, override that with the opened file
             webView.evaluateJavascript("window.code_") { result ->
@@ -116,13 +121,17 @@ fun InitialEditorUI (
         }
     )
 
+    val buttonsForRightTopBar=listOf(TopBarButtons("Settings",onClick = {
+        navController.navigate("settings")
+    }))
 
-        ConstraintLayout(modifier = Modifier.fillMaxSize()) {
-            val (topBarRef,topLeftRef, topRightRef, leftKeyboardRef, codeEditor, rightKeyboardRef, bottomBarRef) = createRefs()
+
+    ConstraintLayout(modifier = Modifier.fillMaxSize()) {
+            val (topLeftBarRef,topMiddleBarRef,topRightBarRef,topLeftRef, topRightRef, leftKeyboardRef, codeEditor, rightKeyboardRef, bottomBarRef) = createRefs()
 
             // Top Left box
             Box(modifier = Modifier.constrainAs(topLeftRef) {
-                top.linkTo(parent.top)
+                top.linkTo(topLeftBarRef.bottom)
                 bottom.linkTo(leftKeyboardRef.top)
                 start.linkTo(parent.start)
                 end.linkTo(codeEditor.start)
@@ -131,25 +140,62 @@ fun InitialEditorUI (
             }
                 .background(color = Color.DarkGray)
 
-            ) {}
+            ) {
 
-            // TopBar Constraint
+                SmoothSlider(sliderViewModel = sliderViewModel)
+
+            }
+
+            // TopBars
+
+        //Left Top Bar
             TopBar(
                 modifier = Modifier
-                    .constrainAs(topBarRef) {
+                    .constrainAs(topLeftBarRef) {
                         top.linkTo(parent.top)
                         start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                        width = Dimension.fillToConstraints
+                        end.linkTo(topMiddleBarRef.start)
+                        width = Dimension.percent(0.2f)
                         height = Dimension.wrapContent
                     },
-                color = Color(0xFF2F2F2F),
-                buttons
+//                color = Color(0xFF2F2F2F),
+                Color.Red,
+                buttonsForLeftTopBar
             )
+
+        //Middle Top Bar
+        TopBar(
+            modifier = Modifier
+                .constrainAs(topMiddleBarRef) {
+                    top.linkTo(parent.top)
+                    start.linkTo(topLeftBarRef.end)
+                    end.linkTo(topRightBarRef.start)
+                    width = Dimension.percent(0.6f)
+                    height = Dimension.wrapContent
+                },
+//                color = Color(0xFF2F2F2F),
+            color = Color.Yellow,
+            buttonsForLeftTopBar
+        )
+
+        //Right Top Bar
+        TopBar(
+            modifier = Modifier
+                .constrainAs(topRightBarRef) {
+                    top.linkTo(parent.top)
+                    start.linkTo(topMiddleBarRef.end)
+                    end.linkTo(parent.end)
+                    width = Dimension.percent(0.2f)
+                    height = Dimension.wrapContent
+                },
+//                color = Color(0xFF2F2F2F),
+            color = Color.Green,
+            buttonsForRightTopBar
+        )
 
             // Top Right box
             Box(modifier = Modifier.constrainAs(topRightRef) {
-                top.linkTo(parent.top)
+                top.linkTo(topRightBarRef.bottom)
                 bottom.linkTo(rightKeyboardRef.top)
                 start.linkTo(codeEditor.start)
                 end.linkTo(parent.end)
@@ -168,7 +214,7 @@ fun InitialEditorUI (
                 modifier = Modifier.constrainAs(leftKeyboardRef) {
                     start.linkTo(parent.start)
                     bottom.linkTo(parent.bottom)
-                    width = Dimension.percent(0.2f) // 20% width for left keyboard
+                    width = Dimension.percent(sliderValue/100f) // 20% width for left keyboard
                 }
             )
 
@@ -176,7 +222,7 @@ fun InitialEditorUI (
             Editor(
                 modifier = Modifier
                     .constrainAs(codeEditor) {
-                        top.linkTo(topBarRef.bottom)  // Now linked to TopBar
+                        top.linkTo(topMiddleBarRef.bottom)  // Now linked to TopBar
                         bottom.linkTo(parent.bottom)
                         start.linkTo(leftKeyboardRef.end)
                         end.linkTo(rightKeyboardRef.start)
@@ -198,7 +244,7 @@ fun InitialEditorUI (
                 modifier = Modifier.constrainAs(rightKeyboardRef) {
                     end.linkTo(parent.end)
                     bottom.linkTo(parent.bottom)
-                    width = Dimension.percent(0.2f) // 20% width for right keyboard
+                    width = Dimension.percent(sliderValue/100f) // 20% width for right keyboard
                 }
             )
 
