@@ -383,6 +383,4 @@ fun InitialEditorUI (
         }
     }
 
-
-
 }

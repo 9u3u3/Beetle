@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
@@ -21,13 +22,17 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color) {
         modifier = modifier
             .background(color)
             .fillMaxWidth()
+            .height(10.dp)
     ) {
-        // Here there will be a row of buttons
         Row(
-            modifier = Modifier.padding(start = 30.dp),
+            modifier = Modifier,
             horizontalArrangement = Arrangement.Center
         ) {
             // Display the information
+            Text(
+                text = "Bottom Bar",
+                color = Color.White
+            )
         }
     }
 }
