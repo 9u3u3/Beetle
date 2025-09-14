@@ -1,7 +1,6 @@
 package com.bsbeetle.bananaspaghetti.ui.home
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -29,10 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.R
-import com.bsbeetle.bananaspaghetti.data.FileData
-import com.bsbeetle.bananaspaghetti.data.OpenedFiles
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
-import com.bsbeetle.bananaspaghetti.utils.getFileName
+import com.bsbeetle.bananaspaghetti.utils.fileLauncher
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 
 @SuppressLint("RestrictedApi")
@@ -44,34 +41,7 @@ fun HomeScreen(
 ) {
 
     val context = LocalContext.current
-
-    // File Picker
-    // Will make it generic later (To pick a file/folder/create new file(maybe))
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-        { result -> // onResult only executes after the Result received
-            if(result.resultCode == Activity.RESULT_OK) {
-                val uri: Uri? = result.data?.data
-
-                if(uri != null) {
-
-                    val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-
-                    context.contentResolver.takePersistableUriPermission(uri, flags)
-                    OpenedFiles.files.add(
-                        FileData(
-                            getFileName(context, uri)
-                                .substringAfter("."),
-                            uri
-                        )
-                    )
-                    fileViewModel.selectedUri = uri
-                    navController.navigate(Screen.OpenFile.route)
-                }
-            }
-        }
-    )
+    val launcher = fileLauncher(context, navController, fileViewModel)
 
     Box(
         modifier = modifier.background(color = Color(0xFF181818)),
@@ -109,13 +79,17 @@ fun HomeScreen(
                             type = "*/*"
                         }
                         launcher.launch(intent)
-                    },
+                    }
                 )
 
                 // Open folder
                 MenuItem(
                     iconRes = R.drawable.folder_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
                     label = "Open Folder",
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+                        launcher.launch(intent)
+                    }
                 )
 
                 // Open terminal

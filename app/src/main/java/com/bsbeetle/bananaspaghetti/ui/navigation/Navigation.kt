@@ -60,6 +60,18 @@ fun AppNavigation(
             )
         }
 
+        // Open a folder (Also add a New Folder if this doesn't provide creation of new folder)
+        composable(
+            Screen.OpenFolder.route
+        ) {
+            InitialEditorUI(
+                fileViewModel,
+                keyboardViewModel,
+                sliderViewModel,
+                navController
+            )
+        }
+
         composable(route=Screen.Settings.route){
             SettingsScreen(
                 keyboardViewModel,

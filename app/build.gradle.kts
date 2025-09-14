@@ -61,13 +61,16 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    implementation("androidx.navigation:navigation-compose:2.9.3")
+    // Navigation
+    implementation("androidx.navigation:navigation-compose:2.9.4")
+
     // For Constraint layout
-    implementation("androidx.constraintlayout:constraintlayout-compose:1.1.0")
+    implementation("androidx.constraintlayout:constraintlayout-compose:1.1.1")
 
     // Keyboard
-
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.2")
 
+    // File Handling
+    implementation("androidx.documentfile:documentfile:1.1.0")
 
 }

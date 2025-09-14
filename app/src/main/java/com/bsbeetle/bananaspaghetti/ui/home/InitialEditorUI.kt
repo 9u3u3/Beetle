@@ -61,10 +61,9 @@ fun InitialEditorUI (
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
 
-
     val context = LocalContext.current
 
-    // for selecting the layout.
+    // Selecting the keyboard layout
     val layout = if (uiState.toggleKeyboard) {
         KeyboardLayout.developerLayout
     } else {
@@ -121,6 +120,7 @@ fun InitialEditorUI (
             loadUrl("file:///android_asset/editor/index.html")
         }
     }
+
     val buttonsForLeftTopBar = listOf(
         TopBarButtons("Save") {
             // Get the code from code mirror, override that with the opened file
@@ -157,20 +157,18 @@ fun InitialEditorUI (
         ConstraintLayout(modifier = Modifier.fillMaxSize()) {
             val (topLeftBarRef, topMiddleBarRef, topRightBarRef, topLeftRef, topRightRef, leftKeyboardRef, codeEditor, rightKeyboardRef, errorLogRef,bottomBarRef) = createRefs()
 
-            // Top Left box
-            Box(
-                modifier = Modifier
-                    .constrainAs(topLeftRef) {
-                        top.linkTo(topLeftBarRef.bottom)
-                        bottom.linkTo(leftKeyboardRef.top)
-                        start.linkTo(parent.start)
-                        end.linkTo(codeEditor.start)
-                        width = Dimension.fillToConstraints
-                        height = Dimension.fillToConstraints
-                    }
-                    .background(color = Color.DarkGray)
-
-            ) {}
+        TopLeftBox(
+            modifier = Modifier.constrainAs(topLeftRef) {
+                top.linkTo(topLeftBarRef.bottom)
+                bottom.linkTo(leftKeyboardRef.top)
+                start.linkTo(parent.start)
+                end.linkTo(codeEditor.start)
+                width = Dimension.fillToConstraints
+                height = Dimension.fillToConstraints
+            }
+                .background(Color.DarkGray),
+            fileViewModel
+        )
 
             // TopBars
 
@@ -185,7 +183,7 @@ fun InitialEditorUI (
                         height = Dimension.wrapContent
                     },
                 //                color = Color(0xFF2F2F2F),
-                Color.Red,
+                Color(0xFF212121),
                 buttonsForLeftTopBar
             )
 
@@ -203,6 +201,19 @@ fun InitialEditorUI (
                 color = Color.Yellow,
                 buttonsForLeftTopBar
             )
+        //Middle Top Bar
+        TopBar(
+            modifier = Modifier
+                .constrainAs(topMiddleBarRef) {
+                    top.linkTo(parent.top)
+                    start.linkTo(topLeftBarRef.end)
+                    end.linkTo(topRightBarRef.start)
+                    width = Dimension.percent(0.6f)
+                    height = Dimension.wrapContent
+                },
+            color = Color(0xFF212121),
+            buttonsForLeftTopBar
+        )
 
             //Right Top Bar
             TopBar(
@@ -218,6 +229,19 @@ fun InitialEditorUI (
                 color = Color.Green,
                 buttonsForRightTopBar
             )
+        //Right Top Bar
+        TopBar(
+            modifier = Modifier
+                .constrainAs(topRightBarRef) {
+                    top.linkTo(parent.top)
+                    start.linkTo(topMiddleBarRef.end)
+                    end.linkTo(parent.end)
+                    width = Dimension.percent(0.2f)
+                    height = Dimension.wrapContent
+                },
+            color = Color(0xFF212121),
+            buttonsForRightTopBar
+        )
 
             // Top Right box
             Box(
@@ -377,7 +401,7 @@ fun InitialEditorUI (
                         end.linkTo(codeEditor.end)
                         width = Dimension.fillToConstraints
                     },
-                color = Color(0xFF2D57A8)
+                color = Color(0xFF326AD5)
 
             )
         }

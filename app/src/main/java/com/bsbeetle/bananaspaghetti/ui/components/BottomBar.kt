@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -28,11 +29,7 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color) {
             modifier = Modifier,
             horizontalArrangement = Arrangement.Center
         ) {
-            // Display the information
-            Text(
-                text = "Bottom Bar",
-                color = Color.White
-            )
+            Box(modifier = Modifier.fillMaxSize()) {  }
         }
     }
 }
