@@ -1,30 +1,27 @@
 package com.bsbeetle.bananaspaghetti.ui.keyboard
 
-
 import android.annotation.SuppressLint
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
-import androidx.constraintlayout.compose.ConstraintLayout
-import androidx.constraintlayout.compose.Dimension
 import com.bsbeetle.bananaspaghetti.model.Key
-import com.bsbeetle.bananaspaghetti.model.KeyType
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 
+enum class KeyboardSide {
+    LEFT, RIGHT
+}
 
 @SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
-fun SplitKeyboard(
+fun SplitKeyboardHalf(
     layout: List<List<Key>>,
+    side: KeyboardSide,
     isCapsLockOn: Boolean,
-    modifier: Modifier = Modifier,
-    viewModel: KeyboardViewModel
+    isShiftOn: Boolean,
+    viewModel: KeyboardViewModel,
+    modifier: Modifier = Modifier
 ) {
     val configuration = LocalConfiguration.current
     val screenHeightDp = configuration.screenHeightDp.dp
@@ -35,91 +32,58 @@ fun SplitKeyboard(
     val availableHeight = keyboardHeight - totalVerticalPadding
     val rowHeight = availableHeight / numberOfRows
 
-
-    Column(
+    Column (
         modifier = modifier
-            .fillMaxWidth()
+            .width(IntrinsicSize.Max)
             .height(keyboardHeight)
             .padding(vertical = 4.dp, horizontal = 2.dp),
         verticalArrangement = Arrangement.SpaceEvenly
     ) {
         layout.forEach { rowOfKeys ->
-            ConstraintLayout(
+            // Split keys into halves
+            val splitIndex = (rowOfKeys.size + 1) / 2
+            val keysToShow = when (side) {
+                KeyboardSide.LEFT -> rowOfKeys.subList(0, splitIndex)
+                KeyboardSide.RIGHT -> rowOfKeys.subList(splitIndex, rowOfKeys.size)
+            }
+
+            KeyboardHalfRow(
+                keys = keysToShow,
+                side = side,
+                isCapsLockOn = isCapsLockOn,
+                isShiftOn=isShiftOn,
+                viewModel = viewModel,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(rowHeight)
-            ) {
-                val (leftRef, rightRef) = createRefs()
-
-                // Split keys into halves
-                val splitIndex = (rowOfKeys.size + 1) / 2
-                val leftHalf = rowOfKeys.subList(0, splitIndex)
-                val rightHalf = rowOfKeys.subList(splitIndex, rowOfKeys.size)
-
-                // Left Keyboard
-                KeyboardHalf(
-                    keys = leftHalf,
-                    isCapsLockOn = isCapsLockOn,
-                    viewModel = viewModel,
-                    modifier = Modifier.constrainAs(leftRef) {
-                        start.linkTo(parent.start)
-                        top.linkTo(parent.top)
-                        bottom.linkTo(parent.bottom)
-                        width = Dimension.percent(0.2f)
-                    },
-                    Arrangement.End
-                )
-
-                // Right Keyboard
-                KeyboardHalf(
-                    keys = rightHalf,
-                    isCapsLockOn = isCapsLockOn,
-                    viewModel = viewModel,
-                    modifier = Modifier.constrainAs(rightRef) {
-                        end.linkTo(parent.end)
-                        top.linkTo(parent.top)
-                        bottom.linkTo(parent.bottom)
-                        width = Dimension.percent(0.2f)
-                    },
-                    Arrangement.Start
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun KeyboardHalf(
-    keys: List<Key>,
-    isCapsLockOn: Boolean,
-    viewModel: KeyboardViewModel,
-    modifier: Modifier = Modifier,
-    arrangement:Arrangement.Horizontal
-){
-    Row(
-        modifier = modifier,
-        horizontalArrangement = arrangement
-    ) {
-        keys.forEach { key ->
-            KeyboardKey(
-                key,
-                isCapsLockOn,
-                onKeyPress = { text ->
-                    when (key.type) {
-                        KeyType.ACTION_TOGGLE -> viewModel.toggleKeyboardVisibility()
-                        KeyType.ACTION_BACKSPACE -> viewModel.onBackspace()
-                        KeyType.ACTION_ENTER -> viewModel.onEnter()
-                        KeyType.ACTION_SPACE -> viewModel.onKeyPress(' ')
-                        KeyType.ACTION_SHIFT -> viewModel.onToggleCapsLock()
-                        else -> viewModel.onKeyPress(text.first())
-                    }
-                },
-                modifier.background(
-                    shape = RectangleShape,
-                    color = Color.Black
-                )
             )
         }
     }
 }
 
+@Composable
+fun KeyboardHalfRow(
+    keys: List<Key>,
+    side: KeyboardSide,
+    isCapsLockOn: Boolean,
+    isShiftOn: Boolean,
+    viewModel: KeyboardViewModel,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = when (side) {
+            KeyboardSide.LEFT -> Arrangement.End
+            KeyboardSide.RIGHT -> Arrangement.Start
+        }
+    ) {
+        keys.forEach { key ->
+            KeyboardKey(
+                key = key,
+                isShiftOn,
+                isCapsLockOn,
+                onKeyEvent = viewModel::onKeyEvent,
+            )
+        }
+    }
+}

@@ -1,28 +1,30 @@
-// Earlier called NewFileScreen: @draco remove this line when you read this
-// Changed because its reusable: this line too
-
 package com.bsbeetle.bananaspaghetti.ui.home
 
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
-
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
-import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboard
+import com.bsbeetle.bananaspaghetti.ui.components.BottomBar
+import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
+import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboardHalf
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
+
+
 
 @Composable
 fun InitialEditorUI(
     viewModel: KeyboardViewModel = viewModel()
 ){
-
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // for selecting the layout.
@@ -32,43 +34,82 @@ fun InitialEditorUI(
         KeyboardLayout.qwertyLayout
     }
 
-        ConstraintLayout(modifier = Modifier.fillMaxSize()) {
-            val (codeEditor, keyboardRef) = createRefs()
+    ConstraintLayout(modifier = Modifier.fillMaxSize()) {
+        val (topLeftRef,topRightRef,leftKeyboardRef, codeEditor, rightKeyboardRef,bottomBarRef) = createRefs()
 
-            // WebView Editor field spans full height and middle 60% width
-            Editor(
-            //Code Editor spans full height and middle 60% width
-                modifier = Modifier
-                    .constrainAs(codeEditor) {
-                        // This is to have full height from top to bottom
-                        top.linkTo(parent.top)
-                        bottom.linkTo(parent.bottom)
-
-                        // This tells to fill the 50% width from start to end (Im getting correct ration for 60%, hence changed ~ @yuki)
-                        start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                        width = Dimension.percent(0.6f)
-
-                        // Fill the total available height on the screen
-                        height = Dimension.fillToConstraints
-                        centerHorizontallyTo(parent) // Center the 60% width element
-                    },
-                viewModel
-            )
-
-            // Split keyboard Constraint layout(overlaying)
-            SplitKeyboard(
-                layout = layout,
-                isCapsLockOn = uiState.isCapsLockOn,
-                viewModel = viewModel,
-                modifier = Modifier.constrainAs(keyboardRef) {
-                    // Keyboard positioned at the bottom
-                    bottom.linkTo(parent.bottom)
-                    start.linkTo(parent.start)
-                    end.linkTo(parent.end)
-                    width = Dimension.fillToConstraints // Fills available width
-                    // The keyboard will naturally overlay on top of the text field
-                }
-            )
+        // Top Left box
+        Box(modifier = Modifier.constrainAs(topLeftRef){
+            top.linkTo(parent.top)
+            bottom.linkTo(leftKeyboardRef.top)
+            start.linkTo(parent.start)
+            end.linkTo(codeEditor.start)
+            width= Dimension.fillToConstraints
+            height = Dimension.fillToConstraints
         }
+        ){}
+
+        // Top Right box
+        Box(modifier = Modifier.constrainAs(topRightRef){
+            top.linkTo(parent.top)
+            bottom.linkTo(rightKeyboardRef.top)
+            start.linkTo(codeEditor.start)
+            end.linkTo(parent.end)
+            width= Dimension.fillToConstraints
+            height = Dimension.fillToConstraints
+        }
+        ){}
+        // Left Keyboard - positioned at bottom left
+        SplitKeyboardHalf(
+            layout = layout,
+            side = KeyboardSide.LEFT,
+            isCapsLockOn = uiState.isCapsLockOn,
+            isShiftOn = uiState.isShiftOn,
+            viewModel = viewModel,
+            modifier = Modifier.constrainAs(leftKeyboardRef) {
+                start.linkTo(parent.start)
+                bottom.linkTo(parent.bottom)
+                width = Dimension.percent(0.2f) // 20% width for left keyboard
+            }
+        )
+
+        // Code Editor - positioned in the center, full height
+        Editor(
+            modifier = Modifier
+                .constrainAs(codeEditor) {
+                    top.linkTo(parent.top)
+                    bottom.linkTo(parent.bottom)
+                    start.linkTo(leftKeyboardRef.end)
+                    end.linkTo(rightKeyboardRef.start)
+                    width = Dimension.fillToConstraints // Takes remaining 60% width
+                    height = Dimension.fillToConstraints
+                },
+            viewModel
+        )
+
+        // Right Keyboard - positioned at bottom right
+        SplitKeyboardHalf(
+            layout = layout,
+            side = KeyboardSide.RIGHT,
+            isCapsLockOn = uiState.isCapsLockOn,
+            isShiftOn = uiState.isShiftOn,
+            viewModel = viewModel,
+            modifier = Modifier.constrainAs(rightKeyboardRef) {
+                end.linkTo(parent.end)
+                bottom.linkTo(parent.bottom)
+                width = Dimension.percent(0.2f) // 20% width for right keyboard
+            }
+        )
+
+
+        BottomBar(
+            modifier = Modifier
+                .height(16.dp)
+                .constrainAs(bottomBarRef) {
+                    bottom.linkTo(codeEditor.bottom)   // stick to editor’s bottom edge
+                    start.linkTo(codeEditor.start)     // align with editor
+                    end.linkTo(codeEditor.end)
+                    width = Dimension.fillToConstraints
+                }
+        )
+    }
 }

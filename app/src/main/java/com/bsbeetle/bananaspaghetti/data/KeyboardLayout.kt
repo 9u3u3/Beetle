@@ -8,10 +8,19 @@ object KeyboardLayout {
 
     // Base weights
     private const val NORMAL_KEY = 1f
-    private const val SHIFT_KEY = 3f
-    private const val BACKSPACE_KEY = 1.5f
-    private const val SPACE_KEY = 6f
-    private const val ENTER_KEY = 2f
+    private const val SHIFT_KEY = NORMAL_KEY
+    private const val SPACE_KEY = NORMAL_KEY*3
+    private const val ENTER_KEY = NORMAL_KEY*1.5f
+
+
+
+        // --- ADD THIS NEW LAYOUT ---
+//        val symbolBarLayout = listOf(
+//            Key("(", "("), Key(")", ")"), Key("{", "{"), Key("}", "}"), Key("[", "["), Key("]", "]"),
+//            Key("=", "="), Key("+", "+"), Key("-", "-"), Key("/", "/"), Key("*", "*"), Key("%", "%"),
+//            Key(";", ";"), Key(":", ":"), Key("_", "_"), Key("\"", "\""), Key("'", "'"), Key("<", "<"), Key(">", ">")
+//        )
+
 
 
     val qwertyLayout = listOf(
@@ -38,7 +47,7 @@ object KeyboardLayout {
         ),
         // Row 4
         listOf(
-            Key("⇧", shiftText = "⇪", type = KeyType.ACTION_SHIFT, weight = NORMAL_KEY),
+            Key("⇧", shiftText = "⇪", type = KeyType.ACTION_SHIFT, weight = SHIFT_KEY),
             Key("z", "Z", NORMAL_KEY), Key("x", "X", NORMAL_KEY), Key("c", "C", NORMAL_KEY),
             Key("v", "V", NORMAL_KEY), Key("b", "B", NORMAL_KEY), Key("n", "N", NORMAL_KEY),
             Key("m", "M", NORMAL_KEY),Key(text = ",", shiftText = ",", weight = NORMAL_KEY),Key(text = ".", shiftText = ".", weight = NORMAL_KEY)
@@ -46,12 +55,12 @@ object KeyboardLayout {
         //Row 5
         listOf(
             Key("🌐", type = KeyType.ACTION_TOGGLE, weight = NORMAL_KEY),
-            Key("Space", type = KeyType.ACTION_SPACE, weight = NORMAL_KEY*3),
+            Key("Space", type = KeyType.ACTION_SPACE, weight = SPACE_KEY),
             Key(text = "{}", shiftText = "{}", weight = NORMAL_KEY),
 
 
             Key(text = "()", shiftText = "()", weight = NORMAL_KEY),
-            Key("↵", type = KeyType.ACTION_ENTER, weight = NORMAL_KEY*1.5f),
+            Key("↵", type = KeyType.ACTION_ENTER, weight = ENTER_KEY),
             Key("⌫", type = KeyType.ACTION_BACKSPACE, weight = NORMAL_KEY),
         )
     )

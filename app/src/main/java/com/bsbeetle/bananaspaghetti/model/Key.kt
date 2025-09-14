@@ -8,7 +8,6 @@ enum class KeyType {
     ACTION_BACKSPACE,
     ACTION_SPACE,
     ACTION_ENTER,
-
     ACTION_TOGGLE
 }
 // Represents a single key on the keyboard
