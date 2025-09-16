@@ -95,7 +95,7 @@ object KeyboardLayout {
         // Row 4
         listOf(
             Key("@", "@", NORMAL_KEY), Key(":", ":", NORMAL_KEY), Key("_", "_", NORMAL_KEY),
-            Key("?", "?", NORMAL_KEY), Key("&&", "&&", NORMAL_KEY), Key("tab", "\t", NORMAL_KEY), // tab/indent
+            Key("?", "?", NORMAL_KEY), Key("&&", "&&", NORMAL_KEY), Key("tab", "\t", type = KeyType.ACTION_TAB, ), // tab/indent
             Key("nL", "\n", NORMAL_KEY), Key("=>", "=>", NORMAL_KEY),Key("→", "→", NORMAL_KEY),
             Key("*", "*", NORMAL_KEY)
         ),

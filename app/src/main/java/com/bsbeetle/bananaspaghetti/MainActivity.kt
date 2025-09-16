@@ -1,4 +1,4 @@
-// Author : Harsh Gaonker
+// Authors : Harsh Gaonker & Johniton Mascarenhas
 // Project started on : 18 - August - 2025
 
 package com.bsbeetle.bananaspaghetti
@@ -10,10 +10,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bsbeetle.bananaspaghetti.ui.DisableDefaultKeyboard
 import com.bsbeetle.bananaspaghetti.ui.EnterImmersiveMode

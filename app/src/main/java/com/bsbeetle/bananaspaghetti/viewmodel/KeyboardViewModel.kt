@@ -46,6 +46,7 @@ class KeyboardViewModel : ViewModel() {
             KeyType.ACTION_SHIFT -> handleShift(gesture)
             KeyType.ACTION_ENTER -> handleEnter(gesture)
             KeyType.ACTION_SPACE -> handleSpace(gesture)
+            KeyType.ACTION_TAB -> handleTab(gesture)
             KeyType.ACTION_TOGGLE -> if (gesture == KeyGesture.Tap) toggleKeyboardVisibility()
         }
     }
@@ -134,12 +135,21 @@ class KeyboardViewModel : ViewModel() {
 
     private fun handleSpace(gesture: KeyGesture) {
         when (gesture) {
-            KeyGesture.Tap -> onKeyPress(' ')
-            KeyGesture.LongPress -> onKeyPress(' ') // Allow continuous space if held
+            KeyGesture.Tap, KeyGesture.LongPress -> emitText(" ")
             else -> {}
         }
     }
 
+    private fun handleTab(gesture: KeyGesture) {
+        when (gesture) {
+            KeyGesture.Tap , KeyGesture.LongPress -> {
+                val spaces = " ".repeat(uiState.value.indentValue) // prints x spaces
+                emitText(spaces)
+            }
+            else -> {}
+        }
+
+    }
     fun toggleKeyboardVisibility() {
         _uiState.update { currentState ->
             currentState.copy(toggleKeyboard = !currentState.toggleKeyboard)
@@ -158,6 +168,12 @@ class KeyboardViewModel : ViewModel() {
         }
     }
 
+    fun updateIndentSize(newSize: Int) {
+        _uiState.update { currentState ->
+            currentState.copy(indentValue = newSize)
+        }
+    }
+
 
     // Emitter functions -> Basic it helps to implements better things
 
@@ -165,10 +181,6 @@ class KeyboardViewModel : ViewModel() {
         viewModelScope.launch {
             _editorAction.emit(EditorAction.InsertText(text))
         }
-    }
-
-    private fun onKeyPress(key: Char) {
-        emitText(key.toString())
     }
 
     private fun onBackspace() {

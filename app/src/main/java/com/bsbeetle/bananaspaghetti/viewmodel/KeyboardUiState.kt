@@ -6,6 +6,7 @@ data class KeyboardUiState(
     val isCapsLockOn: Boolean = false,
     val toggleKeyboard: Boolean = false, // Added this line, default to true (visible)
     val isLeftKeyboardVisible: Boolean = true,
-    val isRightKeyboardVisible: Boolean = true
+    val isRightKeyboardVisible: Boolean = true,
+    val indentValue:Int=4
 // Add other state properties here for control and etc
 )

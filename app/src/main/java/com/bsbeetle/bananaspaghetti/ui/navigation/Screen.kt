@@ -6,4 +6,6 @@ sealed class Screen(val route: String) {
     object OpenFile: Screen("openFile")
 
     object Settings: Screen("settings")
+
+    object Demo: Screen("demo")
 }

@@ -50,6 +50,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.tools.core)
+    implementation(libs.androidx.foundation.layout)
 
 
     testImplementation(libs.junit)

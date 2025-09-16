@@ -9,6 +9,7 @@ import androidx.navigation.compose.rememberNavController
 import com.bsbeetle.bananaspaghetti.ui.home.HomeScreen
 import com.bsbeetle.bananaspaghetti.ui.home.InitialEditorUI
 import com.bsbeetle.bananaspaghetti.ui.home.SettingsScreen
+import com.bsbeetle.bananaspaghetti.ui.keyboard.DemoEditorUi
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
@@ -60,7 +61,17 @@ fun AppNavigation(
         }
 
         composable(route=Screen.Settings.route){
-            SettingsScreen()
+            SettingsScreen(
+                keyboardViewModel,
+                navController
+            )
+        }
+
+        composable(route=Screen.Demo.route){
+            DemoEditorUi(
+                keyboardViewModel,
+                sliderViewModel,
+            )
         }
 
     }

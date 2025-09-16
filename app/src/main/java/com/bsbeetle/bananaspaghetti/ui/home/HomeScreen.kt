@@ -4,9 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
-import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,9 +20,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -32,8 +27,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.ComponentActivity
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.data.FileData
@@ -41,7 +34,6 @@ import com.bsbeetle.bananaspaghetti.data.OpenedFiles
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.getFileName
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
-import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 
 @SuppressLint("RestrictedApi")
 @Composable
@@ -89,7 +81,7 @@ fun HomeScreen(
             modifier = Modifier
                 .align(Alignment.Center)
         ) {
-            Column() {
+            Column {
                 Text(
                     text = "Banana Spaghetti",
                     fontSize = 30.sp,
