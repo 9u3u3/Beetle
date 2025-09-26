@@ -27,7 +27,6 @@ class MainActivity : ComponentActivity() {
 
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
         setContent {
 
             // V I E W  M O D E L S

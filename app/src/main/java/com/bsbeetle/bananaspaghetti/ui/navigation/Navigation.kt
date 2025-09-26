@@ -63,7 +63,7 @@ fun AppNavigation(
         composable(route=Screen.Settings.route){
             SettingsScreen(
                 keyboardViewModel,
-                navController
+                navController,
             )
         }
 
