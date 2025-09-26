@@ -2,9 +2,6 @@ package com.bsbeetle.bananaspaghetti.ui.home
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -66,7 +63,14 @@ fun HomeScreen(
                 MenuItem(
                     iconRes = R.drawable.note_add_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
                     label = "New File",
-                    onClick = { navController.navigate(Screen.NewFile.route) },
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type = "*/*"  // or whatever MIME type you want
+                            putExtra(Intent.EXTRA_TITLE, "NewFile.txt") // default filename
+                        }
+                        launcher.launch(intent)
+                          },
                 )
 
                 // Open file

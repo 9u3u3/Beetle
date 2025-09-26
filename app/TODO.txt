@@ -1,0 +1,4 @@
+Add two different viewModels
+setup webview for term (just basic view)
+Fix the UI, Clean the code
+add proot alpine

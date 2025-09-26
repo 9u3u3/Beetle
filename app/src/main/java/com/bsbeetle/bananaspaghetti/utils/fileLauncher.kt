@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.DocumentsContract
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,9 +32,7 @@ fun fileLauncher(context: Context, navController: NavController, fileViewModel: 
                     context.contentResolver.takePersistableUriPermission(uri, flags)
 
                     // Checking if selected URI is a file or a directory
-                    val pickedUri = DocumentFile.fromTreeUri(context, uri) ?: DocumentFile.fromSingleUri(context, uri)
-
-                    if(pickedUri.isFile) { // Clicked Open a file
+                    if (DocumentsContract.isDocumentUri(context, uri)) {
                         OpenedFiles.files.add(
                             FileData(
                                 getFileName(context, uri)
@@ -43,10 +42,11 @@ fun fileLauncher(context: Context, navController: NavController, fileViewModel: 
                         )
                         fileViewModel.selectedUri = uri
                         navController.navigate(Screen.OpenFile.route)
-                    } else if(pickedUri.isDirectory) { // Clicked open a folder
+                    } else {
                         fileViewModel.selectedFolderUri = uri
                         navController.navigate(Screen.OpenFolder.route)
                     }
+
                 }
             }
         }

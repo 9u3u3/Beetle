@@ -41,6 +41,7 @@ import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
 import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboardHalf
 import com.bsbeetle.bananaspaghetti.data.TopBarButtons
 import com.bsbeetle.bananaspaghetti.ui.components.TopBar
+import com.bsbeetle.bananaspaghetti.ui.components.TopLeftBox
 import com.bsbeetle.bananaspaghetti.utils.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.utils.readFromFile
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
@@ -60,7 +61,6 @@ fun InitialEditorUI (
 
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
-
     val context = LocalContext.current
 
     // Selecting the keyboard layout
@@ -75,15 +75,12 @@ fun InitialEditorUI (
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     var targetHeight by remember { mutableStateOf(17.dp) } // default height
 
-    // Animated height
+    // Animated height (will fix this later as i have to merge it with the blue bar)
     val logHeight by animateDpAsState(
         targetValue = targetHeight,
-        animationSpec = spring(  // spring = bouncy, you can also use tween for linear
-            dampingRatio = 0.8f,
-            stiffness = 50f
-        ),
         label = "logHeightAnim"
     )
+
     val webView = remember {
         WebView(context).apply {
 
