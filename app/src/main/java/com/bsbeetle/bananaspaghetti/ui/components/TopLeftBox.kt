@@ -10,12 +10,17 @@ import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import com.bsbeetle.bananaspaghetti.utils.Tree
+import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 
 @Composable
-fun TopLeftBox(modifier: Modifier = Modifier, fileViewModel: FileViewModel) {
+fun TopLeftBox(
+    modifier: Modifier = Modifier,
+    fileViewModel: FileViewModel,
+    bufferViewModel: BufferViewModel
+) {
 
-    ConstraintLayout(modifier = modifier) {
+    ConstraintLayout(modifier = modifier.background(Color(0xFF252525))) {
         val (leftBar, rightSpace) = createRefs()
 
         // Left bar
@@ -39,9 +44,9 @@ fun TopLeftBox(modifier: Modifier = Modifier, fileViewModel: FileViewModel) {
                  top.linkTo(parent.top)
                  width = Dimension.fillToConstraints
                 }
-                .fillMaxHeight()
-                .background(Color(0xFF252525)),
-            fileViewModel
+                .fillMaxHeight(),
+            fileViewModel,
+            bufferViewModel
         )
     }
 

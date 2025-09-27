@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.R
-import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.fileLauncher
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 
@@ -66,8 +65,7 @@ fun HomeScreen(
                     onClick = {
                         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                             addCategory(Intent.CATEGORY_OPENABLE)
-                            type = "*/*"  // or whatever MIME type you want
-                            putExtra(Intent.EXTRA_TITLE, "NewFile.txt") // default filename
+                            type = "*/*"
                         }
                         launcher.launch(intent)
                           },

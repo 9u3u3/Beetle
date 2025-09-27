@@ -4,6 +4,7 @@
 package com.bsbeetle.bananaspaghetti
 
 import android.os.Bundle
+import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -17,25 +18,26 @@ import com.bsbeetle.bananaspaghetti.ui.DisableDefaultKeyboard
 import com.bsbeetle.bananaspaghetti.ui.EnterImmersiveMode
 import com.bsbeetle.bananaspaghetti.ui.navigation.AppNavigation
 import com.bsbeetle.bananaspaghetti.ui.theme.BananaSpaghettiTheme
+import com.bsbeetle.bananaspaghetti.utils.EditorWebView
+import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
 
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
 
-            // V I E W  M O D E L S
-            // Keyboard view model
             val keyboardViewModel: KeyboardViewModel = viewModel()
-            // File view model
             val fileViewModel: FileViewModel = viewModel()
-            // Slider view model
             val sliderViewModel: SliderViewModel = viewModel()
+            val webView: WebView = EditorWebView.getWebview(this)
+            val bufferViewModel: BufferViewModel = viewModel()
 
             BananaSpaghettiTheme {
 
@@ -51,13 +53,20 @@ class MainActivity : ComponentActivity() {
                     AppNavigation(
                         fileViewModel,
                         keyboardViewModel,
-                        sliderViewModel
+                        sliderViewModel,
+                        bufferViewModel
                     )
                 }
             }
 
         }
     }
+
+    override fun onDestroy() {
+        EditorWebView.destroy()
+        super.onDestroy()
+    }
+
 }
 
 
