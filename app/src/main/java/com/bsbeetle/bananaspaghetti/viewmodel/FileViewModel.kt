@@ -7,5 +7,6 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 
 class FileViewModel : ViewModel() {
-    var selectedUri by mutableStateOf<Uri?>(null)
+    var selectedUri by mutableStateOf<Uri?>(value = null)
+    var selectedFolderUri by mutableStateOf<Uri?>(value = null)
 }

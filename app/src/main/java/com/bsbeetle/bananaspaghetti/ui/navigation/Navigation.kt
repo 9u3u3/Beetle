@@ -8,13 +8,20 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.bsbeetle.bananaspaghetti.ui.home.HomeScreen
 import com.bsbeetle.bananaspaghetti.ui.home.InitialEditorUI
+import com.bsbeetle.bananaspaghetti.ui.home.InitialTerminalUI
+import com.bsbeetle.bananaspaghetti.ui.home.SettingsScreen
+import com.bsbeetle.bananaspaghetti.ui.keyboard.DemoEditorUi
+import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
+import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 
 @Composable
 fun AppNavigation(
     fileViewModel: FileViewModel,
-    keyboardViewModel: KeyboardViewModel
+    keyboardViewModel: KeyboardViewModel,
+    sliderViewModel: SliderViewModel,
+    bufferViewModel: BufferViewModel
 ) {
 
     val navController = rememberNavController()
@@ -38,7 +45,10 @@ fun AppNavigation(
         ) {
                 InitialEditorUI(
                     fileViewModel,
-                    keyboardViewModel
+                    keyboardViewModel,
+                    sliderViewModel,
+                    navController,
+                    bufferViewModel
                 )
         }
 
@@ -48,9 +58,49 @@ fun AppNavigation(
         ) {
             InitialEditorUI(
                 fileViewModel,
-                keyboardViewModel
+                keyboardViewModel,
+                sliderViewModel,
+                navController,
+                bufferViewModel
+            )
+        }
+
+        // Open a folder (Also add a New Folder if this doesn't provide creation of new folder)
+        composable(
+            Screen.OpenFolder.route
+        ) {
+            InitialEditorUI(
+                fileViewModel,
+                keyboardViewModel,
+                sliderViewModel,
+                navController,
+                bufferViewModel
+            )
+        }
+
+        composable(
+            Screen.Terminal.route
+        ) {
+            InitialTerminalUI(
+                keyboardViewModel,
+                sliderViewModel
+            )
+        }
+
+        composable(route=Screen.Settings.route){
+            SettingsScreen(
+                keyboardViewModel,
+                navController,
+            )
+        }
+
+        composable(route=Screen.Demo.route){
+            DemoEditorUi(
+                keyboardViewModel,
+                sliderViewModel,
             )
         }
 
     }
 }
+

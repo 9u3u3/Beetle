@@ -1,43 +1,46 @@
 package com.bsbeetle.bananaspaghetti.ui.keyboard
 
-
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.getValue
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import com.bsbeetle.bananaspaghetti.model.Key
 import com.bsbeetle.bananaspaghetti.model.KeyType
+import com.bsbeetle.bananaspaghetti.viewmodel.KeyGesture
+
 
 @Composable
 fun RowScope.KeyboardKey(
     key: Key,
+    isShiftOn: Boolean,
     isCapsLockOn: Boolean,
-    onKeyPress: (String) -> Unit,
+    onKeyEvent: (Key, KeyGesture) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(targetValue = if (isPressed) 0.92f else 1.0f, label = "")
 
-    // Animate scale
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.92f else 1.0f,
-        label = "keyScaleAnimation"
-    )
+
+// Only highlight Shift key when either Shift or CapsLock is on
+    val isShiftLit = (key.type == KeyType.ACTION_SHIFT && (isShiftOn || isCapsLockOn))
+
 
     val textToShow = when {
-        isCapsLockOn -> key.shiftText ?: key.text.uppercase()
+        isShiftOn or isCapsLockOn -> key.shiftText ?: key.text.uppercase()
         else -> key.text
     }
 
@@ -51,28 +54,46 @@ fun RowScope.KeyboardKey(
     }
 
     // Pressed → slightly darker
-    val backgroundColor = if (isPressed) baseColor.copy(alpha = 0.85f) else baseColor
+//    val backgroundColor = if (isPressed) baseColor.copy(alpha = 0.85f) else baseColor
+    val backgroundColor = when {
+        isShiftLit -> Color(0xFF3A5FCD) // blue highlight when active
+        isPressed -> baseColor.copy(alpha = 0.85f)
+        else -> baseColor
+    }
+
+
+    val gestureModifier = when (key.type) {
+                // The Shift key is special key
+        // Press is buggy so commented out
+        KeyType.ACTION_SHIFT -> Modifier.pointerInput(key) {
+            detectTapGestures(
+                onDoubleTap = { onKeyEvent(key, KeyGesture.DoubleTap) },
+                onTap = { onKeyEvent(key, KeyGesture.Tap) }
+            )
+        }
+//                onPress = {
+//                    onKeyEvent(key, KeyGesture.Press)
+//                    tryAwaitRelease()
+//                    onKeyEvent(key, KeyGesture.Release)
+//                },
+
+        // All other keys get the fast, continuous-press treatment
+        else -> Modifier.continuousPress(key = key) { gesture -> // Pass the key object here
+            onKeyEvent(key, gesture)
+        }
+    }
 
     Surface(
-        modifier = Modifier
-            .graphicsLayer(scaleX = scale, scaleY = scale) // keep press animation
+        modifier = modifier
+            .graphicsLayer(scaleX = scale, scaleY = scale)
             .weight(key.weight)
             .padding(1.dp)
             .fillMaxHeight()
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = { onKeyPress(textToShow) }
-            ),
+            .then(gestureModifier),
         color = backgroundColor,
-        tonalElevation = 3.dp,
         shape = RoundedCornerShape(6.dp),
-        border = BorderStroke(
-            1.dp,
-            if (isCapsLockOn && key.text=="⇧")
-                Color(0xFF00E5FF) // teal glow for active Caps
-            else Color(0xFF2E2E38)
-        )
+        border = BorderStroke(0.5.dp, Color(0xFF3A3A3C)),
+        shadowElevation = if (isPressed) 1.dp else 3.dp
     ) {
         Box(
             contentAlignment = Alignment.Center,

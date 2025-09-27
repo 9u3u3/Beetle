@@ -2,25 +2,35 @@ package com.bsbeetle.bananaspaghetti.data
 
 import com.bsbeetle.bananaspaghetti.model.Key
 import com.bsbeetle.bananaspaghetti.model.KeyType
+import com.bsbeetle.bananaspaghetti.model.StableKeyboardLayout
 
 
 object KeyboardLayout {
 
     // Base weights
     private const val NORMAL_KEY = 1f
-    private const val SHIFT_KEY = 3f
-    private const val BACKSPACE_KEY = 1.5f
-    private const val SPACE_KEY = 6f
-    private const val ENTER_KEY = 2f
+    private const val SHIFT_KEY = NORMAL_KEY
+    private const val SPACE_KEY = NORMAL_KEY*3
+    private const val ENTER_KEY = NORMAL_KEY*1.5f
 
 
-    val qwertyLayout = listOf(
+
+        // --- ADD THIS NEW LAYOUT ---
+//        val symbolBarLayout = listOf(
+//            Key("(", "("), Key(")", ")"), Key("{", "{"), Key("}", "}"), Key("[", "["), Key("]", "]"),
+//            Key("=", "="), Key("+", "+"), Key("-", "-"), Key("/", "/"), Key("*", "*"), Key("%", "%"),
+//            Key(";", ";"), Key(":", ":"), Key("_", "_"), Key("\"", "\""), Key("'", "'"), Key("<", "<"), Key(">", ">")
+//        )
+
+
+
+    val qwertyLayout = StableKeyboardLayout( listOf(
         // Row 1
         listOf(
-            Key("1", "1", NORMAL_KEY), Key("2", "2", NORMAL_KEY), Key("3", "3", NORMAL_KEY),
-            Key("4", "4", NORMAL_KEY), Key("5", "5", NORMAL_KEY), Key("6", "6", NORMAL_KEY),
-            Key("7", "7", NORMAL_KEY), Key("8", "8", NORMAL_KEY), Key("9", "9", NORMAL_KEY),
-            Key("0", "0", NORMAL_KEY)
+            Key("1", "!", NORMAL_KEY), Key("2", "@", NORMAL_KEY), Key("3", "#", NORMAL_KEY),
+            Key("4", "$", NORMAL_KEY), Key("5", "%", NORMAL_KEY), Key("6", "^", NORMAL_KEY),
+            Key("7", "&", NORMAL_KEY), Key("8", "*", NORMAL_KEY), Key("9", "(", NORMAL_KEY),
+            Key("0", ")", NORMAL_KEY)
         ),
         // Row 2
         listOf(
@@ -38,7 +48,7 @@ object KeyboardLayout {
         ),
         // Row 4
         listOf(
-            Key("⇧", shiftText = "⇪", type = KeyType.ACTION_SHIFT, weight = NORMAL_KEY),
+            Key("⇧", shiftText = "⇪", type = KeyType.ACTION_SHIFT, weight = SHIFT_KEY),
             Key("z", "Z", NORMAL_KEY), Key("x", "X", NORMAL_KEY), Key("c", "C", NORMAL_KEY),
             Key("v", "V", NORMAL_KEY), Key("b", "B", NORMAL_KEY), Key("n", "N", NORMAL_KEY),
             Key("m", "M", NORMAL_KEY),Key(text = ",", shiftText = ",", weight = NORMAL_KEY),Key(text = ".", shiftText = ".", weight = NORMAL_KEY)
@@ -46,18 +56,18 @@ object KeyboardLayout {
         //Row 5
         listOf(
             Key("🌐", type = KeyType.ACTION_TOGGLE, weight = NORMAL_KEY),
-            Key("Space", type = KeyType.ACTION_SPACE, weight = NORMAL_KEY*3),
+            Key("Space", type = KeyType.ACTION_SPACE, weight = SPACE_KEY),
             Key(text = "{}", shiftText = "{}", weight = NORMAL_KEY),
 
 
             Key(text = "()", shiftText = "()", weight = NORMAL_KEY),
-            Key("↵", type = KeyType.ACTION_ENTER, weight = NORMAL_KEY*1.5f),
+            Key("↵", type = KeyType.ACTION_ENTER, weight = ENTER_KEY),
             Key("⌫", type = KeyType.ACTION_BACKSPACE, weight = NORMAL_KEY),
         )
-    )
+    ))
 
 
-    val developerLayout = listOf(
+    val developerLayout = StableKeyboardLayout(listOf(
         //Row 1
         listOf(
             Key("{", "{", NORMAL_KEY), Key("}", "}", NORMAL_KEY), Key("(", "(", NORMAL_KEY),
@@ -85,8 +95,8 @@ object KeyboardLayout {
         // Row 4
         listOf(
             Key("@", "@", NORMAL_KEY), Key(":", ":", NORMAL_KEY), Key("_", "_", NORMAL_KEY),
-            Key("?", "?", NORMAL_KEY), Key("&&", "&&", NORMAL_KEY), Key("\t", "\t", NORMAL_KEY), // tab/indent
-            Key("\n", "\n", NORMAL_KEY), Key("=>", "=>", NORMAL_KEY),Key("→", "→", NORMAL_KEY),
+            Key("?", "?", NORMAL_KEY), Key("&&", "&&", NORMAL_KEY), Key("tab", "\t", type = KeyType.ACTION_TAB, ), // tab/indent
+            Key("nL", "\n", NORMAL_KEY), Key("=>", "=>", NORMAL_KEY),Key("→", "→", NORMAL_KEY),
             Key("*", "*", NORMAL_KEY)
         ),
 
@@ -96,5 +106,5 @@ object KeyboardLayout {
 
             Key("=>", "=>", NORMAL_KEY),Key("→", "→", NORMAL_KEY), Key("*", "*", NORMAL_KEY)
         )
-    )
+    ))
 }
