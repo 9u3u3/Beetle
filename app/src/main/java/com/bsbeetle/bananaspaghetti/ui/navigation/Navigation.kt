@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.bsbeetle.bananaspaghetti.ui.home.HomeScreen
 import com.bsbeetle.bananaspaghetti.ui.home.InitialEditorUI
+import com.bsbeetle.bananaspaghetti.ui.home.InitialTerminalUI
 import com.bsbeetle.bananaspaghetti.ui.home.SettingsScreen
 import com.bsbeetle.bananaspaghetti.ui.keyboard.DemoEditorUi
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
@@ -74,6 +75,15 @@ fun AppNavigation(
                 sliderViewModel,
                 navController,
                 bufferViewModel
+            )
+        }
+
+        composable(
+            Screen.Terminal.route
+        ) {
+            InitialTerminalUI(
+                keyboardViewModel,
+                sliderViewModel
             )
         }
 

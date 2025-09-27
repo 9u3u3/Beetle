@@ -19,6 +19,7 @@ import com.bsbeetle.bananaspaghetti.ui.EnterImmersiveMode
 import com.bsbeetle.bananaspaghetti.ui.navigation.AppNavigation
 import com.bsbeetle.bananaspaghetti.ui.theme.BananaSpaghettiTheme
 import com.bsbeetle.bananaspaghetti.utils.EditorWebView
+import com.bsbeetle.bananaspaghetti.utils.TerminalWebView
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
@@ -37,6 +38,7 @@ class MainActivity : ComponentActivity() {
             val fileViewModel: FileViewModel = viewModel()
             val sliderViewModel: SliderViewModel = viewModel()
             val webView: WebView = EditorWebView.getWebview(this)
+            val termWebView: WebView = TerminalWebView.getWebview(this)
             val bufferViewModel: BufferViewModel = viewModel()
 
             BananaSpaghettiTheme {

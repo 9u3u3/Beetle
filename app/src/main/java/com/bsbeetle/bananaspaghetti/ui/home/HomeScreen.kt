@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.R
+import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.fileLauncher
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 
@@ -98,6 +99,9 @@ fun HomeScreen(
                 MenuItem(
                     iconRes = R.drawable.terminal_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
                     label = "Open Terminal",
+                    onClick = {
+                        navController.navigate(Screen.Terminal.route)
+                    }
                 )
             }
         }

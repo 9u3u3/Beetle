@@ -5,6 +5,7 @@ sealed class Screen(val route: String) {
     object NewFile: Screen("newFile")
     object OpenFile: Screen("openFile")
     object OpenFolder: Screen("openFolder")
+    object Terminal: Screen(route = "terminal")
     object Settings: Screen("settings")
 
     object Demo: Screen("demo")
