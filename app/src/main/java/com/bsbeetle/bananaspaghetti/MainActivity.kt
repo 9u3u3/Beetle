@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bsbeetle.bananaspaghetti.tenebrio.data.ShellExecutor
+import com.bsbeetle.bananaspaghetti.tenebrio.terminal.Terminal
 import com.bsbeetle.bananaspaghetti.ui.DisableDefaultKeyboard
 import com.bsbeetle.bananaspaghetti.ui.EnterImmersiveMode
 import com.bsbeetle.bananaspaghetti.ui.navigation.AppNavigation
@@ -24,6 +26,8 @@ import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
+import java.io.File
+import kotlin.concurrent.thread
 
 
 class MainActivity : ComponentActivity() {
@@ -40,12 +44,24 @@ class MainActivity : ComponentActivity() {
             val webView: WebView = EditorWebView.getWebview(this)
             val termWebView: WebView = TerminalWebView.getWebview(this)
             val bufferViewModel: BufferViewModel = viewModel()
+            val dotDownloadedFile = File(filesDir.absolutePath, ".downloaded")
+            val terminal = Terminal(this)
+            ShellExecutor.startShell(this)
 
             BananaSpaghettiTheme {
 
                 // System UI settings (Global settings)
                 EnterImmersiveMode()
                 DisableDefaultKeyboard()
+
+                // testing the terminal
+                thread {
+                    if(dotDownloadedFile.exists()) {
+                        terminal.startAxs()
+                    } else {
+                        terminal.installRootfs() // Install root fs and extract it also download the some extra dependencies
+                    }
+                }
 
                 Box(
                     modifier = Modifier
