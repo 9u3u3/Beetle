@@ -1,27 +1,27 @@
-export LD_LIBRARY_PATH=$PREFIX
+export LD_LIBRARY_PATH=$PREFIX # Done
 
-mkdir -p "$PREFIX/tmp"
-mkdir -p "$PREFIX/alpine/tmp"
-mkdir -p "$PREFIX/public"
+mkdir -p "$PREFIX/tmp" # Done
+mkdir -p "$PREFIX/alpine/tmp" # Done
+mkdir -p "$PREFIX/public" # Done
 
-export PROOT_TMP_DIR=$PREFIX/tmp
+export PROOT_TMP_DIR=$PREFIX/tmp # Done
 
 if [ -f "$NATIVE_DIR/libproot.so" ]; then
     export PROOT_LOADER="$NATIVE_DIR/libproot.so"
-fi
+fi # Done
 
 if [ -f "$NATIVE_DIR/libproot32.so" ]; then
     export PROOT_LOADER32="$NATIVE_DIR/libproot32.so"
-fi
+fi # Done
 
 if [ -e "$PREFIX/libtalloc.so.2" ] || [ -L "$PREFIX/libtalloc.so.2" ]; then
     rm "$PREFIX/libtalloc.so.2"
-fi
+fi # Done
 
-ln -s "$NATIVE_DIR/libtalloc.so" "$PREFIX/libtalloc.so.2"
-export PROOT="$NATIVE_DIR/libproot-xed.so"
+ln -s "$NATIVE_DIR/libtalloc.so" "$PREFIX/libtalloc.so.2" # Done
+export PROOT="$NATIVE_DIR/libproot-xed.so" # Done
 
-ARGS="--kill-on-exit"
+ARGS="--kill-on-exit" # Done
 
 for system_mnt in /apex /odm /product /system /system_ext /vendor \
  /linkerconfig/ld.config.txt \

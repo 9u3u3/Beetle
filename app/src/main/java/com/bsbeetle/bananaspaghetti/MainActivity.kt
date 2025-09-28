@@ -46,8 +46,8 @@ class MainActivity : ComponentActivity() {
             val webView: WebView = EditorWebView.getWebview(this)
             val termWebView: WebView = TerminalWebView.getWebview(this)
             val bufferViewModel: BufferViewModel = viewModel()
-            val dotDownloadedFile = File(filesDir.absolutePath, ".downloaded")
-            val terminal = Terminal(this)
+            // val dotDownloadedFile = File(filesDir.absolutePath, ".downloaded")
+            // val terminal = Terminal(this)
             ShellExecutor.startShell(this)
 
             BananaSpaghettiTheme {
@@ -56,17 +56,9 @@ class MainActivity : ComponentActivity() {
                 EnterImmersiveMode()
                 DisableDefaultKeyboard()
 
-                // testing the terminal
-//                thread {
-//                    if(dotDownloadedFile.exists()) {
-//                        terminal.startAxs()
-//                    } else {
-//                        terminal.installRootfs() // Install root fs and extract it also download the some extra dependencies
-//                    }
-//                }
-
-                val pty = Tenebrio()
-                pty.testShell()
+                // PTY test
+                val pty = Tenebrio(this)
+                pty.init()
 
                 Box(
                     modifier = Modifier

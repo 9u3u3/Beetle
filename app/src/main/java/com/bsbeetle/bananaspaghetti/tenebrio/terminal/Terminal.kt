@@ -41,8 +41,6 @@ class Terminal (private val context: Context) {
             println("Inside Already Installing")
             ShellExecutor.sendCommand("source $filesDirPath/proot-wrapper.sh")
             ShellExecutor.sendCommand("fastfetch")
-            ShellExecutor.sendCommand("tmux")
-            ShellExecutor.sendCommand("fastfetch")
         }
     }
 

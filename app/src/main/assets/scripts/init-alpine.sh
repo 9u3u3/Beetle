@@ -43,7 +43,7 @@ fi
 
 if [ "$#" -eq 0 ]; then
     echo "$$" > "$PREFIX/pid"
-    chmod +x "$PREFIX/axs"
+    # chmod +x "$PREFIX/axs"
 
     # Create initrc if it doesn't exist
     if [ ! -e "$PREFIX/alpine/initrc" ]; then
@@ -66,7 +66,7 @@ EOF
 
     echo 'export PS1="\[\e[38;5;46m\]\u\[\e[0m\]@localhost \[\e[0m\]\w \[\e[0m\]\\$ "' >> $PREFIX/alpine/initrc
     chmod +x "$PREFIX/alpine/initrc"
-    "$PREFIX/axs" -c "bash --rcfile /initrc -i"
+    # "$PREFIX/axs" -c "bash --rcfile /initrc -i"
 else
     exec "$@"
 fi
