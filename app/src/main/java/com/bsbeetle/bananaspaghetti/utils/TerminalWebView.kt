@@ -2,8 +2,11 @@ package com.bsbeetle.bananaspaghetti.utils
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.util.Log
 import android.webkit.WebSettings
 import android.webkit.WebView
+import com.bsbeetle.bananaspaghetti.tenebrio.data.ShellExecutor
+import com.bsbeetle.bananaspaghetti.tenebrio.terminal.TerminalBridge
 
 @SuppressLint("StaticFieldLeak")
 object TerminalWebView {
@@ -29,6 +32,16 @@ object TerminalWebView {
                 loadUrl("file:///android_asset/terminal/index.html")
 
             }
+
+            // Attaching the interfaces
+            webView!!.addJavascriptInterface(TerminalBridge { input ->
+                // This is where the typed input arrives
+                Log.d("TerminalInput", input)
+
+                // Proot session
+                ShellExecutor.sendCommand(input)
+            }, "AndroidTerminal")
+
         }
         return webView!!
     }

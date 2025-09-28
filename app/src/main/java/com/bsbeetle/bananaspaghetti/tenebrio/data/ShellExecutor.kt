@@ -2,6 +2,8 @@ package com.bsbeetle.bananaspaghetti.tenebrio.data
 
 import android.content.Context
 import android.util.Log
+import com.bsbeetle.bananaspaghetti.utils.TerminalWebView
+import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import kotlin.concurrent.thread
@@ -17,6 +19,7 @@ object ShellExecutor {
         if(process != null) return
 
         val filesDir = context.filesDir.absolutePath
+        val terminalWebView = TerminalWebView.getWebview(context)
 
         val processBuilder = ProcessBuilder("sh")
         processBuilder.redirectErrorStream(true)
@@ -32,6 +35,10 @@ object ShellExecutor {
         thread {
             reader!!.forEachLine { line ->
                 Log.d("ShellOutput", line)
+                terminalWebView.post {
+                    val jsCommand = "term.write(${JSONObject.quote(line + "\r\n")});"
+                    terminalWebView.evaluateJavascript(jsCommand, null)
+                }
             }
         }
 

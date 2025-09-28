@@ -40,11 +40,9 @@ class Terminal (private val context: Context) {
         } else {
             println("Inside Already Installing")
             ShellExecutor.sendCommand("source $filesDirPath/proot-wrapper.sh")
-            ShellExecutor.sendCommand("apk --version")
-            ShellExecutor.sendCommand("mkdir hello_using_proot_wrapper")
-            ShellExecutor.sendCommand("touch ~/hello_using_proot_wrapper/hello.txt")
             ShellExecutor.sendCommand("fastfetch")
-            ShellExecutor.sendCommand("apk add python3 && python3 -m http.server")
+            ShellExecutor.sendCommand("tmux")
+            ShellExecutor.sendCommand("fastfetch")
         }
     }
 
