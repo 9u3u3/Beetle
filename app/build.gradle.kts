@@ -23,11 +23,25 @@ android {
             abiFilters += listOf("arm64-v8a")
         }
 
+        // For the native code for PTY
+        externalNativeBuild {
+            cmake {
+                cppFlags += "-std=c++17"
+            }
+        }
+
     }
 
     packaging {
         jniLibs {
             useLegacyPackaging = true
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
         }
     }
 

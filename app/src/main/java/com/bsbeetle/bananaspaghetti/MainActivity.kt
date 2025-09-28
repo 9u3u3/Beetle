@@ -4,6 +4,7 @@
 package com.bsbeetle.bananaspaghetti
 
 import android.os.Bundle
+import android.util.Log
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bsbeetle.bananaspaghetti.tenebrio.data.ShellExecutor
+import com.bsbeetle.bananaspaghetti.tenebrio.pty.Tenebrio
 import com.bsbeetle.bananaspaghetti.tenebrio.terminal.Terminal
 import com.bsbeetle.bananaspaghetti.ui.DisableDefaultKeyboard
 import com.bsbeetle.bananaspaghetti.ui.EnterImmersiveMode
@@ -55,13 +57,16 @@ class MainActivity : ComponentActivity() {
                 DisableDefaultKeyboard()
 
                 // testing the terminal
-                thread {
-                    if(dotDownloadedFile.exists()) {
-                        terminal.startAxs()
-                    } else {
-                        terminal.installRootfs() // Install root fs and extract it also download the some extra dependencies
-                    }
-                }
+//                thread {
+//                    if(dotDownloadedFile.exists()) {
+//                        terminal.startAxs()
+//                    } else {
+//                        terminal.installRootfs() // Install root fs and extract it also download the some extra dependencies
+//                    }
+//                }
+
+                val pty = Tenebrio()
+                pty.testShell()
 
                 Box(
                     modifier = Modifier
