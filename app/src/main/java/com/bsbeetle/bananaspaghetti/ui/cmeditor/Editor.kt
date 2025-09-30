@@ -1,13 +1,13 @@
 package com.bsbeetle.bananaspaghetti.ui.cmeditor
 
+// Used for both terminal and the code editor
+
 import android.annotation.SuppressLint
 import android.webkit.WebView
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
-import com.bsbeetle.bananaspaghetti.utils.loadContentWhenReady
-import com.bsbeetle.bananaspaghetti.utils.readFromFile
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorAction
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 

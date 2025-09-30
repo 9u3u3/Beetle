@@ -42,7 +42,6 @@ fi
 
 if [ "$#" -eq 0 ]; then
     echo "$$" > "$PREFIX/pid"
-    # chmod +x "$PREFIX/axs"
 
     # Create initrc if it doesn't exist
     if [ ! -e "$PREFIX/alpine/initrc" ]; then
@@ -65,17 +64,8 @@ EOF
 
     echo 'export PS1="\[\e[38;5;46m\]\u\[\e[0m\]@localhost \[\e[0m\]\w \[\e[0m\]\\$ "' >> $PREFIX/alpine/initrc
     chmod +x "$PREFIX/alpine/initrc"
-
-    # After initrc setup
     exec /bin/bash --rcfile /data/user/0/com.bsbeetle.bananaspaghetti/files/alpine/initrc -i
-    # "$PREFIX/axs" -c "bash --rcfile /initrc -i"
-
-#    set +e
-#    exec /bin/bash -i
 
 else
     exec "$@"
 fi
-
-# Changes made:
-# Removed the default MOTD (not needed)

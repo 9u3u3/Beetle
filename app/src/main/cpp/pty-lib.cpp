@@ -176,7 +176,7 @@ JNIEXPORT jint JNICALL Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_s
         jstring jAlpineTmp,
         jstring jAlpine,
         jstring jAlpineInit
-        ) {
+) {
 
     // Initializing paths
     const char *PREFIX = env->GetStringUTFChars(prefix, nullptr);
@@ -199,13 +199,11 @@ JNIEXPORT jint JNICALL Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_s
     setenv("PROOT_LOADER32", PROOT_LOADER32, 1);
     setenv("PROOT", PROOT, 1);
 
-//    char command[] = "export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/share/bin:/usr/share/sbin:/usr/local/bin:/usr/local/sbin:/system/bin:/system/xbin:$PREFIX/local/bin\n"
-//                     "export PS1=\\\"\\[\\e[38;5;46m\\]\\u\\[\\033[39m\\]@localhost \\[\\033[39m\\]\\w \\[\\033[0m\\]\\\\\\\\$ \\\"\n"
-//                     "export HOME=/home\n"
-//                     "export TERM=xterm-256color\n"
-//                     "cd /home\n"
-//                     "exec /bin/bash";
 
+    char command[] = ". /data/user/0/com.bsbeetle.bananaspaghetti/files/init-alpine.sh";
+
+    // Building proot command
+    // Building proot command - CHANGED THIS PART
     char *argv[] = {
             const_cast<char *>(PROOT),
 
@@ -246,10 +244,10 @@ JNIEXPORT jint JNICALL Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_s
             "--sysvipc",
             "-L",
 
-            "/bin/sh",
-            "-c",
-            const_cast<char *>(INIT_ALPINE),
-            // command,
+            "/bin/sh",           // CHANGED: Use sh instead of bash
+            "-c",                // CHANGED: Add -c flag
+            // const_cast<char *>(INIT_ALPINE),  // CHANGED: Run the init script
+            command,
             NULL
     };
 
@@ -316,5 +314,4 @@ JNIEXPORT jint JNICALL Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_s
     }
 
     return masterFd;
-
 }

@@ -34,13 +34,7 @@ object TerminalWebView {
 
             }
 
-            // Attaching the interfaces
             webView!!.addJavascriptInterface(TerminalBridge { input ->
-                // This is where the typed input arrives
-                Log.d("TerminalInput", input)
-
-                // Proot session
-                // ShellExecutor.sendCommand(input) // <------- THIS MIGHT BE THE ISSUE
                 outputfd.outputFd!!.write("$input\n".toByteArray())
                 outputfd.outputFd!!.flush()
             }, "AndroidTerminal")

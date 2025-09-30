@@ -57,11 +57,7 @@ class MainActivity : ComponentActivity() {
                 DisableDefaultKeyboard()
 
                 val pty = Tenebrio(this)
-                if(dotDownloadedFile.exists()) {
-                 pty.testShell2()
-                } else {
-                    pty.init()
-                }
+                pty.init()
 
                 Box(
                     modifier = Modifier
