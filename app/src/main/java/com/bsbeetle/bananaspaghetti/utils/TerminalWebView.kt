@@ -6,6 +6,7 @@ import android.util.Log
 import android.webkit.WebSettings
 import android.webkit.WebView
 import com.bsbeetle.bananaspaghetti.tenebrio.data.ShellExecutor
+import com.bsbeetle.bananaspaghetti.tenebrio.data.outputfd
 import com.bsbeetle.bananaspaghetti.tenebrio.terminal.TerminalBridge
 
 @SuppressLint("StaticFieldLeak")
@@ -39,7 +40,9 @@ object TerminalWebView {
                 Log.d("TerminalInput", input)
 
                 // Proot session
-                ShellExecutor.sendCommand(input)
+                // ShellExecutor.sendCommand(input) // <------- THIS MIGHT BE THE ISSUE
+                outputfd.outputFd!!.write("$input\n".toByteArray())
+                outputfd.outputFd!!.flush()
             }, "AndroidTerminal")
 
         }

@@ -4,8 +4,11 @@ import android.content.Context
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import com.bsbeetle.bananaspaghetti.tenebrio.data.ShellExecutor
+import com.bsbeetle.bananaspaghetti.tenebrio.data.outputfd
+import com.bsbeetle.bananaspaghetti.utils.TerminalWebView
 import com.bsbeetle.bananaspaghetti.utils.copyAssetsTo
 import com.bsbeetle.bananaspaghetti.utils.downloadFile
+import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -31,6 +34,19 @@ class Tenebrio(private val context: Context) {
         jAlpine: String,
         jAlpineInit: String
     ) : Int
+
+    external fun startAlpine(
+        prefix: String,
+        jNativeDirPath: String,
+        jProotTmpDir: String,
+        jProotLoader: String,
+        jProotLoader32: String,
+        jProot: String,
+        jPublic: String,
+        jAlpineTmp: String,
+        jAlpine: String,
+        jAlpineInit: String
+    ): Int
 
     val alpineUrl = "https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/aarch64/alpine-minirootfs-3.21.0-aarch64.tar.gz"
 
@@ -124,6 +140,16 @@ class Tenebrio(private val context: Context) {
 
         Log.d("Tenebrio", "Entered testShell")
 
+        if(libtalloc.exists()) libtalloc.delete()
+
+        // ShellExecutor.sendCommand("ln -s $nativeDir/libtalloc.so $PREFIX/libtalloc.so.2")
+        val libtallocLink = File(PREFIX, "libtalloc.so.2")
+        if (libtallocLink.exists()) libtallocLink.delete()
+        java.nio.file.Files.createSymbolicLink(
+            libtallocLink.toPath(),
+            File(nativeDir, "libtalloc.so").toPath()
+        )
+
         val masterFd = getAlpineFork(
             PREFIX.absolutePath.toString(),
             nativeDir,
@@ -148,6 +174,12 @@ class Tenebrio(private val context: Context) {
         output = FileOutputStream(pfd!!.fileDescriptor)
         input = FileInputStream(pfd!!.fileDescriptor)
 
+        // Setting the global state
+        outputfd.outputFd = output
+
+        // Testing the terminal wohooo
+        val terminalWebView = TerminalWebView.getWebview(context)
+
         // reader thread
         thread {
             try {
@@ -157,6 +189,90 @@ class Tenebrio(private val context: Context) {
                     if (bytesRead > 0) {
                         val text = String(buffer, 0, bytesRead)
                         Log.d("Shell", "Output: $text")
+
+                        terminalWebView.post {
+                            val jsCommand = "term.write(${JSONObject.quote(text + "\r\n")});"
+                            terminalWebView.evaluateJavascript(jsCommand, null)
+                        }
+
+                    } else if (bytesRead < 0) {
+                        break // EOF or error
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("TenebrioShell", "Error reading", e)
+            }
+        }
+
+        // Writer thread
+//        thread {
+//            try {
+//                Thread.sleep(1000) // Reduced wait time
+//
+//                val commands = listOf(
+//                    "uname -a\n"
+//                )
+//
+//                for (command in commands) {
+//                    Log.d("Shell", "Sending: ${command.trim()}")
+//                    output!!.write(command.toByteArray())
+//                    output!!.flush()
+//                    Thread.sleep(2000)
+//                }
+//
+//            } catch (e: Exception) {
+//                Log.e("TenebrioShell", "Error Sending", e)
+//            }
+//        }
+
+    }
+
+    fun testShell2() {
+
+        Log.d("Tenebrio", "Entered testShell2")
+
+        val masterFd = startAlpine(
+            PREFIX.absolutePath.toString(),
+            nativeDir,
+            tmp.absolutePath.toString(),
+            prootLoader.absolutePath.toString(),
+            prootLoader32.absolutePath.toString(),
+            proot.absolutePath.toString(),
+            "${public.absolutePath}:/public",
+            "${alpineTmp.absolutePath}:/dev/shm",
+            alpine.absolutePath.toString(),
+            "${PREFIX.absolutePath}/init-alpine.sh"
+        )
+
+        if (masterFd < 0) {
+            Log.e("Tenebrio", "Failed to get the master fd: $masterFd")
+            return
+        } else {
+            Log.d("Tenebrio", "Got the masterFd")
+        }
+
+        pfd = ParcelFileDescriptor.adoptFd(masterFd)
+        output = FileOutputStream(pfd!!.fileDescriptor)
+        input = FileInputStream(pfd!!.fileDescriptor)
+
+        // Testing the terminal wohooo
+        val terminalWebView = TerminalWebView.getWebview(context)
+
+        // reader thread
+        thread {
+            try {
+                val buffer = ByteArray(1024)
+                while (true) {
+                    val bytesRead = input!!.read(buffer)
+                    if (bytesRead > 0) {
+                        val text = String(buffer, 0, bytesRead)
+                        Log.d("Shell", "Output: $text")
+
+                        terminalWebView.post {
+                            val jsCommand = "term.write(${JSONObject.quote(text + "\r\n")});"
+                            terminalWebView.evaluateJavascript(jsCommand, null)
+                        }
+
                     } else if (bytesRead < 0) {
                         break // EOF or error
                     }
@@ -172,10 +288,6 @@ class Tenebrio(private val context: Context) {
                 Thread.sleep(1000) // Reduced wait time
 
                 val commands = listOf(
-                    "echo 'Hello from shell!'\n",
-                    "pwd\n",
-                    "ls /\n",
-                    "whoami\n",
                     "uname -a\n"
                 )
 
@@ -191,6 +303,7 @@ class Tenebrio(private val context: Context) {
             }
         }
     }
+
 
     // Optional: Add cleanup method
     fun cleanup() {

@@ -46,7 +46,7 @@ class MainActivity : ComponentActivity() {
             val webView: WebView = EditorWebView.getWebview(this)
             val termWebView: WebView = TerminalWebView.getWebview(this)
             val bufferViewModel: BufferViewModel = viewModel()
-            // val dotDownloadedFile = File(filesDir.absolutePath, ".downloaded")
+            val dotDownloadedFile = File(filesDir.absolutePath, ".downloaded")
             // val terminal = Terminal(this)
             ShellExecutor.startShell(this)
 
@@ -56,9 +56,12 @@ class MainActivity : ComponentActivity() {
                 EnterImmersiveMode()
                 DisableDefaultKeyboard()
 
-                // PTY test
                 val pty = Tenebrio(this)
-                pty.init()
+                if(dotDownloadedFile.exists()) {
+                 pty.testShell2()
+                } else {
+                    pty.init()
+                }
 
                 Box(
                     modifier = Modifier

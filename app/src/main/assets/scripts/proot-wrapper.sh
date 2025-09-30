@@ -1,12 +1,12 @@
 #!/bin/sh
 # proot-wrapper.sh - Keep proot environment running persistently
 
-export LD_LIBRARY_PATH=$PREFIX
-mkdir -p "$PREFIX/tmp"
-mkdir -p "$PREFIX/alpine/tmp"
-mkdir -p "$PREFIX/public"
+export LD_LIBRARY_PATH=$PREFIX # done
+mkdir -p "$PREFIX/tmp" # done
+mkdir -p "$PREFIX/alpine/tmp" # done
+mkdir -p "$PREFIX/public" # done
 
-export PROOT_TMP_DIR=$PREFIX/tmp
+export PROOT_TMP_DIR=$PREFIX/tmp # done
 
 if [ -f "$NATIVE_DIR/libproot.so" ]; then
     export PROOT_LOADER="$NATIVE_DIR/libproot.so"
