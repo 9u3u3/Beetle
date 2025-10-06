@@ -24,8 +24,6 @@ if [ -n "$missing_packages" ]; then
     echo -e "\e[34m[*] \e[0mUse \e[32mapk\e[0m to install new packages\e[0m"
 fi
 
-# To check if installed (test for working)
-apk --version
 fastfetch
 
 if [ ! -f /linkerconfig/ld.config.txt ]; then

@@ -49,6 +49,19 @@ fun Editor(
     // The AndroidView factory now just provides the instance webview
     AndroidView(
         factory = { webView },
-        modifier = modifier
+        modifier = modifier,
+        // ADD THIS: Force a resize when the view gets laid out
+        onReset = { view ->
+            // Trigger a resize after the view is laid out
+            view.post {
+                view.evaluateJavascript("if(window.fitTerminal) fitTerminal();", null)
+            }
+        },
+        update = { view ->
+            // Trigger resize when size changes
+            view.post {
+                view.evaluateJavascript("if(window.fitTerminal) fitTerminal();", null)
+            }
+        }
     )
 }

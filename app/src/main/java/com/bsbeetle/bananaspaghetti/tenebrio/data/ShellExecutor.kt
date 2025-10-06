@@ -2,6 +2,7 @@ package com.bsbeetle.bananaspaghetti.tenebrio.data
 
 import android.content.Context
 import android.util.Log
+import com.bsbeetle.bananaspaghetti.data.tenebrioObj
 import com.bsbeetle.bananaspaghetti.utils.TerminalWebView
 import org.json.JSONObject
 import java.io.BufferedReader
@@ -19,7 +20,7 @@ object ShellExecutor {
         if(process != null) return
 
         val filesDir = context.filesDir.absolutePath
-        val terminalWebView = TerminalWebView.getWebview(context)
+        val terminalWebView = TerminalWebView.getWebview(context, tenebrioObj.tenebrio!!)
 
         val processBuilder = ProcessBuilder("sh")
         processBuilder.redirectErrorStream(true)

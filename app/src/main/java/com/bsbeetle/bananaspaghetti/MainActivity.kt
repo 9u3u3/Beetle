@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bsbeetle.bananaspaghetti.data.tenebrioObj
 import com.bsbeetle.bananaspaghetti.tenebrio.data.ShellExecutor
 import com.bsbeetle.bananaspaghetti.tenebrio.pty.Tenebrio
 import com.bsbeetle.bananaspaghetti.tenebrio.terminal.Terminal
@@ -40,11 +41,13 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
 
+            tenebrioObj.tenebrio = Tenebrio(this)
+
             val keyboardViewModel: KeyboardViewModel = viewModel()
             val fileViewModel: FileViewModel = viewModel()
             val sliderViewModel: SliderViewModel = viewModel()
             val webView: WebView = EditorWebView.getWebview(this)
-            val termWebView: WebView = TerminalWebView.getWebview(this)
+            val termWebView: WebView = TerminalWebView.getWebview(this, tenebrioObj.tenebrio!!)
             val bufferViewModel: BufferViewModel = viewModel()
             val dotDownloadedFile = File(filesDir.absolutePath, ".downloaded")
             // val terminal = Terminal(this)

@@ -3,18 +3,24 @@ package com.bsbeetle.bananaspaghetti.utils
 import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
+import android.view.ViewGroup
 import android.webkit.WebSettings
 import android.webkit.WebView
 import com.bsbeetle.bananaspaghetti.tenebrio.data.ShellExecutor
 import com.bsbeetle.bananaspaghetti.tenebrio.data.outputfd
+import com.bsbeetle.bananaspaghetti.tenebrio.pty.Tenebrio
 import com.bsbeetle.bananaspaghetti.tenebrio.terminal.TerminalBridge
 
 @SuppressLint("StaticFieldLeak")
 object TerminalWebView {
     private var webView: WebView? = null
+    private var tenebrio: Tenebrio? = null
     @SuppressLint("SetJavaScriptEnabled")
-    fun getWebview(context: Context): WebView {
+    fun getWebview(context: Context, tenebrio: Tenebrio): WebView {
         if(webView == null) {
+
+            this.tenebrio = tenebrio
+
             webView = WebView(context.applicationContext).apply {
 
                 WebView.setWebContentsDebuggingEnabled(true)
@@ -34,10 +40,22 @@ object TerminalWebView {
 
             }
 
+            webView!!.layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+
             webView!!.addJavascriptInterface(TerminalBridge { input ->
                 outputfd.outputFd!!.write("$input\n".toByteArray())
                 outputfd.outputFd!!.flush()
             }, "AndroidTerminal")
+
+            webView!!.addJavascriptInterface(object {
+                @android.webkit.JavascriptInterface
+                fun resizeTerminal(rows: Int, cols: Int) {
+                    tenebrio.resizeTerminal(rows, cols)
+                }
+            }, "AndroidTerminalResize")
 
         }
         return webView!!

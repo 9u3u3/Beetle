@@ -1,4 +1,3 @@
-// Initializes the terminal
 const term = new window.Terminal({
   cursorBlink: true,
   fontSize: 14,
@@ -6,100 +5,122 @@ const term = new window.Terminal({
 });
 
 term.open(document.getElementById("terminal"));
+
+const fitAddon = new FitAddon.FitAddon();
+term.loadAddon(fitAddon);
+
 let currentCommand = '';
 
-// Disable the virtual keyboard
 setTimeout(() => {
   const textarea = term.textarea;
   if (textarea) {
-    textarea.setAttribute("inputmode", "none"); // Disable the IME (Input Method Editor)
+    textarea.setAttribute("inputmode", "none");
     textarea.focus();
     term.focus();
   }
 }, 0);
 
-// Called When a command is entered
-// This onData is required as it has features like going through previous commands
-// So this onData thing is required
 term.onData((data) => {
-  if (data === '\r') { // If Enter key is pressed
+  const code = data.charCodeAt(0);
+
+  if (code < 0x20 && data !== '\r' && data !== '\t') {
+    console.log('Ignoring control character:', code);
+    return;
+  }
+
+  if (data === '\r') {
     console.log('COMMAND ENTERED via onData:', currentCommand);
     term.write('\r\n');
-    AndroidTerminal.sendInput(currentCommand)
+    AndroidTerminal.sendInput(currentCommand);
     currentCommand = '';
-  } else if (data === '\x7f') { // If Backspace key is pressed
+  } else if (data === '\x7f') {
     if (currentCommand.length > 0) {
       currentCommand = currentCommand.slice(0, -1);
       term.write('\b \b');
     }
-  } else { // If any other normal key is pressed
+  } else {
     currentCommand += data;
     term.write(data);
   }
 });
 
-// This function triggers xterm.js's internal input events
-// It accesses xterm's private API to fire onData events properly
-// Basically this function triggers onData of xtermjs
 function fireOnData(data) {
-  // Access xterm's internal core object and fire the onData event
-  // term._core._onData is xterm's internal event emitter for input data
   if (term._core && term._core._onData && typeof term._core._onData.fire === 'function') {
-    term._core._onData.fire(data);  // Fire the internal event
-    return true;  // Success
+    term._core._onData.fire(data);
+    return true;
   }
-  return false;  // Failed - API might have changed
+  return false;
 }
 
-// Handle text insertion from custom keyboard
 window.insertText = function (text) {
-
   term.focus();
-  let success = true;
-  if (!fireOnData(text)) success = false;
-
-  // Fallback in case internal API fails (shouldn't happen with current setup)
-  if (!success) {
-    console.log('Using fallback for insertText');
-    term.write(text);           // Just display the text
-    currentCommand += text;     // Manually track command
-    console.log('Current command (fallback):', currentCommand);
+  if (!fireOnData(text)) {
+    term.write(text);
+    currentCommand += text;
   }
-
 };
 
-// Handle backspace from custom keyboard
 window.performBackspace = function () {
   term.focus();
-  // Send backspace character (\x7f = ASCII DEL) through proper channels
   if (!fireOnData('\x7f')) {
-    // Fallback manual handling
-    console.log('Using fallback for backspace');
     if (currentCommand.length > 0) {
       currentCommand = currentCommand.slice(0, -1);
-      console.log('After backspace (fallback):', currentCommand);
     }
     term.write("\b \b");
   }
 };
 
-// Handle enter key from custom keyboard
 window.performEnter = function () {
   term.focus();
-  // Send carriage return (\r) through proper channels
   if (!fireOnData('\r')) {
-    // Fallback manual handling
-    console.log('Using fallback for enter');
     term.write("\r\n");
-    console.log('COMMAND ENTERED (fallback):', currentCommand);
+    AndroidTerminal.sendInput(currentCommand);
     currentCommand = '';
   }
 };
 
-// Utility function to get current command (for debugging)
 window.getCurrentCommand = function() {
   return currentCommand;
 };
 
-// Expose terminal object globally for debugging
 window.term = term;
+
+window.fitTerminal = function() {
+  try {
+    const container = document.getElementById('terminal');
+    const rect = container.getBoundingClientRect();
+
+    if (rect.width === 0 || rect.height === 0) {
+      setTimeout(window.fitTerminal, 200);
+      return;
+    }
+
+    fitAddon.fit();
+
+    const dims = fitAddon.proposeDimensions();
+    if (dims) {
+      if (window.AndroidTerminalResize) {
+        AndroidTerminalResize.resizeTerminal(dims.rows + 1, dims.cols + 2);
+      } else {
+        console.warn('AndroidTerminalResize not available');
+      }
+    } else {
+      console.warn('FitAddon returned null dimensions');
+    }
+  } catch (e) {
+    console.error('Error in fitTerminal:', e);
+    // Retry on error
+    setTimeout(window.fitTerminal, 200);
+  }
+};
+
+setTimeout(window.fitTerminal, 100);
+setTimeout(window.fitTerminal, 300);
+setTimeout(window.fitTerminal, 500);
+setTimeout(window.fitTerminal, 1000);
+setTimeout(window.fitTerminal, 2000);
+setTimeout(window.fitTerminal, 3000);
+
+window.addEventListener('resize', () => {
+  setTimeout(window.fitTerminal, 100);
+});

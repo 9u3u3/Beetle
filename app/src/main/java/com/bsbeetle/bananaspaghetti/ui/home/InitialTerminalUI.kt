@@ -13,6 +13,7 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
+import com.bsbeetle.bananaspaghetti.data.tenebrioObj
 import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
 import com.bsbeetle.bananaspaghetti.ui.components.TopBar
 import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
@@ -31,7 +32,7 @@ fun InitialTerminalUI(
     val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val layout = if (uiState.toggleKeyboard) KeyboardLayout.developerLayout else KeyboardLayout.qwertyLayout
-    val webView: WebView = TerminalWebView.getWebview(context)
+    val webView: WebView = TerminalWebView.getWebview(context, tenebrioObj.tenebrio!!)
 
     Box {
 
