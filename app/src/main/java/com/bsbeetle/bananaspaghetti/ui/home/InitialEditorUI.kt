@@ -1,13 +1,18 @@
 package com.bsbeetle.bananaspaghetti.ui.home
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.layout.Box
 import android.webkit.WebView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -15,6 +20,7 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
 import com.bsbeetle.bananaspaghetti.ui.components.BottomBar
@@ -24,11 +30,11 @@ import com.bsbeetle.bananaspaghetti.data.TopBarButtons
 import com.bsbeetle.bananaspaghetti.ui.components.TopBar
 import com.bsbeetle.bananaspaghetti.ui.components.TopLeftBox
 import com.bsbeetle.bananaspaghetti.ui.components.TopRightBox
-import com.bsbeetle.bananaspaghetti.utils.EditorWebView
 import com.bsbeetle.bananaspaghetti.utils.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.utils.readFromFile
 import com.bsbeetle.bananaspaghetti.utils.saveFile
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
+import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
@@ -43,21 +49,25 @@ fun InitialEditorUI(
     keyboardViewModel: KeyboardViewModel,
     sliderViewModel: SliderViewModel,
     navController: NavController,
-    bufferViewModel: BufferViewModel
+    bufferViewModel: BufferViewModel,
+    editorViewModel: EditorViewModel
 ) {
 
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val webView: WebView = EditorWebView.getWebview(context)
     val layout = if (uiState.toggleKeyboard) KeyboardLayout.developerLayout else KeyboardLayout.qwertyLayout
 
-    if(fileViewModel.selectedUri != null) {
-        loadContentWhenReady(webView, readFromFile(context, fileViewModel.selectedUri))
+    // Here is the issue behind the clearance of the data inside the editor
+    LaunchedEffect(fileViewModel.selectedUri) { // Not sure about this
+        if(fileViewModel.selectedUri != null) {
+            Log.e("InitialEditor", "Called from 1")
+            loadContentWhenReady(editorViewModel.webView, readFromFile(context, fileViewModel.selectedUri))
+        }
     }
 
     val buttonsForLeftTopBar = listOf(
-        TopBarButtons("Save", { saveFile(fileViewModel, context) })
+        TopBarButtons("Save", { saveFile(fileViewModel, context, editorViewModel) })
     )
 
     val buttonsForRightTopBar = listOf(TopBarButtons("Settings", onClick = {
@@ -89,7 +99,8 @@ fun InitialEditorUI(
                         height = Dimension.fillToConstraints
                     },
                 fileViewModel,
-                bufferViewModel
+                bufferViewModel,
+                editorViewModel.webView!!
             )
 
             TopRightBox(
@@ -115,7 +126,8 @@ fun InitialEditorUI(
                         height = Dimension.wrapContent
                     },
                 Color(0xFF212121),
-                buttonsForLeftTopBar
+                buttonsForLeftTopBar,
+                webView = editorViewModel.webView!!
             )
 
             //Middle Top Bar
@@ -130,7 +142,8 @@ fun InitialEditorUI(
                     },
                 color = Color.Gray,
                 bufferViewModel = bufferViewModel,
-                context = context
+                context = context,
+                webView = editorViewModel.webView!!
             )
 
             //Right Top Bar
@@ -144,7 +157,8 @@ fun InitialEditorUI(
                         height = Dimension.wrapContent
                     },
                 color = Color(0xFF212121),
-                buttonsForRightTopBar
+                buttonsForRightTopBar,
+                webView = editorViewModel.webView!!
             )
 
 
@@ -185,7 +199,7 @@ fun InitialEditorUI(
                         height = Dimension.fillToConstraints
                     },
                 keyboardViewModel,
-                webView = webView
+                webView = editorViewModel.webView!!
             )
 
             if (uiState.isRightKeyboardVisible) {

@@ -1,6 +1,7 @@
 package com.bsbeetle.bananaspaghetti.ui.components
 
 import android.content.Context
+import android.webkit.WebView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -23,10 +24,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bsbeetle.bananaspaghetti.data.TopBarButtons
-import com.bsbeetle.bananaspaghetti.utils.EditorWebView
 import com.bsbeetle.bananaspaghetti.utils.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
+import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 
 @Composable
 fun TopBar(
@@ -34,7 +36,8 @@ fun TopBar(
     color: Color,
     buttons: List<TopBarButtons>? = null,
     bufferViewModel: BufferViewModel? = null,
-    context: Context? = null
+    context: Context? = null,
+    webView: WebView? = null
 ) {
 
     Box(
@@ -88,13 +91,14 @@ fun TopBar(
                                 context = context!!,
                                 entry.key,
                                 entry.value,
-                                bufferViewModel.filesOpenedList
+                                bufferViewModel.filesOpenedList,
+                                webView!!
                             ) {
                                 bufferViewModel.bufferLine.remove(entry.key)
                                 bufferViewModel.filesOpenedList.removeAll { it == entry.key }
 
                                 loadContentWhenReady(
-                                    EditorWebView.getWebview(context!!),
+                                    webView,
                                     if(bufferViewModel.bufferLine.isNotEmpty()) bufferViewModel.bufferLine[bufferViewModel.filesOpenedList.last()]!! else ""
                                 )
 

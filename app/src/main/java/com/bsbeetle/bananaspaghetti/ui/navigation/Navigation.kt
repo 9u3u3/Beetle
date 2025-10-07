@@ -12,6 +12,7 @@ import com.bsbeetle.bananaspaghetti.ui.home.InitialTerminalUI
 import com.bsbeetle.bananaspaghetti.ui.home.SettingsScreen
 import com.bsbeetle.bananaspaghetti.ui.keyboard.DemoEditorUi
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
+import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
@@ -21,7 +22,8 @@ fun AppNavigation(
     fileViewModel: FileViewModel,
     keyboardViewModel: KeyboardViewModel,
     sliderViewModel: SliderViewModel,
-    bufferViewModel: BufferViewModel
+    bufferViewModel: BufferViewModel,
+    editorViewModel: EditorViewModel
 ) {
 
     val navController = rememberNavController()
@@ -48,7 +50,8 @@ fun AppNavigation(
                     keyboardViewModel,
                     sliderViewModel,
                     navController,
-                    bufferViewModel
+                    bufferViewModel,
+                    editorViewModel
                 )
         }
 
@@ -61,7 +64,8 @@ fun AppNavigation(
                 keyboardViewModel,
                 sliderViewModel,
                 navController,
-                bufferViewModel
+                bufferViewModel,
+                editorViewModel
             )
         }
 
@@ -74,7 +78,8 @@ fun AppNavigation(
                 keyboardViewModel,
                 sliderViewModel,
                 navController,
-                bufferViewModel
+                bufferViewModel,
+                editorViewModel
             )
         }
 

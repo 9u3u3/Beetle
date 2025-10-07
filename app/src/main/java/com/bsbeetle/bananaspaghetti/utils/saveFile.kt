@@ -2,16 +2,19 @@ package com.bsbeetle.bananaspaghetti.utils
 
 import android.content.Context
 import android.webkit.WebView
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import java.io.FileNotFoundException
 import java.io.OutputStreamWriter
 
 fun saveFile(
     fileViewModel: FileViewModel,
-    context: Context
+    context: Context,
+    editorViewModel: EditorViewModel
 ) {
 
-    val webView: WebView = EditorWebView.getWebview(context)
+    val webView: WebView = editorViewModel.webView!!
 
     // Get the code from code mirror, override that with the opened file
     webView.evaluateJavascript("window.code_") { result ->

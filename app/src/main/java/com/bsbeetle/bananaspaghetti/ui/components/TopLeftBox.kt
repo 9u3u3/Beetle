@@ -1,5 +1,6 @@
 package com.bsbeetle.bananaspaghetti.ui.components
 
+import android.webkit.WebView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -17,7 +18,8 @@ import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 fun TopLeftBox(
     modifier: Modifier = Modifier,
     fileViewModel: FileViewModel,
-    bufferViewModel: BufferViewModel
+    bufferViewModel: BufferViewModel,
+    webView: WebView
 ) {
 
     ConstraintLayout(modifier = modifier.background(Color(0xFF252525))) {
@@ -46,7 +48,8 @@ fun TopLeftBox(
                 }
                 .fillMaxHeight(),
             fileViewModel,
-            bufferViewModel
+            bufferViewModel,
+            webView
         )
     }
 

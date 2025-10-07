@@ -23,9 +23,10 @@ import com.bsbeetle.bananaspaghetti.ui.DisableDefaultKeyboard
 import com.bsbeetle.bananaspaghetti.ui.EnterImmersiveMode
 import com.bsbeetle.bananaspaghetti.ui.navigation.AppNavigation
 import com.bsbeetle.bananaspaghetti.ui.theme.BananaSpaghettiTheme
-import com.bsbeetle.bananaspaghetti.utils.EditorWebView
+// import com.bsbeetle.bananaspaghetti.utils.EditorWebView
 import com.bsbeetle.bananaspaghetti.utils.TerminalWebView
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
+import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
@@ -42,15 +43,15 @@ class MainActivity : ComponentActivity() {
         setContent {
 
             tenebrioObj.tenebrio = Tenebrio(this)
+            val editorViewModel: EditorViewModel = viewModel()
+            editorViewModel.init()
 
             val keyboardViewModel: KeyboardViewModel = viewModel()
             val fileViewModel: FileViewModel = viewModel()
             val sliderViewModel: SliderViewModel = viewModel()
-            val webView: WebView = EditorWebView.getWebview(this)
             val termWebView: WebView = TerminalWebView.getWebview(this, tenebrioObj.tenebrio!!)
             val bufferViewModel: BufferViewModel = viewModel()
             val dotDownloadedFile = File(filesDir.absolutePath, ".downloaded")
-            // val terminal = Terminal(this)
             ShellExecutor.startShell(this)
 
             BananaSpaghettiTheme {
@@ -71,19 +72,14 @@ class MainActivity : ComponentActivity() {
                         fileViewModel,
                         keyboardViewModel,
                         sliderViewModel,
-                        bufferViewModel
+                        bufferViewModel,
+                        editorViewModel
                     )
                 }
             }
 
         }
     }
-
-    override fun onDestroy() {
-        EditorWebView.destroy()
-        super.onDestroy()
-    }
-
 }
 
 

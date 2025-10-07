@@ -32,6 +32,7 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
+import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.ExpandViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 
@@ -39,14 +40,17 @@ import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 fun Tree(
     modifier: Modifier = Modifier,
     fileViewModel: FileViewModel,
-    bufferViewModel: BufferViewModel
+    bufferViewModel: BufferViewModel,
+    webView: WebView
 ) {
 
     val context = LocalContext.current
     var pickedFolder: DocumentFile? = null
     val uri = fileViewModel.selectedFolderUri
     val scrollState = rememberScrollState()
-    val webView: WebView = EditorWebView.getWebview(context)
+
+    // Separate view model... use the main global one
+    // val editorViewModel: EditorViewModel = viewModel()
 
     uri?.let {
         try {
@@ -94,7 +98,8 @@ fun Tree(
                         DirectoryNode(
                             depth = 0,
                             directory = file,
-                            bufferViewModel
+                            bufferViewModel,
+                            webView
                         )
                     }
                 }
@@ -108,12 +113,13 @@ fun Tree(
 fun DirectoryNode(
     depth: Int,
     directory: DocumentFile,
-    bufferViewModel: BufferViewModel
+    bufferViewModel: BufferViewModel,
+    webView: WebView
 ) {
 
     val context = LocalContext.current
     val indent = depth * 7.dp
-    val webView: WebView = EditorWebView.getWebview(context)
+
 
     // State to track expand/collapse
     // The composes recomposes when this value is changed
@@ -181,7 +187,8 @@ fun DirectoryNode(
                     DirectoryNode(
                         depth = depth + 1,
                         directory = file,
-                        bufferViewModel
+                        bufferViewModel,
+                        webView
                     )
                 }
             }
