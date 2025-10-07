@@ -45,9 +45,19 @@ object TerminalWebView {
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
 
-            webView!!.addJavascriptInterface(TerminalBridge { input ->
-                outputfd.outputFd!!.write("$input\n".toByteArray())
-                outputfd.outputFd!!.flush()
+            webView!!.addJavascriptInterface(object {
+                @android.webkit.JavascriptInterface
+                fun sendInput(input: String) {
+                    outputfd.outputFd!!.write("$input\n".toByteArray())
+                    outputfd.outputFd!!.flush()
+                }
+
+                @android.webkit.JavascriptInterface
+                fun sendRaw(input: String) {
+                    Log.d("Terminal", "sendRaw: bytes=${input.toByteArray().joinToString(" ") { "%02x".format(it) }}")
+                    outputfd.outputFd!!.write(input.toByteArray())
+                    outputfd.outputFd!!.flush()
+                }
             }, "AndroidTerminal")
 
             webView!!.addJavascriptInterface(object {

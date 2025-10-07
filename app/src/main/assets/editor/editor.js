@@ -4,6 +4,10 @@ import { cpp } from "@codemirror/lang-cpp"
 import { oneDark } from "@codemirror/theme-one-dark"
 import {insertNewlineAndIndent, deleteCharBackward } from "@codemirror/commands";
 
+import { undo, redo, history } from "@codemirror/commands"
+import { search, openSearchPanel } from "@codemirror/search"
+
+
 window.code_ = ""
 
 // Currently the editor is hardcoded for cpp
@@ -14,6 +18,8 @@ window.editor = new EditorView({ // add the editor to window
       basicSetup, 
       cpp(),
       oneDark,
+      history(),
+      search(),
       EditorView.contentAttributes.of({ // disables the virtual keyboard
         inputmode: "none",
         readonly: "true"
@@ -54,4 +60,56 @@ window.performBackspace = function() {
 window.performEnter = function() {
    insertNewlineAndIndent(editor);
    editor.focus();
+};
+
+// For copy
+window.performCopy = function() {
+    const selection = editor.state.selection.main;
+    const text = editor.state.sliceDoc(selection.from, selection.to);
+    navigator.clipboard.writeText(text).catch(e => console.error("Copy failed:", e));
+};
+
+window.performPaste = async function() {
+    try {
+        const text = await navigator.clipboard.readText();
+        editor.dispatch(editor.state.replaceSelection(text));
+        editor.focus();
+    } catch(e) {
+        console.error("Paste failed:", e);
+    }
+};
+
+window.performCut = function() {
+    const selection = editor.state.selection.main;
+    const text = editor.state.sliceDoc(selection.from, selection.to);
+    navigator.clipboard.writeText(text);
+    editor.dispatch({
+        changes: { from: selection.from, to: selection.to }
+    });
+};
+
+window.performUndo = function() {
+    undo(editor);
+};
+
+window.performRedo = function() {
+    redo(editor);
+};
+
+window.performSelectAll = function() {
+    editor.dispatch({
+        selection: { anchor: 0, head: editor.state.doc.length }
+    });
+};
+
+window.performFind = function() {
+    openSearchPanel(editor);
+};
+window.closeFindPanel = function() {
+    closeSearchPanel(editorView);
+};
+
+window.performSave = function() {
+    // Implement save logic here
+    console.log("Save triggered");
 };

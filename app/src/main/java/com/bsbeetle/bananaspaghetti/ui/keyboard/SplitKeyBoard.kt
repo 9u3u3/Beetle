@@ -21,6 +21,7 @@ fun SplitKeyboardHalf(
     side: KeyboardSide,
     isCapsLockOn: Boolean,
     isShiftOn: Boolean,
+    isCtrlOn: Boolean,
     onKeyEvent: (Key, KeyGesture) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -53,6 +54,7 @@ fun SplitKeyboardHalf(
                 side = side,
                 isCapsLockOn = isCapsLockOn,
                 isShiftOn=isShiftOn,
+                isCtrlOn,
                 onKeyEvent = onKeyEvent,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -68,6 +70,7 @@ fun KeyboardHalfRow(
     side: KeyboardSide,
     isCapsLockOn: Boolean,
     isShiftOn: Boolean,
+    isCtrlOn: Boolean,
     onKeyEvent: (Key, KeyGesture) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -83,6 +86,7 @@ fun KeyboardHalfRow(
                 key = key,
                 isShiftOn,
                 isCapsLockOn,
+                isCtrlOn,
                 onKeyEvent = onKeyEvent,
             )
         }
