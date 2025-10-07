@@ -21790,6 +21790,15 @@
       }
   });
   /**
+  Add search state to the editor configuration, and optionally
+  configure the search extension.
+  ([`openSearchPanel`](https://codemirror.net/6/docs/ref/#search.openSearchPanel) will automatically
+  enable this if it isn't already on).
+  */
+  function search(config) {
+      return searchExtensions;
+  }
+  /**
   A search query. Part of the editor's search state.
   */
   class SearchQuery {
@@ -26860,6 +26869,8 @@
         basicSetup, 
         cpp(),
         oneDark,
+        history(),
+        search(),
         EditorView.contentAttributes.of({ // disables the virtual keyboard
           inputmode: "none",
           readonly: "true"
@@ -26900,6 +26911,53 @@
   window.performEnter = function() {
      insertNewlineAndIndent(editor);
      editor.focus();
+  };
+
+  // For CodeMirror 6
+  window.performCopy = function() {
+      const selection = editor.state.selection.main;
+      const text = editor.state.sliceDoc(selection.from, selection.to);
+      navigator.clipboard.writeText(text);
+  };
+
+  window.performPaste = async function() {
+      const text = await navigator.clipboard.readText();
+      editor.dispatch({
+          changes: { from: editor.state.selection.main.from, insert: text }
+      });
+  };
+
+
+  window.performCut = function() {
+      const selection = editor.state.selection.main;
+      const text = editor.state.sliceDoc(selection.from, selection.to);
+      navigator.clipboard.writeText(text);
+      editor.dispatch({
+          changes: { from: selection.from, to: selection.to }
+      });
+  };
+
+  window.performUndo = function() {
+      undo(editor);
+  };
+
+  window.performRedo = function() {
+      redo(editor);
+  };
+
+  window.performSelectAll = function() {
+      editor.dispatch({
+          selection: { anchor: 0, head: editor.state.doc.length }
+      });
+  };
+
+  window.performFind = function() {
+      openSearchPanel(editor);
+  };
+
+  window.performSave = function() {
+      // Implement your save logic here
+      console.log("Save triggered");
   };
 
 })();

@@ -90,6 +90,7 @@ fun DemoEditorUi (
                         side = KeyboardSide.LEFT,
                         isCapsLockOn = uiState.isCapsLockOn,
                         isShiftOn = uiState.isShiftOn,
+                        isCtrlOn = uiState.isCtrlOn,
                         onKeyEvent = keyboardViewModel::onKeyEvent,
                         modifier = Modifier.constrainAs(leftKeyboardRef) {
                             start.linkTo(parent.start)
@@ -138,6 +139,7 @@ fun DemoEditorUi (
                         side = KeyboardSide.RIGHT,
                         isCapsLockOn = uiState.isCapsLockOn,
                         isShiftOn = uiState.isShiftOn,
+                        isCtrlOn = uiState.isCtrlOn,
                         onKeyEvent = keyboardViewModel::onKeyEvent,
                         modifier = Modifier.constrainAs(rightKeyboardRef) {
                             end.linkTo(parent.end)

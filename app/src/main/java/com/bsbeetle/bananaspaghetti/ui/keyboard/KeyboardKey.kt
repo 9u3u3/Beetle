@@ -27,6 +27,7 @@ fun RowScope.KeyboardKey(
     key: Key,
     isShiftOn: Boolean,
     isCapsLockOn: Boolean,
+    isCtrlOn: Boolean,
     onKeyEvent: (Key, KeyGesture) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -54,8 +55,8 @@ fun RowScope.KeyboardKey(
     }
 
     // Pressed → slightly darker
-//    val backgroundColor = if (isPressed) baseColor.copy(alpha = 0.85f) else baseColor
     val backgroundColor = when {
+        isCtrlOn -> Color.Red
         isShiftLit -> Color(0xFF3A5FCD) // blue highlight when active
         isPressed -> baseColor.copy(alpha = 0.85f)
         else -> baseColor
@@ -63,6 +64,13 @@ fun RowScope.KeyboardKey(
 
 
     val gestureModifier = when (key.type) {
+
+        // Control key is special
+        KeyType.ACTION_CTRL -> Modifier.pointerInput(key) {
+            detectTapGestures(
+                onTap = { onKeyEvent(key, KeyGesture.Tap) }
+            )
+        }
                 // The Shift key is special key
         // Press is buggy so commented out
         KeyType.ACTION_SHIFT -> Modifier.pointerInput(key) {
@@ -71,11 +79,6 @@ fun RowScope.KeyboardKey(
                 onTap = { onKeyEvent(key, KeyGesture.Tap) }
             )
         }
-//                onPress = {
-//                    onKeyEvent(key, KeyGesture.Press)
-//                    tryAwaitRelease()
-//                    onKeyEvent(key, KeyGesture.Release)
-//                },
 
         // All other keys get the fast, continuous-press treatment
         else -> Modifier.continuousPress(key = key) { gesture -> // Pass the key object here

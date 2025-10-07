@@ -79,6 +79,92 @@ window.performEnter = function () {
   }
 };
 
+// Add after performEnter function
+
+window.performCopy = function() {
+  const selection = term.getSelection();
+  if (selection) {
+    navigator.clipboard.writeText(selection)
+      .catch(e => console.error("Copy failed:", e));
+  }
+};
+
+window.performPaste = async function() {
+  term.focus();
+  try {
+    const text = await navigator.clipboard.readText();
+    if (!fireOnData(text)) {
+      term.write(text);
+      currentCommand += text;
+    }
+  } catch(e) {
+    console.error("Paste failed:", e);
+  }
+};
+
+window.performCut = function() {
+  const selection = term.getSelection();
+  if (selection) {
+    navigator.clipboard.writeText(selection);
+    // Terminal doesn't support cutting selected text easily
+    // So just copy it
+  }
+};
+
+window.performSelectAll = function() {
+  term.selectAll();
+};
+
+window.performFind = function() {
+  // xterm.js doesn't have built-in search UI
+  console.log("Find not supported in terminal");
+};
+
+
+window.performCtrlC = function() {
+  term.focus();
+
+  // Method 1: Fire through onData directly
+  fireOnData('\x03');
+
+  // Method 2: Also send to Android
+  if (window.AndroidTerminal) {
+    if (window.AndroidTerminal.sendControlC) {
+      AndroidTerminal.sendControlC();
+    } else if (window.AndroidTerminal.sendInput) {
+      // Send Ctrl+C as raw bytes
+      AndroidTerminal.sendInput('\x03');
+    }
+  }
+
+  // Visual feedback
+  term.write('^C');
+  currentCommand = '';
+};
+
+window.performCtrlD = function() {
+  term.focus();
+  // Send EOF (Ctrl+D) - ASCII code 0x04
+  fireOnData('\x04');
+
+  if (window.AndroidTerminal && window.AndroidTerminal.sendInput) {
+    AndroidTerminal.sendInput('\x04');
+  }
+
+  term.write('^D');
+  currentCommand = '';
+};
+
+window.performEscape = function() {
+  term.focus();
+
+  // Send to Android PTY
+  if (window.AndroidTerminal && AndroidTerminal.sendRaw) {
+    AndroidTerminal.sendRaw('\x1B');
+  }
+
+  currentCommand = '';
+};
 window.getCurrentCommand = function() {
   return currentCommand;
 };

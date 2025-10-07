@@ -13,6 +13,7 @@ object KeyboardLayout {
     private const val SPACE_KEY = NORMAL_KEY*3
     private const val ENTER_KEY = NORMAL_KEY*1.5f
 
+    private const val CTRL_KEY = NORMAL_KEY*1.2f
 
 
         // --- ADD THIS NEW LAYOUT ---
@@ -56,6 +57,7 @@ object KeyboardLayout {
         //Row 5
         listOf(
             Key("🌐", type = KeyType.ACTION_TOGGLE, weight = NORMAL_KEY),
+            Key("Ctrl", type = KeyType.ACTION_CTRL, weight = CTRL_KEY),
             Key("Space", type = KeyType.ACTION_SPACE, weight = SPACE_KEY),
             Key(text = "{}", shiftText = "{}", weight = NORMAL_KEY),
 
@@ -102,9 +104,9 @@ object KeyboardLayout {
 
         // Row 5
         listOf(
-            Key("\uD83D\uDD24", type = KeyType.ACTION_TOGGLE, weight = NORMAL_KEY), Key("Ctrl", type = KeyType.ACTION_SHIFT, weight = NORMAL_KEY), Key("Space", type = KeyType.ACTION_SPACE, weight = NORMAL_KEY*3),
+            Key("\uD83D\uDD24", type = KeyType.ACTION_TOGGLE, weight = NORMAL_KEY),  Key("Ctrl", type = KeyType.ACTION_CTRL, weight = CTRL_KEY),  Key("Space", type = KeyType.ACTION_SPACE, weight = NORMAL_KEY*3),
 
-            Key("=>", "=>", NORMAL_KEY),Key("→", "→", NORMAL_KEY), Key("*", "*", NORMAL_KEY)
+            Key("Esc", "Esc", NORMAL_KEY, type = KeyType.ACTION_ESCAPE),Key("→", "→", NORMAL_KEY), Key("*", "*", NORMAL_KEY)
         )
     ))
 }
