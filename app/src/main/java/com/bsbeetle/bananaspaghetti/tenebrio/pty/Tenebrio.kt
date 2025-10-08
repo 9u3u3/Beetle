@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import com.bsbeetle.bananaspaghetti.tenebrio.data.outputfd
+import com.bsbeetle.bananaspaghetti.tenebrio.data.termSize
 import com.bsbeetle.bananaspaghetti.utils.TerminalWebView
 import com.bsbeetle.bananaspaghetti.utils.copyAssetsTo
 import com.bsbeetle.bananaspaghetti.utils.downloadFile
@@ -31,7 +32,9 @@ class Tenebrio(private val context: Context) {
         jPublic: String,
         jAlpineTmp: String,
         jAlpine: String,
-        jAlpineInit: String
+        jAlpineInit: String,
+        jRows: Int,
+        jCols: Int
     ) : Int
 
     external fun resizePty(masterFd: Int, rows: Int, cols: Int): Int
@@ -151,7 +154,8 @@ class Tenebrio(private val context: Context) {
                 "${public.absolutePath}:/public",
                 "${alpineTmp.absolutePath}:/dev/shm",
                 alpine.absolutePath.toString(),
-                "${PREFIX.absolutePath}/init-alpine.sh"
+                "${PREFIX.absolutePath}/init-alpine.sh",
+                termSize.row!!, termSize.cols!!
             )
 
             if (masterFd < 0) {

@@ -83,6 +83,7 @@ fun AppNavigation(
             )
         }
 
+        // Open a terminal
         composable(
             Screen.Terminal.route
         ) {

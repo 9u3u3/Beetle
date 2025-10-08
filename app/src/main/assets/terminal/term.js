@@ -30,17 +30,19 @@ term.onData((data) => {
 
   if (data === '\r') {
     console.log('COMMAND ENTERED via onData:', currentCommand);
-    term.write('\r\n');
-    AndroidTerminal.sendInput(currentCommand);
+    // Send newline to PTY - it will echo back
+    AndroidTerminal.sendRaw('\n');
     currentCommand = '';
   } else if (data === '\x7f') {
+    // Send backspace to PTY - it will handle the display
+    AndroidTerminal.sendRaw('\x7f');
     if (currentCommand.length > 0) {
       currentCommand = currentCommand.slice(0, -1);
-      term.write('\b \b');
     }
   } else {
+    // Send character to PTY - it will echo back
+    AndroidTerminal.sendRaw(data);
     currentCommand += data;
-    term.write(data);
   }
 });
 
@@ -54,32 +56,29 @@ function fireOnData(data) {
 
 window.insertText = function (text) {
   term.focus();
-  if (!fireOnData(text)) {
-    term.write(text);
-    currentCommand += text;
+  // Send each character to PTY, let it echo
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    AndroidTerminal.sendRaw(char);
+    currentCommand += char;
   }
 };
 
 window.performBackspace = function () {
   term.focus();
-  if (!fireOnData('\x7f')) {
-    if (currentCommand.length > 0) {
-      currentCommand = currentCommand.slice(0, -1);
-    }
-    term.write("\b \b");
+  // Send backspace to PTY
+  AndroidTerminal.sendRaw('\x7f');
+  if (currentCommand.length > 0) {
+    currentCommand = currentCommand.slice(0, -1);
   }
 };
 
 window.performEnter = function () {
   term.focus();
-  if (!fireOnData('\r')) {
-    term.write("\r\n");
-    AndroidTerminal.sendInput(currentCommand);
-    currentCommand = '';
-  }
+  // Send newline to PTY
+  AndroidTerminal.sendRaw('\n');
+  currentCommand = '';
 };
-
-// Add after performEnter function
 
 window.performCopy = function() {
   const selection = term.getSelection();
@@ -93,9 +92,11 @@ window.performPaste = async function() {
   term.focus();
   try {
     const text = await navigator.clipboard.readText();
-    if (!fireOnData(text)) {
-      term.write(text);
-      currentCommand += text;
+    // Send each character to PTY
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      AndroidTerminal.sendRaw(char);
+      currentCommand += char;
     }
   } catch(e) {
     console.error("Paste failed:", e);
@@ -120,51 +121,27 @@ window.performFind = function() {
   console.log("Find not supported in terminal");
 };
 
-
 window.performCtrlC = function() {
   term.focus();
-
-  // Method 1: Fire through onData directly
-  fireOnData('\x03');
-
-  // Method 2: Also send to Android
-  if (window.AndroidTerminal) {
-    if (window.AndroidTerminal.sendControlC) {
-      AndroidTerminal.sendControlC();
-    } else if (window.AndroidTerminal.sendInput) {
-      // Send Ctrl+C as raw bytes
-      AndroidTerminal.sendInput('\x03');
-    }
-  }
-
-  // Visual feedback
-  term.write('^C');
+  // Send Ctrl+C to PTY
+  AndroidTerminal.sendRaw('\x03');
   currentCommand = '';
 };
 
 window.performCtrlD = function() {
   term.focus();
-  // Send EOF (Ctrl+D) - ASCII code 0x04
-  fireOnData('\x04');
-
-  if (window.AndroidTerminal && window.AndroidTerminal.sendInput) {
-    AndroidTerminal.sendInput('\x04');
-  }
-
-  term.write('^D');
+  // Send EOF (Ctrl+D) to PTY
+  AndroidTerminal.sendRaw('\x04');
   currentCommand = '';
 };
 
 window.performEscape = function() {
   term.focus();
-
-  // Send to Android PTY
-  if (window.AndroidTerminal && AndroidTerminal.sendRaw) {
-    AndroidTerminal.sendRaw('\x1B');
-  }
-
+  // Send ESC to PTY
+  AndroidTerminal.sendRaw('\x1B');
   currentCommand = '';
 };
+
 window.getCurrentCommand = function() {
   return currentCommand;
 };
@@ -186,7 +163,7 @@ window.fitTerminal = function() {
     const dims = fitAddon.proposeDimensions();
     if (dims) {
       if (window.AndroidTerminalResize) {
-        AndroidTerminalResize.resizeTerminal(dims.rows + 1, dims.cols + 2);
+        AndroidTerminalResize.getRowsCols(dims.rows, dims.cols);
       } else {
         console.warn('AndroidTerminalResize not available');
       }

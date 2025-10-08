@@ -1,10 +1,9 @@
-// Authors : Harsh Gaonker & Johniton Mascarenhas
+// Authors : Harsh Gaonker (Founder and only owner) & Johniton Mascarenhas (Intern)
 // Project started on : 18 - August - 2025
 
 package com.bsbeetle.bananaspaghetti
 
 import android.os.Bundle
-import android.util.Log
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,14 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bsbeetle.bananaspaghetti.data.tenebrioObj
-import com.bsbeetle.bananaspaghetti.tenebrio.data.ShellExecutor
 import com.bsbeetle.bananaspaghetti.tenebrio.pty.Tenebrio
-import com.bsbeetle.bananaspaghetti.tenebrio.terminal.Terminal
 import com.bsbeetle.bananaspaghetti.ui.DisableDefaultKeyboard
 import com.bsbeetle.bananaspaghetti.ui.EnterImmersiveMode
 import com.bsbeetle.bananaspaghetti.ui.navigation.AppNavigation
 import com.bsbeetle.bananaspaghetti.ui.theme.BananaSpaghettiTheme
-// import com.bsbeetle.bananaspaghetti.utils.EditorWebView
 import com.bsbeetle.bananaspaghetti.utils.TerminalWebView
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
@@ -31,7 +27,6 @@ import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 import java.io.File
-import kotlin.concurrent.thread
 
 
 class MainActivity : ComponentActivity() {
@@ -52,7 +47,6 @@ class MainActivity : ComponentActivity() {
             val termWebView: WebView = TerminalWebView.getWebview(this, tenebrioObj.tenebrio!!)
             val bufferViewModel: BufferViewModel = viewModel()
             val dotDownloadedFile = File(filesDir.absolutePath, ".downloaded")
-            ShellExecutor.startShell(this)
 
             BananaSpaghettiTheme {
 
@@ -81,34 +75,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

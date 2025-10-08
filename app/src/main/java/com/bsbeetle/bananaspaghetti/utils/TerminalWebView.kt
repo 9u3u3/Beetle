@@ -8,6 +8,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import com.bsbeetle.bananaspaghetti.tenebrio.data.ShellExecutor
 import com.bsbeetle.bananaspaghetti.tenebrio.data.outputfd
+import com.bsbeetle.bananaspaghetti.tenebrio.data.termSize
 import com.bsbeetle.bananaspaghetti.tenebrio.pty.Tenebrio
 import com.bsbeetle.bananaspaghetti.tenebrio.terminal.TerminalBridge
 
@@ -63,7 +64,14 @@ object TerminalWebView {
             webView!!.addJavascriptInterface(object {
                 @android.webkit.JavascriptInterface
                 fun resizeTerminal(rows: Int, cols: Int) {
+                    Log.d("TerminalWebView", "Called resize Terminal")
                     tenebrio.resizeTerminal(rows, cols)
+                }
+
+                @android.webkit.JavascriptInterface
+                fun getRowsCols(rows: Int, cols: Int) {
+                    termSize.row = rows
+                    termSize.cols = cols
                 }
             }, "AndroidTerminalResize")
 

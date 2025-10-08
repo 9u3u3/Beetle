@@ -23,7 +23,9 @@ JNIEXPORT jint JNICALL Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_s
         jstring jPublic,
         jstring jAlpineTmp,
         jstring jAlpine,
-        jstring jAlpineInit
+        jstring jAlpineInit,
+        jint rows,
+        jint cols
 ) {
 
     // Initializing paths
@@ -118,8 +120,8 @@ JNIEXPORT jint JNICALL Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_s
     // CRITICAL: Set initial window size before forking
     // This ensures child process starts with correct terminal dimensions
     struct winsize ws;
-    ws.ws_row = 53;    // Start with reasonable default
-    ws.ws_col = 117;   // Will be updated by fitTerminal() later
+    ws.ws_row = rows;    // Start with reasonable default
+    ws.ws_col = cols;   // Will be updated by fitTerminal() later
     ws.ws_xpixel = 0;
     ws.ws_ypixel = 0;
 
