@@ -6,11 +6,9 @@ import android.util.Log
 import android.view.ViewGroup
 import android.webkit.WebSettings
 import android.webkit.WebView
-import com.bsbeetle.bananaspaghetti.tenebrio.data.ShellExecutor
 import com.bsbeetle.bananaspaghetti.tenebrio.data.outputfd
 import com.bsbeetle.bananaspaghetti.tenebrio.data.termSize
 import com.bsbeetle.bananaspaghetti.tenebrio.pty.Tenebrio
-import com.bsbeetle.bananaspaghetti.tenebrio.terminal.TerminalBridge
 
 @SuppressLint("StaticFieldLeak")
 object TerminalWebView {
@@ -19,13 +17,9 @@ object TerminalWebView {
     @SuppressLint("SetJavaScriptEnabled")
     fun getWebview(context: Context, tenebrio: Tenebrio): WebView {
         if(webView == null) {
-
             this.tenebrio = tenebrio
-
             webView = WebView(context.applicationContext).apply {
-
                 WebView.setWebContentsDebuggingEnabled(true)
-
                 settings.apply {
                     javaScriptEnabled = true
                     domStorageEnabled = true
@@ -36,9 +30,7 @@ object TerminalWebView {
                     loadWithOverviewMode = true
                     setSupportZoom(false)
                 }
-
                 loadUrl("file:///android_asset/terminal/index.html")
-
             }
 
             webView!!.layoutParams = ViewGroup.LayoutParams(

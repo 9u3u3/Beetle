@@ -4,18 +4,15 @@ import android.content.Context
 import android.webkit.WebView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -24,7 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bsbeetle.bananaspaghetti.LocalBufferViewModel
+import com.bsbeetle.bananaspaghetti.LocalEditorViewModel
 import com.bsbeetle.bananaspaghetti.data.TopBarButtons
 import com.bsbeetle.bananaspaghetti.utils.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
@@ -35,10 +33,12 @@ fun TopBar(
     modifier: Modifier = Modifier,
     color: Color,
     buttons: List<TopBarButtons>? = null,
-    bufferViewModel: BufferViewModel? = null,
     context: Context? = null,
-    webView: WebView? = null
 ) {
+
+    val bufferViewModel: BufferViewModel = LocalBufferViewModel.current
+    val editorViewModel: EditorViewModel = LocalEditorViewModel.current
+    val webView = editorViewModel.webView
 
     Box(
         modifier = modifier
@@ -101,7 +101,6 @@ fun TopBar(
                                     webView,
                                     if(bufferViewModel.bufferLine.isNotEmpty()) bufferViewModel.bufferLine[bufferViewModel.filesOpenedList.last()]!! else ""
                                 )
-
                             }
                         }
                     }

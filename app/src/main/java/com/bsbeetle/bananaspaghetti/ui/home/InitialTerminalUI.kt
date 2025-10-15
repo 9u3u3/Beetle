@@ -12,8 +12,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
+import com.bsbeetle.bananaspaghetti.LocalSliderViewModel
 import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
 import com.bsbeetle.bananaspaghetti.data.tenebrioObj
+import com.bsbeetle.bananaspaghetti.tenebrio.pty.Tenebrio
 import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
 import com.bsbeetle.bananaspaghetti.ui.components.TopBar
 import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
@@ -23,15 +26,17 @@ import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 
 @Composable
-fun InitialTerminalUI(
-    keyboardViewModel: KeyboardViewModel,
-    sliderViewModel: SliderViewModel,
-) {
+fun InitialTerminalUI() {
+
+    val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
+    val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
 
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val layout = if (uiState.toggleKeyboard) KeyboardLayout.developerLayout else KeyboardLayout.qwertyLayout
+
+    tenebrioObj.tenebrio = Tenebrio(context)
     val webView: WebView = TerminalWebView.getWebview(context, tenebrioObj.tenebrio!!)
 
     Box {
@@ -69,7 +74,6 @@ fun InitialTerminalUI(
                         height = Dimension.wrapContent
                     },
                 color = Color.Gray,
-                // bufferViewModel = bufferViewModel,
                 context = context
             )
 
@@ -84,7 +88,6 @@ fun InitialTerminalUI(
                         height = Dimension.wrapContent
                     },
                 color = Color(0xFF212121),
-                // buttonsForRightTopBar
             )
 
 
@@ -112,21 +115,14 @@ fun InitialTerminalUI(
                     .constrainAs(codeEditor) {
                         top.linkTo(topMiddleBarRef.bottom)
                         bottom.linkTo(parent.bottom)
-                        if (uiState.isLeftKeyboardVisible) {
-                            start.linkTo(leftKeyboardRef.end)
-                        } else {
-                            start.linkTo(parent.start)
-                        }
-                        if (uiState.isRightKeyboardVisible) {
-                            end.linkTo(rightKeyboardRef.start)
-                        } else {
-                            end.linkTo(parent.end)
-                        }
+                        if (uiState.isLeftKeyboardVisible){start.linkTo(leftKeyboardRef.end)}
+                        else {start.linkTo(parent.start)}
+                        if (uiState.isRightKeyboardVisible){end.linkTo(rightKeyboardRef.start)}
+                        else{end.linkTo(parent.end)}
                         width = Dimension.fillToConstraints
                         height = Dimension.fillToConstraints
                     },
-                keyboardViewModel,
-                webView = webView // just need to pass the terminal web content i guess
+                webView = webView
             )
 
             if (uiState.isRightKeyboardVisible) {
@@ -147,8 +143,6 @@ fun InitialTerminalUI(
                     )
                 }
             }
-
         }
     }
-
 }

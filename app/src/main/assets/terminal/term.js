@@ -8,6 +8,8 @@ term.open(document.getElementById("terminal"));
 
 const fitAddon = new FitAddon.FitAddon();
 term.loadAddon(fitAddon);
+const dims = fitAddon.proposeDimensions();
+AndroidTerminalResize.getRowsCols(dims.rows, dims.cols);
 
 let currentCommand = '';
 

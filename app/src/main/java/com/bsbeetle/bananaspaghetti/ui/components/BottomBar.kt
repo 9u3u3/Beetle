@@ -67,9 +67,7 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color) {
                     modifier = Modifier.padding(8.dp),
                     fontSize = 12.sp
                 )
-
             }
         }
     }
-
 }

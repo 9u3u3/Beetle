@@ -10,6 +10,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
+import com.bsbeetle.bananaspaghetti.LocalBufferViewModel
+import com.bsbeetle.bananaspaghetti.LocalFileViewModel
 import com.bsbeetle.bananaspaghetti.utils.Tree
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
@@ -17,8 +19,6 @@ import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 @Composable
 fun TopLeftBox(
     modifier: Modifier = Modifier,
-    fileViewModel: FileViewModel,
-    bufferViewModel: BufferViewModel,
     webView: WebView
 ) {
 
@@ -47,10 +47,7 @@ fun TopLeftBox(
                  width = Dimension.fillToConstraints
                 }
                 .fillMaxHeight(),
-            fileViewModel,
-            bufferViewModel,
             webView
         )
     }
-
 }

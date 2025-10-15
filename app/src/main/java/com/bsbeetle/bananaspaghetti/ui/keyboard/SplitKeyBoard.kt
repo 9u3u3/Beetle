@@ -25,10 +25,10 @@ fun SplitKeyboardHalf(
     onKeyEvent: (Key, KeyGesture) -> Unit,
     modifier: Modifier = Modifier
 ) {
+
     val configuration = LocalConfiguration.current
     val screenHeightDp = configuration.screenHeightDp.dp
     val keyboardHeight = screenHeightDp / 2f
-
     val numberOfRows = layout.rows.size
     val totalVerticalPadding = 16.dp
     val availableHeight = keyboardHeight - totalVerticalPadding

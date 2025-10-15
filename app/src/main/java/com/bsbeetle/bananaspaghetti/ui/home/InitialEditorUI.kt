@@ -22,6 +22,11 @@ import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.bsbeetle.bananaspaghetti.LocalBufferViewModel
+import com.bsbeetle.bananaspaghetti.LocalEditorViewModel
+import com.bsbeetle.bananaspaghetti.LocalFileViewModel
+import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
+import com.bsbeetle.bananaspaghetti.LocalSliderViewModel
 import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
 import com.bsbeetle.bananaspaghetti.ui.components.BottomBar
 import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
@@ -44,39 +49,29 @@ import java.io.OutputStreamWriter
 
 @SuppressLint("RememberReturnType")
 @Composable
-fun InitialEditorUI(
-    fileViewModel: FileViewModel,
-    keyboardViewModel: KeyboardViewModel,
-    sliderViewModel: SliderViewModel,
-    navController: NavController,
-    bufferViewModel: BufferViewModel,
-    editorViewModel: EditorViewModel
-) {
+fun InitialEditorUI( navController: NavController ) {
 
+    val fileViewModel: FileViewModel = LocalFileViewModel.current
+    val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
+    val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
+    val editorViewModel: EditorViewModel = LocalEditorViewModel.current
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val layout = if (uiState.toggleKeyboard) KeyboardLayout.developerLayout else KeyboardLayout.qwertyLayout
 
-    // Here is the issue behind the clearance of the data inside the editor
-    LaunchedEffect(fileViewModel.selectedUri) { // Not sure about this
+    editorViewModel.init()
+
+    LaunchedEffect(fileViewModel.selectedUri) {
         if(fileViewModel.selectedUri != null) {
-            Log.e("InitialEditor", "Called from 1")
             loadContentWhenReady(editorViewModel.webView, readFromFile(context, fileViewModel.selectedUri))
         }
     }
 
-    val buttonsForLeftTopBar = listOf(
-        TopBarButtons("Save", { saveFile(fileViewModel, context, editorViewModel) })
-    )
-
-    val buttonsForRightTopBar = listOf(TopBarButtons("Settings", onClick = {
-        navController.navigate("settings")
-    }))
-
+    val buttonsForLeftTopBar = listOf(TopBarButtons("Save", {saveFile(fileViewModel, context, editorViewModel)}))
+    val buttonsForRightTopBar = listOf(TopBarButtons("Settings", onClick = {navController.navigate("settings")}))
 
     Box {
-
         ConstraintLayout(modifier = Modifier.fillMaxSize()) {
             val (topLeftBarRef,
                 topMiddleBarRef,
@@ -98,8 +93,6 @@ fun InitialEditorUI(
                         width = Dimension.fillToConstraints
                         height = Dimension.fillToConstraints
                     },
-                fileViewModel,
-                bufferViewModel,
                 editorViewModel.webView!!
             )
 
@@ -127,7 +120,6 @@ fun InitialEditorUI(
                     },
                 Color(0xFF212121),
                 buttonsForLeftTopBar,
-                webView = editorViewModel.webView!!
             )
 
             //Middle Top Bar
@@ -141,9 +133,7 @@ fun InitialEditorUI(
                         height = Dimension.wrapContent
                     },
                 color = Color.Gray,
-                bufferViewModel = bufferViewModel,
                 context = context,
-                webView = editorViewModel.webView!!
             )
 
             //Right Top Bar
@@ -158,9 +148,7 @@ fun InitialEditorUI(
                     },
                 color = Color(0xFF212121),
                 buttonsForRightTopBar,
-                webView = editorViewModel.webView!!
             )
-
 
             if (uiState.isLeftKeyboardVisible) {
                 key(sliderValue) {
@@ -186,21 +174,14 @@ fun InitialEditorUI(
                     .constrainAs(codeEditor) {
                         top.linkTo(topMiddleBarRef.bottom)
                         bottom.linkTo(parent.bottom)
-                        if (uiState.isLeftKeyboardVisible) {
-                            start.linkTo(leftKeyboardRef.end)
-                        } else {
-                            start.linkTo(parent.start)
-                        }
-                        if (uiState.isRightKeyboardVisible) {
-                            end.linkTo(rightKeyboardRef.start)
-                        } else {
-                            end.linkTo(parent.end)
-                        }
+                        if (uiState.isLeftKeyboardVisible){start.linkTo(leftKeyboardRef.end)}
+                        else {start.linkTo(parent.start)}
+                        if (uiState.isRightKeyboardVisible){end.linkTo(rightKeyboardRef.start)}
+                        else {end.linkTo(parent.end)}
                         width = Dimension.fillToConstraints
                         height = Dimension.fillToConstraints
                     },
-                keyboardViewModel,
-                webView = editorViewModel.webView!!
+                editorViewModel.webView!!
             )
 
             if (uiState.isRightKeyboardVisible) {
@@ -233,7 +214,6 @@ fun InitialEditorUI(
                     },
                 color = Color(0xFF245895)
             )
-
         }
     }
 }

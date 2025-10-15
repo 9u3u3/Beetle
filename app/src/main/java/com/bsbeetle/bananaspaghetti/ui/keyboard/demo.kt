@@ -21,23 +21,21 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
+import com.bsbeetle.bananaspaghetti.LocalSliderViewModel
 import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
 import com.bsbeetle.bananaspaghetti.ui.components.BottomBar
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 
 @Composable
-fun DemoEditorUi (
-    keyboardViewModel: KeyboardViewModel,
-    sliderViewModel: SliderViewModel,
-) {
+fun DemoEditorUi () {
 
+    val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
+    val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
-
-
     val context = LocalContext.current
-
     // for selecting the layout.
     val layout = if (uiState.toggleKeyboard) {
         KeyboardLayout.developerLayout
@@ -47,9 +45,7 @@ fun DemoEditorUi (
 
     val webView = remember {
         WebView(context).apply {
-
             WebView.setWebContentsDebuggingEnabled(true)
-
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true
@@ -69,10 +65,8 @@ fun DemoEditorUi (
                     //... finishes loading the page
                     // view -> webView instance, url -> url of the loaded page
                     super.onPageFinished(view, url)
-
                 }
             }
-
             loadUrl("file:///android_asset/editor/index.html")
         }
     }
@@ -124,7 +118,6 @@ fun DemoEditorUi (
                         width = Dimension.fillToConstraints // Takes remaining 60% width
                         height = Dimension.fillToConstraints
                     },
-                keyboardViewModel,
                 webView = webView
 
             )
@@ -176,5 +169,4 @@ fun DemoEditorUi (
             SmoothSlider(sliderViewModel)
         }
     }
-
 }

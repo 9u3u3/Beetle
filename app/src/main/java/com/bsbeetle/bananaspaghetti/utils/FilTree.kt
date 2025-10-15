@@ -16,10 +16,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,27 +26,25 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bsbeetle.bananaspaghetti.LocalBufferViewModel
+import com.bsbeetle.bananaspaghetti.LocalFileViewModel
 import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
-import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.ExpandViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 
 @Composable
 fun Tree(
     modifier: Modifier = Modifier,
-    fileViewModel: FileViewModel,
-    bufferViewModel: BufferViewModel,
     webView: WebView
 ) {
 
+    val fileViewModel: FileViewModel = LocalFileViewModel.current
+    val bufferViewModel: BufferViewModel = LocalBufferViewModel.current
     val context = LocalContext.current
     var pickedFolder: DocumentFile? = null
     val uri = fileViewModel.selectedFolderUri
     val scrollState = rememberScrollState()
-
-    // Separate view model... use the main global one
-    // val editorViewModel: EditorViewModel = viewModel()
 
     uri?.let {
         try {
@@ -66,9 +60,7 @@ fun Tree(
             pickedFolder?.listFiles()?.forEach { file ->
                 item {
                     if(file.isFile) {
-
                         val fileName: String = getFileName(context, file.uri)
-
                         Row (
                             modifier = Modifier.clickable {
                                 // Buffer line implementation
@@ -78,27 +70,22 @@ fun Tree(
                             },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-
                             Icon(
                                 painter = painterResource(id = getIconResourceId(fileName)),
                                 contentDescription = "file icon",
                                 modifier = Modifier.size(13.dp)
                             )
-
                             Spacer(modifier = Modifier.width(3.dp))
-
                             Text(
                                 text = "$fileName",
                                 color = Color.White,
                                 fontSize = 11.sp
                             )
-
                         }
                     } else if(file.isDirectory) {
                         DirectoryNode(
                             depth = 0,
                             directory = file,
-                            bufferViewModel,
                             webView
                         )
                     }
@@ -113,10 +100,10 @@ fun Tree(
 fun DirectoryNode(
     depth: Int,
     directory: DocumentFile,
-    bufferViewModel: BufferViewModel,
     webView: WebView
 ) {
 
+    val bufferViewModel: BufferViewModel = LocalBufferViewModel.current
     val context = LocalContext.current
     val indent = depth * 7.dp
 
@@ -128,7 +115,6 @@ fun DirectoryNode(
     var isExpanded = expandViewModel.expandedFolders[directory.uri.toString()] ?: false
 
     Column {
-
         Row(
             modifier = Modifier.padding(start = indent),
             verticalAlignment = Alignment.CenterVertically
@@ -138,9 +124,7 @@ fun DirectoryNode(
                 contentDescription = "folder open or close",
                 modifier = Modifier.size(13.dp)
             )
-
             Spacer(modifier = Modifier.width(3.dp))
-
             Text(
                 text = getFileName(context, directory.uri),
                 color = Color.White,
@@ -154,9 +138,7 @@ fun DirectoryNode(
         if (isExpanded) {
             directory.listFiles().forEach { file ->
                 if (file.isFile) {
-
                     val fileName: String = getFileName(context, file.uri)
-
                     Row (
                         modifier = Modifier
                             .padding(start = indent + 7.dp)
@@ -168,15 +150,12 @@ fun DirectoryNode(
                             },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-
                         Icon(
                             painter = painterResource(id = getIconResourceId(fileName)),
                             contentDescription = "file icon",
                             modifier = Modifier.size(13.dp)
                         )
-
                         Spacer(modifier = Modifier.width(3.dp))
-
                         Text(
                             text = "$fileName",
                             color = Color.White,
@@ -187,7 +166,6 @@ fun DirectoryNode(
                     DirectoryNode(
                         depth = depth + 1,
                         directory = file,
-                        bufferViewModel,
                         webView
                     )
                 }

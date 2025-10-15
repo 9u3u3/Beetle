@@ -67,24 +67,6 @@ class KeyboardViewModel : ViewModel() {
         }
     }
 
-
-    // To Handle character keys
-//    private fun handleCharacter(key: Key, gesture: KeyGesture) {
-//        when (gesture) {
-//            KeyGesture.Tap -> {
-//                // Single tap means single character
-//                val textToInsert = getCharacterText(key)
-//                emitText(textToInsert)
-//            }
-//            KeyGesture.LongPress -> {
-//                // Long press/hold = continuous typing of the same character
-//                val textToInsert = getCharacterText(key)
-//                emitText(textToInsert)
-//            }
-//            else -> {} // Ignore other gestures for character keys
-//        }
-//    }
-//
     private fun handleCharacter(key: Key, gesture: KeyGesture) {
         when (gesture) {
             KeyGesture.Tap -> {

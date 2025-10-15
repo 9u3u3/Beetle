@@ -5,7 +5,7 @@ export PS1="\[\e[38;5;46m\]\u\[\033[39m\]@localhost \[\033[39m\]\w \[\033[0m\]\\
 export HOME=/home
 export TERM=xterm-256color
 
-required_packages="bash fastfetch "
+required_packages="bash"
 missing_packages=""
 
 for pkg in $required_packages; do
@@ -23,8 +23,6 @@ if [ -n "$missing_packages" ]; then
     fi
     echo -e "\e[34m[*] \e[0mUse \e[32mapk\e[0m to install new packages\e[0m"
 fi
-
-fastfetch
 
 if [ ! -f /linkerconfig/ld.config.txt ]; then
     mkdir -p /linkerconfig

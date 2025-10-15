@@ -10,5 +10,4 @@ data class KeyboardUiState(
     val isLeftKeyboardVisible: Boolean = true,
     val isRightKeyboardVisible: Boolean = true,
     val indentValue:Int=4
-// Add other state properties here for control and etc
 )

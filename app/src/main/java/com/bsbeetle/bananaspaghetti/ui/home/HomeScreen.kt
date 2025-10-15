@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,26 +28,22 @@ import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.fileLauncher
-import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 
 @SuppressLint("RestrictedApi")
 @Composable
-fun HomeScreen(
-    modifier: Modifier = Modifier,
-    navController: NavController,
-    fileViewModel: FileViewModel,
-) {
+fun HomeScreen(navController: NavController) {
 
     val context = LocalContext.current
-    val launcher = fileLauncher(context, navController, fileViewModel)
+    val launcher = fileLauncher(context, navController)
 
     Box(
-        modifier = modifier.background(color = Color(0xFF181818)),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(color = Color(0xFF181818)),
         contentAlignment = Alignment.Center
     ) {
         Box(
-            modifier = Modifier
-                .align(Alignment.Center)
+            modifier = Modifier .align(Alignment.Center)
         ) {
             Column {
                 Text(
@@ -69,7 +66,7 @@ fun HomeScreen(
                             type = "*/*"
                         }
                         launcher.launch(intent)
-                          },
+                    }
                 )
 
                 // Open file
@@ -103,6 +100,7 @@ fun HomeScreen(
                         navController.navigate(Screen.Terminal.route)
                     }
                 )
+
             }
         }
     }

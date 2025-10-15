@@ -12,18 +12,7 @@ object KeyboardLayout {
     private const val SHIFT_KEY = NORMAL_KEY
     private const val SPACE_KEY = NORMAL_KEY*3
     private const val ENTER_KEY = NORMAL_KEY*1.5f
-
     private const val CTRL_KEY = NORMAL_KEY*1.2f
-
-
-        // --- ADD THIS NEW LAYOUT ---
-//        val symbolBarLayout = listOf(
-//            Key("(", "("), Key(")", ")"), Key("{", "{"), Key("}", "}"), Key("[", "["), Key("]", "]"),
-//            Key("=", "="), Key("+", "+"), Key("-", "-"), Key("/", "/"), Key("*", "*"), Key("%", "%"),
-//            Key(";", ";"), Key(":", ":"), Key("_", "_"), Key("\"", "\""), Key("'", "'"), Key("<", "<"), Key(">", ">")
-//        )
-
-
 
     val qwertyLayout = StableKeyboardLayout( listOf(
         // Row 1
