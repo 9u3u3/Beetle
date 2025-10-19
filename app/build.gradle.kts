@@ -100,4 +100,6 @@ dependencies {
     // File Handling
     implementation("androidx.documentfile:documentfile:1.1.0")
 
+    implementation("org.nanohttpd:nanohttpd:2.3.1")
+
 }

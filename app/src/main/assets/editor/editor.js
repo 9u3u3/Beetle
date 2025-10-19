@@ -3,10 +3,8 @@ import { EditorState } from "@codemirror/state"
 import { cpp } from "@codemirror/lang-cpp"
 import { oneDark } from "@codemirror/theme-one-dark"
 import {insertNewlineAndIndent, deleteCharBackward } from "@codemirror/commands";
-
 import { undo, redo, history } from "@codemirror/commands"
 import { search, openSearchPanel } from "@codemirror/search"
-
 
 window.code_ = ""
 
@@ -15,7 +13,7 @@ window.code_ = ""
 window.editor = new EditorView({ // add the editor to window
   state: EditorState.create({
     extensions: [
-      basicSetup, 
+      basicSetup,
       cpp(),
       oneDark,
       history(),

@@ -38,7 +38,7 @@ JNIEXPORT jint JNICALL Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_s
     const char *PUBLIC = env->GetStringUTFChars(jPublic, nullptr);
     const char *ALPINE_TMP = env->GetStringUTFChars(jAlpineTmp, nullptr);
     const char *ALPINE = env->GetStringUTFChars(jAlpine, nullptr);
-    const char *INIT_ALPINE = env->GetStringUTFChars(jAlpineInit, nullptr);
+    // const char *INIT_ALPINE = env->GetStringUTFChars(jAlpineInit, nullptr);
 
     // Setting the environment variables
     setenv("PREFIX", PREFIX, 1);
