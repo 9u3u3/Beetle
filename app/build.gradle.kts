@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.2.20"
 }
 
 android {
@@ -64,6 +65,14 @@ android {
     buildFeatures {
         compose = true
     }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/INDEX.LIST"
+            excludes += "/META-INF/io.netty.versions.properties"
+            excludes += "/META-INF/DEPENDENCIES"
+        }
+    }
 }
 
 dependencies {
@@ -100,6 +109,23 @@ dependencies {
     // File Handling
     implementation("androidx.documentfile:documentfile:1.1.0")
 
+    // to replace
     implementation("org.nanohttpd:nanohttpd:2.3.1")
 
+    // ktor for websockets
+    implementation("io.ktor:ktor-server-core:3.2.2")
+    implementation("io.ktor:ktor-server-cio:3.2.2")
+    implementation("io.ktor:ktor-server-websockets:3.2.2")
+
+    val ktorVersion = "3.3.1"
+    val kotlinxSerializationVersion = "1.7.3"
+    val logbackVersion = "1.4.11"
+
+
+    implementation("io.ktor:ktor-server-core-jvm:${ktorVersion}")
+    implementation("io.ktor:ktor-server-netty-jvm:${ktorVersion}")
+    implementation("io.ktor:ktor-server-websockets-jvm:${ktorVersion}")
+    implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:${ktorVersion}")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${kotlinxSerializationVersion}")
+    implementation("org.slf4j:slf4j-android:1.7.36")
 }

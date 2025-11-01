@@ -20,6 +20,9 @@ class AssetServer(private val context: Context, port: Int = 8080) : NanoHTTPD(po
             }
             newFixedLengthResponse(Response.Status.OK, mime, stream, stream.available().toLong())
         } catch (e: Exception) {
+            if(e is java.net.SocketException || e is java.net.SocketTimeoutException) {
+                newFixedLengthResponse(Response.Status.NO_CONTENT, "text/plain", "")
+            }
             newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "File not found")
         }
     }

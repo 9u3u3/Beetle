@@ -70,7 +70,7 @@ object KeyboardLayout {
         //Row 2
         listOf(
             Key(".", ".", NORMAL_KEY), Key(",", ",", NORMAL_KEY), Key("\"", "\"", NORMAL_KEY),
-            Key("'", "'", NORMAL_KEY), Key("`", "`", NORMAL_KEY), Key("\\", "\\", NORMAL_KEY),
+            Key("'", "'", NORMAL_KEY), Key("`", "`", NORMAL_KEY), Key("\\\\", "\\\\", NORMAL_KEY),
             Key("/", "/", NORMAL_KEY), Key("|", "|", NORMAL_KEY), Key("&", "&", NORMAL_KEY),
             Key("=", "=", NORMAL_KEY),
         ),

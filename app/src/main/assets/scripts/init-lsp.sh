@@ -30,7 +30,7 @@ export SHELL=\$(command -v bash)
 
 EOF
     fi
-    exec "clangd"
+    exec "clangd --log=error --background-index --completion-style=detailed --header-insertion=never --clang-tidy=false"
 else
     exec "$@"
 fi

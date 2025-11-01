@@ -32,7 +32,6 @@ import com.bsbeetle.bananaspaghetti.ui.components.BottomBar
 import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
 import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboardHalf
 import com.bsbeetle.bananaspaghetti.data.TopBarButtons
-import com.bsbeetle.bananaspaghetti.tenebrio.LSP.StartLsp
 import com.bsbeetle.bananaspaghetti.ui.components.TopBar
 import com.bsbeetle.bananaspaghetti.ui.components.TopLeftBox
 import com.bsbeetle.bananaspaghetti.ui.components.TopRightBox
@@ -62,9 +61,6 @@ fun InitialEditorUI( navController: NavController ) {
     val layout = if (uiState.toggleKeyboard) KeyboardLayout.developerLayout else KeyboardLayout.qwertyLayout
 
     editorViewModel.init()
-
-    val lsp = StartLsp(context)
-    lsp.init()
 
     LaunchedEffect(fileViewModel.selectedUri) {
         if(fileViewModel.selectedUri != null) {

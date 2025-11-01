@@ -26,11 +26,10 @@ fun Editor (modifier: Modifier = Modifier, webView: WebView) {
         webView.webViewClient = object : android.webkit.WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                Log.d("Editor", "On page called")
                 try {
                     tenebrioObj.tenebrio!!.init()
                 } catch (e: NullPointerException) {
-                    Log.d("Editor", "Null pointer exception")
+                    Log.e("Editor", "Null pointer exception")
                 }
             }
         }

@@ -8,13 +8,15 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
+#include <errno.h>
+#include <termios.h>
 #include <android/log.h>
 
 #define LOG_TAG "NativeLSP"
 #define ALOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 extern "C"
-JNIEXPORT jint JNICALL Java_com_bsbeetle_bananaspaghetti_tenebrio_LSP_StartLsp_getCppLsp(
+JNIEXPORT jint JNICALL Java_com_bsbeetle_bananaspaghetti_tenebrio_LSP_cLsp_getCppLsp(
        JNIEnv *env,
        jobject /*thizz nutz*/,
        jstring prefix,
@@ -63,8 +65,6 @@ JNIEXPORT jint JNICALL Java_com_bsbeetle_bananaspaghetti_tenebrio_LSP_StartLsp_g
             "-b", "/vendor",
             "-b", "/linkerconfig/ld.config.txt",
             "-b", "/linkerconfig/com.android.art/ld.config.txt",
-            "-b", "/plat_property_contexts",
-            "-b", "/property_contexts",
 
             "-b", "/sdcard",
             "-b", "/storage",
@@ -134,6 +134,33 @@ JNIEXPORT jint JNICALL Java_com_bsbeetle_bananaspaghetti_tenebrio_LSP_StartLsp_g
         if(slave_fd < 0) {
             ALOGE("Failed slave open");
             exit(-1);
+        }
+
+        struct termios tio;
+        if (tcgetattr(slave_fd, &tio) == -1) {
+            ALOGE("tcgetattr failed: %d", errno);
+        } else {
+            // Prefer cfmakeraw if available:
+#ifdef __GLIBC__
+            cfmakeraw(&tio);
+#else
+            // manual raw flags fallback
+            tio.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP
+                             | INLCR | IGNCR | ICRNL | IXON);
+            tio.c_oflag &= ~OPOST;
+            tio.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+            tio.c_cflag &= ~(CSIZE | PARENB);
+            tio.c_cflag |= CS8;
+#endif
+
+            // disable ECHO explicitly
+            tio.c_lflag &= ~ECHO;
+            // set attributes immediately
+            if (tcsetattr(slave_fd, TCSANOW, &tio) == -1) {
+                ALOGE("tcsetattr failed: %d", errno);
+            } else {
+                ALOGE("Slave pty set to raw / no-echo mode");
+            }
         }
 
         if(setsid() < 0) {

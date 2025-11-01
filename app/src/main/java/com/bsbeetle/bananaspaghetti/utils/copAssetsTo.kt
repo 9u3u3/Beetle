@@ -1,6 +1,7 @@
 package com.bsbeetle.bananaspaghetti.utils
 
 import android.content.Context
+import android.util.Log
 import java.io.File
 import java.io.FileOutputStream
 
@@ -14,6 +15,7 @@ fun copyAssetsTo(
     assetName: String,
     context: Context
 ) {
+    Log.d("NativeLSP", "Called Copy Asset")
     val outFile = File(context.filesDir, assetName.substringAfter('/'))
     context.assets.open(assetName).use { inputStream ->
         FileOutputStream(outFile).use { outputStream ->
