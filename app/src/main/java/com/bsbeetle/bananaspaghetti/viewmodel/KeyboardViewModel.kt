@@ -1,7 +1,9 @@
 package com.bsbeetle.bananaspaghetti.viewmodel
 
+import android.view.KeyEvent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bsbeetle.bananaspaghetti.data.Ic
 import com.bsbeetle.bananaspaghetti.model.Key
 import com.bsbeetle.bananaspaghetti.model.KeyType
 import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
@@ -241,19 +243,29 @@ class KeyboardViewModel : ViewModel() {
 
     private fun emitText(text: String) {
         viewModelScope.launch {
-            _editorAction.emit(EditorAction.InsertText(text))
+            // _editorAction.emit(EditorAction.InsertText(text))
+            Ic.ic?.commitText(text, 1)
         }
     }
 
     private fun onBackspace() {
         viewModelScope.launch {
-            _editorAction.emit(EditorAction.Backspace)
+            //_editorAction.emit(EditorAction.Backspace)
+            Ic.ic?.deleteSurroundingText(1, 0)
         }
     }
 
     private fun onEnter() {
         viewModelScope.launch {
-            _editorAction.emit(EditorAction.Enter)
+            // _editorAction.emit(EditorAction.Enter)
+            // First try key event (lets web editors intercept Enter)
+            val sent = Ic.ic?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER)) == true &&
+                    Ic.ic?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER)) == true
+
+            // If that didn’t trigger (common in WebViews), manually insert newline
+            if (!sent) {
+                Ic.ic?.commitText("\n", 1)
+            }
         }
     }
 

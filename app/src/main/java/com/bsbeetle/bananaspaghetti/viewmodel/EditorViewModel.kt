@@ -2,15 +2,19 @@ package com.bsbeetle.bananaspaghetti.viewmodel
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.util.Log
+import android.view.inputmethod.InputConnection
 import android.webkit.WebSettings
 import android.webkit.WebView
 import androidx.lifecycle.AndroidViewModel
+import com.bsbeetle.bananaspaghetti.data.Ic
 import com.bsbeetle.bananaspaghetti.utils.AssetServer
+import com.bsbeetle.bananaspaghetti.utils.NoKeyboardWebView
 
 class EditorViewModel(app: Application) : AndroidViewModel(app) {
-    @SuppressLint("StaticFieldLeak")
-    var webView: WebView? = null
 
+    @SuppressLint("StaticFieldLeak")
+    var webView: NoKeyboardWebView? = null
     private var server: AssetServer? = null
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -23,7 +27,7 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
             server?.start()
         }
 
-        webView = WebView(getApplication()).apply {
+        webView = NoKeyboardWebView(getApplication()).apply {
             WebView.setWebContentsDebuggingEnabled(true)
             settings.apply {
                 javaScriptEnabled = true
@@ -38,7 +42,22 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
 
             // Load via HTTP server instead of directly from assets
             loadUrl("http://localhost:8080/index.html")
+
+            // Wait for the WebView to actually be ready
+            post {
+                requestFocus()
+                postDelayed({
+                    val inputConnection = currentInputConnection()
+                    if (inputConnection != null) {
+                        Ic.ic = inputConnection
+                    } else {
+                        Log.e("EditorViewModel", "InputConnection is still null (WebView not ready yet)")
+                    }
+                }, 3000)
+            }
+
         }
+
     }
 
     override fun onCleared() {
