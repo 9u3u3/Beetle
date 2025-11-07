@@ -15,6 +15,19 @@ val IosevkaFont = FontFamily(
     Font(R.font.iosevka_thin, FontWeight.Thin)
 )
 
+// Importing karmatic font
+val KarmaticFont = FontFamily(
+    Font(R.font.karmatic_arcade_regular)
+)
+
+val born2bsporty = FontFamily(
+    Font(R.font.born2bsporty_fs_regular)
+)
+
+val codaRegular = FontFamily(
+    Font(R.font.coda_regular)
+)
+
 // Set of Material typography styles to start with
 val Typography = Typography(
     bodyLarge = TextStyle(
@@ -37,5 +50,13 @@ val Typography = Typography(
         fontSize = 11.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.5.sp
+    ),
+    // New Karmatic text style
+    displayLarge = TextStyle(
+        fontFamily = KarmaticFont,
+        fontWeight = FontWeight.Normal,
+        fontSize = 32.sp,
+        lineHeight = 36.sp,
+        letterSpacing = 1.sp
     )
 )

@@ -121,11 +121,12 @@ dependencies {
     val kotlinxSerializationVersion = "1.7.3"
     val logbackVersion = "1.4.11"
 
-
     implementation("io.ktor:ktor-server-core-jvm:${ktorVersion}")
     implementation("io.ktor:ktor-server-netty-jvm:${ktorVersion}")
     implementation("io.ktor:ktor-server-websockets-jvm:${ktorVersion}")
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:${ktorVersion}")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${kotlinxSerializationVersion}")
     implementation("org.slf4j:slf4j-android:1.7.36")
+
+    implementation("io.github.kyant0:backdrop:1.0.0")
 }
