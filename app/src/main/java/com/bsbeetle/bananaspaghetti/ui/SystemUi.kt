@@ -1,9 +1,11 @@
 package com.bsbeetle.bananaspaghetti.ui
 
 import android.app.Activity
+import android.content.res.Configuration
 import android.view.WindowManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -14,22 +16,26 @@ import androidx.core.view.WindowInsetsControllerCompat
 fun DisableDefaultKeyboard() {
     val context = LocalContext.current
     val window = (context as Activity).window
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    LaunchedEffect(
-        Unit
-    ) {
+    LaunchedEffect(isLandscape) {  // React to orientation changes
         window.let { win ->
-            WindowCompat.setDecorFitsSystemWindows(win, false)
-            win.setSoftInputMode( // Disables soft keyboard popup
-                WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN or
-                        WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING
-            )
+            if (isLandscape) {
+                WindowCompat.setDecorFitsSystemWindows(win, false)
+                win.setSoftInputMode(
+                    WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN or
+                            WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING
+                )
+            } else {
+                // Enable keyboard in portrait
+                win.setSoftInputMode(
+                    WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+                )
+            }
         }
     }
-
-}
-
-@Composable
+}@Composable
 fun EnterImmersiveMode() {
     val view = LocalView.current
 

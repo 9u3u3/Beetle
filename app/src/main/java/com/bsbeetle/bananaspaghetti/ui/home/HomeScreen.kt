@@ -2,6 +2,8 @@ package com.bsbeetle.bananaspaghetti.ui.home
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.res.Configuration
+import android.widget.Space
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -36,6 +38,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -63,6 +66,10 @@ import com.kyant.backdrop.effects.vibrancy
 @Composable
 fun HomeScreen(navController: NavController) {
 
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+
     var isRecentsOpen by remember { mutableStateOf(false) }
 
     // Animated offset for main menu
@@ -73,9 +80,9 @@ fun HomeScreen(navController: NavController) {
     )
 
     // Animated offset for recents panel
+    val targetOffset = if (isRecentsOpen) 0.dp else 300.dp
     val recentsPanelOffset by animateDpAsState(
-        targetValue = if (isRecentsOpen) 0.dp else 400.dp,
-        animationSpec = tween(durationMillis = 400),
+        targetValue = if (isLandscape) targetOffset else targetOffset,
         label = "recentsPanelOffset"
     )
 
@@ -101,7 +108,8 @@ fun HomeScreen(navController: NavController) {
                         end.linkTo(parent.end)
                     })
 
-            beetleAscii(modifier = Modifier
+            beetleAscii(
+                modifier = Modifier
                 .size(400.dp)
                 .constrainAs(beetleAsciiLeft) {
                     start.linkTo(parent.start)
@@ -109,7 +117,8 @@ fun HomeScreen(navController: NavController) {
                 }
                 .alpha(0.6f))
 
-            beetleAscii(modifier = Modifier
+            beetleAscii(
+                modifier = Modifier
                 .size(400.dp)
                 .constrainAs(beetleAsciiRight) {
                     end.linkTo(parent.end)
@@ -133,7 +142,12 @@ fun HomeScreen(navController: NavController) {
             MainMenu(
                 modifier = Modifier
                     .size(390.dp)
-                    .offset(x = mainMenuOffset)
+                    .then(
+                        if (isLandscape)
+                            Modifier.offset(x = mainMenuOffset, y = 0.dp)
+                        else
+                            Modifier.offset(x = 0.dp, y = mainMenuOffset)
+                    )
                     .constrainAs(mainMenu) {
                         top.linkTo(parent.top)
                         bottom.linkTo(parent.bottom)
@@ -144,6 +158,7 @@ fun HomeScreen(navController: NavController) {
             )
 
             // Recents Panel with animated offset
+            if (isLandscape) {
             Box(
                 modifier = Modifier
                     .width(300.dp)
@@ -174,7 +189,42 @@ fun HomeScreen(navController: NavController) {
                     }
                 }
             }
+        }
+            else {
+                // Portrait version of Recents panel
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(250.dp)
+                        .offset(y = recentsPanelOffset) // 👈 vertical animation
+                        .constrainAs(recentsPanel) {
+                            bottom.linkTo(parent.bottom)  // 👈 stick to bottom
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+                        }
+                ) {
+                    LiquidGlassBox(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Recent",
+                                fontFamily = codaRegular,
+                                color = Color(0xFFFFFFFF),
+                                fontSize = 30.sp
+                            )
+                        }
+                    }
+                }
 
+            }
             Image(
                 painter = painterResource(R.drawable.settings_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
                 contentDescription = "Settings",
@@ -218,9 +268,10 @@ fun MainMenu(
     val buttonFontSize = 30.sp
 
     Box(
-        modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center
+        modifier = modifier.fillMaxSize().padding(10.dp), contentAlignment = Alignment.Center
     ) {
         Column() {
+
             Row(
                 modifier = Modifier
                     .width(400.dp)
@@ -239,34 +290,35 @@ fun MainMenu(
                     modifier = Modifier.width(10.dp)
                 )
 
-                Text(
-                    text = "Beetle",
-                    fontFamily = KarmaticFont,
-                    color = Color.White,
-                    fontSize = 50.sp,
-                    style = TextStyle(
-                        shadow = Shadow(
-                            color = Color(0xFFFFFFFF),
-                            offset = Offset(0f, 0f),
-                            blurRadius = 15f
+                Box {
+                    Column(
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Text(
+                            text = "Beetle",
+                            fontFamily = KarmaticFont,
+                            color = Color.White,
+                            fontSize = 50.sp,
+                            style = TextStyle(
+                                shadow = Shadow(
+                                    color = Color(0xFFFFFFFF),
+                                    offset = Offset(0f, 0f),
+                                    blurRadius = 15f
+                                )
+                            )
                         )
-                    )
-                )
-
-                Spacer(
-                    modifier = Modifier.weight(1f)
-                )
-
-                Box(
-                    modifier = Modifier.fillMaxHeight(), contentAlignment = Alignment.BottomCenter
-                ) {
-                    Text(
-                        text = "v1.0.0",
-                        color = Color(0xFF4E4E4E),
-                        fontSize = 20.sp,
-                        fontFamily = born2bsporty,
-                    )
+                        Spacer(Modifier.padding(2.dp))
+                        Text(
+                            text = "v1.0.0",
+                            color = Color(0xFF4E4E4E),
+                            fontSize = 20.sp,
+                            fontFamily = born2bsporty,
+                            modifier = Modifier.offset(y = (-10).dp)                        )
+                    }
                 }
+
+
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -277,6 +329,7 @@ fun MainMenu(
                 drawRect(backgroundColor)
                 drawContent()
             }
+
 
             Row(
                 modifier = Modifier.width(400.dp),
