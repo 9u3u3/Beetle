@@ -1,19 +1,59 @@
+//package com.bsbeetle.bananaspaghetti.utils
+//
+//import android.content.Context
+//import android.util.AttributeSet
+//import android.view.inputmethod.EditorInfo
+//import android.view.inputmethod.InputConnection
+//import android.webkit.WebView
+//
+//class NoKeyboardWebView @JvmOverloads constructor(
+//    context: Context,
+//    attr: AttributeSet? = null,
+//    defStyleAttr: Int = 0
+//) : WebView(context, attr, defStyleAttr) {
+//
+//    fun currentInputConnection(): InputConnection? {
+//        return onCreateInputConnection(EditorInfo())
+//    }
+//
+//}
+
 package com.bsbeetle.bananaspaghetti.utils
 
 import android.content.Context
-import android.util.AttributeSet
+import android.content.res.Configuration
+import android.util.Log
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.webkit.WebView
+import com.bsbeetle.bananaspaghetti.data.Ic
 
-class NoKeyboardWebView @JvmOverloads constructor(
-    context: Context,
-    attr: AttributeSet? = null,
-    defStyleAttr: Int = 0
-) : WebView(context, attr, defStyleAttr) {
+class NoKeyboardWebView(context: Context) : WebView(context) {
 
-    fun currentInputConnection(): InputConnection? {
-        return onCreateInputConnection(EditorInfo())
+    override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection? {
+        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+        val inputConnection = super.onCreateInputConnection(outAttrs)
+
+        if (inputConnection != null) {
+            Ic.ic = inputConnection
+            Log.d("NoKeyboardWebView", "InputConnection saved to Ic")
+        }
+
+        if (isLandscape) {
+            // KEY CHANGES: Suppress keyboard but keep connection active
+            outAttrs.inputType = EditorInfo.TYPE_NULL  // Change from 0 to TYPE_NULL
+            outAttrs.imeOptions = EditorInfo.IME_FLAG_NO_FULLSCREEN or
+                    EditorInfo.IME_ACTION_NONE
+            outAttrs.initialSelStart = 0
+            outAttrs.initialSelEnd = 0
+        }
+
+        return inputConnection  // Always return the connection
     }
 
+    override fun onCheckIsTextEditor(): Boolean {
+        // Always return true so the editor can be focused
+        return true
+    }
 }

@@ -3,7 +3,6 @@
 
 package com.bsbeetle.bananaspaghetti
 
-import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,7 +14,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bsbeetle.bananaspaghetti.ui.DisableDefaultKeyboard
 import com.bsbeetle.bananaspaghetti.ui.EnterImmersiveMode
@@ -26,7 +24,6 @@ import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
-import androidx.compose.ui.platform.LocalConfiguration
 
 val LocalFileViewModel = compositionLocalOf<FileViewModel>{error("No file view model provided")}
 val LocalKeyboardViewModel = compositionLocalOf<KeyboardViewModel>{error("No key board view model provided")}
@@ -43,14 +40,8 @@ class MainActivity : ComponentActivity() {
             BananaSpaghettiTheme(dynamicColor = false) {
 
                 // System UI settings (Global settings)
-                val configuration = LocalConfiguration.current
-                val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
-                // System UI settings (Global settings)
                 EnterImmersiveMode()
-                if (isLandscape) {
-                    DisableDefaultKeyboard()
-                }
+                DisableDefaultKeyboard()
 
                 // View Models used throughout the application
                 val fileViewModel: FileViewModel = viewModel()
