@@ -1,6 +1,7 @@
 package com.bsbeetle.bananaspaghetti.ui.components
 
 import android.content.Context
+import android.content.res.Configuration
 import android.webkit.WebView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bsbeetle.bananaspaghetti.LocalBufferViewModel
@@ -27,7 +29,6 @@ import com.bsbeetle.bananaspaghetti.data.TopBarButtons
 import com.bsbeetle.bananaspaghetti.utils.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
-
 @Composable
 fun TopBar(
     modifier: Modifier = Modifier,
@@ -35,54 +36,79 @@ fun TopBar(
     buttons: List<TopBarButtons>? = null,
     context: Context? = null,
 ) {
-
     val bufferViewModel: BufferViewModel = LocalBufferViewModel.current
     val editorViewModel: EditorViewModel = LocalEditorViewModel.current
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val webView = editorViewModel.webView
 
     Box(
         modifier = modifier
             .background(color)
             .fillMaxWidth()
-            .height(15.dp),
+            .height(if (isLandscape) 15.dp else 25.dp)
     ) {
-        // Here there will be a row of buttons
         Row(
-            // modifier = Modifier.padding(start = 30.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-
-            // If Buttons are there
-            // This is for the left top bar and the right top bar
-            // As only those bar will contain the the buttons
-            if(buttons != null) {
-                // Display buttons with their functionalities
-                Row (
-                    horizontalArrangement = Arrangement.Center
-                ) {
+            if (buttons != null) {
+                Row(horizontalArrangement = Arrangement.Center) {
                     buttons.forEach { button ->
                         Box(
                             modifier = Modifier
-                                .clickable{button.onClick()},
+                                .clickable { button.onClick() }
+                                .background(Color.Transparent)
+                                .fillMaxHeight()
+                                .width(50.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = button.title,
-                                color = Color.White,
-                                fontSize = 12.sp
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                // ✅ Show icon if available
+                                button.icon?.let { icon ->
+                                    androidx.compose.material3.Icon(
+                                        imageVector = icon,
+                                        contentDescription = button.title ?: "",
+                                        tint = Color.White,
+                                        modifier = Modifier.height(16.dp)
+                                    )
+                                }
+
+                                // ✅ Show image if available
+                                button.imageRes?.let { imageRes ->
+                                    androidx.compose.foundation.Image(
+                                        painter = androidx.compose.ui.res.painterResource(id = imageRes),
+                                        contentDescription = button.title ?: "",
+                                        modifier = Modifier.height(16.dp)
+                                    )
+                                }
+
+
+                                // ✅ Show title if available
+                                button.title?.let {
+                                    Text(
+                                        text = it,
+                                        color = Color.White,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
                         }
+
                         VerticalDivider(
-                            modifier = Modifier.fillMaxHeight()
+                            modifier = Modifier
+                                .fillMaxHeight()
                                 .width(1.dp),
                             color = Color(0xFF8D8D8D)
                         )
                     }
                 }
             } else bufferViewModel?.bufferLine?.size?.let {
-                if(it > 0) { // for the middle bar, i.e. the buffer bar
-
-                    LazyRow (
+                if (it > 0) {
+                    LazyRow(
                         modifier = Modifier.fillMaxWidth().fillMaxHeight()
                     ) {
                         items(bufferViewModel.bufferLine.entries.toList()) { entry ->
@@ -99,7 +125,9 @@ fun TopBar(
 
                                 loadContentWhenReady(
                                     webView,
-                                    if(bufferViewModel.bufferLine.isNotEmpty()) bufferViewModel.bufferLine[bufferViewModel.filesOpenedList.last()]!! else ""
+                                    if (bufferViewModel.bufferLine.isNotEmpty())
+                                        bufferViewModel.bufferLine[bufferViewModel.filesOpenedList.last()]!!
+                                    else ""
                                 )
                             }
                         }

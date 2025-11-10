@@ -15,8 +15,11 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.bsbeetle.bananaspaghetti.ui.DisableDefaultKeyboard
 import com.bsbeetle.bananaspaghetti.ui.EnterImmersiveMode
+import com.bsbeetle.bananaspaghetti.ui.home.InitialEditorUI
 import com.bsbeetle.bananaspaghetti.ui.navigation.AppNavigation
 import com.bsbeetle.bananaspaghetti.ui.theme.BananaSpaghettiTheme
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
@@ -50,6 +53,11 @@ class MainActivity : ComponentActivity() {
                 val bufferViewModel: BufferViewModel = viewModel()
                 val editorViewModel: EditorViewModel = viewModel()
 
+
+                //tempporary for building
+                val navController = rememberNavController()
+                //temporary
+
                 CompositionLocalProvider(
                     LocalFileViewModel provides fileViewModel,
                     LocalKeyboardViewModel provides keyboardViewModel,
@@ -61,7 +69,8 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier
                             .fillMaxSize()
                     ) {
-                        AppNavigation()
+//                        AppNavigation()
+                        InitialEditorUI(navController = navController)
                     }
                 }
 
