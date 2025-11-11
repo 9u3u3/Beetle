@@ -1,4 +1,5 @@
-package com.bsbeetle.bananaspaghetti.ui.sidebar
+package com.bsbeetle.bananaspaghetti.data.sidebar
+
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*

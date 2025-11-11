@@ -1,4 +1,5 @@
-package com.bsbeetle.bananaspaghetti.ui.sidebar
+package com.bsbeetle.bananaspaghetti.data.sidebar
+
 
 data class FileItem(
     val name: String,

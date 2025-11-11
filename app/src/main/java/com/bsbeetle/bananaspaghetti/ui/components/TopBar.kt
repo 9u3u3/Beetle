@@ -2,7 +2,6 @@ package com.bsbeetle.bananaspaghetti.ui.components
 
 import android.content.Context
 import android.content.res.Configuration
-import android.webkit.WebView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement

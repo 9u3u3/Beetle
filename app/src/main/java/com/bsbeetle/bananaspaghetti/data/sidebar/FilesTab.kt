@@ -1,0 +1,112 @@
+package com.bsbeetle.bananaspaghetti.data.sidebar
+
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+@Composable
+fun FilesTab(
+    currentPath: String?,
+    onFileSelected: (String) -> Unit
+) {
+    var expandedFolders by remember { mutableStateOf(setOf<String>()) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // Modern search bar
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            placeholder = {
+                Text("Search files...", color = Color(0xFF6A6A6A), fontSize = 13.sp)
+            },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = null,
+                    tint = Color(0xFF858585),
+                    modifier = Modifier.size(18.dp)
+                )
+            },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(
+                        onClick = { searchQuery = "" },
+                        modifier = Modifier.size(18.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Clear",
+                            tint = Color(0xFF858585),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color(0xFF007ACC),
+                unfocusedBorderColor = Color(0xFF3C3C3C),
+                focusedTextColor = Color(0xFFE8E8E8),
+                unfocusedTextColor = Color(0xFFCCCCCC),
+                cursorColor = Color(0xFF007ACC),
+                focusedContainerColor = Color(0xFF2D2D2D),
+                unfocusedContainerColor = Color(0xFF252526)
+            ),
+            singleLine = true,
+            shape = RoundedCornerShape(6.dp)
+        )
+
+        // File tree with smooth animations
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            val sampleFiles = listOf(
+                FileItem("src", "/src", true, level = 0),
+                FileItem("middleware", "/src/middleware", true, level = 1),
+                FileItem("authRoutes", "/src/authRoutes", true, level = 1),
+                FileItem("auth.js", "/src/authRoutes/auth.js", false, level = 2),
+                FileItem("delete.js", "/src/authRoutes/delete.js", false, level = 2),
+                FileItem("Server.js", "/src/Server.js", false, level = 1),
+                FileItem(".env", "/.env", false, level = 0),
+                FileItem("package.json", "/package.json", false, level = 0),
+                FileItem("README.md", "/README.md", false, level = 0)
+            ).filter {
+                searchQuery.isEmpty() || it.name.contains(searchQuery, ignoreCase = true)
+            }
+
+            items(sampleFiles, key = { it.path }) { file ->
+                FileTreeItem(
+                    file = file,
+                    isExpanded = expandedFolders.contains(file.path),
+                    isSelected = currentPath == file.path,
+                    onToggleExpand = {
+                        expandedFolders = if (expandedFolders.contains(file.path)) {
+                            expandedFolders - file.path
+                        } else {
+                            expandedFolders + file.path
+                        }
+                    },
+                    onFileClick = { onFileSelected(file.path) }
+                )
+            }
+        }
+    }
+}
