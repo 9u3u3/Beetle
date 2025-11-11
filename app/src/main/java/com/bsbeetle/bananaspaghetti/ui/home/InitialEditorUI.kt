@@ -49,12 +49,10 @@ import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 @SuppressLint("RememberReturnType")
 @Composable
 fun InitialEditorUI(navController: NavController) {
-
     val fileViewModel: FileViewModel = LocalFileViewModel.current
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
     val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
     val editorViewModel: EditorViewModel = LocalEditorViewModel.current
-    val expandViewModel: ExpandViewModel = LocalExpandViewModel.current
     val bufferViewModel: BufferViewModel = LocalBufferViewModel.current
 
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
@@ -69,110 +67,77 @@ fun InitialEditorUI(navController: NavController) {
     editorViewModel.init()
 
     LaunchedEffect(fileViewModel.selectedUri) {
-        if (fileViewModel.selectedUri != null) {
-            val uri = fileViewModel.selectedUri!!
-            val documentFile = DocumentFile.fromSingleUri(context, uri)
-
-            if (documentFile != null) {
-                // Check if file is already in buffer
-                val existingFile = bufferViewModel.filesOpenedList.find {
-                    it.uri.toString() == uri.toString()
-                }
-
-                if (existingFile == null) {
-                    // New file - add to buffer FIRST
+        fileViewModel.selectedUri?.let { uri ->
+            DocumentFile.fromSingleUri(context, uri)?.let { documentFile ->
+                if (bufferViewModel.filesOpenedList.none { it.uri.toString() == uri.toString() }) {
                     bufferViewModel.filesOpenedList.add(documentFile)
-                    Log.d("Buffer", "Added to buffer: ${documentFile.name}")
+                    Log.d("Buffer", "Added: ${documentFile.name}")
                 }
 
-                // Read content
                 val content = readFromFile(context, uri)
-
-                // Store content in buffer
                 bufferViewModel.bufferLine[documentFile] = content
-
-                // Load content in editor
                 loadContentWhenReady(editorViewModel.webView, content)
-
-                // Update current file path
                 fileViewModel.currentFilePath = uri.toString()
-
-                Log.d("Buffer", "File opened: ${documentFile.name}, buffer size: ${bufferViewModel.filesOpenedList.size}")
+                Log.d("Buffer", "Opened: ${documentFile.name}, total: ${bufferViewModel.filesOpenedList.size}")
             }
         }
     }
 
-    val buttonsForLeftTopBar = listOf(
+    val buttonsLeft = listOf(
         TopBarButtons("Save", onClick = { saveFile(fileViewModel, context, editorViewModel) }),
         TopBarButtons("Sidebar", onClick = { showSidebar = !showSidebar })
     )
 
-    val buttonsForRightTopBar = listOf(
+    val buttonsRight = listOf(
         TopBarButtons("Settings", onClick = { navController.navigate("settings") })
     )
 
     Box {
-        ConstraintLayout(modifier = Modifier.fillMaxSize()) {
-            val (
-                topLeftBarRef,
-                topMiddleBarRef,
-                topRightBarRef,
-                topLeftRef,
-                topRightRef,
-                leftKeyboardRef,
-                codeEditor,
-                rightKeyboardRef,
-                errorLogRef
-            ) = createRefs()
+        ConstraintLayout(Modifier.fillMaxSize()) {
+            val (topLeft, topMiddle, topRight, leftBox, rightBox, leftKb, editor, rightKb, bottomBarRef) = createRefs()
 
-            // Left Top Bar
+
             TopBar(
-                modifier = Modifier.constrainAs(topLeftBarRef) {
+                modifier = Modifier.constrainAs(topLeft) {
                     top.linkTo(parent.top)
                     start.linkTo(parent.start)
-                    end.linkTo(topMiddleBarRef.start)
+                    end.linkTo(topMiddle.start)
                     width = Dimension.percent(0.2f)
-                    height = Dimension.wrapContent
                 },
                 color = Color(0xFF1B1B1B),
-                buttons = buttonsForLeftTopBar,
+                buttons = buttonsLeft
             )
 
-            // Middle Top Bar - Buffer Tabs
             TopBar(
-                modifier = Modifier.constrainAs(topMiddleBarRef) {
+                modifier = Modifier.constrainAs(topMiddle) {
                     top.linkTo(parent.top)
-                    start.linkTo(topLeftBarRef.end)
-                    end.linkTo(topRightBarRef.start)
+                    start.linkTo(topLeft.end)
+                    end.linkTo(topRight.start)
                     width = Dimension.percent(0.6f)
-                    height = Dimension.wrapContent
                 },
                 color = Color(0xFF1B1B1B),
                 context = context,
                 showBufferTabs = true
             )
 
-            // Right Top Bar
             TopBar(
-                modifier = Modifier.constrainAs(topRightBarRef) {
+                modifier = Modifier.constrainAs(topRight) {
                     top.linkTo(parent.top)
-                    start.linkTo(topMiddleBarRef.end)
+                    start.linkTo(topMiddle.end)
                     end.linkTo(parent.end)
                     width = Dimension.percent(0.2f)
-                    height = Dimension.wrapContent
                 },
                 color = Color(0xFF1B1B1B),
-                buttons = buttonsForRightTopBar,
+                buttons = buttonsRight
             )
 
-            // Optional top boxes in landscape
             if (isLandscape) {
                 TopLeftBox(
-                    modifier = Modifier.constrainAs(topLeftRef) {
-                        top.linkTo(topLeftBarRef.bottom)
-                        bottom.linkTo(leftKeyboardRef.top)
+                    Modifier.constrainAs(leftBox) {
+                        top.linkTo(topLeft.bottom)
+                        bottom.linkTo(leftKb.top)
                         start.linkTo(parent.start)
-                        end.linkTo(codeEditor.start)
+                        end.linkTo(editor.start)
                         width = Dimension.fillToConstraints
                         height = Dimension.fillToConstraints
                     },
@@ -180,10 +145,10 @@ fun InitialEditorUI(navController: NavController) {
                 )
 
                 TopRightBox(
-                    modifier = Modifier.constrainAs(topRightRef) {
-                        top.linkTo(topRightBarRef.bottom)
-                        bottom.linkTo(rightKeyboardRef.top)
-                        start.linkTo(codeEditor.start)
+                    Modifier.constrainAs(rightBox) {
+                        top.linkTo(topRight.bottom)
+                        bottom.linkTo(rightKb.top)
+                        start.linkTo(editor.start)
                         end.linkTo(parent.end)
                         width = Dimension.fillToConstraints
                         height = Dimension.fillToConstraints
@@ -192,13 +157,9 @@ fun InitialEditorUI(navController: NavController) {
 
                 if (uiState.isLeftKeyboardVisible) {
                     SplitKeyboardHalf(
-                        layout = layout,
-                        side = KeyboardSide.LEFT,
-                        isCapsLockOn = uiState.isCapsLockOn,
-                        isShiftOn = uiState.isShiftOn,
-                        isCtrlOn = uiState.isCtrlOn,
-                        onKeyEvent = keyboardViewModel::onKeyEvent,
-                        modifier = Modifier.constrainAs(leftKeyboardRef) {
+                        layout, KeyboardSide.LEFT, uiState.isCapsLockOn,
+                        uiState.isShiftOn, uiState.isCtrlOn, keyboardViewModel::onKeyEvent,
+                        Modifier.constrainAs(leftKb) {
                             start.linkTo(parent.start)
                             bottom.linkTo(parent.bottom)
                             width = Dimension.percent(sliderValue / 100f)
@@ -208,13 +169,9 @@ fun InitialEditorUI(navController: NavController) {
 
                 if (uiState.isRightKeyboardVisible) {
                     SplitKeyboardHalf(
-                        layout = layout,
-                        side = KeyboardSide.RIGHT,
-                        isCapsLockOn = uiState.isCapsLockOn,
-                        isShiftOn = uiState.isShiftOn,
-                        isCtrlOn = uiState.isCtrlOn,
-                        onKeyEvent = keyboardViewModel::onKeyEvent,
-                        modifier = Modifier.constrainAs(rightKeyboardRef) {
+                        layout, KeyboardSide.RIGHT, uiState.isCapsLockOn,
+                        uiState.isShiftOn, uiState.isCtrlOn, keyboardViewModel::onKeyEvent,
+                        Modifier.constrainAs(rightKb) {
                             end.linkTo(parent.end)
                             bottom.linkTo(parent.bottom)
                             width = Dimension.percent(sliderValue / 100f)
@@ -223,62 +180,34 @@ fun InitialEditorUI(navController: NavController) {
                 }
             }
 
-            // Shared Editor composable (works for both orientations)
             Editor(
-                modifier = Modifier.constrainAs(codeEditor) {
-                    top.linkTo(topMiddleBarRef.bottom)
+                Modifier.constrainAs(editor) {
+                    top.linkTo(topMiddle.bottom)
                     bottom.linkTo(parent.bottom)
-
-                    if (isLandscape && uiState.isLeftKeyboardVisible) {
-                        start.linkTo(leftKeyboardRef.end)
-                    } else {
-                        start.linkTo(parent.start)
-                    }
-
-                    if (isLandscape && uiState.isRightKeyboardVisible) {
-                        end.linkTo(rightKeyboardRef.start)
-                    } else {
-                        end.linkTo(parent.end)
-                    }
-
+                    start.linkTo(if (isLandscape && uiState.isLeftKeyboardVisible) leftKb.end else parent.start)
+                    end.linkTo(if (isLandscape && uiState.isRightKeyboardVisible) rightKb.start else parent.end)
                     width = Dimension.fillToConstraints
                     height = Dimension.fillToConstraints
                 },
                 editorViewModel.webView!!
             )
 
-            // Bottom Bar
             BottomBar(
-                modifier = Modifier
-                    .background(Color.DarkGray)
-                    .constrainAs(errorLogRef) {
-                        bottom.linkTo(codeEditor.bottom)
-                        start.linkTo(codeEditor.start)
-                        end.linkTo(codeEditor.end)
-                        width = Dimension.fillToConstraints
-                    },
+                Modifier.background(Color.DarkGray).constrainAs(bottomBarRef) {
+                    bottom.linkTo(editor.bottom)
+                    start.linkTo(editor.start)
+                    end.linkTo(editor.end)
+                    width = Dimension.fillToConstraints
+                },
                 color = Color(0xFF245895)
             )
 
-            // Sidebar Overlay (portrait only)
             if (!isLandscape) {
                 Sidebar(
-                    isVisible = showSidebar,
-                    onDismiss = { showSidebar = false },
-                    onFileSelected = { filePath ->
-                        Log.d("Sidebar", "File selected: $filePath")
-                        fileViewModel.selectedUri = Uri.parse(filePath)
-                        fileViewModel.currentFilePath = filePath
-                        showSidebar = false
-                    },
-                    currentPath = fileViewModel.currentFilePath,
-                    enabledTabs = listOf(
-                        SidebarTab.FILES,
-                        SidebarTab.SEARCH,
-                        SidebarTab.GIT,
-                        SidebarTab.EXTENSIONS,
-                        SidebarTab.SETTINGS
-                    )
+                    showSidebar, { showSidebar = false },
+                    { fileViewModel.selectedUri = Uri.parse(it); fileViewModel.currentFilePath = it; showSidebar = false },
+                    fileViewModel.currentFilePath,
+                    listOf(SidebarTab.FILES, SidebarTab.SEARCH, SidebarTab.GIT, SidebarTab.EXTENSIONS, SidebarTab.SETTINGS)
                 )
             }
         }
