@@ -1,6 +1,5 @@
 package com.bsbeetle.bananaspaghetti.data.sidebar
 
-
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -19,20 +18,29 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun SidebarTabBar(
     selectedTab: SidebarTab,
-    onTabSelected: (SidebarTab) -> Unit
+    onTabSelected: (SidebarTab) -> Unit,
+    enabledTabs: List<SidebarTab> = SidebarTab.values().toList(), // Changed parameter name
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(48.dp)
-            .background(Color(0xFF252526)),
+            .background(Color(0xFF252525)),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        SidebarTab.entries.forEach { tab ->
+        // Iterate over ALL tabs, but check if each is enabled
+        SidebarTab.values().forEach { tab ->
+            val isEnabled = enabledTabs.contains(tab)
             SidebarTabItem(
                 tab = tab,
                 isSelected = selectedTab == tab,
-                onClick = { onTabSelected(tab) }
+                isEnabled = isEnabled, // Pass enabled state
+                onClick = {
+                    if (isEnabled) { // Only allow click if enabled
+                        onTabSelected(tab)
+                    }
+                }
             )
         }
     }
@@ -42,10 +50,11 @@ fun SidebarTabBar(
 private fun RowScope.SidebarTabItem(
     tab: SidebarTab,
     isSelected: Boolean,
+    isEnabled: Boolean, // Add this parameter
     onClick: () -> Unit
 ) {
     val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.1f else 1f,
+        targetValue = if (isSelected && isEnabled) 1.1f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium
@@ -59,15 +68,20 @@ private fun RowScope.SidebarTabItem(
         modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
+            .background(
+                // Darker background for disabled tabs
+                if (!isEnabled) Color(0xFF1A1A1A) else Color.Transparent
+            )
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
+                enabled = isEnabled, // Disable click for disabled tabs
                 onClick = onClick
             ),
         contentAlignment = Alignment.Center
     ) {
-        // Animated indicator line - OUTSIDE the Box with scale
-        if (isSelected) {
+        // Animated indicator line - only show for enabled selected tabs
+        if (isSelected && isEnabled) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.7f)
@@ -85,15 +99,17 @@ private fun RowScope.SidebarTabItem(
             )
         }
 
-// Icon with scale animation (keep this below)
-
         // Icon with scale animation
         Box(modifier = Modifier.scale(scale)) {
             tab.icon?.let { icon ->
                 Icon(
                     imageVector = icon,
                     contentDescription = tab.label,
-                    tint = if (isSelected) Color(0xFF007ACC) else Color(0xFF858585),
+                    tint = when {
+                        !isEnabled -> Color.Gray.copy(alpha = 0.3f) // Grayed out for disabled
+                        isSelected -> Color(0xFF007ACC)
+                        else -> Color(0xFF858585)
+                    },
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -102,7 +118,8 @@ private fun RowScope.SidebarTabItem(
                 Image(
                     painter = painterResource(id = imageRes),
                     contentDescription = tab.label,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(22.dp),
+                    alpha = if (!isEnabled) 0.3f else 1f // Reduced opacity for disabled
                 )
             }
         }

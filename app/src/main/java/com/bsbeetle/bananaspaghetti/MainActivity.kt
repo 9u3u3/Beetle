@@ -20,8 +20,10 @@ import androidx.navigation.compose.rememberNavController
 import com.bsbeetle.bananaspaghetti.ui.DisableDefaultKeyboard
 import com.bsbeetle.bananaspaghetti.ui.EnterImmersiveMode
 import com.bsbeetle.bananaspaghetti.ui.home.InitialEditorUI
+import com.bsbeetle.bananaspaghetti.ui.home.InitialTerminalUI
 import com.bsbeetle.bananaspaghetti.ui.navigation.AppNavigation
 import com.bsbeetle.bananaspaghetti.ui.theme.BananaSpaghettiTheme
+import com.bsbeetle.bananaspaghetti.utils.TerminalWebView
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
@@ -69,8 +71,9 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier
                             .fillMaxSize()
                     ) {
-//                        AppNavigation()
-                        InitialEditorUI(navController = navController)
+                        AppNavigation()
+//                        InitialEditorUI(navController = navController)
+//                        InitialTerminalUI()
                     }
                 }
 
