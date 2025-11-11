@@ -258,12 +258,9 @@ fun InitialEditorUI( navController: NavController ) {
             onFileSelected = { filePath ->
                 // Handle file selection
                 // Load the file content into the editor
-                // You can use your existing file loading logic here
+                // Implement this gaonker twink
                 Log.d("Sidebar", "File selected: $filePath")
 
-                // Example: Load file and add to buffer
-                // fileViewModel.selectedUri = Uri.parse(filePath)
-                // bufferViewModel.addBuffer(filePath)
             },
             currentPath = fileViewModel.selectedUri?.path,
             modifier = Modifier.align(Alignment.CenterStart)
