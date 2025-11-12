@@ -17,6 +17,7 @@
 
         <activity
             android:name=".MainActivity"
+            android:hardwareAccelerated="true"
             android:exported="true"
             android:theme="@style/Theme.BananaSpaghetti">
             <intent-filter>

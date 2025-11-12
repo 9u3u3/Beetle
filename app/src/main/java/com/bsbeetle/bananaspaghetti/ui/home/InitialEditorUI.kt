@@ -28,6 +28,7 @@ import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
 import com.bsbeetle.bananaspaghetti.data.TopBarButtons
 import com.bsbeetle.bananaspaghetti.data.sidebar.Sidebar
 import com.bsbeetle.bananaspaghetti.data.sidebar.SidebarTab
+import com.bsbeetle.bananaspaghetti.ui.browser.DevBrowserScreen
 import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
 import com.bsbeetle.bananaspaghetti.ui.components.BottomBar
 import com.bsbeetle.bananaspaghetti.ui.components.TopBar
@@ -89,7 +90,10 @@ fun InitialEditorUI(navController: NavController) {
     )
 
     val buttonsRight = listOf(
-        TopBarButtons("Settings", onClick = { navController.navigate("settings") })
+//        TopBarButtons("Settings", onClick = { navController.navigate("settings") })
+        TopBarButtons("Browser", onClick = {
+            navController.navigate("browser")
+        })
     )
 
     Box {
