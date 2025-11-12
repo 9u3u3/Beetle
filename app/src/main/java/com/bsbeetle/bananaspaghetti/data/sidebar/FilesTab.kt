@@ -33,17 +33,15 @@ fun FilesTab(
     var searchQuery by remember { mutableStateOf("") }
 
     // Get real files from the file system
-    // Get real files from the file system
-    val files = remember(fileViewModel.selectedFolderUri, expandedFolders) {  // CHANGED: watch selectedFolderUri
-        val rootUri = fileViewModel.selectedFolderUri  // CHANGED: use selectedFolderUri
+    val files = remember(fileViewModel.selectedFolderUri, expandedFolders, searchQuery) {
+        val rootUri = fileViewModel.selectedFolderUri
         if (rootUri != null) {
             val rootDoc = DocumentFile.fromTreeUri(context, rootUri)
-            rootDoc?.let { buildFileTree(it, 0, expandedFolders) } ?: emptyList()
+            rootDoc?.let { buildFileTree(it, 0, expandedFolders, searchQuery.isNotEmpty()) } ?: emptyList()
         } else {
             emptyList()
         }
     }
-
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -139,7 +137,8 @@ fun FilesTab(
 private fun buildFileTree(
     doc: DocumentFile,
     level: Int,
-    expandedFolders: Set<String>
+    expandedFolders: Set<String>,
+    searchActive: Boolean
 ): List<FileItem> {
     val result = mutableListOf<FileItem>()
 
@@ -160,8 +159,8 @@ private fun buildFileTree(
         )
 
         // If it's a directory and expanded, recursively add children
-        if (child.isDirectory && expandedFolders.contains(childPath)) {
-            result.addAll(buildFileTree(child, level + 1, expandedFolders))
+        if (child.isDirectory && (searchActive || expandedFolders.contains(childPath))) {
+            result.addAll(buildFileTree(child, level + 1, expandedFolders, searchActive))
         }
     }
 

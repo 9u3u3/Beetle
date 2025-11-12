@@ -16,10 +16,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.bsbeetle.bananaspaghetti.utils.ImageLoaderSingleton
 
 @Composable
 fun FileTreeItem(
@@ -79,12 +82,14 @@ fun FileTreeItem(
                 tint = Color(0xFFDCB67A),
                 modifier = Modifier.size(18.dp)
             )
-        } else {
+        }else {
             Spacer(modifier = Modifier.width(22.dp))
-            Icon(
-                imageVector = Icons.Default.InsertDriveFile,
+            val context = LocalContext.current
+            val iconPath = FileIconUtils.getIconPath(file.name)
+            AsyncImage(
+                model = iconPath,
+                imageLoader = ImageLoaderSingleton.get(context),
                 contentDescription = null,
-                tint = FileUtils.getFileIconColor(file.name),
                 modifier = Modifier.size(16.dp)
             )
         }
