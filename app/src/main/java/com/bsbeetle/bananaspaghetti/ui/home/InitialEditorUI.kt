@@ -49,19 +49,18 @@ import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 @SuppressLint("RememberReturnType")
 @Composable
 fun InitialEditorUI(navController: NavController) {
+
     val fileViewModel: FileViewModel = LocalFileViewModel.current
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
     val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
     val editorViewModel: EditorViewModel = LocalEditorViewModel.current
     val bufferViewModel: BufferViewModel = LocalBufferViewModel.current
-
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val layout = if (uiState.toggleKeyboard) KeyboardLayout.developerLayout else KeyboardLayout.qwertyLayout
-
     var showSidebar by rememberSaveable { mutableStateOf(false) }
 
     editorViewModel.init()

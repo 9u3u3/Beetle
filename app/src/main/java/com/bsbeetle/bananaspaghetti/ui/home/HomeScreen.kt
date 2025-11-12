@@ -3,7 +3,6 @@ package com.bsbeetle.bananaspaghetti.ui.home
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.Configuration
-import android.widget.Space
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -68,23 +67,17 @@ fun HomeScreen(navController: NavController) {
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
-
     var isRecentsOpen by remember { mutableStateOf(false) }
-
-    // Animated offset for main menu
     val mainMenuOffset by animateDpAsState(
         targetValue = if (isRecentsOpen) -150.dp else 0.dp,
         animationSpec = tween(durationMillis = 400),
         label = "mainMenuOffset"
-    )
-
-    // Animated offset for recents panel
+    ) // Animated offset or main menu
     val targetOffset = if (isRecentsOpen) 0.dp else 300.dp
     val recentsPanelOffset by animateDpAsState(
         targetValue = if (isLandscape) targetOffset else targetOffset,
         label = "recentsPanelOffset"
-    )
+    ) // Animated offset for recent panel
 
     Box(
         modifier = Modifier
@@ -110,22 +103,22 @@ fun HomeScreen(navController: NavController) {
 
             beetleAscii(
                 modifier = Modifier
-                .size(400.dp)
-                .constrainAs(beetleAsciiLeft) {
-                    start.linkTo(parent.start)
-                    bottom.linkTo(parent.bottom)
-                }
-                .alpha(0.6f))
+                    .size(400.dp)
+                    .constrainAs(beetleAsciiLeft) {
+                        start.linkTo(parent.start)
+                        bottom.linkTo(parent.bottom)
+                    }
+                    .alpha(0.6f))
 
             beetleAscii(
                 modifier = Modifier
-                .size(400.dp)
-                .constrainAs(beetleAsciiRight) {
-                    end.linkTo(parent.end)
-                    top.linkTo(parent.top)
-                }
-                .rotate(180f)
-                .alpha(0.6f))
+                    .size(400.dp)
+                    .constrainAs(beetleAsciiRight) {
+                        end.linkTo(parent.end)
+                        top.linkTo(parent.top)
+                    }
+                    .rotate(180f)
+                    .alpha(0.6f))
 
             VignetteEffect(
                 modifier = Modifier
@@ -138,7 +131,6 @@ fun HomeScreen(navController: NavController) {
                     }, intensity = 1f
             )
 
-            // Main Menu with animated offset
             MainMenu(
                 modifier = Modifier
                     .size(390.dp)
@@ -157,48 +149,46 @@ fun HomeScreen(navController: NavController) {
                 navController
             )
 
-            // Recents Panel with animated offset
             if (isLandscape) {
-            Box(
-                modifier = Modifier
-                    .width(300.dp)
-                    .fillMaxHeight()
-                    .offset(x = recentsPanelOffset)
-                    .constrainAs(recentsPanel) {
-                        top.linkTo(parent.top)
-                        bottom.linkTo(parent.bottom)
-                        end.linkTo(parent.end)
-                    }
-            ) {
-                LiquidGlassBox(
+                Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
+                        .width(300.dp)
+                        .fillMaxHeight()
+                        .offset(x = recentsPanelOffset)
+                        .constrainAs(recentsPanel) {
+                            top.linkTo(parent.top)
+                            bottom.linkTo(parent.bottom)
+                            end.linkTo(parent.end)
+                        }
                 ) {
-                    Box(
+                    LiquidGlassBox(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
+                            .fillMaxSize()
+                            .padding(16.dp)
                     ) {
-                        Text(
-                            text = "Recent",
-                            fontFamily = codaRegular,
-                            color = Color(0xFFFFFFFF),
-                            fontSize = 35.sp
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp)
+                        ) {
+                            Text(
+                                text = "Recent",
+                                fontFamily = codaRegular,
+                                color = Color(0xFFFFFFFF),
+                                fontSize = 35.sp
+                            )
+                        }
                     }
                 }
             }
-        }
             else {
-                // Portrait version of Recents panel
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(250.dp)
-                        .offset(y = recentsPanelOffset) // 👈 vertical animation
+                        .offset(y = recentsPanelOffset)
                         .constrainAs(recentsPanel) {
-                            bottom.linkTo(parent.bottom)  // 👈 stick to bottom
+                            bottom.linkTo(parent.bottom)
                             start.linkTo(parent.start)
                             end.linkTo(parent.end)
                         }
@@ -260,76 +250,77 @@ fun HomeScreen(navController: NavController) {
 
 @Composable
 fun MainMenu(
-    modifier: Modifier = Modifier, navController: NavController
+    modifier: Modifier = Modifier,
+    navController: NavController
 ) {
-
     val context = LocalContext.current
     val launcher = fileLauncher(context, navController)
     val buttonFontSize = 30.sp
 
     Box(
-        modifier = modifier.fillMaxSize().padding(10.dp), contentAlignment = Alignment.Center
+        modifier = modifier
+            .fillMaxSize()
+            .padding(10.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Column() {
+        Column {
 
             Row(
                 modifier = Modifier
                     .width(400.dp)
                     .height(80.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start
             ) {
                 Image(
                     painter = painterResource(R.drawable.beetle_logo),
                     contentDescription = "Beetle logo",
                     modifier = Modifier
-                        .size(75.dp)
+                        .size(65.dp)
                         .clip(RoundedCornerShape(12.dp))
                 )
 
-                Spacer(
-                    modifier = Modifier.width(10.dp)
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Text(
+                    text = "BEETLE",
+                    fontFamily = KarmaticFont,
+                    color = Color.White,
+                    fontSize = 45.sp,
+                    style = TextStyle(
+                        shadow = Shadow(
+                            color = Color(0xFFFFFFFF),
+                            offset = Offset(0f, 0f),
+                            blurRadius = 15f
+                        )
+                    )
                 )
 
-                Box {
-                    Column(
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.End
-                    ) {
-                        Text(
-                            text = "Beetle",
-                            fontFamily = KarmaticFont,
-                            color = Color.White,
-                            fontSize = 50.sp,
-                            style = TextStyle(
-                                shadow = Shadow(
-                                    color = Color(0xFFFFFFFF),
-                                    offset = Offset(0f, 0f),
-                                    blurRadius = 15f
-                                )
-                            )
-                        )
-                        Spacer(Modifier.padding(2.dp))
-                        Text(
-                            text = "v1.0.0",
-                            color = Color(0xFF4E4E4E),
-                            fontSize = 20.sp,
-                            fontFamily = born2bsporty,
-                            modifier = Modifier.offset(y = (-10).dp)                        )
-                    }
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Box(
+                   modifier = Modifier
+                       .fillMaxSize()
+                ) {
+                    Text(
+                        text = "v1.0.0",
+                        color = Color(0xFF666666),
+                        fontSize = 18.sp,
+                        fontFamily = born2bsporty,
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .align(Alignment.BottomEnd)
+                    )
                 }
-
-
             }
 
             Spacer(modifier = Modifier.height(20.dp))
-
             val backgroundColor = Color(0xFFFFFFFF)
 
             val backdrop = rememberLayerBackdrop {
                 drawRect(backgroundColor)
                 drawContent()
             }
-
 
             Row(
                 modifier = Modifier.width(400.dp),
@@ -351,17 +342,23 @@ fun MainMenu(
                     Box(
                         modifier = Modifier
                             .matchParentSize()
-                            .drawBackdrop(backdrop = backdrop, shape = { RoundedCornerShape(8.dp) }, effects = {
-                                vibrancy()
-                                blur(15f.dp.toPx())
-                                lens(25f.dp.toPx(), 50f.dp.toPx())
-                            }, onDrawSurface = {
-                                drawRect(Color.White.copy(alpha = 0.01f))
-                            })
+                            .drawBackdrop(
+                                backdrop = backdrop,
+                                shape = { RoundedCornerShape(8.dp) },
+                                effects = {
+                                    vibrancy()
+                                    blur(15f.dp.toPx())
+                                    lens(25f.dp.toPx(), 50f.dp.toPx())
+                                },
+                                onDrawSurface = {
+                                    drawRect(Color.White.copy(alpha = 0.01f))
+                                }
+                            )
                     )
 
                     Box(
-                        modifier = Modifier.matchParentSize(), contentAlignment = Alignment.Center
+                        modifier = Modifier.matchParentSize(),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "New file",
@@ -396,17 +393,23 @@ fun MainMenu(
                     Box(
                         modifier = Modifier
                             .matchParentSize()
-                            .drawBackdrop(backdrop = backdrop, shape = { RoundedCornerShape(8.dp) }, effects = {
-                                vibrancy()
-                                blur(15f.dp.toPx())
-                                lens(25f.dp.toPx(), 50f.dp.toPx())
-                            }, onDrawSurface = {
-                                drawRect(Color.White.copy(alpha = 0.01f))
-                            })
+                            .drawBackdrop(
+                                backdrop = backdrop,
+                                shape = { RoundedCornerShape(8.dp) },
+                                effects = {
+                                    vibrancy()
+                                    blur(15f.dp.toPx())
+                                    lens(25f.dp.toPx(), 50f.dp.toPx())
+                                },
+                                onDrawSurface = {
+                                    drawRect(Color.White.copy(alpha = 0.01f))
+                                }
+                            )
                     )
 
                     Box(
-                        modifier = Modifier.matchParentSize(), contentAlignment = Alignment.Center
+                        modifier = Modifier.matchParentSize(),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "Open file",
@@ -426,7 +429,6 @@ fun MainMenu(
                 }
             }
 
-
             Spacer(modifier = Modifier.height(10.dp))
 
             Box(
@@ -442,13 +444,18 @@ fun MainMenu(
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .drawBackdrop(backdrop = backdrop, shape = { RoundedCornerShape(8.dp) }, effects = {
-                            vibrancy()
-                            blur(15f.dp.toPx())
-                            lens(25f.dp.toPx(), 50f.dp.toPx())
-                        }, onDrawSurface = {
-                            drawRect(Color.White.copy(alpha = 0.01f))
-                        })
+                        .drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { RoundedCornerShape(8.dp) },
+                            effects = {
+                                vibrancy()
+                                blur(15f.dp.toPx())
+                                lens(25f.dp.toPx(), 50f.dp.toPx())
+                            },
+                            onDrawSurface = {
+                                drawRect(Color.White.copy(alpha = 0.01f))
+                            }
+                        )
                 )
 
                 Box(modifier = Modifier.matchParentSize(), contentAlignment = Alignment.Center) {
@@ -483,13 +490,18 @@ fun MainMenu(
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .drawBackdrop(backdrop = backdrop, shape = { RoundedCornerShape(8.dp) }, effects = {
-                            vibrancy()
-                            blur(15f.dp.toPx())
-                            lens(25f.dp.toPx(), 50f.dp.toPx())
-                        }, onDrawSurface = {
-                            drawRect(Color.White.copy(alpha = 0.01f))
-                        })
+                        .drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { RoundedCornerShape(8.dp) },
+                            effects = {
+                                vibrancy()
+                                blur(15f.dp.toPx())
+                                lens(25f.dp.toPx(), 50f.dp.toPx())
+                            },
+                            onDrawSurface = {
+                                drawRect(Color.White.copy(alpha = 0.01f))
+                            }
+                        )
                 )
 
                 Box(modifier = Modifier.matchParentSize(), contentAlignment = Alignment.Center) {

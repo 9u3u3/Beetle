@@ -7,23 +7,16 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.bsbeetle.bananaspaghetti.ui.DisableDefaultKeyboard
 import com.bsbeetle.bananaspaghetti.ui.EnterImmersiveMode
-import com.bsbeetle.bananaspaghetti.ui.home.InitialEditorUI
-import com.bsbeetle.bananaspaghetti.ui.home.InitialTerminalUI
 import com.bsbeetle.bananaspaghetti.ui.navigation.AppNavigation
 import com.bsbeetle.bananaspaghetti.ui.theme.BananaSpaghettiTheme
-import com.bsbeetle.bananaspaghetti.utils.TerminalWebView
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.ExpandViewModel
@@ -60,11 +53,6 @@ class MainActivity : ComponentActivity() {
                 val editorViewModel: EditorViewModel = viewModel()
                 val expandViewModel: ExpandViewModel = viewModel()
 
-
-                //tempporary for building
-                val navController = rememberNavController()
-                //temporary
-
                 CompositionLocalProvider(
                     LocalFileViewModel provides fileViewModel,
                     LocalKeyboardViewModel provides keyboardViewModel,
@@ -78,8 +66,6 @@ class MainActivity : ComponentActivity() {
                             .fillMaxSize()
                     ) {
                         AppNavigation()
-//                        InitialEditorUI(navController = navController)
-//                        InitialTerminalUI()
                     }
                 }
 
