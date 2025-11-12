@@ -1,8 +1,10 @@
 package com.bsbeetle.bananaspaghetti.ui.browser
 
 import android.webkit.WebView
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -10,9 +12,12 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,12 +44,10 @@ fun DevBrowserScreen() {
         webView?.loadUrl(finalUrl)
     }
 
-
     val updateNavigation: () -> Unit = {
         webView?.let { wv ->
             canGoBack = wv.canGoBack()
             canGoForward = wv.canGoForward()
-            // Update URL bar to match current page
             wv.url?.let { currentUrl ->
                 url = currentUrl
                 urlInput = currentUrl
@@ -60,86 +63,121 @@ fun DevBrowserScreen() {
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // URL Bar
-        Box(
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        // Compact top bar - optimized spacing
+        Row(
             modifier = Modifier
-                .background(color = Color.Black)
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .background(Color(0xFF0A0A0A))
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
+            // Navigation buttons - compact design
+            CompactIconButton(
+                onClick = { webView?.goBack(); updateNavigation() },
+                enabled = canGoBack,
+                icon = Icons.Default.ArrowBack
+            )
+
+            CompactIconButton(
+                onClick = { webView?.goForward(); updateNavigation() },
+                enabled = canGoForward,
+                icon = Icons.Default.ArrowForward
+            )
+
+            CompactIconButton(
+                onClick = { webView?.reload() },
+                enabled = true,
+                icon = Icons.Default.Refresh
+            )
+
+            // URL bar - takes maximum available space
+            OutlinedTextField(
+                value = urlInput,
+                onValueChange = { urlInput = it },
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Back Button
-                IconButton(
-                    onClick = { webView?.goBack(); updateNavigation() },
-                    enabled = canGoBack
-                ) {
-                    Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
-                }
-
-                // Forward Button
-                IconButton(
-                    onClick = { webView?.goForward(); updateNavigation() },
-                    enabled = canGoForward
-                ) {
-                    Icon(Icons.Default.ArrowForward, "Forward", tint = Color.White)
-                }
-
-                // Reload Button
-                IconButton(onClick = { webView?.reload() }) {
-                    Icon(Icons.Default.Refresh, "Reload", tint = Color.White)
-                }
-
-                // URL TextField
-                OutlinedTextField(
-                    value = urlInput,
-                    onValueChange = { urlInput = it },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    placeholder = { Text("Enter URL...") },
-                    trailingIcon = {
-                        IconButton(onClick = { navigateTo(urlInput) }) {
-                            Icon(Icons.Default.Search, "Go")
+                    .weight(1f)
+                    .heightIn(min = 52.dp),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF3D3D3D),
+                    unfocusedBorderColor = Color(0xFF2A2A2A),
+                    focusedContainerColor = Color(0xFF1A1A1A),
+                    unfocusedContainerColor = Color(0xFF151515),
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color(0xFFE0E0E0),
+                    cursorColor = Color.White
+                ),
+                textStyle = LocalTextStyle.current.copy(
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal
+                ),
+                placeholder = {
+                    Text(
+                        "Search or enter URL",
+                        color = Color(0xFF666666),
+                        fontSize = 14.sp
+                    )
+                },
+                trailingIcon = {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .padding(end = 4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        IconButton(
+                            onClick = { navigateTo(urlInput) },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.ArrowForward,
+                                null,
+                                tint = Color(0xFFBBBBBB),
+                                modifier = Modifier.size(16.dp)
+                            )
                         }
                     }
-                )
-
-                // Dev Tools Toggle
-                IconButton(
-                    onClick = toggleDevTools,
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = if (showDevTools) MaterialTheme.colorScheme.primary
-                        else Color.Transparent
-                    )
-                ) {
-                    Icon(
-                        Icons.Default.Build,
-                        "Dev Tools",
-                        tint = if (showDevTools) Color.White
-                        else MaterialTheme.colorScheme.onSurface
-                    )
                 }
-            }
-        }
+            )
 
-        // Loading Progress
-        if (isLoading) {
-            LinearProgressIndicator(
-                progress = { loadProgress / 100f },
-                modifier = Modifier.fillMaxWidth()
+            // Dev tools button
+            CompactIconButton(
+                onClick = toggleDevTools,
+                enabled = true,
+                icon = Icons.Default.Build,
+                isActive = showDevTools
             )
         }
 
-        // WebView
+        // Minimal progress indicator - no wasted space
+        AnimatedVisibility(
+            visible = isLoading,
+            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
+        ) {
+            LinearProgressIndicator(
+                progress = { loadProgress / 100f },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(2.dp),
+                color = Color(0xFF6366F1),
+                trackColor = Color(0xFF1A1A1A)
+            )
+        }
+
+        // WebView - maximum screen usage
         AndroidView(
             modifier = Modifier
-                .fillMaxSize()
-                .weight(1f),
+                .fillMaxWidth()
+                .weight(1f)
+                .background(Color.White),
             factory = { ctx ->
                 DevWebViewManager.createWebView(
                     context = ctx,
@@ -161,9 +199,46 @@ fun DevBrowserScreen() {
                     }
                 ).also { wv ->
                     webView = wv
-                    wv.loadUrl(url)  // Load initial URL
+                    wv.loadUrl(url)
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun CompactIconButton(
+    onClick: () -> Unit,
+    enabled: Boolean,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isActive: Boolean = false
+) {
+    val backgroundColor = when {
+        isActive -> Color(0xFF6366F1)
+        enabled -> Color(0xFF1A1A1A)
+        else -> Color(0xFF0F0F0F)
+    }
+
+    val iconColor = when {
+        isActive -> Color.White
+        enabled -> Color(0xFFBBBBBB)
+        else -> Color(0xFF444444)
+    }
+
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.size(40.dp),
+        shape = RoundedCornerShape(10.dp),
+        color = backgroundColor
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                icon,
+                null,
+                tint = iconColor,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
