@@ -36,10 +36,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
+import coil.compose.AsyncImage
 import com.bsbeetle.bananaspaghetti.LocalBufferViewModel
 import com.bsbeetle.bananaspaghetti.LocalEditorViewModel
 import com.bsbeetle.bananaspaghetti.LocalFileViewModel
 import com.bsbeetle.bananaspaghetti.data.TopBarButtons
+import com.bsbeetle.bananaspaghetti.data.sidebar.FileIconUtils
+import com.bsbeetle.bananaspaghetti.utils.ImageLoaderSingleton
 import com.bsbeetle.bananaspaghetti.utils.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.utils.readFromFile
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
@@ -139,7 +142,8 @@ fun TopBar(
                                             loadContentWhenReady(webView!!, "")
                                         }
                                     }
-                                }
+                                },
+                                context
                             )
                         }
                     }
@@ -213,7 +217,8 @@ private fun FileTab(
     fileName: String,
     isSelected: Boolean,
     onClick: () -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    context: Context
 ) {
     val backgroundColor by animateColorAsState(
         targetValue = if (isSelected) Color(0xFF1E1E1E) else Color(0xFF2D2D30),
@@ -235,10 +240,17 @@ private fun FileTab(
             .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
             .background(backgroundColor)
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+            .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        val iconPath = FileIconUtils.getIconPath(fileName)
+        AsyncImage(
+            model = iconPath,
+            imageLoader = ImageLoaderSingleton.get(context),
+            contentDescription = null,
+            modifier = Modifier.size(16.dp)
+        )
         AnimatedContent(
             targetState = fileName,
             transitionSpec = {
@@ -253,7 +265,7 @@ private fun FileTab(
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = 100.dp)
+                modifier = Modifier.widthIn(max = 150.dp)
             )
         }
 
