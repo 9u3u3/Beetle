@@ -15,9 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bsbeetle.bananaspaghetti.ui.DisableDefaultKeyboard
 import com.bsbeetle.bananaspaghetti.ui.EnterImmersiveMode
-import com.bsbeetle.bananaspaghetti.ui.browser.DevBrowserScreen
-import com.bsbeetle.bananaspaghetti.ui.home.InitialEditorUI
-import com.bsbeetle.bananaspaghetti.ui.home.InitialTerminalUI
 import com.bsbeetle.bananaspaghetti.ui.navigation.AppNavigation
 import com.bsbeetle.bananaspaghetti.ui.theme.BananaSpaghettiTheme
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
@@ -33,8 +30,6 @@ val LocalSliderViewModel = compositionLocalOf<SliderViewModel>{error("No slider 
 val LocalBufferViewModel = compositionLocalOf<BufferViewModel>{error("No buffer view model provided")}
 val LocalEditorViewModel = compositionLocalOf<EditorViewModel>{error("No editor view model provided")}
 val LocalExpandViewModel = compositionLocalOf<ExpandViewModel>{error("No expand view model provided")}
-
-
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -31,6 +31,8 @@ import com.bsbeetle.bananaspaghetti.data.sidebar.SidebarTab
 import com.bsbeetle.bananaspaghetti.ui.browser.DevBrowserScreen
 import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
 import com.bsbeetle.bananaspaghetti.ui.components.BottomBar
+import com.bsbeetle.bananaspaghetti.ui.components.LeftTopBar
+import com.bsbeetle.bananaspaghetti.ui.components.RightTopBar
 import com.bsbeetle.bananaspaghetti.ui.components.TopBar
 import com.bsbeetle.bananaspaghetti.ui.components.TopLeftBox
 import com.bsbeetle.bananaspaghetti.ui.components.TopRightBox
@@ -51,15 +53,19 @@ import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 @Composable
 fun InitialEditorUI(navController: NavController) {
 
+    // View models
     val fileViewModel: FileViewModel = LocalFileViewModel.current
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
     val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
     val editorViewModel: EditorViewModel = LocalEditorViewModel.current
     val bufferViewModel: BufferViewModel = LocalBufferViewModel.current
+
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
+
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
+
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val layout = if (uiState.toggleKeyboard) KeyboardLayout.developerLayout else KeyboardLayout.qwertyLayout
     var showSidebar by rememberSaveable { mutableStateOf(false) }
@@ -83,32 +89,17 @@ fun InitialEditorUI(navController: NavController) {
         }
     }
 
-    val buttonsLeft = listOf(
-        TopBarButtons("Save", onClick = { saveFile(fileViewModel, context, editorViewModel) }),
-        TopBarButtons("Sidebar", onClick = { showSidebar = !showSidebar })
-    )
-
-    val buttonsRight = listOf(
-//        TopBarButtons("Settings", onClick = { navController.navigate("settings") })
-        TopBarButtons("Browser", onClick = {
-            navController.navigate("browser")
-        })
-    )
-
     Box {
         ConstraintLayout(Modifier.fillMaxSize()) {
             val (topLeft, topMiddle, topRight, leftBox, rightBox, leftKb, editor, rightKb, bottomBarRef) = createRefs()
 
-
-            TopBar(
+            LeftTopBar(
                 modifier = Modifier.constrainAs(topLeft) {
                     top.linkTo(parent.top)
                     start.linkTo(parent.start)
                     end.linkTo(topMiddle.start)
                     width = Dimension.percent(0.2f)
-                },
-                color = Color(0xFF1B1B1B),
-                buttons = buttonsLeft
+                }
             )
 
             TopBar(
@@ -118,20 +109,16 @@ fun InitialEditorUI(navController: NavController) {
                     end.linkTo(topRight.start)
                     width = Dimension.percent(0.6f)
                 },
-                color = Color(0xFF1B1B1B),
-                context = context,
-                showBufferTabs = true
+                context = context
             )
 
-            TopBar(
+            RightTopBar(
                 modifier = Modifier.constrainAs(topRight) {
                     top.linkTo(parent.top)
                     start.linkTo(topMiddle.end)
                     end.linkTo(parent.end)
                     width = Dimension.percent(0.2f)
-                },
-                color = Color(0xFF1B1B1B),
-                buttons = buttonsRight
+                }
             )
 
             if (isLandscape) {
@@ -143,8 +130,7 @@ fun InitialEditorUI(navController: NavController) {
                         end.linkTo(editor.start)
                         width = Dimension.fillToConstraints
                         height = Dimension.fillToConstraints
-                    },
-                    editorViewModel.webView!!
+                    }
                 )
 
                 TopRightBox(
@@ -161,24 +147,26 @@ fun InitialEditorUI(navController: NavController) {
                 if (uiState.isLeftKeyboardVisible) {
                     SplitKeyboardHalf(
                         layout, KeyboardSide.LEFT, uiState.isCapsLockOn,
-                        uiState.isShiftOn, uiState.isCtrlOn, keyboardViewModel::onKeyEvent,
+                        uiState.isShiftOn, keyboardViewModel::onKeyEvent,
                         Modifier.constrainAs(leftKb) {
                             start.linkTo(parent.start)
                             bottom.linkTo(parent.bottom)
                             width = Dimension.percent(sliderValue / 100f)
                         }
+                            .background(Color(0xFF212121))
                     )
                 }
 
                 if (uiState.isRightKeyboardVisible) {
                     SplitKeyboardHalf(
                         layout, KeyboardSide.RIGHT, uiState.isCapsLockOn,
-                        uiState.isShiftOn, uiState.isCtrlOn, keyboardViewModel::onKeyEvent,
+                        uiState.isShiftOn, keyboardViewModel::onKeyEvent,
                         Modifier.constrainAs(rightKb) {
                             end.linkTo(parent.end)
                             bottom.linkTo(parent.bottom)
                             width = Dimension.percent(sliderValue / 100f)
                         }
+                            .background(Color(0xFF212121))
                     )
                 }
             }
@@ -196,13 +184,13 @@ fun InitialEditorUI(navController: NavController) {
             )
 
             BottomBar(
-                Modifier.background(Color.DarkGray).constrainAs(bottomBarRef) {
+                Modifier.constrainAs(bottomBarRef) {
                     bottom.linkTo(editor.bottom)
                     start.linkTo(editor.start)
                     end.linkTo(editor.end)
                     width = Dimension.fillToConstraints
                 },
-                color = Color(0xFF245895)
+                color = Color(0xFF1B1B1B)
             )
 
             if (!isLandscape) {

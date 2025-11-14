@@ -3,11 +3,9 @@ package com.bsbeetle.bananaspaghetti.viewmodel
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.res.Configuration
-import android.util.Log
 import android.webkit.WebSettings
 import android.webkit.WebView
 import androidx.lifecycle.AndroidViewModel
-import com.bsbeetle.bananaspaghetti.data.Ic
 import com.bsbeetle.bananaspaghetti.utils.AssetServer
 import com.bsbeetle.bananaspaghetti.utils.NoKeyboardWebView
 

@@ -2,27 +2,37 @@ package com.bsbeetle.bananaspaghetti.ui.home
 
 import android.content.res.Configuration
 import android.webkit.WebView
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
 import com.bsbeetle.bananaspaghetti.LocalSliderViewModel
 import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
-import com.bsbeetle.bananaspaghetti.data.TopBarButtons
 import com.bsbeetle.bananaspaghetti.data.sidebar.Sidebar
 import com.bsbeetle.bananaspaghetti.data.sidebar.SidebarTab
 import com.bsbeetle.bananaspaghetti.data.tenebrioObj
 import com.bsbeetle.bananaspaghetti.tenebrio.pty.Tenebrio
 import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
+import com.bsbeetle.bananaspaghetti.ui.components.LeftTermTopBar
+import com.bsbeetle.bananaspaghetti.ui.components.LeftTopBar
+import com.bsbeetle.bananaspaghetti.ui.components.RightTopBar
 import com.bsbeetle.bananaspaghetti.ui.components.TopBar
+import com.bsbeetle.bananaspaghetti.ui.components.TopLeftBox
+import com.bsbeetle.bananaspaghetti.ui.components.TopLeftTermBox
+import com.bsbeetle.bananaspaghetti.ui.components.TopRightBox
 import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
 import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboardHalf
 import com.bsbeetle.bananaspaghetti.utils.TerminalWebView
@@ -43,12 +53,6 @@ fun InitialTerminalUI() {
 
     var showSidebar by rememberSaveable { mutableStateOf(false) }
 
-    val buttonsForLeftTopBar = listOf(
-        TopBarButtons("Sidebar", onClick = { showSidebar = !showSidebar })
-    )
-//    val buttonsForRightTopBar = listOf(TopBarButtons("Settings", onClick = {navController.navigate("settings")}))
-
-    // ✅ Initialize Tenebrio & WebView safely, only once
     val tenebrio = remember {
         Tenebrio(context)
     }.also {
@@ -67,101 +71,95 @@ fun InitialTerminalUI() {
 
     Box {
         ConstraintLayout(modifier = Modifier.fillMaxSize()) {
-            val (
-                topLeftBarRef,
-                topMiddleBarRef,
-                topRightBarRef,
-                leftKeyboardRef,
-                codeEditor,
-                rightKeyboardRef,
-            ) = createRefs()
 
-            // Left Top Bar
-            TopBar(
-                modifier = Modifier.constrainAs(topLeftBarRef) {
+            val (topLeft, topRight, leftBox, rightBox, leftKb, editor, rightKb) = createRefs()
+
+            LeftTermTopBar(
+                modifier = Modifier.constrainAs(topLeft) {
                     top.linkTo(parent.top)
                     start.linkTo(parent.start)
-                    end.linkTo(topMiddleBarRef.start)
-                    width = Dimension.percent(0.2f)
+                    end.linkTo(editor.start)
+                    width = Dimension.fillToConstraints
                     height = Dimension.wrapContent
-                },
-                color = Color(0xFF212121),
-                buttonsForLeftTopBar
+                }
             )
 
-            // Middle Top Bar
-            TopBar(
-                modifier = Modifier.constrainAs(topMiddleBarRef) {
+            RightTopBar(
+                modifier = Modifier.constrainAs(topRight) {
                     top.linkTo(parent.top)
-                    start.linkTo(topLeftBarRef.end)
-                    end.linkTo(topRightBarRef.start)
-                    width = Dimension.percent(0.6f)
-                    height = Dimension.wrapContent
-                },
-                color = Color.Gray,
-                context = context
-            )
-
-            // Right Top Bar
-            TopBar(
-                modifier = Modifier.constrainAs(topRightBarRef) {
-                    top.linkTo(parent.top)
-                    start.linkTo(topMiddleBarRef.end)
+                    start.linkTo(editor.end)
                     end.linkTo(parent.end)
-                    width = Dimension.percent(0.2f)
+                    width = Dimension.fillToConstraints
                     height = Dimension.wrapContent
                 },
-                color = Color(0xFF212121),
+                isTerminal = true
             )
 
-            // 🧩 Optional Split Keyboards in Landscape
-            if (isLandscape && uiState.isLeftKeyboardVisible) {
-                SplitKeyboardHalf(
-                    layout = layout,
-                    side = KeyboardSide.LEFT,
-                    isCapsLockOn = uiState.isCapsLockOn,
-                    isShiftOn = uiState.isShiftOn,
-                    isCtrlOn = uiState.isCtrlOn,
-                    onKeyEvent = keyboardViewModel::onKeyEvent,
-                    modifier = Modifier.constrainAs(leftKeyboardRef) {
+            if (isLandscape) {
+                TopLeftTermBox(
+                    Modifier.constrainAs(leftBox) {
+                        top.linkTo(topRight.bottom)
+                        bottom.linkTo(leftKb.top)
                         start.linkTo(parent.start)
-                        bottom.linkTo(parent.bottom)
-                        width = Dimension.percent(sliderValue / 100f)
+                        end.linkTo(editor.start)
+                        width = Dimension.fillToConstraints
+                        height = Dimension.fillToConstraints
                     }
                 )
-            }
 
-            if (isLandscape && uiState.isRightKeyboardVisible) {
-                SplitKeyboardHalf(
-                    layout = layout,
-                    side = KeyboardSide.RIGHT,
-                    isCapsLockOn = uiState.isCapsLockOn,
-                    isShiftOn = uiState.isShiftOn,
-                    isCtrlOn = uiState.isCtrlOn,
-                    onKeyEvent = keyboardViewModel::onKeyEvent,
-                    modifier = Modifier.constrainAs(rightKeyboardRef) {
+                TopRightBox(
+                    Modifier.constrainAs(rightBox) {
+                        top.linkTo(topRight.bottom)
+                        bottom.linkTo(rightKb.top)
+                        start.linkTo(editor.start)
                         end.linkTo(parent.end)
-                        bottom.linkTo(parent.bottom)
-                        width = Dimension.percent(sliderValue / 100f)
+                        width = Dimension.fillToConstraints
+                        height = Dimension.fillToConstraints
                     }
                 )
+
+                if (uiState.isLeftKeyboardVisible) {
+                    SplitKeyboardHalf(
+                        layout, KeyboardSide.LEFT, uiState.isCapsLockOn,
+                        uiState.isShiftOn, keyboardViewModel::onKeyEvent,
+                        Modifier.constrainAs(leftKb) {
+                            start.linkTo(parent.start)
+                            bottom.linkTo(parent.bottom)
+                            width = Dimension.percent(sliderValue / 100f)
+                        }
+                            .background(Color(0xFF212121))
+                    )
+                }
+
+                if (uiState.isRightKeyboardVisible) {
+                    SplitKeyboardHalf(
+                        layout, KeyboardSide.RIGHT, uiState.isCapsLockOn,
+                        uiState.isShiftOn, keyboardViewModel::onKeyEvent,
+                        Modifier.constrainAs(rightKb) {
+                            end.linkTo(parent.end)
+                            bottom.linkTo(parent.bottom)
+                            width = Dimension.percent(sliderValue / 100f)
+                        }
+                            .background(Color(0xFF212121))
+                    )
+                }
             }
 
-            // 🧠 Shared Editor logic (works in both orientations)
+            // Editor extended to the top
             Editor(
-                modifier = Modifier.constrainAs(codeEditor) {
-                    top.linkTo(topMiddleBarRef.bottom)
+                modifier = Modifier.constrainAs(editor) {
+                    top.linkTo(parent.top) // Starts right after top bar
                     bottom.linkTo(parent.bottom)
 
                     // adapt constraints depending on keyboard visibility & orientation
                     if (isLandscape && uiState.isLeftKeyboardVisible) {
-                        start.linkTo(leftKeyboardRef.end)
+                        start.linkTo(leftKb.end)
                     } else {
                         start.linkTo(parent.start)
                     }
 
                     if (isLandscape && uiState.isRightKeyboardVisible) {
-                        end.linkTo(rightKeyboardRef.start)
+                        end.linkTo(rightKb.start)
                     } else {
                         end.linkTo(parent.end)
                     }
@@ -171,16 +169,17 @@ fun InitialTerminalUI() {
                 },
                 webView = webView
             )
-           if(!isLandscape){
-               Sidebar(
-                   isVisible = showSidebar,
-                   onDismiss = { showSidebar = false },
-                   enabledTabs = listOf(
-                       SidebarTab.EXTENSIONS,
-                       SidebarTab.SETTINGS
-                   )
-               )
-           }
+
+            if(!isLandscape){
+                Sidebar(
+                    isVisible = showSidebar,
+                    onDismiss = { showSidebar = false },
+                    enabledTabs = listOf(
+                        SidebarTab.EXTENSIONS,
+                        SidebarTab.SETTINGS
+                    )
+                )
+            }
         }
     }
 }

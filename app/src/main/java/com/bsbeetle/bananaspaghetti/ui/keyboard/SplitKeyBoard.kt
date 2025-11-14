@@ -21,7 +21,6 @@ fun SplitKeyboardHalf(
     side: KeyboardSide,
     isCapsLockOn: Boolean,
     isShiftOn: Boolean,
-    isCtrlOn: Boolean,
     onKeyEvent: (Key, KeyGesture) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -42,7 +41,6 @@ fun SplitKeyboardHalf(
         verticalArrangement = Arrangement.SpaceEvenly
     ) {
         layout.rows.forEach { rowOfKeys ->
-            // Split keys into halves
             val splitIndex = (rowOfKeys.size + 1) / 2
             val keysToShow = when (side) {
                 KeyboardSide.LEFT -> rowOfKeys.subList(0, splitIndex)
@@ -54,7 +52,6 @@ fun SplitKeyboardHalf(
                 side = side,
                 isCapsLockOn = isCapsLockOn,
                 isShiftOn=isShiftOn,
-                isCtrlOn,
                 onKeyEvent = onKeyEvent,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -70,7 +67,6 @@ fun KeyboardHalfRow(
     side: KeyboardSide,
     isCapsLockOn: Boolean,
     isShiftOn: Boolean,
-    isCtrlOn: Boolean,
     onKeyEvent: (Key, KeyGesture) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -86,7 +82,6 @@ fun KeyboardHalfRow(
                 key = key,
                 isShiftOn,
                 isCapsLockOn,
-                isCtrlOn,
                 onKeyEvent = onKeyEvent,
             )
         }

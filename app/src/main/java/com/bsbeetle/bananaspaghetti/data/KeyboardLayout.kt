@@ -45,13 +45,14 @@ object KeyboardLayout {
         ),
         //Row 5
         listOf(
-            Key("🌐", type = KeyType.ACTION_TOGGLE, weight = NORMAL_KEY),
+            Key("123?", type = KeyType.ACTION_TOGGLE, weight = NORMAL_KEY),
             Key("Ctrl", type = KeyType.ACTION_CTRL, weight = CTRL_KEY),
             Key("Space", type = KeyType.ACTION_SPACE, weight = SPACE_KEY),
-            Key(text = "{}", shiftText = "{}", weight = NORMAL_KEY),
+            Key("tab", "\t", type = KeyType.ACTION_TAB, ),
 
 
-            Key(text = "()", shiftText = "()", weight = NORMAL_KEY),
+            Key("Esc", "Esc", NORMAL_KEY, type = KeyType.ACTION_ESCAPE),
+            Key(":", ":", NORMAL_KEY),
             Key("↵", type = KeyType.ACTION_ENTER, weight = ENTER_KEY),
             Key("⌫", type = KeyType.ACTION_BACKSPACE, weight = NORMAL_KEY),
         )

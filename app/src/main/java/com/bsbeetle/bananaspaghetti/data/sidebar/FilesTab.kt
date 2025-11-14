@@ -134,11 +134,11 @@ fun FilesTab(
 }
 
 // Helper function to build file tree recursively
-private fun buildFileTree(
+fun buildFileTree(
     doc: DocumentFile,
     level: Int,
     expandedFolders: Set<String>,
-    searchActive: Boolean
+    searchActive: Boolean = false
 ): List<FileItem> {
     val result = mutableListOf<FileItem>()
 
