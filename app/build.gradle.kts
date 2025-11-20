@@ -88,6 +88,7 @@ dependencies {
     implementation(libs.androidx.tools.core)
     implementation(libs.androidx.foundation.layout)
     implementation(libs.androidx.compose.foundation.layout)
+    implementation(libs.androidx.compose.foundation)
 
 
     testImplementation(libs.junit)

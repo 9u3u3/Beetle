@@ -5,6 +5,7 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -12,9 +13,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -22,8 +24,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DevBrowserScreen() {
-    var url by rememberSaveable { mutableStateOf("https://google.com") }
+fun DevBrowserScreen(modifier: Modifier = Modifier) {
+    var url by rememberSaveable { mutableStateOf("https://github.com/harshf40") }
     var urlInput by rememberSaveable { mutableStateOf(url) }
     var webView by remember { mutableStateOf<WebView?>(null) }
     var canGoBack by remember { mutableStateOf(false) }
@@ -64,99 +66,88 @@ fun DevBrowserScreen() {
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
-            .background(Color.Black)
     ) {
-        // Compact top bar - optimized spacing
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF0A0A0A))
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .height(18.dp)
+                .background(Color(0xFF1B1B1B))
         ) {
-            // Navigation buttons - compact design
-            CompactIconButton(
-                onClick = { webView?.goBack(); updateNavigation() },
-                enabled = canGoBack,
-                icon = Icons.Default.ArrowBack
+
+            // LEFT edge divider
+            Box(
+                Modifier
+                    .align(Alignment.CenterStart)   // ✔ Correct here
+                    .fillMaxHeight()
+                    .width(1.dp)
+                    .background(Color(0xFF3E3E42))
             )
 
-            CompactIconButton(
-                onClick = { webView?.goForward(); updateNavigation() },
-                enabled = canGoForward,
-                icon = Icons.Default.ArrowForward
+            // RIGHT edge divider
+            Box(
+                Modifier
+                    .align(Alignment.CenterEnd)     // ✔ Correct here
+                    .fillMaxHeight()
+                    .width(1.dp)
+                    .background(Color(0xFF3E3E42))
             )
 
-            CompactIconButton(
-                onClick = { webView?.reload() },
-                enabled = true,
-                icon = Icons.Default.Refresh
-            )
-
-            // URL bar - takes maximum available space
-            OutlinedTextField(
-                value = urlInput,
-                onValueChange = { urlInput = it },
+            // Compact top bar
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 52.dp),
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF3D3D3D),
-                    unfocusedBorderColor = Color(0xFF2A2A2A),
-                    focusedContainerColor = Color(0xFF1A1A1A),
-                    unfocusedContainerColor = Color(0xFF151515),
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color(0xFFE0E0E0),
-                    cursorColor = Color.White
-                ),
-                textStyle = LocalTextStyle.current.copy(
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Normal
-                ),
-                placeholder = {
-                    Text(
-                        "Search or enter URL",
-                        color = Color(0xFF666666),
-                        fontSize = 14.sp
-                    )
-                },
-                trailingIcon = {
-                    Box(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .padding(end = 4.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        IconButton(
-                            onClick = { navigateTo(urlInput) },
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.ArrowForward,
-                                null,
-                                tint = Color(0xFFBBBBBB),
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                }
-            )
+                    .fillMaxWidth()
+                    .height(18.dp)
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
 
-            // Dev tools button
-            CompactIconButton(
-                onClick = toggleDevTools,
-                enabled = true,
-                icon = Icons.Default.Build,
-                isActive = showDevTools
-            )
+                // Back button
+                CompactIconButton(
+                    onClick = { webView?.goBack(); updateNavigation() },
+                    enabled = canGoBack,
+                    icon = Icons.Default.ArrowBack
+                )
+
+                // Forward button
+                CompactIconButton(
+                    onClick = { webView?.goForward(); updateNavigation() },
+                    enabled = canGoForward,
+                    icon = Icons.Default.ArrowForward
+                )
+
+                // Refresh button
+                CompactIconButton(
+                    onClick = { webView?.reload() },
+                    enabled = true,
+                    icon = Icons.Default.Refresh
+                )
+
+                CompactTextField(
+                    value = urlInput,
+                    onValueChange = { urlInput = it },
+                    placeholder = "Search or enter URL",
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(18.dp)
+                )
+
+                // Dev Tools button
+                CompactIconButton(
+                    onClick = toggleDevTools,
+                    enabled = true,
+                    icon = Icons.Default.Build,
+                    isActive = showDevTools
+                )
+            }
+
         }
 
-        // Minimal progress indicator - no wasted space
+
+
+        // Progress indicator
         AnimatedVisibility(
             visible = isLoading,
             enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
@@ -167,12 +158,12 @@ fun DevBrowserScreen() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(2.dp),
-                color = Color(0xFF6366F1),
+                color = Color(0xFF007ACC),
                 trackColor = Color(0xFF1A1A1A)
             )
         }
 
-        // WebView - maximum screen usage
+        // WebView
         AndroidView(
             modifier = Modifier
                 .fillMaxWidth()
@@ -213,32 +204,63 @@ private fun CompactIconButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     isActive: Boolean = false
 ) {
-    val backgroundColor = when {
-        isActive -> Color(0xFF6366F1)
-        enabled -> Color(0xFF1A1A1A)
-        else -> Color(0xFF0F0F0F)
-    }
-
     val iconColor = when {
-        isActive -> Color.White
-        enabled -> Color(0xFFBBBBBB)
-        else -> Color(0xFF444444)
+        isActive -> Color(0xFF007ACC)
+        enabled -> Color(0xFFCCCCCC)
+        else -> Color(0xFF6A6A6A)
     }
 
-    Surface(
+    IconButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.size(40.dp),
-        shape = RoundedCornerShape(10.dp),
-        color = backgroundColor
+        modifier = Modifier.size(20.dp)
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                icon,
-                null,
-                tint = iconColor,
-                modifier = Modifier.size(20.dp)
-            )
-        }
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = iconColor,
+            modifier = Modifier.size(12.dp)
+        )
     }
+}
+
+@Composable
+private fun CompactTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier
+) {
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        cursorBrush = SolidColor(Color.White),
+        textStyle = TextStyle(
+            color = Color.White,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Normal,
+            lineHeight = 11.sp   // <-- Centers text vertically
+        ),
+        modifier = modifier
+            .background(Color(0xFF2D2D30), RoundedCornerShape(4.dp))
+            .padding(horizontal = 6.dp, vertical = 0.dp)  // <-- No vertical padding
+            .fillMaxHeight(),  // takes full 18dp height
+        decorationBox = { inner ->
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.CenterStart  // <-- Perfect vertical center
+            ) {
+                if (value.isEmpty()) {
+                    Text(
+                        placeholder,
+                        fontSize = 11.sp,
+                        color = Color(0xFF6A6A6A),
+                        lineHeight = 11.sp
+                    )
+                }
+                inner()
+            }
+        }
+    )
 }

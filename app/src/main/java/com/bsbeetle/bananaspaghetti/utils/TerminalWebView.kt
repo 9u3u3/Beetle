@@ -12,13 +12,13 @@ import com.bsbeetle.bananaspaghetti.tenebrio.pty.Tenebrio
 
 @SuppressLint("StaticFieldLeak")
 object TerminalWebView {
-    private var webView: WebView? = null
+    private var webView: CustomWebView? = null
     private var tenebrio: Tenebrio? = null
     @SuppressLint("SetJavaScriptEnabled")
     fun getWebview(context: Context, tenebrio: Tenebrio): WebView {
         if(webView == null) {
             this.tenebrio = tenebrio
-            webView = WebView(context.applicationContext).apply {
+            webView = CustomWebView(context.applicationContext).apply {
                 WebView.setWebContentsDebuggingEnabled(true)
                 settings.apply {
                     javaScriptEnabled = true

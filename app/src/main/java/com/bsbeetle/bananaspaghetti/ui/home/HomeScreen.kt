@@ -89,7 +89,7 @@ fun HomeScreen(navController: NavController) {
         ConstraintLayout(
             modifier = Modifier.fillMaxSize()
         ) {
-            val (gridLayout, beetleAsciiLeft, beetleAsciiRight, vignette, mainMenu, settings, recents, recentsPanel) = createRefs()
+            val (gridLayout, beetleAsciiLeft, beetleAsciiRight, vignette, mainMenu, settings, recents, recentsPanel, browser) = createRefs()
 
             GridBackground(
                 modifier = Modifier
@@ -230,12 +230,26 @@ fun HomeScreen(navController: NavController) {
                         }))
 
             Image(
+                painter = painterResource(R.drawable.web_icon),
+                contentDescription = "browser",
+                modifier = Modifier
+                    .size(20.dp)
+                    .constrainAs(browser) {
+                        top.linkTo(settings.bottom, margin = 20.dp)
+                        end.linkTo(parent.end, margin = 20.dp)
+                    }
+                    .clickable(
+                        onClick = {
+                            navController.navigate(Screen.Browser.route)
+                        }))
+
+            Image(
                 painter = painterResource(R.drawable.history_2_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
                 contentDescription = "Recents",
                 modifier = Modifier
                     .size(20.dp)
                     .constrainAs(recents) {
-                        top.linkTo(settings.bottom, margin = 20.dp)
+                        top.linkTo(browser.bottom, margin = 20.dp)
                         end.linkTo(parent.end, margin = 20.dp)
                     }
                     .clickable(

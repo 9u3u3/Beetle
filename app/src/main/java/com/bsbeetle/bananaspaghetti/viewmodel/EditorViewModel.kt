@@ -3,21 +3,25 @@ package com.bsbeetle.bananaspaghetti.viewmodel
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.res.Configuration
+import android.util.Log
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebSettings
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.lifecycle.AndroidViewModel
 import com.bsbeetle.bananaspaghetti.utils.AssetServer
-import com.bsbeetle.bananaspaghetti.utils.NoKeyboardWebView
+import com.bsbeetle.bananaspaghetti.utils.CustomWebView
 
 class EditorViewModel(app: Application) : AndroidViewModel(app) {
 
     @SuppressLint("StaticFieldLeak")
-    var webView: NoKeyboardWebView? = null
+    var webView: CustomWebView? = null
     private var server: AssetServer? = null
 
     @SuppressLint("SetJavaScriptEnabled")
     fun init() {
         if (webView != null) return  // already created
+
 
         // Start AssetServer on port 8080
         if (server == null) {
@@ -25,7 +29,7 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
             server?.start()
         }
 
-        webView = NoKeyboardWebView(getApplication()).apply {
+        webView = CustomWebView(getApplication()).apply {
             WebView.setWebContentsDebuggingEnabled(true)
             settings.apply {
                 javaScriptEnabled = true
@@ -37,6 +41,8 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
                 loadWithOverviewMode = true
                 setSupportZoom(false)
             }
+
+
 
             // Load via HTTP server instead of directly from assets
             loadUrl("http://localhost:8080/index.html")
@@ -52,6 +58,18 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
                     // In landscape, don't request focus
                     clearFocus()
                 }
+            }
+        }
+
+        // WebViewClient is the brain of the of the webview, it handles the navigation and the errors
+        webView!!.webViewClient = object : WebViewClient() {
+            override fun onRenderProcessGone(
+                view: WebView?,
+                detail: RenderProcessGoneDetail?
+            ): Boolean {
+                Log.d("EditorViewModel", "WebView Crashed")
+                view?.destroy() // Kill the specific webview instance
+                return true // <--- CRITICAL: "true" means "Do not crash the app"
             }
         }
     }

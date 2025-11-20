@@ -193,6 +193,10 @@ function setupEditor() {
       diagnosticsField, // Add StateField
       lspLinter,
       lintGutter(),
+      // EditorState.readOnly.of(true), // Makes the editor readOnly for the user (to block the default from popping up)
+      EditorView.contentAttributes.of({
+        inputmode: "none"
+      }),
       autocompletion({
         override: [lspCompletionSource],
         activateOnTyping: true,

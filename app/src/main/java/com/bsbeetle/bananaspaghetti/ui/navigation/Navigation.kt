@@ -5,6 +5,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.bsbeetle.bananaspaghetti.ui.browser.DevBrowserScreen
+import com.bsbeetle.bananaspaghetti.ui.home.BrowserScreen
 import com.bsbeetle.bananaspaghetti.ui.home.HomeScreen
 import com.bsbeetle.bananaspaghetti.ui.home.InitialEditorUI
 import com.bsbeetle.bananaspaghetti.ui.home.InitialTerminalUI
@@ -22,6 +23,6 @@ fun AppNavigation() {
         composable(Screen.Terminal.route){InitialTerminalUI()} // Open Terminal
         composable(route=Screen.Settings.route){SettingsScreen(navController)} // Open Settings
         composable(route=Screen.Demo.route){DemoEditorUi()} // Demo editor used settings
-        composable(route= Screen.Browser.route){ DevBrowserScreen() }
+        composable(route= Screen.Browser.route){ BrowserScreen() }
     }
 }

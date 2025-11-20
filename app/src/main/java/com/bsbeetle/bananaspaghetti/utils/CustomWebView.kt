@@ -8,11 +8,11 @@ import android.view.inputmethod.InputConnection
 import android.webkit.WebView
 import com.bsbeetle.bananaspaghetti.data.Ic
 
-class NoKeyboardWebView(context: Context) : WebView(context) {
+class CustomWebView(context: Context) : WebView(context) {
 
     override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection? {
-        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
+        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         val inputConnection = super.onCreateInputConnection(outAttrs)
 
         if (inputConnection != null) {
@@ -29,11 +29,10 @@ class NoKeyboardWebView(context: Context) : WebView(context) {
             outAttrs.initialSelEnd = 0
         }
 
-        return inputConnection  // Always return the connection
+        return null  // Always return the connection
     }
 
     override fun onCheckIsTextEditor(): Boolean {
-        // Always return true so the editor can be focused
         return true
     }
 }

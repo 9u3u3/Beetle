@@ -333,7 +333,8 @@ fun RightTopBar(
     onFullscreenClick: () -> Unit = {},
     onTerminalClick: () -> Unit = {},
     onExtensionsClick: () -> Unit = {},
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onWebClick: () -> Unit = {}
 ) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -362,6 +363,18 @@ fun RightTopBar(
             TopBarIconButton(
                 icon = R.drawable.zoom_in,
                 onClick = onFullscreenClick
+            )
+
+            VerticalDivider(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(1.dp),
+                color = Color(0xFF3E3E42)
+            )
+
+            TopBarIconButton(
+                icon = R.drawable.web_icon,
+                onClick = onWebClick
             )
 
             if(!isTerminal) {
