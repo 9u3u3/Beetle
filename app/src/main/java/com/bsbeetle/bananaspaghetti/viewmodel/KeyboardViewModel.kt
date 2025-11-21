@@ -1,9 +1,12 @@
 package com.bsbeetle.bananaspaghetti.viewmodel
 
+import android.view.KeyEvent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bsbeetle.bananaspaghetti.data.Ic
 import com.bsbeetle.bananaspaghetti.model.Key
 import com.bsbeetle.bananaspaghetti.model.KeyType
+import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,6 +30,19 @@ sealed class EditorAction {
     data class InsertText(val text: String) : EditorAction()
     object Backspace : EditorAction()
     object Enter : EditorAction()
+    // for the ctrl
+    object Copy : EditorAction()
+    object Paste : EditorAction()
+    object Cut : EditorAction()
+    object Undo : EditorAction()
+    object Redo : EditorAction()
+    object SelectAll : EditorAction()
+    object Find : EditorAction()
+    object Save : EditorAction()
+    object CtrlC : EditorAction()
+    object CtrlZ : EditorAction()
+    object CtrlD : EditorAction()
+    object Escape : EditorAction()
 }
 
 class KeyboardViewModel : ViewModel() {
@@ -48,24 +64,72 @@ class KeyboardViewModel : ViewModel() {
             KeyType.ACTION_SPACE -> handleSpace(gesture)
             KeyType.ACTION_TAB -> handleTab(gesture)
             KeyType.ACTION_TOGGLE -> if (gesture == KeyGesture.Tap) toggleKeyboardVisibility()
+            KeyType.ACTION_CTRL -> handleCtrl(gesture)
+            KeyType.ACTION_ESCAPE -> handleEscape(gesture)
+        }
+    }
+
+    private fun handleCharacter(key: Key, gesture: KeyGesture) {
+        when (gesture) {
+            KeyGesture.Tap -> {
+                // Check if CTRL is pressed for shortcuts
+                if (_uiState.value.isCtrlOn) {
+                    handleCtrlShortcut(key)
+                } else {
+                    // Single tap means single character
+                    val textToInsert = getCharacterText(key)
+                    emitText(textToInsert)
+                }
+            }
+            KeyGesture.LongPress -> {
+                // Long press/hold = continuous typing of the same character
+                if (!_uiState.value.isCtrlOn) {
+                    val textToInsert = getCharacterText(key)
+                    emitText(textToInsert)
+                }
+            }
+            else -> {}
+        }
+    }
+
+    private fun handleEscape(gesture: KeyGesture) {
+        if (gesture == KeyGesture.Tap) {
+            viewModelScope.launch {
+                _editorAction.emit(EditorAction.Escape)
+            }
+            _uiState.update { currentState ->
+                currentState.copy(isEscapeOn = !currentState.isEscapeOn)
+            }
         }
     }
 
 
-    // To Handle character keys
-    private fun handleCharacter(key: Key, gesture: KeyGesture) {
-        when (gesture) {
-            KeyGesture.Tap -> {
-                // Single tap means single character
-                val textToInsert = getCharacterText(key)
-                emitText(textToInsert)
+    private fun handleCtrlShortcut(key: Key) {
+        val action = when (key.text.lowercase()) {
+            "c" -> EditorAction.CtrlC  // Always interrupt
+            "v" -> EditorAction.Paste
+            "x" -> EditorAction.Cut
+            "d" -> EditorAction.CtrlD
+            "z" -> EditorAction.Undo
+            "y" -> EditorAction.Redo
+            "a" -> EditorAction.SelectAll
+            "f" -> EditorAction.Find
+            "s" -> EditorAction.Save
+            else -> return
+        }
+
+        action?.let {
+            emitAction(it)
+            // Turn off CTRL immediately after shortcut
+            _uiState.update { state -> state.copy(isCtrlOn = false) }
+        }
+    }
+
+    private fun handleCtrl(gesture: KeyGesture) {
+        if (gesture == KeyGesture.Tap) {
+            _uiState.update { currentState ->
+                currentState.copy(isCtrlOn = !currentState.isCtrlOn)
             }
-            KeyGesture.LongPress -> {
-                // Long press/hold = continuous typing of the same character
-                val textToInsert = getCharacterText(key)
-                emitText(textToInsert)
-            }
-            else -> {} // Ignore other gestures for character keys
         }
     }
 
@@ -179,19 +243,35 @@ class KeyboardViewModel : ViewModel() {
 
     private fun emitText(text: String) {
         viewModelScope.launch {
-            _editorAction.emit(EditorAction.InsertText(text))
+            // _editorAction.emit(EditorAction.InsertText(text))
+            Ic.ic?.commitText(text, 1)
         }
     }
 
     private fun onBackspace() {
         viewModelScope.launch {
-            _editorAction.emit(EditorAction.Backspace)
+            //_editorAction.emit(EditorAction.Backspace)
+            Ic.ic?.deleteSurroundingText(1, 0)
         }
     }
 
     private fun onEnter() {
         viewModelScope.launch {
-            _editorAction.emit(EditorAction.Enter)
+            // _editorAction.emit(EditorAction.Enter)
+            // First try key event (lets web editors intercept Enter)
+            val sent = Ic.ic?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER)) == true &&
+                    Ic.ic?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER)) == true
+
+            // If that didn’t trigger (common in WebViews), manually insert newline
+            if (!sent) {
+                Ic.ic?.commitText("\n", 1)
+            }
+        }
+    }
+
+    private fun emitAction(action: EditorAction) {
+        viewModelScope.launch {
+            _editorAction.emit(action)
         }
     }
 }

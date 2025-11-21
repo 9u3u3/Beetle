@@ -1,11 +1,9 @@
 package com.bsbeetle.bananaspaghetti.ui.home
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,108 +44,27 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
 import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 
-//@Composable
-//fun SettingsScreen(
-//    keyboardViewModel: KeyboardViewModel,
-//    navController: NavController
-//
-//) {
-//    val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
-//
-//    var indentValue by remember { mutableStateOf("${uiState.indentValue}") }
-//
-//    Column (
-//        modifier = Modifier
-//            .fillMaxSize()
-//            .background(color = Color.DarkGray)
-//    ){
-//        Box(
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .background(color = Color.DarkGray)
-//                .padding(16.dp)
-//
-//        ) {
-//            Column {
-//                OutlinedTextField(
-//                    value = indentValue,
-//                    onValueChange = { newText ->
-//                        indentValue = newText
-//                        newText.toIntOrNull()?.let { num ->
-//                            keyboardViewModel.updateIndentSize(num)
-//                        }
-//                    },
-//                    label = { Text("Indent size") },
-//                    colors = TextFieldDefaults.colors(
-//                        unfocusedContainerColor = Color.DarkGray,
-//                        focusedLabelColor = Color.White,
-//                        unfocusedLabelColor = Color.LightGray
-//                    )
-//                )
-//            }
-//        }
-//            Box {
-//                Column(
-//                    horizontalAlignment = Alignment.Start,
-//                    modifier = Modifier.fillMaxWidth()
-//                        .padding(horizontal = 5.dp)
-//                ) {
-//                    Text("Keyboard Visibility")
-//                    Row(
-//                        verticalAlignment = Alignment.CenterVertically
-//                    ){
-//                        Checkbox(checked = uiState.isLeftKeyboardVisible, onCheckedChange = {
-//                            keyboardViewModel.toggleLeftKeyboardVisibility()
-//                        })
-//                        Text("Left Keyboard")
-//                    }
-//
-//                    Row(
-//                        verticalAlignment = Alignment.CenterVertically
-//                    ){
-//                        Checkbox(checked = uiState.isRightKeyboardVisible, onCheckedChange = {
-//                            keyboardViewModel.toggleRightKeyboardVisibility()
-//                        })
-//                        Text("Right Keyboard")
-//                    }
-//                }
-//            }
-//
-//        Box(
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .clickable(onClick = {
-//                    navController.navigate("demo")
-//                })
-//        ){
-//           Text("Keyboard Sizing")
-//        }
-//        }
-//
-//}
 @Composable
 fun KeyboardSettings(
-    keyboardViewModel: KeyboardViewModel,
     navController: NavController
 ) {
 
+    val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     var indentValue by remember { mutableStateOf("${uiState.indentValue}") }
-
     val backgroundBoxSize = 250.dp
     val verticalScrollState = rememberScrollState()
     val horizontalScrollState = rememberScrollState()
     var tapped by remember { mutableStateOf(false) }
-
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -156,7 +73,6 @@ fun KeyboardSettings(
             .fillMaxWidth()
 
     ) {
-
         Row(
             modifier = Modifier
                 .padding(25.dp)
@@ -211,7 +127,6 @@ fun KeyboardSettings(
                     )
                 }
             }
-
             Box(
                 modifier = Modifier
                     .height(backgroundBoxSize)
@@ -286,27 +201,23 @@ fun KeyboardSettings(
         ) {
             Text("Keyboard Sizing", color = Color.White, fontWeight = FontWeight.Bold)
         }
-
     }
 
 }
 
 @Composable
 fun SettingsScreen(
-    keyboardViewModel: KeyboardViewModel,
     navController: NavController
 ) {
-    Row {
-        ResponsiveScaffold(keyboardViewModel, navController)
-    }
+    Row {ResponsiveScaffold(navController)}
 }
 
 
 @Composable
 fun ResponsiveScaffold(
-    keyboardViewModel: KeyboardViewModel,
     navController: NavController
 ) {
+
     var selectedItem by remember { mutableStateOf<String?>("Keyboard") }
 
     Row(modifier = Modifier.fillMaxSize()) {
@@ -331,7 +242,7 @@ fun ResponsiveScaffold(
                 .fillMaxSize()
                 .background(Color.Black),
         ) {
-            MainContent(selectedItem, keyboardViewModel, navController)
+            MainContent(selectedItem, navController)
         }
     }
 }
@@ -341,7 +252,6 @@ val HighlightColor = Color(0xFF228edd)
 @Composable
 fun MainContent(
     selectedItem: String?,
-    keyboardViewModel: KeyboardViewModel,
     navController: NavController
 ) {
     Box(
@@ -352,20 +262,11 @@ fun MainContent(
                 contentScale = ContentScale.Crop, alpha = 0.4f
             )
     ) {
-        if (selectedItem == "Editor") {
-            EditorSettings()
-        }
-        if (selectedItem == "Appearance") {
-            AppearenceSettings()
-        }
-        if (selectedItem == "Keybindings") {
-            KeybindingsSettings()
-        }
-        if (selectedItem == "Keyboard") {
-            KeyboardSettings(keyboardViewModel, navController)
-        }
+        if (selectedItem == "Editor") EditorSettings()
+        if (selectedItem == "Appearance") AppearenceSettings()
+        if (selectedItem == "Keybindings") KeybindingsSettings()
+        if (selectedItem == "Keyboard") KeyboardSettings(navController)
     }
-
 }
 
 @Composable
@@ -455,4 +356,3 @@ fun AppearenceSettings() {
 fun EditorSettings() {
 
 }
-

@@ -2,8 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:allowBackup="true"
+        android:usesCleartextTraffic="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -11,9 +14,10 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.BananaSpaghetti">
+
         <activity
             android:name=".MainActivity"
-            android:screenOrientation="sensorLandscape"
+            android:hardwareAccelerated="true"
             android:exported="true"
             android:theme="@style/Theme.BananaSpaghetti">
             <intent-filter>
@@ -21,6 +25,21 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <provider
+            android:name="com.bsbeetle.bananaspaghetti.utils.fileHandling.AlpineDocumentProvider"
+            android:authorities="${applicationId}.documents"
+            android:permission="android.permission.MANAGE_DOCUMENTS"
+            android:exported="true"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.provider.PROVIDER_LABEL"
+                android:resource="@string/app_name" />
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>
+
     </application>
 
 </manifest>

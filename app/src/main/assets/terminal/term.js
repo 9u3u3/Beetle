@@ -1,61 +1,191 @@
-// === terminal.js ===
-
-// Initialize terminal
 const term = new window.Terminal({
   cursorBlink: true,
   fontSize: 14,
   fontFamily: "monospace",
 });
+
 term.open(document.getElementById("terminal"));
 
-// Disable Android IME popup
+const fitAddon = new FitAddon.FitAddon();
+term.loadAddon(fitAddon);
+const dims = fitAddon.proposeDimensions();
+AndroidTerminalResize.getRowsCols(dims.rows, dims.cols);
+
+let currentCommand = '';
+
 setTimeout(() => {
   const textarea = term.textarea;
   if (textarea) {
-    textarea.setAttribute("inputmode", "none");   // disables keyboard
-    textarea.setAttribute("readonly", "true");   // blocks input
-
-    textarea.focus()
-    term.focus()
-
-    const clickEvent = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
-    textarea.dispatchEvent(clickEvent);
-    const upEvent = new MouseEvent("mouseup", { bubbles: true, cancelable: true });
-    textarea.dispatchEvent(upEvent);
-    const focusEvent = new FocusEvent("focus", { bubbles: true, cancelable: true });
-    textarea.dispatchEvent(focusEvent);
-
+    textarea.setAttribute("inputmode", "none");
+    textarea.focus();
+    term.focus();
   }
 }, 0);
 
-// === Exposed functions for Android WebView ===
+term.onData((data) => {
+  const code = data.charCodeAt(0);
 
-// Insert text at cursor
+  if (code < 0x20 && data !== '\r' && data !== '\t') {
+    console.log('Ignoring control character:', code);
+    return;
+  }
+
+  if (data === '\r') {
+    console.log('COMMAND ENTERED via onData:', currentCommand);
+    // Send newline to PTY - it will echo back
+    AndroidTerminal.sendRaw('\n');
+    currentCommand = '';
+  } else if (data === '\x7f') {
+    // Send backspace to PTY - it will handle the display
+    AndroidTerminal.sendRaw('\x7f');
+    if (currentCommand.length > 0) {
+      currentCommand = currentCommand.slice(0, -1);
+    }
+  } else {
+    // Send character to PTY - it will echo back
+    AndroidTerminal.sendRaw(data);
+    currentCommand += data;
+  }
+});
+
+function fireOnData(data) {
+  if (term._core && term._core._onData && typeof term._core._onData.fire === 'function') {
+    term._core._onData.fire(data);
+    return true;
+  }
+  return false;
+}
+
 window.insertText = function (text) {
   term.focus();
-  term.write(text);
+  // Send each character to PTY, let it echo
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    AndroidTerminal.sendRaw(char);
+    currentCommand += char;
+  }
 };
 
-// Perform backspace
 window.performBackspace = function () {
   term.focus();
-  // send DEL (works with PTY), fallback is \b \b for local erase
-  if (term.send) {
-    term.send("\x7f"); // ASCII DEL
-  } else {
-    term.write("\b \b");
+  // Send backspace to PTY
+  AndroidTerminal.sendRaw('\x7f');
+  if (currentCommand.length > 0) {
+    currentCommand = currentCommand.slice(0, -1);
   }
 };
 
-// Perform enter
 window.performEnter = function () {
   term.focus();
-  if (term.send) {
-    term.send("\r"); // send enter to backend
-  } else {
-    term.write("\r\n"); // local newline
+  // Send newline to PTY
+  AndroidTerminal.sendRaw('\n');
+  currentCommand = '';
+};
+
+window.performCopy = function() {
+  const selection = term.getSelection();
+  if (selection) {
+    navigator.clipboard.writeText(selection)
+      .catch(e => console.error("Copy failed:", e));
   }
 };
 
-// Optional: expose the terminal object itself (for debugging)
+window.performPaste = async function() {
+  term.focus();
+  try {
+    const text = await navigator.clipboard.readText();
+    // Send each character to PTY
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      AndroidTerminal.sendRaw(char);
+      currentCommand += char;
+    }
+  } catch(e) {
+    console.error("Paste failed:", e);
+  }
+};
+
+window.performCut = function() {
+  const selection = term.getSelection();
+  if (selection) {
+    navigator.clipboard.writeText(selection);
+    // Terminal doesn't support cutting selected text easily
+    // So just copy it
+  }
+};
+
+window.performSelectAll = function() {
+  term.selectAll();
+};
+
+window.performFind = function() {
+  // xterm.js doesn't have built-in search UI
+  console.log("Find not supported in terminal");
+};
+
+window.performCtrlC = function() {
+  term.focus();
+  // Send Ctrl+C to PTY
+  AndroidTerminal.sendRaw('\x03');
+  currentCommand = '';
+};
+
+window.performCtrlD = function() {
+  term.focus();
+  // Send EOF (Ctrl+D) to PTY
+  AndroidTerminal.sendRaw('\x04');
+  currentCommand = '';
+};
+
+window.performEscape = function() {
+  term.focus();
+  // Send ESC to PTY
+  AndroidTerminal.sendRaw('\x1B');
+  currentCommand = '';
+};
+
+window.getCurrentCommand = function() {
+  return currentCommand;
+};
+
 window.term = term;
+
+window.fitTerminal = function() {
+  try {
+    const container = document.getElementById('terminal');
+    const rect = container.getBoundingClientRect();
+
+    if (rect.width === 0 || rect.height === 0) {
+      setTimeout(window.fitTerminal, 200);
+      return;
+    }
+
+    fitAddon.fit();
+
+    const dims = fitAddon.proposeDimensions();
+    if (dims) {
+      if (window.AndroidTerminalResize) {
+        AndroidTerminalResize.getRowsCols(dims.rows, dims.cols);
+      } else {
+        console.warn('AndroidTerminalResize not available');
+      }
+    } else {
+      console.warn('FitAddon returned null dimensions');
+    }
+  } catch (e) {
+    console.error('Error in fitTerminal:', e);
+    // Retry on error
+    setTimeout(window.fitTerminal, 200);
+  }
+};
+
+setTimeout(window.fitTerminal, 100);
+setTimeout(window.fitTerminal, 300);
+setTimeout(window.fitTerminal, 500);
+setTimeout(window.fitTerminal, 1000);
+setTimeout(window.fitTerminal, 2000);
+setTimeout(window.fitTerminal, 3000);
+
+window.addEventListener('resize', () => {
+  setTimeout(window.fitTerminal, 100);
+});

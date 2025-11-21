@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.2.20"
 }
 
 android {
@@ -16,6 +17,33 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // for now the support is only for arm64-v8a [Might add other architectures later]
+        ndk {
+            //noinspection ChromeOsAbiSupport
+            abiFilters += listOf("arm64-v8a")
+        }
+
+        // For the native code for PTY
+        externalNativeBuild {
+            cmake {
+                cppFlags += "-std=c++17"
+            }
+        }
+
+    }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
     }
 
     buildTypes {
@@ -37,6 +65,14 @@ android {
     buildFeatures {
         compose = true
     }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/INDEX.LIST"
+            excludes += "/META-INF/io.netty.versions.properties"
+            excludes += "/META-INF/DEPENDENCIES"
+        }
+    }
 }
 
 dependencies {
@@ -51,6 +87,8 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.tools.core)
     implementation(libs.androidx.foundation.layout)
+    implementation(libs.androidx.compose.foundation.layout)
+    implementation(libs.androidx.compose.foundation)
 
 
     testImplementation(libs.junit)
@@ -73,4 +111,32 @@ dependencies {
     // File Handling
     implementation("androidx.documentfile:documentfile:1.1.0")
 
+    // to replace
+    implementation("org.nanohttpd:nanohttpd:2.3.1")
+
+    // ktor for websockets
+    implementation("io.ktor:ktor-server-core:3.2.2")
+    implementation("io.ktor:ktor-server-cio:3.2.2")
+    implementation("io.ktor:ktor-server-websockets:3.2.2")
+
+    val ktorVersion = "3.3.1"
+    val kotlinxSerializationVersion = "1.7.3"
+    val logbackVersion = "1.4.11"
+
+    implementation("io.ktor:ktor-server-core-jvm:${ktorVersion}")
+    implementation("io.ktor:ktor-server-netty-jvm:${ktorVersion}")
+    implementation("io.ktor:ktor-server-websockets-jvm:${ktorVersion}")
+    implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:${ktorVersion}")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${kotlinxSerializationVersion}")
+    implementation("org.slf4j:slf4j-android:1.7.36")
+
+    implementation("io.github.kyant0:backdrop:1.0.0")
+
+
+    implementation("androidx.compose.material:material-icons-core")
+    implementation("androidx.compose.material:material-icons-extended")
+
+
+    implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("io.coil-kt:coil-svg:2.5.0")
 }

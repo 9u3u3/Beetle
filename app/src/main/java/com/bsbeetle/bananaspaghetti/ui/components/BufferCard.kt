@@ -1,6 +1,7 @@
 package com.bsbeetle.bananaspaghetti.ui.components
 
 import android.content.Context
+import android.webkit.WebView
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,10 +22,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.documentfile.provider.DocumentFile
 import com.bsbeetle.bananaspaghetti.R
-import com.bsbeetle.bananaspaghetti.utils.EditorWebView
-import com.bsbeetle.bananaspaghetti.utils.getFileName
-import com.bsbeetle.bananaspaghetti.utils.getIconResourceId
-import com.bsbeetle.bananaspaghetti.utils.loadContentWhenReady
+import com.bsbeetle.bananaspaghetti.utils.fileHandling.getFileName
+import com.bsbeetle.bananaspaghetti.utils.resourceHandling.getIconResourceId
+import com.bsbeetle.bananaspaghetti.utils.webViewHandling.loadContentWhenReady
 
 @Composable
 fun BufferCard(
@@ -33,11 +33,11 @@ fun BufferCard(
     file: DocumentFile,
     content: String = "",
     filesOpenedList: MutableList<DocumentFile>,
+    webView: WebView,
     onClickDelete: () -> Unit
 ) {
 
     val fileName: String = getFileName(context, file.uri)
-    val webView = EditorWebView.getWebview(context)
 
     Box(
       modifier = modifier.clickable {

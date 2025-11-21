@@ -2,14 +2,30 @@
   <dictionary name="project">
     <words>
       <w>bananaspaghetti</w>
+      <w>banannaspaghetti</w>
       <w>bsbeetle</w>
       <w>codemirror</w>
+      <w>execlp</w>
+      <w>execv</w>
+      <w>fdroid</w>
       <w>gaonker</w>
+      <w>grantpt</w>
       <w>inputmode</w>
       <w>iosevka</w>
       <w>iostream</w>
       <w>johniton</w>
+      <w>libproot</w>
+      <w>libtalloc</w>
+      <w>linkerconfig</w>
       <w>mascarenhas</w>
+      <w>ptmx</w>
+      <w>ptsname</w>
+      <w>resolvconf</w>
+      <w>setsid</w>
+      <w>sysvipc</w>
+      <w>tenebrio</w>
+      <w>unlockpt</w>
+      <w>urandom</w>
     </words>
   </dictionary>
 </component>
