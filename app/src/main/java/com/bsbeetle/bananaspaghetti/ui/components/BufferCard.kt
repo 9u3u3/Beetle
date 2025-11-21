@@ -21,12 +21,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.documentfile.provider.DocumentFile
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bsbeetle.bananaspaghetti.R
-import com.bsbeetle.bananaspaghetti.utils.getFileName
-import com.bsbeetle.bananaspaghetti.utils.getIconResourceId
-import com.bsbeetle.bananaspaghetti.utils.loadContentWhenReady
-import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
+import com.bsbeetle.bananaspaghetti.utils.fileHandling.getFileName
+import com.bsbeetle.bananaspaghetti.utils.resourceHandling.getIconResourceId
+import com.bsbeetle.bananaspaghetti.utils.webViewHandling.loadContentWhenReady
 
 @Composable
 fun BufferCard(

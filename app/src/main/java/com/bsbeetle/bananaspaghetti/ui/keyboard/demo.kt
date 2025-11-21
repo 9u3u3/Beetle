@@ -25,6 +25,7 @@ import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
 import com.bsbeetle.bananaspaghetti.LocalSliderViewModel
 import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
 import com.bsbeetle.bananaspaghetti.ui.components.BottomBar
+import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 
@@ -44,7 +45,7 @@ fun DemoEditorUi () {
     }
 
     val webView = remember {
-        WebView(context).apply {
+        CustomWebView(context).apply {
             WebView.setWebContentsDebuggingEnabled(true)
             settings.apply {
                 javaScriptEnabled = true

@@ -3,6 +3,7 @@ package com.bsbeetle.bananaspaghetti.ui.home
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.Configuration
+import android.util.Log
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -45,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.navigation.NavController
+import com.bsbeetle.bananaspaghetti.LocalTerminalViewModel
 import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.ui.components.GridBackground
 import com.bsbeetle.bananaspaghetti.ui.components.LiquidGlassBox
@@ -54,7 +56,11 @@ import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.ui.theme.KarmaticFont
 import com.bsbeetle.bananaspaghetti.ui.theme.born2bsporty
 import com.bsbeetle.bananaspaghetti.ui.theme.codaRegular
-import com.bsbeetle.bananaspaghetti.utils.fileLauncher
+import com.bsbeetle.bananaspaghetti.utils.fileHandling.fileLauncher
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.Session
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
+import com.bsbeetle.bananaspaghetti.viewmodel.TerminalViewModel
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
@@ -64,6 +70,8 @@ import com.kyant.backdrop.effects.vibrancy
 @SuppressLint("RestrictedApi")
 @Composable
 fun HomeScreen(navController: NavController) {
+
+    Log.e("Sessions", SessionList.sessions.toString())
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -89,7 +97,7 @@ fun HomeScreen(navController: NavController) {
         ConstraintLayout(
             modifier = Modifier.fillMaxSize()
         ) {
-            val (gridLayout, beetleAsciiLeft, beetleAsciiRight, vignette, mainMenu, settings, recents, recentsPanel, browser) = createRefs()
+            val (gridLayout, beetleAsciiLeft, beetleAsciiRight, vignette, mainMenu, settings, recents, recentsPanel, browser, windowPreview) = createRefs()
 
             GridBackground(
                 modifier = Modifier
@@ -244,21 +252,33 @@ fun HomeScreen(navController: NavController) {
                         }))
 
             Image(
+                painter = painterResource(R.drawable.zoom_in),
+                contentDescription = "window preview",
+                modifier = Modifier
+                    .size(20.dp)
+                    .constrainAs(windowPreview) {
+                        top.linkTo(browser.bottom, margin = 20.dp)
+                        end.linkTo(parent.end, margin = 20.dp)
+                    }
+                    .clickable(
+                        onClick = {
+                            // Coming soon
+                        }))
+
+            Image(
                 painter = painterResource(R.drawable.history_2_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
                 contentDescription = "Recents",
                 modifier = Modifier
                     .size(20.dp)
                     .constrainAs(recents) {
-                        top.linkTo(browser.bottom, margin = 20.dp)
+                        top.linkTo(windowPreview.bottom, margin = 20.dp)
                         end.linkTo(parent.end, margin = 20.dp)
                     }
                     .clickable(
                         onClick = {
                             isRecentsOpen = !isRecentsOpen
                         }))
-
         }
-
     }
 }
 
@@ -270,6 +290,7 @@ fun MainMenu(
     val context = LocalContext.current
     val launcher = fileLauncher(context, navController)
     val buttonFontSize = 30.sp
+    val terminalViewModel: TerminalViewModel = LocalTerminalViewModel.current
 
     Box(
         modifier = modifier
@@ -498,6 +519,9 @@ fun MainMenu(
                     .height(50.dp)
                     .clickable(
                         onClick = {
+                            // Terminal Session handler (Will make a function for this later im to lazy to do that currently and this is also in the testing)
+                            Session(context.applicationContext, SessionType.TERMINAL)
+                            terminalViewModel.setTerminalWebView(SessionList.sessions[SessionList.activeSessionIndex!!].terminalView!!)
                             navController.navigate(Screen.Terminal.route)
                         })
             ) {

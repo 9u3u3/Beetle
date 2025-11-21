@@ -1,41 +1,31 @@
 package com.bsbeetle.bananaspaghetti.ui.home
 
 import android.content.res.Configuration
-import android.webkit.WebView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
 import com.bsbeetle.bananaspaghetti.LocalSliderViewModel
+import com.bsbeetle.bananaspaghetti.LocalTerminalViewModel
 import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
 import com.bsbeetle.bananaspaghetti.data.sidebar.Sidebar
 import com.bsbeetle.bananaspaghetti.data.sidebar.SidebarTab
-import com.bsbeetle.bananaspaghetti.data.tenebrioObj
-import com.bsbeetle.bananaspaghetti.tenebrio.pty.Tenebrio
 import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
 import com.bsbeetle.bananaspaghetti.ui.components.LeftTermTopBar
-import com.bsbeetle.bananaspaghetti.ui.components.LeftTopBar
 import com.bsbeetle.bananaspaghetti.ui.components.RightTopBar
-import com.bsbeetle.bananaspaghetti.ui.components.TopBar
-import com.bsbeetle.bananaspaghetti.ui.components.TopLeftBox
 import com.bsbeetle.bananaspaghetti.ui.components.TopLeftTermBox
 import com.bsbeetle.bananaspaghetti.ui.components.TopRightBox
 import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
 import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboardHalf
-import com.bsbeetle.bananaspaghetti.utils.TerminalWebView
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 
@@ -53,15 +43,15 @@ fun InitialTerminalUI() {
 
     var showSidebar by rememberSaveable { mutableStateOf(false) }
 
-    val tenebrio = remember {
-        Tenebrio(context)
-    }.also {
-        tenebrioObj.tenebrio = it
-    }
-
-    val webView: WebView = remember {
-        TerminalWebView.getWebview(context, tenebrio)
-    }
+//    val tenebrio = remember {
+//        Tenebrio(context)
+//    }.also {
+//        tenebrioObj.tenebrio = it
+//    }
+//
+//    val webView: WebView = remember {
+//        TerminalViewModel.getWebview(context, tenebrio)
+//    }
 
     val layout = if (uiState.toggleKeyboard) {
         KeyboardLayout.developerLayout
@@ -167,7 +157,7 @@ fun InitialTerminalUI() {
                     width = Dimension.fillToConstraints
                     height = Dimension.fillToConstraints
                 },
-                webView = webView
+                webView = LocalTerminalViewModel.current.webView!!
             )
 
             if(!isLandscape){

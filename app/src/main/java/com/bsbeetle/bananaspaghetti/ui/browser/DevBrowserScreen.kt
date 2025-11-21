@@ -1,6 +1,6 @@
 package com.bsbeetle.bananaspaghetti.ui.browser
 
-import android.webkit.WebView
+import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -15,36 +15,34 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
+import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DevBrowserScreen(modifier: Modifier = Modifier) {
+
     var url by rememberSaveable { mutableStateOf("https://github.com/harshf40") }
     var urlInput by rememberSaveable { mutableStateOf(url) }
-    var webView by remember { mutableStateOf<WebView?>(null) }
+    // var webView by remember { mutableStateOf<WebView?>(null) }
     var canGoBack by remember { mutableStateOf(false) }
     var canGoForward by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
-    var loadProgress by remember { mutableStateOf(0) }
+    var loadProgress by remember { mutableIntStateOf(0) }
     var showDevTools by rememberSaveable { mutableStateOf(false) }
 
-    val context = LocalContext.current
+    var webView: CustomWebView? = null
 
-    val navigateTo: (String) -> Unit = { newUrl ->
-        var finalUrl = newUrl.trim()
-        if (!finalUrl.startsWith("http://") && !finalUrl.startsWith("https://")) {
-            finalUrl = "https://$finalUrl"
-        }
-        url = finalUrl
-        urlInput = finalUrl
-        webView?.loadUrl(finalUrl)
+    try {
+        webView = SessionList.sessions[SessionList.activeSessionIndex!!].browserView
+    } catch (e: Exception) {
+        Log.e("DevBrowserScreen", "No active browser in SessionList")
     }
+
 
     val updateNavigation: () -> Unit = {
         webView?.let { wv ->
@@ -163,37 +161,39 @@ fun DevBrowserScreen(modifier: Modifier = Modifier) {
             )
         }
 
+//        { ctx ->
+//            DevWebViewModel.createWebView(
+//                context = ctx,
+//                onPageFinished = {
+//                    updateNavigation()
+//                    isLoading = false
+//                },
+//                onProgressChanged = { progress ->
+//                    loadProgress = progress
+//                    isLoading = progress < 100
+//                },
+//                onFrameworkDetected = { _, _ -> },
+//                onNetworkRequest = { },
+//                onConsoleLog = { },
+//                onUrlChanged = { newUrl ->
+//                    url = newUrl
+//                    urlInput = newUrl
+//                    updateNavigation()
+//                }
+//            ).also { wv ->
+//                webView = wv
+//                wv.loadUrl(url)
+//            }
+//        }
+
         // WebView
-        AndroidView(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .background(Color.White),
-            factory = { ctx ->
-                DevWebViewManager.createWebView(
-                    context = ctx,
-                    onPageFinished = {
-                        updateNavigation()
-                        isLoading = false
-                    },
-                    onProgressChanged = { progress ->
-                        loadProgress = progress
-                        isLoading = progress < 100
-                    },
-                    onFrameworkDetected = { _, _ -> },
-                    onNetworkRequest = { },
-                    onConsoleLog = { },
-                    onUrlChanged = { newUrl ->
-                        url = newUrl
-                        urlInput = newUrl
-                        updateNavigation()
-                    }
-                ).also { wv ->
-                    webView = wv
-                    wv.loadUrl(url)
-                }
-            }
-        )
+//        AndroidView(
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .weight(1f)
+//                .background(Color.White),
+//            factory =
+//        )
     }
 }
 

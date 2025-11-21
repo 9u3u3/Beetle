@@ -1,4 +1,4 @@
-package com.bsbeetle.bananaspaghetti.utils
+package com.bsbeetle.bananaspaghetti.utils.resourceHandling
 
 import android.content.Context
 import coil.ImageLoader

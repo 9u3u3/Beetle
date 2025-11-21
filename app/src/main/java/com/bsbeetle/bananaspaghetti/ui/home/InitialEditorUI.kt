@@ -35,8 +35,9 @@ import com.bsbeetle.bananaspaghetti.ui.components.TopLeftBox
 import com.bsbeetle.bananaspaghetti.ui.components.TopRightBox
 import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
 import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboardHalf
-import com.bsbeetle.bananaspaghetti.utils.loadContentWhenReady
-import com.bsbeetle.bananaspaghetti.utils.readFromFile
+import com.bsbeetle.bananaspaghetti.utils.webViewHandling.loadContentWhenReady
+import com.bsbeetle.bananaspaghetti.utils.fileHandling.readFromFile
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
@@ -47,6 +48,8 @@ import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 @SuppressLint("RememberReturnType")
 @Composable
 fun InitialEditorUI(navController: NavController) {
+
+    Log.e("Sessions", SessionList.sessions.toString())
 
     // View models
     val fileViewModel: FileViewModel = LocalFileViewModel.current
@@ -64,8 +67,6 @@ fun InitialEditorUI(navController: NavController) {
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val layout = if (uiState.toggleKeyboard) KeyboardLayout.developerLayout else KeyboardLayout.qwertyLayout
     var showSidebar by rememberSaveable { mutableStateOf(false) }
-
-    editorViewModel.init()
 
     LaunchedEffect(fileViewModel.selectedUri) {
         fileViewModel.selectedUri?.let { uri ->

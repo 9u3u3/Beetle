@@ -1,4 +1,4 @@
-package com.bsbeetle.bananaspaghetti.utils
+package com.bsbeetle.bananaspaghetti.utils.fileHandling
 
 import android.content.Context
 import android.net.Uri

@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bsbeetle.bananaspaghetti.ui.DisableDefaultKeyboard
 import com.bsbeetle.bananaspaghetti.ui.EnterImmersiveMode
-import com.bsbeetle.bananaspaghetti.ui.browser.DevBrowserScreen
 import com.bsbeetle.bananaspaghetti.ui.navigation.AppNavigation
 import com.bsbeetle.bananaspaghetti.ui.theme.BananaSpaghettiTheme
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
@@ -24,6 +23,7 @@ import com.bsbeetle.bananaspaghetti.viewmodel.ExpandViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
+import com.bsbeetle.bananaspaghetti.viewmodel.TerminalViewModel
 
 val LocalFileViewModel = compositionLocalOf<FileViewModel>{error("No file view model provided")}
 val LocalKeyboardViewModel = compositionLocalOf<KeyboardViewModel>{error("No key board view model provided")}
@@ -31,6 +31,7 @@ val LocalSliderViewModel = compositionLocalOf<SliderViewModel>{error("No slider 
 val LocalBufferViewModel = compositionLocalOf<BufferViewModel>{error("No buffer view model provided")}
 val LocalEditorViewModel = compositionLocalOf<EditorViewModel>{error("No editor view model provided")}
 val LocalExpandViewModel = compositionLocalOf<ExpandViewModel>{error("No expand view model provided")}
+val LocalTerminalViewModel = compositionLocalOf<TerminalViewModel> {error("No terminal view model provided")}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,6 +52,7 @@ class MainActivity : ComponentActivity() {
                 val bufferViewModel: BufferViewModel = viewModel()
                 val editorViewModel: EditorViewModel = viewModel()
                 val expandViewModel: ExpandViewModel = viewModel()
+                val terminalViewModel: TerminalViewModel = viewModel()
 
                 CompositionLocalProvider(
                     LocalFileViewModel provides fileViewModel,
@@ -59,6 +61,7 @@ class MainActivity : ComponentActivity() {
                     LocalBufferViewModel provides bufferViewModel,
                     LocalEditorViewModel provides editorViewModel,
                     LocalExpandViewModel provides expandViewModel,
+                    LocalTerminalViewModel provides terminalViewModel
                 ) {
                     Box(
                         modifier = Modifier

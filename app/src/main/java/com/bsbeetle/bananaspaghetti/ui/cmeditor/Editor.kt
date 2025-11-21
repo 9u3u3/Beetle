@@ -14,16 +14,16 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.bsbeetle.bananaspaghetti.LocalEditorViewModel
 import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
 import com.bsbeetle.bananaspaghetti.data.tenebrioObj
+import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorAction
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import java.lang.NullPointerException
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun Editor(modifier: Modifier = Modifier, webView: WebView) {
+fun Editor(modifier: Modifier = Modifier, webView: CustomWebView) {
 
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
-    val editorViewModel: EditorViewModel = LocalEditorViewModel.current
     val configuration = LocalConfiguration.current
     val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
 

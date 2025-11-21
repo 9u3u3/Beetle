@@ -1,4 +1,4 @@
-package com.bsbeetle.bananaspaghetti.utils
+package com.bsbeetle.bananaspaghetti.utils.assetHandling
 
 import android.content.Context
 import android.util.Log

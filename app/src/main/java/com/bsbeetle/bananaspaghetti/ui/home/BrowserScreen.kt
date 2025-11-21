@@ -1,21 +1,18 @@
 package com.bsbeetle.bananaspaghetti.ui.home
 
 import android.content.res.Configuration
-import android.webkit.WebView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -24,18 +21,12 @@ import com.bsbeetle.bananaspaghetti.LocalSliderViewModel
 import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
 import com.bsbeetle.bananaspaghetti.data.sidebar.Sidebar
 import com.bsbeetle.bananaspaghetti.data.sidebar.SidebarTab
-import com.bsbeetle.bananaspaghetti.data.tenebrioObj
-import com.bsbeetle.bananaspaghetti.tenebrio.pty.Tenebrio
-import com.bsbeetle.bananaspaghetti.ui.browser.DevBrowserScreen
-import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
 import com.bsbeetle.bananaspaghetti.ui.components.LeftTermTopBar
 import com.bsbeetle.bananaspaghetti.ui.components.RightTopBar
 import com.bsbeetle.bananaspaghetti.ui.components.TopLeftTermBox
 import com.bsbeetle.bananaspaghetti.ui.components.TopRightBox
 import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
 import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboardHalf
-import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
-import com.bsbeetle.bananaspaghetti.utils.TerminalWebView
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 
@@ -134,28 +125,28 @@ fun BrowserScreen() {
                 }
             }
 
-            DevBrowserScreen(
-                modifier = Modifier.constrainAs(editor) {
-                    top.linkTo(parent.top) // Starts right after top bar
-                    bottom.linkTo(parent.bottom)
-
-                    // adapt constraints depending on keyboard visibility & orientation
-                    if (isLandscape && uiState.isLeftKeyboardVisible) {
-                        start.linkTo(leftKb.end)
-                    } else {
-                        start.linkTo(parent.start)
-                    }
-
-                    if (isLandscape && uiState.isRightKeyboardVisible) {
-                        end.linkTo(rightKb.start)
-                    } else {
-                        end.linkTo(parent.end)
-                    }
-
-                    width = Dimension.fillToConstraints
-                    height = Dimension.fillToConstraints
-                }
-            )
+//            DevBrowserScreen(
+//                modifier = Modifier.constrainAs(editor) {
+//                    top.linkTo(parent.top) // Starts right after top bar
+//                    bottom.linkTo(parent.bottom)
+//
+//                    // adapt constraints depending on keyboard visibility & orientation
+//                    if (isLandscape && uiState.isLeftKeyboardVisible) {
+//                        start.linkTo(leftKb.end)
+//                    } else {
+//                        start.linkTo(parent.start)
+//                    }
+//
+//                    if (isLandscape && uiState.isRightKeyboardVisible) {
+//                        end.linkTo(rightKb.start)
+//                    } else {
+//                        end.linkTo(parent.end)
+//                    }
+//
+//                    width = Dimension.fillToConstraints
+//                    height = Dimension.fillToConstraints
+//                }
+//            )
 
             if(!isLandscape){
                 Sidebar(

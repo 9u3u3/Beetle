@@ -3,18 +3,21 @@ package com.bsbeetle.bananaspaghetti.tenebrio.pty
 import android.content.Context
 import android.os.ParcelFileDescriptor
 import android.util.Log
+import com.bsbeetle.bananaspaghetti.LocalTerminalViewModel
 import com.bsbeetle.bananaspaghetti.tenebrio.data.outputfd
 import com.bsbeetle.bananaspaghetti.tenebrio.data.termSize
-import com.bsbeetle.bananaspaghetti.utils.TerminalWebView
-import com.bsbeetle.bananaspaghetti.utils.copyAssetsTo
-import com.bsbeetle.bananaspaghetti.utils.downloadFile
+import com.bsbeetle.bananaspaghetti.viewmodel.TerminalViewModel
+import com.bsbeetle.bananaspaghetti.utils.assetHandling.copyAssetsTo
+import com.bsbeetle.bananaspaghetti.utils.fileHandling.downloadFile
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.nio.file.Files
 import kotlin.concurrent.thread
 
-class Tenebrio(private val context: Context) {
+class Tenebrio(private val context: Context, private val id: Int?) {
 
     companion object {
         init {
@@ -95,7 +98,7 @@ class Tenebrio(private val context: Context) {
                 if(libtalloc.exists()) libtalloc.delete()
                 val libtallocLink = File(PREFIX, "libtalloc.so.2")
                 if (libtallocLink.exists()) libtallocLink.delete()
-                java.nio.file.Files.createSymbolicLink(
+                Files.createSymbolicLink(
                     libtallocLink.toPath(),
                     File(nativeDir, "libtalloc.so").toPath()
                 )
@@ -148,7 +151,9 @@ class Tenebrio(private val context: Context) {
             output = FileOutputStream(pfd!!.fileDescriptor)
             input = FileInputStream(pfd!!.fileDescriptor)
             outputfd.outputFd = output
-            val terminalWebView = TerminalWebView.getWebview(context, this)
+
+            val terminalWebView = SessionList.sessions[id!!].terminalView
+
             thread {
                 try {
                     val buffer = ByteArray(1024)
@@ -157,7 +162,7 @@ class Tenebrio(private val context: Context) {
                         if (bytesRead > 0) {
                             val text = String(buffer, 0, bytesRead)
                             Log.d("Shell", "Output: $text")
-                            terminalWebView.post {
+                            terminalWebView!!.post {
                                 val jsCommand = "term.write(${JSONObject.quote(text)});"
                                 terminalWebView.evaluateJavascript(jsCommand, null)
                             }

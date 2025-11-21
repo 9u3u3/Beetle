@@ -1,9 +1,8 @@
-package com.bsbeetle.bananaspaghetti.utils
+package com.bsbeetle.bananaspaghetti.utils.fileHandling
 
 import android.content.Context
 import android.util.Log
 import android.webkit.WebView
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import java.io.FileNotFoundException

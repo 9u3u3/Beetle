@@ -27,7 +27,7 @@
         </activity>
 
         <provider
-            android:name="com.bsbeetle.bananaspaghetti.utils.AlpineDocumentProvider"
+            android:name="com.bsbeetle.bananaspaghetti.utils.fileHandling.AlpineDocumentProvider"
             android:authorities="${applicationId}.documents"
             android:permission="android.permission.MANAGE_DOCUMENTS"
             android:exported="true"

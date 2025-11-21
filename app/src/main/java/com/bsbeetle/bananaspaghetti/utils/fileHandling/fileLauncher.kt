@@ -1,4 +1,4 @@
-package com.bsbeetle.bananaspaghetti.utils
+package com.bsbeetle.bananaspaghetti.utils.fileHandling
 
 import android.app.Activity
 import android.content.Context
@@ -10,15 +10,23 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavController
+import com.bsbeetle.bananaspaghetti.LocalEditorViewModel
 import com.bsbeetle.bananaspaghetti.LocalFileViewModel
 import com.bsbeetle.bananaspaghetti.data.FileData
 import com.bsbeetle.bananaspaghetti.data.OpenedFiles
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.Session
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
+import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 
 @Composable
 fun fileLauncher(context: Context, navController: NavController): ActivityResultLauncher<Intent> {
+
     val fileViewModel: FileViewModel = LocalFileViewModel.current
+    val editorViewModel: EditorViewModel = LocalEditorViewModel.current
+
     return rememberLauncherForActivityResult (
         ActivityResultContracts.StartActivityForResult(),
         { result -> // onResult only executes after the Result received
@@ -36,10 +44,21 @@ fun fileLauncher(context: Context, navController: NavController): ActivityResult
                                 uri
                             )
                         )
+
                         fileViewModel.selectedUri = uri
+
+                        // Adding to the newly created session here
+                        Session(context.applicationContext, SessionType.EDITOR)
+                        editorViewModel.setEditorWebView(SessionList.sessions[SessionList.activeSessionIndex!!].editorView!!)
+
                         navController.navigate(Screen.OpenFile.route)
                     } else {
                         fileViewModel.selectedFolderUri = uri
+
+                        // Adding to the newly created session here
+                        Session(context.applicationContext, SessionType.EDITOR)
+                        editorViewModel.setEditorWebView(SessionList.sessions[SessionList.activeSessionIndex!!].editorView!!)
+
                         navController.navigate(Screen.OpenFolder.route)
                     }
                 }

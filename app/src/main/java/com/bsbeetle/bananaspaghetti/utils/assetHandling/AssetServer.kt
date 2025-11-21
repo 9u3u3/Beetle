@@ -1,8 +1,10 @@
-package com.bsbeetle.bananaspaghetti.utils
+package com.bsbeetle.bananaspaghetti.utils.assetHandling
 
 import android.content.Context
 import fi.iki.elonen.NanoHTTPD
 import java.io.InputStream
+import java.net.SocketException
+import java.net.SocketTimeoutException
 
 class AssetServer(private val context: Context, port: Int = 8080) : NanoHTTPD(port) {
 
@@ -20,7 +22,7 @@ class AssetServer(private val context: Context, port: Int = 8080) : NanoHTTPD(po
             }
             newFixedLengthResponse(Response.Status.OK, mime, stream, stream.available().toLong())
         } catch (e: Exception) {
-            if(e is java.net.SocketException || e is java.net.SocketTimeoutException) {
+            if(e is SocketException || e is SocketTimeoutException) {
                 newFixedLengthResponse(Response.Status.NO_CONTENT, "text/plain", "")
             }
             newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "File not found")

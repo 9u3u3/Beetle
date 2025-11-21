@@ -1,9 +1,6 @@
 package com.bsbeetle.bananaspaghetti.ui.components
 
-import android.net.Uri
-import android.webkit.WebView
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -11,7 +8,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
-import com.bsbeetle.bananaspaghetti.utils.Tree
+import com.bsbeetle.bananaspaghetti.utils.fileHandling.Tree
 
 @Composable
 fun TopLeftBox(
