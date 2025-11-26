@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.net.Uri
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,6 +36,7 @@ import com.bsbeetle.bananaspaghetti.ui.components.TopLeftBox
 import com.bsbeetle.bananaspaghetti.ui.components.TopRightBox
 import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
 import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboardHalf
+import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.readFromFile
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
@@ -50,6 +52,14 @@ import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 fun InitialEditorUI(navController: NavController) {
 
     Log.e("Sessions", SessionList.sessions.toString())
+
+
+    // This can be buggy
+    BackHandler {
+        navController.navigate(Screen.Home.route) {
+            popUpTo(Screen.OpenFolder.route) { inclusive = true }
+        }
+    }
 
     // View models
     val fileViewModel: FileViewModel = LocalFileViewModel.current
@@ -114,7 +124,8 @@ fun InitialEditorUI(navController: NavController) {
                     start.linkTo(topMiddle.end)
                     end.linkTo(parent.end)
                     width = Dimension.percent(0.2f)
-                }
+                },
+                navController = navController
             )
 
             if (isLandscape) {

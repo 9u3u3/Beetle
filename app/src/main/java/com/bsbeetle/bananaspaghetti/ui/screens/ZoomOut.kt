@@ -1,5 +1,6 @@
 package com.bsbeetle.bananaspaghetti.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
 
 //NO_PORTRAIT
 
@@ -25,6 +27,12 @@ import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 fun ZoomOut(navController: NavController) {
 
     val activeSession = SessionList.sessions[SessionList.activeSessionIndex!!]
+
+    BackHandler {
+        navController.navigate(Screen.Home.route) {
+            popUpTo(Screen.ZoomOut.route) { inclusive = true }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -43,7 +51,12 @@ fun ZoomOut(navController: NavController) {
                     .padding(8.dp)
                     .clickable {
                         SessionList.activeSessionIndex = session.id
-                        navController.navigate(Screen.Terminal.route) // We have to properly navigate through the stack
+                        when(SessionList.sessions[SessionList.activeSessionIndex!!].type) {
+                            SessionType.EDITOR -> navController.navigate(Screen.OpenFolder.route)
+                            SessionType.BROWSER -> navController.navigate(Screen.Browser.route)
+                            SessionType.TERMINAL -> navController.navigate(Screen.Terminal.route)
+                            SessionType.DEMO -> navController.navigate(Screen.Demo.route)
+                        }
                     }
             ) {
                 Text(

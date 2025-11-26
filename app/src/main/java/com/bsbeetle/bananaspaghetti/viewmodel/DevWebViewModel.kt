@@ -20,4 +20,5 @@ class DevWebViewModel(app: Application) : AndroidViewModel(app) {
     // Might have to change from CustomWebView to the normal WebView
     @SuppressLint("StaticFieldLeak")
     var webView: CustomWebView? = null
+    fun setDevWebView(webView: CustomWebView) {this.webView = webView}
 }

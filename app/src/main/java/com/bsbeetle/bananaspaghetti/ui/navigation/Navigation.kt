@@ -23,7 +23,7 @@ fun AppNavigation() {
         composable(Screen.Terminal.route){InitialTerminalUI(navController)} // Open Terminal
         composable(Screen.Settings.route){SettingsScreen(navController)} // Open Settings
         composable(Screen.Demo.route){DemoEditorUi()} // Demo editor used settings
-        composable(Screen.Browser.route){BrowserScreen()} // Developer browser UI
+        composable(Screen.Browser.route){BrowserScreen(navController)} // Developer browser UI
         composable(Screen.ZoomOut.route){ZoomOut(navController)} // Zoom out preview (Session switching)
     }
 }

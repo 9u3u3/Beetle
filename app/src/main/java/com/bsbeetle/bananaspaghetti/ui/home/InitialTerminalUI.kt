@@ -1,6 +1,8 @@
 package com.bsbeetle.bananaspaghetti.ui.home
 
 import android.content.res.Configuration
+import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,6 +55,12 @@ fun InitialTerminalUI(navController: NavController) {
         KeyboardLayout.qwertyLayout
     }
 
+    BackHandler {
+        navController.navigate(Screen.Home.route) {
+            popUpTo(Screen.Terminal.route) { inclusive = true }
+        }
+    }
+
     Box {
         ConstraintLayout(modifier = Modifier.fillMaxSize()) {
 
@@ -77,9 +85,7 @@ fun InitialTerminalUI(navController: NavController) {
                     height = Dimension.wrapContent
                 },
                 isTerminal = true,
-                onZoomOutClick = {
-                    navController.navigate(Screen.ZoomOut.route)
-                }
+                navController = navController
             )
 
             if (isLandscape) {
