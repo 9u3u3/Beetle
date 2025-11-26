@@ -1,6 +1,7 @@
 package com.bsbeetle.bananaspaghetti.ui.home
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.util.Log
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.navigation.NavController
+import com.bsbeetle.bananaspaghetti.LocalBrowserViewModel
 import com.bsbeetle.bananaspaghetti.LocalTerminalViewModel
 import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.ui.components.GridBackground
@@ -60,6 +62,7 @@ import com.bsbeetle.bananaspaghetti.utils.fileHandling.fileLauncher
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.Session
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
+import com.bsbeetle.bananaspaghetti.viewmodel.DevWebViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.TerminalViewModel
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
@@ -86,6 +89,8 @@ fun HomeScreen(navController: NavController) {
         targetValue = if (isLandscape) targetOffset else targetOffset,
         label = "recentsPanelOffset"
     ) // Animated offset for recent panel
+    val context: Context = LocalContext.current
+    val browserViewModel = LocalBrowserViewModel.current
 
     Box(
         modifier = Modifier
@@ -248,6 +253,8 @@ fun HomeScreen(navController: NavController) {
                     }
                     .clickable(
                         onClick = {
+                            Session(context, SessionType.BROWSER)
+                            browserViewModel.setDevWebView(SessionList.sessions[SessionList.activeSessionIndex!!].browserView!!)
                             navController.navigate(Screen.Browser.route)
                         }))
 
@@ -262,7 +269,7 @@ fun HomeScreen(navController: NavController) {
                     }
                     .clickable(
                         onClick = {
-                            // Coming soon
+                            navController.navigate(Screen.ZoomOut.route)
                         }))
 
             Image(

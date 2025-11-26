@@ -1,6 +1,8 @@
 package com.bsbeetle.bananaspaghetti.ui.home
 
 import android.content.res.Configuration
+import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,22 +18,34 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
 import com.bsbeetle.bananaspaghetti.LocalSliderViewModel
 import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
 import com.bsbeetle.bananaspaghetti.data.sidebar.Sidebar
 import com.bsbeetle.bananaspaghetti.data.sidebar.SidebarTab
+import com.bsbeetle.bananaspaghetti.ui.browser.DevBrowserScreen
 import com.bsbeetle.bananaspaghetti.ui.components.LeftTermTopBar
 import com.bsbeetle.bananaspaghetti.ui.components.RightTopBar
 import com.bsbeetle.bananaspaghetti.ui.components.TopLeftTermBox
 import com.bsbeetle.bananaspaghetti.ui.components.TopRightBox
 import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
 import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboardHalf
+import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 
 @Composable
-fun BrowserScreen() {
+fun BrowserScreen(navController: NavController) {
+
+    Log.d("BrowserScreen", "Loading the Browser screen, Session type: ${SessionList.sessions[SessionList.activeSessionIndex!!].type}")
+
+    BackHandler {
+        navController.navigate(Screen.Home.route) {
+            popUpTo(Screen.Browser.route) { inclusive = true }
+        }
+    }
 
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
     val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
@@ -72,7 +86,8 @@ fun BrowserScreen() {
                     end.linkTo(parent.end)
                     width = Dimension.fillToConstraints
                     height = Dimension.wrapContent
-                }
+                },
+                navController = navController
             )
 
             if (isLandscape) {
@@ -125,28 +140,29 @@ fun BrowserScreen() {
                 }
             }
 
-//            DevBrowserScreen(
-//                modifier = Modifier.constrainAs(editor) {
-//                    top.linkTo(parent.top) // Starts right after top bar
-//                    bottom.linkTo(parent.bottom)
-//
-//                    // adapt constraints depending on keyboard visibility & orientation
-//                    if (isLandscape && uiState.isLeftKeyboardVisible) {
-//                        start.linkTo(leftKb.end)
-//                    } else {
-//                        start.linkTo(parent.start)
-//                    }
-//
-//                    if (isLandscape && uiState.isRightKeyboardVisible) {
-//                        end.linkTo(rightKb.start)
-//                    } else {
-//                        end.linkTo(parent.end)
-//                    }
-//
-//                    width = Dimension.fillToConstraints
-//                    height = Dimension.fillToConstraints
-//                }
-//            )
+            DevBrowserScreen(
+                modifier = Modifier.constrainAs(editor) {
+                    top.linkTo(parent.top) // Starts right after top bar
+                    bottom.linkTo(parent.bottom)
+
+                    // adapt constraints depending on keyboard visibility & orientation
+                    if (isLandscape && uiState.isLeftKeyboardVisible) {
+                        start.linkTo(leftKb.end)
+                    } else {
+                        start.linkTo(parent.start)
+                    }
+
+                    if (isLandscape && uiState.isRightKeyboardVisible) {
+                        end.linkTo(rightKb.start)
+                    } else {
+                        end.linkTo(parent.end)
+                    }
+
+                    width = Dimension.fillToConstraints
+                    height = Dimension.fillToConstraints
+                },
+                webView = SessionList.sessions[SessionList.activeSessionIndex!!]._getBrowserView()
+            )
 
             if(!isLandscape){
                 Sidebar(

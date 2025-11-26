@@ -1,5 +1,6 @@
 package com.bsbeetle.bananaspaghetti.ui.home
 
+import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -43,6 +44,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -51,6 +53,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
 import com.bsbeetle.bananaspaghetti.R
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.Session
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 
 @Composable
@@ -65,6 +69,7 @@ fun KeyboardSettings(
     val verticalScrollState = rememberScrollState()
     val horizontalScrollState = rememberScrollState()
     var tapped by remember { mutableStateOf(false) }
+    val context: Context = LocalContext.current
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -195,8 +200,11 @@ fun KeyboardSettings(
                 )
                 .shadow(2.dp, RoundedCornerShape(12.dp))
                 .padding(16.dp)
-                .clickable(onClick = {
+                .clickable(onClick = { // Fix this demo thing later (not important for now)
+
+                    Session(context.applicationContext, SessionType.DEMO)
                     navController.navigate("demo")
+
                 })
         ) {
             Text("Keyboard Sizing", color = Color.White, fontWeight = FontWeight.Bold)

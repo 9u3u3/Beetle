@@ -31,16 +31,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.bsbeetle.bananaspaghetti.LocalBrowserViewModel
 import com.bsbeetle.bananaspaghetti.LocalBufferViewModel
 import com.bsbeetle.bananaspaghetti.LocalEditorViewModel
 import com.bsbeetle.bananaspaghetti.LocalFileViewModel
 import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.data.sidebar.FileIconUtils
+import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.resourceHandling.ImageLoaderSingleton
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.readFromFile
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.Session
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
@@ -321,14 +328,12 @@ private fun TopBarIconButton(
 fun RightTopBar(
     modifier: Modifier = Modifier,
     isTerminal: Boolean = false,
-    onFullscreenClick: () -> Unit = {},
-    onTerminalClick: () -> Unit = {},
-    onExtensionsClick: () -> Unit = {},
-    onSettingsClick: () -> Unit = {},
-    onWebClick: () -> Unit = {}
+    navController: NavController
 ) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val context = LocalContext.current
+    val browserViewModel = LocalBrowserViewModel.current
 
     Box(
         modifier = modifier
@@ -353,7 +358,9 @@ fun RightTopBar(
             // Fullscreen button
             TopBarIconButton(
                 icon = R.drawable.zoom_in,
-                onClick = onFullscreenClick
+                onClick = {
+                    navController.navigate(Screen.ZoomOut.route)
+                }
             )
 
             VerticalDivider(
@@ -365,7 +372,11 @@ fun RightTopBar(
 
             TopBarIconButton(
                 icon = R.drawable.web_icon,
-                onClick = onWebClick
+                onClick = {
+                    Session(context, SessionType.BROWSER)
+                    browserViewModel.setDevWebView(SessionList.sessions[SessionList.activeSessionIndex!!].browserView!!)
+                    navController.navigate(Screen.Browser.route)
+                }
             )
 
             if(!isTerminal) {
@@ -379,7 +390,9 @@ fun RightTopBar(
                 // Ai button
                 TopBarIconButton(
                     icon = R.drawable.network_intel,
-                    onClick = onTerminalClick
+                    onClick = {
+                        /*TODO*/
+                    }
                 )
             }
 
@@ -393,7 +406,9 @@ fun RightTopBar(
             // Extensions button
             TopBarIconButton(
                 icon = R.drawable.extension,
-                onClick = onExtensionsClick
+                onClick = {
+                    /*TODO*/
+                }
             )
 
             VerticalDivider(
@@ -406,7 +421,9 @@ fun RightTopBar(
             // Settings button
             TopBarIconButton(
                 icon = R.drawable.settings_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
-                onClick = onSettingsClick
+                onClick = {
+                    navController.navigate(Screen.Settings.route)
+                }
             )
 
             VerticalDivider(

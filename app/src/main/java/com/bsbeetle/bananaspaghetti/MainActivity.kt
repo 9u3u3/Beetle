@@ -18,6 +18,7 @@ import com.bsbeetle.bananaspaghetti.ui.EnterImmersiveMode
 import com.bsbeetle.bananaspaghetti.ui.navigation.AppNavigation
 import com.bsbeetle.bananaspaghetti.ui.theme.BananaSpaghettiTheme
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
+import com.bsbeetle.bananaspaghetti.viewmodel.DevWebViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.ExpandViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
@@ -32,6 +33,7 @@ val LocalBufferViewModel = compositionLocalOf<BufferViewModel>{error("No buffer 
 val LocalEditorViewModel = compositionLocalOf<EditorViewModel>{error("No editor view model provided")}
 val LocalExpandViewModel = compositionLocalOf<ExpandViewModel>{error("No expand view model provided")}
 val LocalTerminalViewModel = compositionLocalOf<TerminalViewModel> {error("No terminal view model provided")}
+val LocalBrowserViewModel = compositionLocalOf<DevWebViewModel> {error("No browser view model provided")}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,6 +55,7 @@ class MainActivity : ComponentActivity() {
                 val editorViewModel: EditorViewModel = viewModel()
                 val expandViewModel: ExpandViewModel = viewModel()
                 val terminalViewModel: TerminalViewModel = viewModel()
+                val browserViewModel: DevWebViewModel = viewModel()
 
                 CompositionLocalProvider(
                     LocalFileViewModel provides fileViewModel,
@@ -61,7 +64,8 @@ class MainActivity : ComponentActivity() {
                     LocalBufferViewModel provides bufferViewModel,
                     LocalEditorViewModel provides editorViewModel,
                     LocalExpandViewModel provides expandViewModel,
-                    LocalTerminalViewModel provides terminalViewModel
+                    LocalTerminalViewModel provides terminalViewModel,
+                    LocalBrowserViewModel provides browserViewModel
                 ) {
                     Box(
                         modifier = Modifier
@@ -70,7 +74,6 @@ class MainActivity : ComponentActivity() {
                         AppNavigation()
                     }
                 }
-
             }
         }
     }

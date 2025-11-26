@@ -3,12 +3,11 @@ package com.bsbeetle.bananaspaghetti.tenebrio.pty
 import android.content.Context
 import android.os.ParcelFileDescriptor
 import android.util.Log
-import com.bsbeetle.bananaspaghetti.LocalTerminalViewModel
 import com.bsbeetle.bananaspaghetti.tenebrio.data.outputfd
 import com.bsbeetle.bananaspaghetti.tenebrio.data.termSize
-import com.bsbeetle.bananaspaghetti.viewmodel.TerminalViewModel
 import com.bsbeetle.bananaspaghetti.utils.assetHandling.copyAssetsTo
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.downloadFile
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.Session
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import org.json.JSONObject
 import java.io.File
@@ -17,7 +16,7 @@ import java.io.FileOutputStream
 import java.nio.file.Files
 import kotlin.concurrent.thread
 
-class Tenebrio(private val context: Context, private val id: Int?) {
+class Tenebrio(private val context: Context, private val session: Session) {
 
     companion object {
         init {
@@ -109,13 +108,13 @@ class Tenebrio(private val context: Context, private val id: Int?) {
             val libtallocLink = File(PREFIX, "libtalloc.so.2")
             try {
                 // This will delete the symlink even if it's broken
-                java.nio.file.Files.deleteIfExists(libtallocLink.toPath())
+                Files.deleteIfExists(libtallocLink.toPath())
             } catch (e: Exception) {
                 Log.e("Tenebrio", "Failed to delete existing symlink", e)
             }
             // Now create the fresh symlink
             try {
-                java.nio.file.Files.createSymbolicLink(
+                Files.createSymbolicLink(
                     libtallocLink.toPath(),
                     File(nativeDir, "libtalloc.so").toPath()
                 )
@@ -124,9 +123,12 @@ class Tenebrio(private val context: Context, private val id: Int?) {
                 Log.e("Tenebrio", "Failed to create symlink", e)
                 return
             }
-            if(termSize.row == null || termSize.cols == null) {
+
+            // Global make it session wise
+            if(session.rows == null || session.cols == null) {
                 Log.d("Tenebrio", "Null sizes")
             }
+
             val masterFd = startAlpine(
                 PREFIX.absolutePath.toString(),
                 nativeDir,
@@ -138,8 +140,9 @@ class Tenebrio(private val context: Context, private val id: Int?) {
                 "${alpineTmp.absolutePath}:/dev/shm",
                 alpine.absolutePath.toString(),
                 "${PREFIX.absolutePath}/init-alpine.sh",
-                termSize.row!! , termSize.cols!!
+                session.rows!! , session.cols!!
             )
+
             if (masterFd < 0) {
                 Log.e("Tenebrio", "Failed to get the master fd: $masterFd")
                 return
@@ -147,12 +150,13 @@ class Tenebrio(private val context: Context, private val id: Int?) {
                 Log.d("Tenebrio", "Got the masterFd")
                 gMasterFd = masterFd
             }
+
             pfd = ParcelFileDescriptor.adoptFd(masterFd)
             output = FileOutputStream(pfd!!.fileDescriptor)
             input = FileInputStream(pfd!!.fileDescriptor)
-            outputfd.outputFd = output
 
-            val terminalWebView = SessionList.sessions[id!!].terminalView
+            session.outputFd = output
+            val terminalWebView = SessionList.sessions[session.id!!].terminalView
 
             thread {
                 try {

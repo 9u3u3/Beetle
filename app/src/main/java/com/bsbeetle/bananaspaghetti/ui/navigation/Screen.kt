@@ -8,6 +8,8 @@ sealed class Screen(val route: String) {
     object Terminal: Screen(route = "terminal")
     object Settings: Screen("settings")
     object Demo: Screen("demo")
-
     object Browser: Screen("browser")
+
+    // zoom out preview testing
+    object ZoomOut: Screen("zoom_out")
 }

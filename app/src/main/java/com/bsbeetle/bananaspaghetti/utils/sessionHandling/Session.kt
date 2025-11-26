@@ -24,42 +24,63 @@ import java.io.FileOutputStream
 
 enum class SessionType {
     EDITOR,
-    // BROWSER,
-    TERMINAL
+    BROWSER,
+    TERMINAL,
+    DEMO
 }
 
 class Session(
-   val context: Context,
-   val type: SessionType
+    val context: Context,
+    val type: SessionType,
+    onPageFinished: () -> Unit = {},
+    onProgressChanged: (Int) -> Unit = {},
+    onFrameworkDetected: (String, String) -> Unit = { _, _ -> },
+    onNetworkRequest: () -> Unit = {},
+    onConsoleLog: () -> Unit = {},
+    onUrlChanged: (String) -> Unit = {}
 ) {
 
     // Views
     var editorView: CustomWebView? = null
     var terminalView: CustomWebView? = null
     var browserView: CustomWebView? = null
+    var demoView: CustomWebView? = null
 
-    // Other objects required for the functioning of the views
-    private var _inputConnection: InputConnection? = null
-    private var outputFd: FileOutputStream? = null
-    private var tenebrio: Tenebrio? = null
+    var _inputConnection: InputConnection? = null
     var id: Int? = null
 
+    // Terminal
+    var outputFd: FileOutputStream? = null
+    private var tenebrio: Tenebrio? = null
+    var rows: Int? = null
+    var cols: Int? = null
+
     init {
-        // Add the session to the list when the object is created
+        // Add the session to the list when the object is created and set it as active
         id = SessionList.sessions.size
         SessionList.sessions.add(this)
         SessionList.activeSessionIndex = SessionList.sessions.indexOf(this)
-        when(type) {
+
+        when (type) {
             SessionType.EDITOR -> createEditorView()
             SessionType.TERMINAL -> createTerminalView()
-            else -> {}
+            SessionType.BROWSER -> createBrowserView(
+                onPageFinished,
+                onProgressChanged,
+                onFrameworkDetected,
+                onNetworkRequest,
+                onConsoleLog,
+                onUrlChanged
+            )
+
+            SessionType.DEMO -> createDemoView()
         }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
     fun createEditorView() {
         if (editorView != null) return // Don't recreate if exists
-        editorView = CustomWebView(context.applicationContext).apply {
+        editorView = CustomWebView(context.applicationContext, this).apply {
             WebView.setWebContentsDebuggingEnabled(true)
             settings.apply {
                 javaScriptEnabled = true
@@ -73,7 +94,8 @@ class Session(
             }
             loadUrl("http://localhost:8080/index.html")
             post {
-                val isPortrait = resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+                val isPortrait =
+                    resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
                 if (isPortrait) requestFocus()
                 else clearFocus()
             }
@@ -94,9 +116,17 @@ class Session(
 
     fun createTerminalView() {
         if (terminalView != null) return
-        tenebrio = Tenebrio(context.applicationContext, id) // Create a PTY session
 
-        terminalView = CustomWebView(context.applicationContext).apply {
+        Log.d("Session", "Creating tenebrio for ID: $id")
+        tenebrio = Tenebrio(context.applicationContext, this)
+
+        try {
+            tenebrio!!.init()
+        } catch (e: Exception) {
+            Log.e("Session", "Null tenebrio, object creation failed!")
+        }
+
+        terminalView = CustomWebView(context.applicationContext, this).apply {
 
             WebView.setWebContentsDebuggingEnabled(true)
 
@@ -122,15 +152,20 @@ class Session(
 
                 @JavascriptInterface
                 fun sendInput(input: String) {
-                    outputfd.outputFd!!.write("$input\n".toByteArray())
-                    outputfd.outputFd!!.flush()
+                    outputFd!!.write("$input\n".toByteArray())
+                    outputFd!!.flush()
                 }
 
                 @JavascriptInterface
                 fun sendRaw(input: String) {
-                    Log.d("Terminal", "sendRaw: bytes=${input.toByteArray().joinToString(" ") { "%02x".format(it) }}")
-                    outputfd.outputFd!!.write(input.toByteArray())
-                    outputfd.outputFd!!.flush()
+                    Log.d(
+                        "Terminal",
+                        "sendRaw: bytes=${
+                            input.toByteArray().joinToString(" ") { "%02x".format(it) }
+                        }"
+                    )
+                    outputFd!!.write(input.toByteArray())
+                    outputFd!!.flush()
                 }
             }, "AndroidTerminal")
 
@@ -143,11 +178,22 @@ class Session(
                 }
 
                 @JavascriptInterface
-                fun getRowsCols(rows: Int, cols: Int) {
-                    termSize.row = rows
-                    termSize.cols = cols
-                }
+                fun getRowsCols(_rows: Int, _cols: Int) {
+                    Log.d("TerminalWebView", "Called resize Terminal")
+                    rows = _rows
+                    cols = _cols
+                    if (tenebrio?.gMasterFd ?: -1 < 0) {
+                        try {
+                            tenebrio!!.init()
+                        } catch (e: Exception) {
+                            Log.e("Session", "Tenebrio init failed", e)
+                        }
+                    } else {
 
+                        tenebrio!!.resizeTerminal(this@Session.rows!!, this@Session.cols!!)
+
+                    }
+                }
             }, "AndroidTerminalResize")
         }
 
@@ -162,7 +208,7 @@ class Session(
         onConsoleLog: () -> Unit,
         onUrlChanged: (String) -> Unit
     ) {
-        browserView = CustomWebView(context.applicationContext).apply {
+        browserView = CustomWebView(context.applicationContext, this).apply {
 
             settings.apply {
                 javaScriptEnabled = true
@@ -186,6 +232,10 @@ class Session(
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
                             "AppleWebKit/537.36 (KHTML, like Gecko) " +
                             "Chrome/120.0.0.0 Safari/537.36"
+
+                minimumFontSize = 1
+                minimumLogicalFontSize = 1
+                textZoom = 100
             }
 
             isVerticalScrollBarEnabled = true
@@ -204,8 +254,35 @@ class Session(
                     view?.evaluateJavascript(DevToolsInjector.EARLY_INJECTION, null)
                 }
 
+                // This doesn't work
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
+                    /** 🔥 Inject desktop viewport override */
+                    view?.evaluateJavascript(
+                        """
+    (function() {
+        function forceDesktop() {
+            var meta = document.querySelector('meta[name=viewport]');
+            if (!meta) {
+                meta = document.createElement('meta');
+                meta.name = "viewport";
+                document.head.appendChild(meta);
+            }
+            meta.setAttribute('content', 'width=1280, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes');
+        }
+
+        forceDesktop();
+
+        let count = 0;
+        const interval = setInterval(() => {
+            forceDesktop();
+            if (++count >= 10) clearInterval(interval);
+        }, 500);
+    })();
+    """.trimIndent(),
+                        null
+                    )
+
                     url?.let { onUrlChanged(it) }
                     view?.evaluateJavascript(DevToolsInjector.LATE_INJECTION, null)
                     onPageFinished()
@@ -245,9 +322,72 @@ class Session(
         }
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
+    fun createDemoView() {
+        if (demoView != null) return // Don't recreate if exists
+        demoView = CustomWebView(context, this).apply {
+            WebView.setWebContentsDebuggingEnabled(true)
+            settings.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                allowFileAccess = true
+                cacheMode = WebSettings.LOAD_NO_CACHE
+                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                useWideViewPort = true
+                loadWithOverviewMode = true
+                setSupportZoom(false)
+            }
+            loadUrl("file:///android_asset/editor/index.html")
+        }
+    }
+
+    fun destroySession() {
+        // For now we will keep this session as dangling session, later change it do directly removing the session object from memory
+        when (type) {
+
+            SessionType.DEMO -> {
+                demoView?.destroy()
+                demoView = null
+            }
+
+            SessionType.TERMINAL -> {
+                terminalView?.destroy()
+                terminalView = null
+            }
+
+            SessionType.EDITOR -> {
+                editorView?.destroy()
+                editorView = null
+            }
+
+            SessionType.BROWSER -> {
+                browserView?.destroy()
+                browserView = null
+            }
+        }
+
+        SessionList.activeSessionIndex =
+            SessionList.sessions.size - 1 // This will be for sure buggy i will handle this later
+        SessionList.sessions.remove(this)
+
+
+    }
+
     // Getters
-    fun _getEditorView() : CustomWebView {return editorView!!}
-    fun _getTerminalView() : CustomWebView {return terminalView!!}
-    fun _getBrowserView() : CustomWebView {return browserView!!}
+    fun _getEditorView(): CustomWebView {
+        return editorView!!
+    }
+
+    fun _getTerminalView(): CustomWebView {
+        return terminalView!!
+    }
+
+    fun _getBrowserView(): CustomWebView {
+        return browserView!!
+    }
+
+    fun _getDemoView(): CustomWebView {
+        return demoView!!
+    }
 
 }
