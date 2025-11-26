@@ -321,7 +321,7 @@ private fun TopBarIconButton(
 fun RightTopBar(
     modifier: Modifier = Modifier,
     isTerminal: Boolean = false,
-    onFullscreenClick: () -> Unit = {},
+    onZoomOutClick: () -> Unit = {},
     onTerminalClick: () -> Unit = {},
     onExtensionsClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
@@ -353,7 +353,7 @@ fun RightTopBar(
             // Fullscreen button
             TopBarIconButton(
                 icon = R.drawable.zoom_in,
-                onClick = onFullscreenClick
+                onClick = onZoomOutClick
             )
 
             VerticalDivider(

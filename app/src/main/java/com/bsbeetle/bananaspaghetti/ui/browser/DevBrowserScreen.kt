@@ -28,13 +28,11 @@ fun DevBrowserScreen(modifier: Modifier = Modifier) {
 
     var url by rememberSaveable { mutableStateOf("https://github.com/harshf40") }
     var urlInput by rememberSaveable { mutableStateOf(url) }
-    // var webView by remember { mutableStateOf<WebView?>(null) }
     var canGoBack by remember { mutableStateOf(false) }
     var canGoForward by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var loadProgress by remember { mutableIntStateOf(0) }
     var showDevTools by rememberSaveable { mutableStateOf(false) }
-
     var webView: CustomWebView? = null
 
     try {

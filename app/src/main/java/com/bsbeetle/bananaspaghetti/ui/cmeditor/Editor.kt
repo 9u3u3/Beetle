@@ -11,14 +11,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.viewinterop.AndroidView
-import com.bsbeetle.bananaspaghetti.LocalEditorViewModel
 import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
-import com.bsbeetle.bananaspaghetti.data.tenebrioObj
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorAction
-import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
-import java.lang.NullPointerException
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun Editor(modifier: Modifier = Modifier, webView: CustomWebView) {
@@ -41,11 +38,6 @@ fun Editor(modifier: Modifier = Modifier, webView: CustomWebView) {
                     )
                 }
 
-                try {
-                    tenebrioObj.tenebrio!!.init()
-                } catch (e: NullPointerException) {
-                    Log.e("Editor", "Null pointer exception")
-                }
             }
         }
     }

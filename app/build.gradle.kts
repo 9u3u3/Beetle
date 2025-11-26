@@ -21,7 +21,7 @@ android {
         // for now the support is only for arm64-v8a [Might add other architectures later]
         ndk {
             //noinspection ChromeOsAbiSupport
-            abiFilters += listOf("arm64-v8a")
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
 
         // For the native code for PTY

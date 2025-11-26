@@ -13,12 +13,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
 import com.bsbeetle.bananaspaghetti.LocalSliderViewModel
 import com.bsbeetle.bananaspaghetti.LocalTerminalViewModel
 import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
 import com.bsbeetle.bananaspaghetti.data.sidebar.Sidebar
 import com.bsbeetle.bananaspaghetti.data.sidebar.SidebarTab
+import com.bsbeetle.bananaspaghetti.tenebrio.pty.Tenebrio
 import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
 import com.bsbeetle.bananaspaghetti.ui.components.LeftTermTopBar
 import com.bsbeetle.bananaspaghetti.ui.components.RightTopBar
@@ -26,11 +28,13 @@ import com.bsbeetle.bananaspaghetti.ui.components.TopLeftTermBox
 import com.bsbeetle.bananaspaghetti.ui.components.TopRightBox
 import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
 import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboardHalf
+import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 
 @Composable
-fun InitialTerminalUI() {
+fun InitialTerminalUI(navController: NavController) {
 
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
     val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
@@ -42,16 +46,6 @@ fun InitialTerminalUI() {
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     var showSidebar by rememberSaveable { mutableStateOf(false) }
-
-//    val tenebrio = remember {
-//        Tenebrio(context)
-//    }.also {
-//        tenebrioObj.tenebrio = it
-//    }
-//
-//    val webView: WebView = remember {
-//        TerminalViewModel.getWebview(context, tenebrio)
-//    }
 
     val layout = if (uiState.toggleKeyboard) {
         KeyboardLayout.developerLayout
@@ -82,7 +76,10 @@ fun InitialTerminalUI() {
                     width = Dimension.fillToConstraints
                     height = Dimension.wrapContent
                 },
-                isTerminal = true
+                isTerminal = true,
+                onZoomOutClick = {
+                    navController.navigate(Screen.ZoomOut.route)
+                }
             )
 
             if (isLandscape) {
@@ -157,7 +154,8 @@ fun InitialTerminalUI() {
                     width = Dimension.fillToConstraints
                     height = Dimension.fillToConstraints
                 },
-                webView = LocalTerminalViewModel.current.webView!!
+                // Change the webview used here
+                webView = SessionList.sessions[SessionList.activeSessionIndex!!]._getTerminalView()
             )
 
             if(!isLandscape){

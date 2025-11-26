@@ -10,6 +10,7 @@ import com.bsbeetle.bananaspaghetti.ui.home.InitialEditorUI
 import com.bsbeetle.bananaspaghetti.ui.home.InitialTerminalUI
 import com.bsbeetle.bananaspaghetti.ui.home.SettingsScreen
 import com.bsbeetle.bananaspaghetti.ui.keyboard.DemoEditorUi
+import com.bsbeetle.bananaspaghetti.ui.screens.ZoomOut
 
 @Composable
 fun AppNavigation() {
@@ -19,9 +20,10 @@ fun AppNavigation() {
         composable(Screen.OpenFile.route){InitialEditorUI(navController)} // Open File
         composable(Screen.NewFile.route){InitialEditorUI(navController)} // New File
         composable(Screen.OpenFolder.route){InitialEditorUI(navController)} // Open or Create Folder
-        composable(Screen.Terminal.route){InitialTerminalUI()} // Open Terminal
-        composable(route=Screen.Settings.route){SettingsScreen(navController)} // Open Settings
-        composable(route=Screen.Demo.route){DemoEditorUi()} // Demo editor used settings
-        composable(route= Screen.Browser.route){ BrowserScreen() }
+        composable(Screen.Terminal.route){InitialTerminalUI(navController)} // Open Terminal
+        composable(Screen.Settings.route){SettingsScreen(navController)} // Open Settings
+        composable(Screen.Demo.route){DemoEditorUi()} // Demo editor used settings
+        composable(Screen.Browser.route){BrowserScreen()} // Developer browser UI
+        composable(Screen.ZoomOut.route){ZoomOut(navController)} // Zoom out preview (Session switching)
     }
 }

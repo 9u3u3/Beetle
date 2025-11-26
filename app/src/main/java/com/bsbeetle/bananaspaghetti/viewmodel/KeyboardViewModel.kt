@@ -3,10 +3,9 @@ package com.bsbeetle.bananaspaghetti.viewmodel
 import android.view.KeyEvent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bsbeetle.bananaspaghetti.data.Ic
 import com.bsbeetle.bananaspaghetti.model.Key
 import com.bsbeetle.bananaspaghetti.model.KeyType
-import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -244,14 +243,14 @@ class KeyboardViewModel : ViewModel() {
     private fun emitText(text: String) {
         viewModelScope.launch {
             // _editorAction.emit(EditorAction.InsertText(text))
-            Ic.ic?.commitText(text, 1)
+            SessionList.sessions[SessionList.activeSessionIndex!!]._inputConnection?.commitText(text, 1)
         }
     }
 
     private fun onBackspace() {
         viewModelScope.launch {
             //_editorAction.emit(EditorAction.Backspace)
-            Ic.ic?.deleteSurroundingText(1, 0)
+            SessionList.sessions[SessionList.activeSessionIndex!!]._inputConnection?.deleteSurroundingText(1, 0)
         }
     }
 
@@ -259,12 +258,12 @@ class KeyboardViewModel : ViewModel() {
         viewModelScope.launch {
             // _editorAction.emit(EditorAction.Enter)
             // First try key event (lets web editors intercept Enter)
-            val sent = Ic.ic?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER)) == true &&
-                    Ic.ic?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER)) == true
+            val sent = SessionList.sessions[SessionList.activeSessionIndex!!]._inputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER)) == true &&
+                    SessionList.sessions[SessionList.activeSessionIndex!!]._inputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER)) == true
 
             // If that didn’t trigger (common in WebViews), manually insert newline
             if (!sent) {
-                Ic.ic?.commitText("\n", 1)
+                SessionList.sessions[SessionList.activeSessionIndex!!]._inputConnection?.commitText("\n", 1)
             }
         }
     }
