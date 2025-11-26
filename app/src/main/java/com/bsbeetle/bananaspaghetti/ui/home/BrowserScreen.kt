@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
 import com.bsbeetle.bananaspaghetti.LocalSliderViewModel
@@ -35,6 +36,7 @@ import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
+import com.bsbeetle.bananaspaghetti.viewmodel.DevWebViewModel
 
 @Composable
 fun BrowserScreen(navController: NavController) {
@@ -49,6 +51,7 @@ fun BrowserScreen(navController: NavController) {
 
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
     val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
+    val devWebViewModel: DevWebViewModel = viewModel() // Add DevWebViewModel
 
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
@@ -161,7 +164,8 @@ fun BrowserScreen(navController: NavController) {
                     width = Dimension.fillToConstraints
                     height = Dimension.fillToConstraints
                 },
-                webView = SessionList.sessions[SessionList.activeSessionIndex!!]._getBrowserView()
+                webView = SessionList.sessions[SessionList.activeSessionIndex!!]._getBrowserView(),
+                viewModel = devWebViewModel // Pass the ViewModel here
             )
 
             if(!isLandscape){

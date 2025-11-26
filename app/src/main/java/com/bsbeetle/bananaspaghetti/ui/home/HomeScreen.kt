@@ -239,6 +239,8 @@ fun HomeScreen(navController: NavController) {
                     }
                     .clickable(
                         onClick = {
+                            Session(context, SessionType.BROWSER)
+                            browserViewModel.setDevWebView(SessionList.sessions[SessionList.activeSessionIndex!!].browserView!!)
                             navController.navigate(Screen.Settings.route)
                         }))
 
