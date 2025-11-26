@@ -105,7 +105,9 @@ fun InitialEditorUI(navController: NavController) {
                     start.linkTo(parent.start)
                     end.linkTo(topMiddle.start)
                     width = Dimension.percent(0.2f)
-                }
+                },
+                onMenuClick = { showSidebar = true },
+                showMenuIcon = !isLandscape
             )
 
             TopBar(
