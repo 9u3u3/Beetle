@@ -3,7 +3,6 @@ package com.bsbeetle.bananaspaghetti.utils.sessionHandling
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.Configuration
-import android.graphics.Bitmap
 import android.util.Log
 import android.view.ViewGroup
 import android.view.inputmethod.InputConnection
@@ -21,6 +20,8 @@ import com.bsbeetle.bananaspaghetti.ui.browser.DevBridge
 import com.bsbeetle.bananaspaghetti.ui.browser.DevToolsInjector
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 import java.io.FileOutputStream
+import android.graphics.Bitmap
+import android.graphics.Canvas
 
 enum class SessionType {
     EDITOR,
@@ -371,6 +372,31 @@ class Session(
         SessionList.sessions.remove(this)
 
 
+    }
+
+    fun captureSnapshot(): Bitmap? {
+        return try {
+            val webView = when (type) {
+                SessionType.EDITOR -> editorView
+                SessionType.BROWSER -> browserView
+                SessionType.TERMINAL -> terminalView
+                SessionType.DEMO -> demoView
+            } ?: return null
+
+            val bitmap = Bitmap.createBitmap(
+                if (webView.width > 0) webView.width else 800,
+                if (webView.height > 0) webView.height else 600,
+                Bitmap.Config.ARGB_8888
+            )
+
+            val canvas = Canvas(bitmap)
+            webView.draw(canvas)
+
+            bitmap
+        } catch (e: Exception) {
+            Log.e("Session", "Failed to capture snapshot", e)
+            null
+        }
     }
 
     // Getters

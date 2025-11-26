@@ -140,13 +140,13 @@ private fun LandscapeTopBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(18.dp)
+            .height(38.dp)
             .background(Color(0xFF1B1B1B))
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(18.dp)
+                .height(38.dp)
                 .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -159,7 +159,7 @@ private fun LandscapeTopBar(
                 value = urlInput,
                 onValueChange = onUrlChange,
                 placeholder = "Search or enter URL",
-                modifier = Modifier.weight(1f).height(18.dp),
+                modifier = Modifier.weight(1f).height(28.dp),
                 onEnterPressed = { onNavigate() }
             )
 
@@ -238,7 +238,7 @@ private fun CompactIconButton(
     }
 
     IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(20.dp)) {
-        Icon(imageVector = icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(12.dp))
+        Icon(imageVector = icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(30.dp))
     }
 }
 

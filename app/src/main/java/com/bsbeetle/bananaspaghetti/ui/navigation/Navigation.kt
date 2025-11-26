@@ -10,7 +10,7 @@ import com.bsbeetle.bananaspaghetti.ui.home.InitialEditorUI
 import com.bsbeetle.bananaspaghetti.ui.home.InitialTerminalUI
 import com.bsbeetle.bananaspaghetti.ui.home.SettingsScreen
 import com.bsbeetle.bananaspaghetti.ui.keyboard.DemoEditorUi
-import com.bsbeetle.bananaspaghetti.ui.screens.ZoomOut
+import com.bsbeetle.bananaspaghetti.ui.screens.sessions.ZoomOut
 
 @Composable
 fun AppNavigation() {
@@ -25,5 +25,6 @@ fun AppNavigation() {
         composable(Screen.Demo.route){DemoEditorUi()} // Demo editor used settings
         composable(Screen.Browser.route){BrowserScreen(navController)} // Developer browser UI
         composable(Screen.ZoomOut.route){ZoomOut(navController)} // Zoom out preview (Session switching)
+
     }
 }
