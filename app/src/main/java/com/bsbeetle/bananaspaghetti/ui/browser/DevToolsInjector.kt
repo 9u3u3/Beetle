@@ -41,14 +41,13 @@ object DevToolsInjector {
     console.info = wrap('INFO', original.info);
     console.debug = wrap('DEBUG', original.debug);
 
-    console.log('✅ Early console capture active');
 })();
 """.trimIndent()
 
     // THIS RUNS AFTER - Loads Eruda with adaptive sizing for portrait/landscape
     val LATE_INJECTION = """
 (function() {
-    console.log('🚀 DevBrowser: Loading Eruda...');
+//    console.log('🚀 DevBrowser: Loading Eruda...');
 
     // ============================================
     // DETECT ORIENTATION & SET OPTIMAL SIZE
@@ -262,8 +261,8 @@ object DevToolsInjector {
                             devToolsEl.style.setProperty('height', currentHeight + '%', 'important');
                             erudaContainer.style.setProperty('height', currentHeight + 'vh', 'important');
                             
-                            console.log('📏 Eruda height: ' + currentHeight + '% (orientation: ' + 
-                                       (isCurrentlyPortrait ? 'portrait' : 'landscape') + ')');
+//                            console.log('📏 Eruda height: ' + currentHeight + '% (orientation: ' + 
+//                                       (isCurrentlyPortrait ? 'portrait' : 'landscape') + ')');
                         }
 
                         // - button handlers
@@ -467,28 +466,28 @@ object DevToolsInjector {
             const ws = new OriginalWebSocket(url, protocols);
 
             ws.addEventListener('open', () => {
-                console.log('✅ WebSocket opened:', url);
+//                console.log('✅ WebSocket opened:', url);
             });
 
             ws.addEventListener('message', (event) => {
                 const preview = typeof event.data === 'string' 
                     ? event.data.substring(0, 100) 
                     : '[Binary data]';
-                console.log('📩 WS Message:', preview);
+//                console.log('📩 WS Message:', preview);
             });
 
             ws.addEventListener('error', () => {
-                console.error('❌ WebSocket error:', url);
+//                console.error('❌ WebSocket error:', url);
             });
 
             ws.addEventListener('close', () => {
-                console.log('🔒 WebSocket closed:', url);
+//                console.log('🔒 WebSocket closed:', url);
             });
 
             return ws;
         };
 
-        console.log('✅ Enhanced network interceptor active');
+//        console.log('✅ Enhanced network interceptor active');
     })();
 
     // ============================================
@@ -542,14 +541,14 @@ object DevToolsInjector {
             if (detected.length > 0) {
                 console.log('🎯 Frameworks detected: ' + detected.join(', '));
             } else {
-                console.log('ℹ️ No major frameworks detected (vanilla JS)');
+//                console.log('ℹ️ No major frameworks detected (vanilla JS)');
             }
         } catch(e) {
-            console.error('❌ Framework detection error:', e);
+//            console.error('❌ Framework detection error:', e);
         }
     }, 1500);
 
-    console.log('🎉 DevBrowser: All tools loaded and optimized!');
+//    console.log('🎉 DevBrowser: All tools loaded and optimized!');
 })();
 """.trimIndent()
 }
