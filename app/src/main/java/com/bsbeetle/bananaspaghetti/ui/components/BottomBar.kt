@@ -28,23 +28,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.ui.theme.codaRegular
+import com.bsbeetle.bananaspaghetti.viewmodel.LspViewModel
 
 @SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
-fun BottomBar(modifier: Modifier = Modifier, color: Color) {
+fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspViewModel = viewModel()) {
 
     var targetHeight by remember { mutableStateOf(18.dp) }
     val logHeight by animateDpAsState(targetValue = targetHeight, label = "logHeightAnim")
     val density = LocalDensity.current
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    
+    val lspStatus by lspViewModel.lspStatus.collectAsStateWithLifecycle()
 
     Box(
         modifier = modifier.height(logHeight)
@@ -68,11 +72,8 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Line number and the column number
-                    // Dummy line no. for now as there is no LSP integrated as of now
-                    var lineNo: Int = 1
-                    var colNo: Int = 4
                     Text(
-                        text = "Ln $lineNo, Col $colNo",
+                        text = "Ln ${lspStatus.line}, Col ${lspStatus.column}",
                         fontFamily = codaRegular,
                         fontSize = 9.sp,
                         color = Color(0xFFFFFFFF)
@@ -80,46 +81,24 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color) {
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    // path to the objects
-                    Image(
-                        painter = painterResource(R.drawable.class_cube),
-                        contentDescription = "Class",
-                        modifier = Modifier.size(9.dp),
-                        alignment = Alignment.Center
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "UserData",
-                        fontFamily = codaRegular,
-                        fontSize = 9.sp,
-                        color = Color(0xFFFFFFFF)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Image(
-                        painter = painterResource(R.drawable.chevron_right),
-                        contentDescription = "Chevron",
-                        modifier = Modifier.size(9.dp),
-                        alignment = Alignment.Center
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Image(
-                        painter = painterResource(R.drawable.data_object),
-                        contentDescription = "Function",
-                        modifier = Modifier.size(9.dp),
-                        alignment = Alignment.Center
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "getUserName",
-                        fontFamily = codaRegular,
-                        fontSize = 9.sp,
-                        color = Color(0xFFFFFFFF)
-                    )
+                    if (lspStatus.currentSymbol.isNotEmpty()) {
+                        // path to the objects
+                        Image(
+                            painter = painterResource(R.drawable.class_cube), // Placeholder icon logic could be improved
+                            contentDescription = "Symbol",
+                            modifier = Modifier.size(9.dp),
+                            alignment = Alignment.Center
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = lspStatus.currentSymbol,
+                            fontFamily = codaRegular,
+                            fontSize = 9.sp,
+                            color = Color(0xFFFFFFFF)
+                        )
+                    }
 
                     Spacer(modifier = Modifier.weight(1f))
-
-                    var warningCount: Int = 3
-                    var errorCount: Int = 0
 
                     Image(
                         painter = painterResource(R.drawable.warning_icon),
@@ -129,7 +108,7 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color) {
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = warningCount.toString(),
+                        text = lspStatus.warningCount.toString(),
                         fontFamily = codaRegular,
                         fontSize = 9.sp,
                         color = Color(0xFFFFFFFF)
@@ -143,7 +122,7 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color) {
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = errorCount.toString(),
+                        text = lspStatus.errorCount.toString(),
                         fontFamily = codaRegular,
                         fontSize = 9.sp,
                         color = Color(0xFFFFFFFF)
@@ -160,7 +139,7 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color) {
             ) {
 
                 Text(
-                    text = "Errors: 3\nWarnings: 9\nShow Fixes",
+                    text = "Errors: ${lspStatus.errorCount}\nWarnings: ${lspStatus.warningCount}\nShow Fixes",
                     color = Color.White,
                     modifier = Modifier.padding(8.dp),
                     fontSize = 12.sp

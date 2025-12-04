@@ -42,6 +42,7 @@ sealed class EditorAction {
     object CtrlZ : EditorAction()
     object CtrlD : EditorAction()
     object Escape : EditorAction()
+    data class Navigation(val type: KeyType) : EditorAction()
 }
 
 class KeyboardViewModel : ViewModel() {
@@ -51,6 +52,9 @@ class KeyboardViewModel : ViewModel() {
 
     private val _editorAction = MutableSharedFlow<EditorAction>()
     val editorAction = _editorAction.asSharedFlow()
+
+    private val _textBuffer = StringBuilder()
+    private var _bufferJob: kotlinx.coroutines.Job? = null
 
 
     // only Entry point for the key clicked
@@ -177,19 +181,24 @@ class KeyboardViewModel : ViewModel() {
 
     private fun handleNavigation(type: KeyType, gesture: KeyGesture) {
         if (gesture == KeyGesture.Tap || gesture == KeyGesture.LongPress) {
-            val sequence = when (type) {
-                KeyType.ACTION_LEFT -> "\u001B[D"
-                KeyType.ACTION_RIGHT -> "\u001B[C"
-                KeyType.ACTION_UP -> "\u001B[A"
-                KeyType.ACTION_DOWN -> "\u001B[B"
-                KeyType.ACTION_HOME -> "\u001B[H"
-                KeyType.ACTION_END -> "\u001B[F"
-                KeyType.ACTION_PGUP -> "\u001B[5~"
-                KeyType.ACTION_PGDN -> "\u001B[6~"
-                else -> ""
-            }
-            if (sequence.isNotEmpty()) {
-                sendTerminalSequence(sequence)
+            val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
+            if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
+                emitAction(EditorAction.Navigation(type))
+            } else {
+                val sequence = when (type) {
+                    KeyType.ACTION_LEFT -> "\u001B[D"
+                    KeyType.ACTION_RIGHT -> "\u001B[C"
+                    KeyType.ACTION_UP -> "\u001B[A"
+                    KeyType.ACTION_DOWN -> "\u001B[B"
+                    KeyType.ACTION_HOME -> "\u001B[H"
+                    KeyType.ACTION_END -> "\u001B[F"
+                    KeyType.ACTION_PGUP -> "\u001B[5~"
+                    KeyType.ACTION_PGDN -> "\u001B[6~"
+                    else -> ""
+                }
+                if (sequence.isNotEmpty()) {
+                    sendTerminalSequence(sequence)
+                }
             }
         }
     }
@@ -303,14 +312,27 @@ class KeyboardViewModel : ViewModel() {
     // Emitter functions -> Basic it helps to implements better things
 
     private fun emitText(text: String) {
-        viewModelScope.launch {
-            val session = SessionList.sessions[SessionList.activeSessionIndex!!]
-            if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
-                session.insertTextToEditor(text)
-            } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) {
-                session.insertText(text)
-            } else {
-                session._inputConnection?.commitText(text, 1)
+        // Buffer text input to prevent flooding the WebView with evaluateJavascript calls
+        // This is crucial for landscape mode where custom keyboard is used
+        _textBuffer.append(text)
+        
+        if (_bufferJob?.isActive != true) {
+            _bufferJob = viewModelScope.launch {
+                kotlinx.coroutines.delay(16) // Wait for 1 frame (approx 16ms) to batch inputs
+                
+                val textToSend = _textBuffer.toString()
+                _textBuffer.clear()
+                
+                if (textToSend.isNotEmpty()) {
+                    val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
+                    if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
+                        session.insertTextToEditor(textToSend)
+                    } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) {
+                        session.insertText(textToSend)
+                    } else {
+                        session?._inputConnection?.commitText(textToSend, 1)
+                    }
+                }
             }
         }
     }
@@ -361,6 +383,7 @@ class KeyboardViewModel : ViewModel() {
                     is EditorAction.Redo -> session.performEditorAction("performRedo")
                     is EditorAction.SelectAll -> session.performEditorAction("performSelectAll")
                     is EditorAction.Find -> session.performEditorAction("performFind")
+                    is EditorAction.Navigation -> session.performNavigation(action.type)
                     // Add other actions as needed
                     else -> _editorAction.emit(action)
                 }
