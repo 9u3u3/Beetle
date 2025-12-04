@@ -12,7 +12,7 @@ import com.bsbeetle.bananaspaghetti.utils.AppConfig
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.WebViewPool
 
-class EditorSession(context: Context, name: String = "Editor") : Session(context, SessionType.EDITOR, name) {
+class EditorSession(context: Context, name: String = "Editor") : Session(context.applicationContext, SessionType.EDITOR, name) {
 
     init {
         createView()

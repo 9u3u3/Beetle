@@ -10,7 +10,7 @@ import android.webkit.WebViewClient
 import com.bsbeetle.bananaspaghetti.utils.AppConfig
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 
-class DemoSession(context: Context, name: String = "Demo") : Session(context, SessionType.DEMO, name) {
+class DemoSession(context: Context, name: String = "Demo") : Session(context.applicationContext, SessionType.DEMO, name) {
 
     init {
         createView()

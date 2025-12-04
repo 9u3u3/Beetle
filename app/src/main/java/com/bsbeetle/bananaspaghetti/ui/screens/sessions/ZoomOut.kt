@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -136,11 +137,12 @@ fun ZoomOut(
                 onCreateSession = { sessionType, sessionName ->
                     // Create new session
                     val finalName = if (sessionName.isBlank()) sessionType.name.lowercase().replaceFirstChar { it.uppercase() } else sessionName
+                    val appContext = navController.context.applicationContext
                     when (sessionType) {
-                        SessionType.EDITOR -> EditorSession(navController.context, finalName)
-                        SessionType.BROWSER -> BrowserSession(navController.context, name = finalName)
-                        SessionType.TERMINAL -> TerminalSession(navController.context, finalName)
-                        SessionType.DEMO -> DemoSession(navController.context, finalName)
+                        SessionType.EDITOR -> EditorSession(appContext, finalName)
+                        SessionType.BROWSER -> BrowserSession(appContext, name = finalName)
+                        SessionType.TERMINAL -> TerminalSession(appContext, finalName)
+                        SessionType.DEMO -> DemoSession(appContext, finalName)
                     }
                     showNewSessionDialog = false
                 }
@@ -161,13 +163,24 @@ fun SessionCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(280.dp)  // Made smaller to fit better
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF1A1A1A))
+            .height(280.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF252525),
+                        Color(0xFF151515)
+                    )
+                )
+            )
             .border(
-                width = if (isActive) 3.dp else 1.dp,
-                color = if (isActive) Color(0xFF4A90E2) else Color(0xFF333333),
-                shape = RoundedCornerShape(12.dp)
+                width = if (isActive) 2.dp else 1.dp,
+                brush = if (isActive) Brush.linearGradient(
+                    colors = listOf(Color(0xFF4A90E2), Color(0xFF9013FE))
+                ) else Brush.linearGradient(
+                    colors = listOf(Color(0xFF333333), Color(0xFF222222))
+                ),
+                shape = RoundedCornerShape(16.dp)
             )
             .clickable { onClick() }
     ) {
@@ -183,9 +196,9 @@ fun SessionCard(
                     contentDescription = "Session preview",
                     modifier = Modifier
                         .fillMaxSize()
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .background(Color(0xFF0D0D0D)),
-                    contentScale = ContentScale.Fit  // Changed from Crop to Fit
+                    contentScale = ContentScale.Crop
                 )
             } else {
                 // Fallback when snapshot is not available
@@ -234,8 +247,8 @@ fun SessionCard(
             Icon(
                 imageVector = Icons.Default.Close,
                 contentDescription = "Close",
-                tint = Color(0xFFFF4444),
-                modifier = Modifier.size(20.dp)
+                tint = Color.White,
+                modifier = Modifier.size(16.dp)
             )
         }
 

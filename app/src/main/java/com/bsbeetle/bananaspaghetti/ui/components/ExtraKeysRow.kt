@@ -30,35 +30,64 @@ import com.bsbeetle.bananaspaghetti.viewmodel.EditorAction
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyGesture
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
+
 @Composable
 fun ExtraKeysRow(
     keyboardViewModel: KeyboardViewModel,
+    mode: SessionType,
     modifier: Modifier = Modifier
 ) {
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
 
-    // Row 1 keys
-    val row1 = listOf(
+    // Editor Keys
+    val editorRow1 = listOf(
         "ESC" to KeyType.ACTION_ESCAPE,
         "/" to KeyType.CHARACTER,
         "-" to KeyType.CHARACTER,
-        "HOME" to KeyType.ACTION_CTRL, // Placeholder type, handled manually
+        "{" to KeyType.CHARACTER,
+        "}" to KeyType.CHARACTER,
+        "(" to KeyType.CHARACTER,
+        ")" to KeyType.CHARACTER
+    )
+
+    val editorRow2 = listOf(
+        "TAB" to KeyType.ACTION_TAB,
+        "CTRL" to KeyType.ACTION_CTRL,
+        "ALT" to KeyType.ACTION_CTRL,
+        "[" to KeyType.CHARACTER,
+        "]" to KeyType.CHARACTER,
+        "<" to KeyType.CHARACTER,
+        ">" to KeyType.CHARACTER
+    )
+
+    // Terminal Keys
+    val terminalRow1 = listOf(
+        "ESC" to KeyType.ACTION_ESCAPE,
+        "/" to KeyType.CHARACTER,
+        "-" to KeyType.CHARACTER,
+        "HOME" to KeyType.ACTION_CTRL,
         "UP" to KeyType.ACTION_CTRL,
         "END" to KeyType.ACTION_CTRL,
         "PGUP" to KeyType.ACTION_CTRL
     )
 
-    // Row 2 keys
-    val row2 = listOf(
+    val terminalRow2 = listOf(
         "TAB" to KeyType.ACTION_TAB,
         "CTRL" to KeyType.ACTION_CTRL,
-        "ALT" to KeyType.ACTION_CTRL, // Will add ALT type later
+        "ALT" to KeyType.ACTION_CTRL,
         "LEFT" to KeyType.ACTION_CTRL,
         "DOWN" to KeyType.ACTION_CTRL,
         "RIGHT" to KeyType.ACTION_CTRL,
         "PGDN" to KeyType.ACTION_CTRL
     )
+
+    val (row1, row2) = if (mode == SessionType.TERMINAL) {
+        terminalRow1 to terminalRow2
+    } else {
+        editorRow1 to editorRow2
+    }
 
     Column(
         modifier = modifier
@@ -145,6 +174,16 @@ fun handleExtraKey(label: String, viewModel: KeyboardViewModel) {
         "CTRL" -> viewModel.onKeyEvent(Key("CTRL", type = KeyType.ACTION_CTRL), KeyGesture.Tap)
         "ALT" -> viewModel.onKeyEvent(Key("ALT", type = KeyType.ACTION_ALT), KeyGesture.Tap)
         
+        // Editor Symbols
+        "{" -> viewModel.onKeyEvent(Key("{", type = KeyType.CHARACTER), KeyGesture.Tap)
+        "}" -> viewModel.onKeyEvent(Key("}", type = KeyType.CHARACTER), KeyGesture.Tap)
+        "(" -> viewModel.onKeyEvent(Key("(", type = KeyType.CHARACTER), KeyGesture.Tap)
+        ")" -> viewModel.onKeyEvent(Key(")", type = KeyType.CHARACTER), KeyGesture.Tap)
+        "[" -> viewModel.onKeyEvent(Key("[", type = KeyType.CHARACTER), KeyGesture.Tap)
+        "]" -> viewModel.onKeyEvent(Key("]", type = KeyType.CHARACTER), KeyGesture.Tap)
+        "<" -> viewModel.onKeyEvent(Key("<", type = KeyType.CHARACTER), KeyGesture.Tap)
+        ">" -> viewModel.onKeyEvent(Key(">", type = KeyType.CHARACTER), KeyGesture.Tap)
+
         // Special sequences for Terminal
         "HOME" -> sendSequence(viewModel, "\u001B[H")
         "END" -> sendSequence(viewModel, "\u001B[F")

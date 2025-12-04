@@ -71,7 +71,7 @@ fun InitialEditorUI(navController: NavController) {
     val configuration = LocalConfiguration.current
 
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val layout = if (uiState.toggleKeyboard) KeyboardLayout.developerLayout else KeyboardLayout.qwertyLayout
+    val layout = if (uiState.toggleKeyboard) KeyboardLayout.editorLayout else KeyboardLayout.qwertyLayout
 
     // UI States
     var showSidebar by rememberSaveable { mutableStateOf(false) }
@@ -242,6 +242,7 @@ fun InitialEditorUI(navController: NavController) {
             if (isKeyboardVisible) {
                 com.bsbeetle.bananaspaghetti.ui.components.ExtraKeysRow(
                     keyboardViewModel = keyboardViewModel,
+                    mode = com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType.EDITOR,
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color(0xFF2E2E2E))

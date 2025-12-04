@@ -25,7 +25,7 @@ class BrowserSession(
     val onConsoleLog: () -> Unit = {},
     val onUrlChanged: (String) -> Unit = {},
     name: String = "Browser"
-) : Session(context, SessionType.BROWSER, name) {
+) : Session(context.applicationContext, SessionType.BROWSER, name) {
 
     init {
         createView()
