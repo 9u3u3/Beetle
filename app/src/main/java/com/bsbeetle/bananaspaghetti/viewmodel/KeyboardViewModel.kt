@@ -66,6 +66,8 @@ class KeyboardViewModel : ViewModel() {
             KeyType.ACTION_CTRL -> handleCtrl(gesture)
             KeyType.ACTION_ESCAPE -> handleEscape(gesture)
             KeyType.ACTION_ALT -> handleAlt(gesture)
+            KeyType.ACTION_LEFT, KeyType.ACTION_RIGHT, KeyType.ACTION_UP, KeyType.ACTION_DOWN,
+            KeyType.ACTION_HOME, KeyType.ACTION_END, KeyType.ACTION_PGUP, KeyType.ACTION_PGDN -> handleNavigation(key.type, gesture)
         }
     }
 
@@ -139,6 +141,25 @@ class KeyboardViewModel : ViewModel() {
         if (gesture == KeyGesture.Tap) {
             _uiState.update { currentState ->
                 currentState.copy(isAltOn = !currentState.isAltOn)
+            }
+        }
+    }
+
+    private fun handleNavigation(type: KeyType, gesture: KeyGesture) {
+        if (gesture == KeyGesture.Tap || gesture == KeyGesture.LongPress) {
+            val sequence = when (type) {
+                KeyType.ACTION_LEFT -> "\u001B[D"
+                KeyType.ACTION_RIGHT -> "\u001B[C"
+                KeyType.ACTION_UP -> "\u001B[A"
+                KeyType.ACTION_DOWN -> "\u001B[B"
+                KeyType.ACTION_HOME -> "\u001B[H"
+                KeyType.ACTION_END -> "\u001B[F"
+                KeyType.ACTION_PGUP -> "\u001B[5~"
+                KeyType.ACTION_PGDN -> "\u001B[6~"
+                else -> ""
+            }
+            if (sequence.isNotEmpty()) {
+                sendTerminalSequence(sequence)
             }
         }
     }

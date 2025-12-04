@@ -104,8 +104,8 @@ object KeyboardLayout {
                 Key("Esc", "Esc", type = KeyType.ACTION_ESCAPE), // Moved Esc here for easy reach
 
                 // Utility grouping
-                Key("←", "←", NORMAL_KEY), // Arrow Left
-                Key("→", "→", NORMAL_KEY), // Arrow Right
+                Key("←", "←", type = KeyType.ACTION_LEFT, weight = NORMAL_KEY), // Arrow Left
+                Key("→", "→", type = KeyType.ACTION_RIGHT, weight = NORMAL_KEY), // Arrow Right
                 Key("↵", type = KeyType.ACTION_ENTER, weight = ENTER_KEY),
                 Key("⌫", type = KeyType.ACTION_BACKSPACE, weight = NORMAL_KEY),
             )
@@ -126,10 +126,10 @@ object KeyboardLayout {
             listOf(
                 Key("Esc", "Esc", type = KeyType.ACTION_ESCAPE, weight = NORMAL_KEY),
                 Key("/", "/", NORMAL_KEY), Key("-", "-", NORMAL_KEY),
-                Key("Home", type = KeyType.ACTION_CTRL, weight = NORMAL_KEY),
-                Key("Up", type = KeyType.ACTION_CTRL, weight = NORMAL_KEY),
-                Key("End", type = KeyType.ACTION_CTRL, weight = NORMAL_KEY),
-                Key("PgUp", type = KeyType.ACTION_CTRL, weight = NORMAL_KEY),
+                Key("Home", type = KeyType.ACTION_HOME, weight = NORMAL_KEY),
+                Key("Up", type = KeyType.ACTION_UP, weight = NORMAL_KEY),
+                Key("End", type = KeyType.ACTION_END, weight = NORMAL_KEY),
+                Key("PgUp", type = KeyType.ACTION_PGUP, weight = NORMAL_KEY),
                 Key("`", "`", NORMAL_KEY), Key("~", "~", NORMAL_KEY),
                 Key("|", "|", NORMAL_KEY)
             ),
@@ -138,11 +138,11 @@ object KeyboardLayout {
             listOf(
                 Key("Tab", "\t", type = KeyType.ACTION_TAB, weight = NORMAL_KEY),
                 Key("Ctrl", type = KeyType.ACTION_CTRL, weight = NORMAL_KEY),
-                Key("Alt", type = KeyType.ACTION_CTRL, weight = NORMAL_KEY),
-                Key("Left", type = KeyType.ACTION_CTRL, weight = NORMAL_KEY),
-                Key("Down", type = KeyType.ACTION_CTRL, weight = NORMAL_KEY),
-                Key("Right", type = KeyType.ACTION_CTRL, weight = NORMAL_KEY),
-                Key("PgDn", type = KeyType.ACTION_CTRL, weight = NORMAL_KEY),
+                Key("Alt", type = KeyType.ACTION_ALT, weight = NORMAL_KEY),
+                Key("Left", type = KeyType.ACTION_LEFT, weight = NORMAL_KEY),
+                Key("Down", type = KeyType.ACTION_DOWN, weight = NORMAL_KEY),
+                Key("Right", type = KeyType.ACTION_RIGHT, weight = NORMAL_KEY),
+                Key("PgDn", type = KeyType.ACTION_PGDN, weight = NORMAL_KEY),
                 Key("[", "[", NORMAL_KEY), Key("]", "]", NORMAL_KEY),
                 Key("\\", "\\", NORMAL_KEY)
             ),
@@ -154,8 +154,8 @@ object KeyboardLayout {
                 Key("Space", type = KeyType.ACTION_SPACE, weight = SPACE_KEY),
                 Key("Esc", "Esc", type = KeyType.ACTION_ESCAPE),
 
-                Key("←", "←", NORMAL_KEY),
-                Key("→", "→", NORMAL_KEY),
+                Key("←", "←", type = KeyType.ACTION_LEFT, weight = NORMAL_KEY),
+                Key("→", "→", type = KeyType.ACTION_RIGHT, weight = NORMAL_KEY),
                 Key("↵", type = KeyType.ACTION_ENTER, weight = ENTER_KEY),
                 Key("⌫", type = KeyType.ACTION_BACKSPACE, weight = NORMAL_KEY),
             )
