@@ -80,7 +80,37 @@ class KeyboardViewModel : ViewModel() {
             KeyGesture.Tap -> {
                 // Check if CTRL is pressed for shortcuts
                 if (_uiState.value.isCtrlOn) {
-                    handleCtrlShortcut(key)
+                    val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
+                    if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) {
+                        // Handle generic Ctrl+Key for Terminal (ASCII control codes)
+                        val char = key.text.uppercase()
+                        if (char.isNotEmpty()) {
+                            val code = char[0].code
+                            // ASCII Control codes: A=1 (0x01) ... Z=26 (0x1A)
+                            // '@' (64) -> 0 (Null)
+                            // '[' (91) -> 27 (Esc)
+                            // '\' (92) -> 28 (FS)
+                            // ']' (93) -> 29 (GS)
+                            // '^' (94) -> 30 (RS)
+                            // '_' (95) -> 31 (US)
+                            // '?' (63) -> 127 (DEL) - often mapped to Ctrl+?
+                            
+                            val ctrlCode = if (code == '?'.code) {
+                                127
+                            } else {
+                                code - 64
+                            }
+
+                            if (ctrlCode in 0..31 || ctrlCode == 127) {
+                                emitText(ctrlCode.toChar().toString())
+                            }
+                        }
+                        // Turn off CTRL
+                        _uiState.update { state -> state.copy(isCtrlOn = false) }
+                    } else {
+                        // Editor / Browser shortcuts
+                        handleCtrlShortcut(key)
+                    }
                 } else {
                     // Single tap means single character
                     val textToInsert = getCharacterText(key)
