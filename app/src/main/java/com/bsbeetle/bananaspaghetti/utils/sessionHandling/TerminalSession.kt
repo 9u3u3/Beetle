@@ -33,8 +33,8 @@ class TerminalSession(context: Context) : Session(context, SessionType.TERMINAL)
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    override fun createView() {
-        if (view != null) return
+    override fun createView(): CustomWebView {
+        if (view != null) return view!!
         view = CustomWebView(context.applicationContext, this).apply {
             WebView.setWebContentsDebuggingEnabled(true)
             settings.apply {
@@ -97,6 +97,7 @@ class TerminalSession(context: Context) : Session(context, SessionType.TERMINAL)
                 }
             }
         }
+        return view!!
     }
 
     fun insertText(text: String) {

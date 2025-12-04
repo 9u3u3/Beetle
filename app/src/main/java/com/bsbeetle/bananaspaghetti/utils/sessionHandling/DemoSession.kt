@@ -17,8 +17,8 @@ class DemoSession(context: Context) : Session(context, SessionType.DEMO) {
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    override fun createView() {
-        if (view != null) return
+    override fun createView(): CustomWebView {
+        if (view != null) return view!!
         view = CustomWebView(context, this).apply {
             WebView.setWebContentsDebuggingEnabled(true)
             settings.apply {
@@ -40,5 +40,6 @@ class DemoSession(context: Context) : Session(context, SessionType.DEMO) {
                 }
             }
         }
+        return view!!
     }
 }

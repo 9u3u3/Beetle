@@ -34,7 +34,7 @@ abstract class Session(
     abstract fun createView(): CustomWebView
 
     // Shared helper to get the view (if you prefer a getter method)
-    fun getView(): CustomWebView {
+    fun getOrInitView(): CustomWebView {
         if (view == null) {
             view = createView()
         }

@@ -39,12 +39,7 @@ class SessionViewModel : ViewModel() {
             try {
                 val session = SessionList.sessions.find { it.id == sessionId } ?: return@launch
 
-                val webView = when (session.type) {
-                    SessionType.EDITOR -> session.editorView
-                    SessionType.BROWSER -> session.browserView
-                    SessionType.TERMINAL -> session.terminalView
-                    SessionType.DEMO -> session.demoView
-                }
+                val webView = session.getOrInitView()
 
                 if (webView != null) {
                     withContext(Dispatchers.Main) {

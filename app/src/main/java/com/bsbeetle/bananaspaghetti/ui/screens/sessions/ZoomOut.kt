@@ -30,8 +30,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.Session
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.BrowserSession
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.DemoSession
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
 import com.bsbeetle.bananaspaghetti.viewmodel.SessionViewModel
 
 //NO_PORTRAIT
@@ -117,7 +121,7 @@ fun ZoomOut(
                             navigateToSession(navController, session)
                         },
                         onClose = {
-                            session.destroySession()
+                            session.destroy()
                             viewModel.removeSnapshot(session.id)
                         }
                     )
@@ -131,10 +135,12 @@ fun ZoomOut(
                 onDismiss = { showNewSessionDialog = false },
                 onCreateSession = { sessionType, sessionName ->
                     // Create new session
-                    Session(
-                        context = navController.context,
-                        type = sessionType
-                    )
+                    when (sessionType) {
+                        SessionType.EDITOR -> EditorSession(navController.context)
+                        SessionType.BROWSER -> BrowserSession(navController.context)
+                        SessionType.TERMINAL -> TerminalSession(navController.context)
+                        SessionType.DEMO -> DemoSession(navController.context)
+                    }
                     showNewSessionDialog = false
                 }
             )

@@ -31,8 +31,8 @@ class BrowserSession(
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    override fun createView() {
-        if (view != null) return
+    override fun createView(): CustomWebView {
+        if (view != null) return view!!
         view = WebViewPool.get(context.applicationContext).apply {
             session = this@BrowserSession
             settings.apply {
@@ -134,6 +134,7 @@ class BrowserSession(
                 }
             }
         }
+        return view!!
     }
 
     override fun destroy() {
