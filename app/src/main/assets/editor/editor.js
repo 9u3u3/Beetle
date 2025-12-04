@@ -1,13 +1,23 @@
-// Imports
 import { EditorView, basicSetup } from "codemirror"
-import { EditorState, StateEffect, StateField } from "@codemirror/state"
+import { EditorState, StateEffect, StateField, Compartment } from "@codemirror/state"
 import { oneDark } from "@codemirror/theme-one-dark"
-import { autocompletion, completionKeymap, closeCompletion, startCompletion, completionStatus } from "@codemirror/autocomplete"
-import { keymap } from "@codemirror/view"
-import { linter, lintGutter, forceLinting } from "@codemirror/lint"
+import { autocompletion, completionKeymap, closeCompletion, closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete"
+import { keymap, highlightActiveLine, lineNumbers, highlightActiveLineGutter, scrollPastEnd, placeholder } from "@codemirror/view"
+import { linter, lintGutter, forceLinting, lintKeymap } from "@codemirror/lint"
+import { insertNewlineAndIndent, deleteCharBackward, undo, redo, history, historyKeymap, defaultKeymap, indentWithTab, toggleComment, moveLineUp, moveLineDown, copyLineUp, copyLineDown } from "@codemirror/commands"
+import { openSearchPanel, closeSearchPanel, searchKeymap, highlightSelectionMatches, selectNextOccurrence } from "@codemirror/search"
+import { bracketMatching, foldGutter, foldKeymap, indentOnInput, syntaxHighlighting, defaultHighlightStyle } from "@codemirror/language"
+
+// Languages
 import { cpp } from "@codemirror/lang-cpp"
-import { insertNewlineAndIndent, deleteCharBackward, undo, redo } from "@codemirror/commands"
-import { openSearchPanel, closeSearchPanel } from "@codemirror/search"
+import { python } from "@codemirror/lang-python"
+import { javascript } from "@codemirror/lang-javascript"
+import { html } from "@codemirror/lang-html"
+import { css } from "@codemirror/lang-css"
+import { java } from "@codemirror/lang-java"
+import { rust } from "@codemirror/lang-rust"
+import { json } from "@codemirror/lang-json"
+import { markdown } from "@codemirror/lang-markdown"
 
 window.code_ = ""
 
@@ -24,6 +34,35 @@ function setupEditor() {
   let messageBuffer = '';
   let isInitialized = false;
   let initializationPromise = null;
+
+  // Language Compartment
+  const languageConf = new Compartment()
+
+  const languages = {
+    "cpp": cpp(),
+    "c": cpp(),
+    "python": python(),
+    "javascript": javascript(),
+    "js": javascript(),
+    "typescript": javascript(), // Basic support via JS grammar
+    "ts": javascript(),
+    "html": html(),
+    "css": css(),
+    "java": java(),
+    "rust": rust(),
+    "json": json(),
+    "markdown": markdown(),
+    "md": markdown()
+  }
+
+  window.setLanguage = function (langName) {
+    const lang = languages[langName.toLowerCase()] || languages["cpp"]
+    if (view) {
+      view.dispatch({
+        effects: languageConf.reconfigure(lang)
+      })
+    }
+  }
 
   // StateEffect for updating diagnostics
   const setDiagnosticsEffect = StateEffect.define()
@@ -43,17 +82,17 @@ function setupEditor() {
     }
   })
 
-  const setFileUri = (uri) => {URI = uri}
-  const setRootUri = (uri) => {rootURI = uri}
+  const setFileUri = (uri) => { URI = uri }
+  const setRootUri = (uri) => { rootURI = uri }
 
   function handleDiagnostics(params) {
-    if(!view) return
+    if (!view) return
     try {
       const diagnostics = []
-      for(const d of params.diagnostics) {
+      for (const d of params.diagnostics) {
         try {
-          if(d.range.start.line < 0 || d.range.end.line < 0) continue
-          if(d.range.start.line + 1 > view.state.doc.lines || d.range.end.line + 1 > view.state.doc.lines) continue;
+          if (d.range.start.line < 0 || d.range.end.line < 0) continue
+          if (d.range.start.line + 1 > view.state.doc.lines || d.range.end.line + 1 > view.state.doc.lines) continue;
 
           const startLine = view.state.doc.line(d.range.start.line + 1)
           const endLine = view.state.doc.line(d.range.end.line + 1)
@@ -62,17 +101,17 @@ function setupEditor() {
           const from = startLine.from + startChar
           const to = endLine.from + endChar
 
-          if(to < from) continue
+          if (to < from) continue
 
           diagnostics.push({
             from: from,
             to: Math.max(from + 1, to),
             severity: d.severity === 1 ? 'error' :
-                      d.severity === 2 ? 'warning' : 'info',
+              d.severity === 2 ? 'warning' : 'info',
             message: d.message || 'Unknown error',
             source: d.source || 'clangd'
           })
-        } catch(e) {
+        } catch (e) {
           console.error('Error processing diagnostic:', e)
         }
       }
@@ -86,7 +125,7 @@ function setupEditor() {
 
       // Force linter to update
       forceLinting(view)
-    } catch(e) {
+    } catch (e) {
       console.error('Error in handleDiagnostics:', e)
     }
   }
@@ -94,12 +133,11 @@ function setupEditor() {
   async function lspCompletionSource(context) {
     // Wait for initialization
     if (!isInitialized) {
-      console.log('⏳ Waiting for LSP initialization...');
+      // console.log('⏳ Waiting for LSP initialization...');
       if (initializationPromise) {
         try {
           await initializationPromise;
-        } catch(e) {
-          console.error('Initialization failed:', e);
+        } catch (e) {
           return null;
         }
       } else {
@@ -110,9 +148,9 @@ function setupEditor() {
     const now = Date.now()
 
     // Always allow explicit completions
-    if(!context.explicit) {
+    if (!context.explicit) {
       // For automatic completions, check timing
-      if(now - lastCompletionTime < 300) {
+      if (now - lastCompletionTime < 300) {
         return null
       }
     }
@@ -125,42 +163,42 @@ function setupEditor() {
 
     try {
       const result = await sendRequest(ws, 'textDocument/completion', {
-        textDocument: {uri: URI},
-        position: {line: lineNumber, character},
+        textDocument: { uri: URI },
+        position: { line: lineNumber, character },
         context: {
           triggerKind: context.explicit ? 1 : 2,
         }
-      }, 8000) // Increased timeout
+      }, 5000)
 
-      if(!result) {
+      if (!result) {
         return null
       }
 
       const items = result.items || result
-      if(!Array.isArray(items) || items.length === 0) {
+      if (!Array.isArray(items) || items.length === 0) {
         return null
       }
 
-      console.log(`✨ Got ${items.length} completion items`)
+      // console.log(`✨ Got ${items.length} completion items`)
 
       const options = items.slice(0, 50).map(item => {
         const cleanLabel = item.label.replace(/^[•\s]+/, '').trim()
         let textToInsert = cleanLabel
 
-        if(item.insertText) textToInsert = item.insertText
-        else if(item.textEdit && item.textEdit.newText) textToInsert = item.textEdit.newText
+        if (item.insertText) textToInsert = item.insertText
+        else if (item.textEdit && item.textEdit.newText) textToInsert = item.textEdit.newText
 
         return {
           label: cleanLabel,
           type: item.kind === 3 ? 'function' :
-                item.kind === 6 ? 'variable' :
-                item.kind === 14 ? 'keyword' :
+            item.kind === 6 ? 'variable' :
+              item.kind === 14 ? 'keyword' :
                 item.kind === 5 ? 'class' :
-                item.kind === 7 ? 'class' :
-                item.kind === 8 ? 'interface' :
-                item.kind === 9 ? 'namespace' :
-                item.kind === 2 ? 'method' :
-                item.kind === 13 ? 'enum' : 'text',
+                  item.kind === 7 ? 'class' :
+                    item.kind === 8 ? 'interface' :
+                      item.kind === 9 ? 'namespace' :
+                        item.kind === 2 ? 'method' :
+                          item.kind === 13 ? 'enum' : 'text',
           detail: item.detail || '',
           info: typeof item.documentation === 'string' ? item.documentation : item.documentation?.value || '',
           apply: textToInsert
@@ -173,7 +211,7 @@ function setupEditor() {
         options,
         validFor: /^\w*$/
       }
-    } catch(e) {
+    } catch (e) {
       console.error('Completion error:', e)
       return null
     }
@@ -187,13 +225,15 @@ function setupEditor() {
   const startState = EditorState.create({
     doc: "",
     extensions: [
-      basicSetup,
+      basicSetup, // Includes history, foldGutter, drawSelection, dropCursor, allowMultipleSelections, indentOnInput, syntaxHighlighting, bracketMatching, closeBrackets, autocompletion, rectangularSelection, crosshairCursor, highlightActiveLine, highlightSelectionMatches, keymap
       oneDark,
-      cpp(),
-      diagnosticsField, // Add StateField
+      languageConf.of(cpp()), // Dynamic language support
+      diagnosticsField,
       lspLinter,
       lintGutter(),
-      // EditorState.readOnly.of(true), // Makes the editor readOnly for the user (to block the default from popping up)
+      highlightActiveLineGutter(),
+      scrollPastEnd(),
+      placeholder("Start typing..."),
       EditorView.contentAttributes.of({
         inputmode: "none"
       }),
@@ -205,22 +245,32 @@ function setupEditor() {
         closeOnBlur: false
       }),
       keymap.of([
+        indentWithTab,
+        ...closeBracketsKeymap,
+        ...defaultKeymap,
+        ...searchKeymap,
+        ...historyKeymap,
+        ...foldKeymap,
         ...completionKeymap,
-        {
-          key: `Escape`,
-          run: closeCompletion
-        }
+        ...lintKeymap,
+        { key: "Ctrl-/", run: toggleComment },
+        { key: "Alt-ArrowUp", run: moveLineUp },
+        { key: "Alt-ArrowDown", run: moveLineDown },
+        { key: "Shift-Alt-ArrowUp", run: copyLineUp },
+        { key: "Shift-Alt-ArrowDown", run: copyLineDown },
+        { key: "Ctrl-d", run: selectNextOccurrence },
+        { key: "Escape", run: closeCompletion }
       ]),
       EditorView.updateListener.of((update) => {
-        if(update.docChanged) window.code_ = update.state.doc.toString()
+        if (update.docChanged) window.code_ = update.state.doc.toString()
 
-        if(update.docChanged && ws.readyState === WebSocket.OPEN && view && isInitialized) {
+        if (update.docChanged && ws.readyState === WebSocket.OPEN && view && isInitialized) {
           sendNotification(ws, 'textDocument/didChange', {
             textDocument: {
               uri: URI,
               version: Date.now()
             },
-            contentChanges: [{text: update.state.doc.toString()}]
+            contentChanges: [{ text: update.state.doc.toString() }]
           })
         }
       })
@@ -239,68 +289,70 @@ function setupEditor() {
   const bg = window.getComputedStyle(editorEl).backgroundColor
   document.body.style.backgroundColor = bg
 
-  window.insertText = function(text) {
+  // API for Android
+  window.insertText = function (text) {
     view.dispatch(view.state.replaceSelection(text));
     view.focus();
   };
 
-  window.performBackspace = function() {
+  window.performBackspace = function () {
     deleteCharBackward(view);
     view.focus();
   };
 
-  window.performEnter = function() {
-     insertNewlineAndIndent(view);
-     view.focus();
+  window.performEnter = function () {
+    insertNewlineAndIndent(view);
+    view.focus();
   };
 
-  window.performCopy = function() {
-      const selection = view.state.selection.main;
-      const text = view.state.sliceDoc(selection.from, selection.to);
-      navigator.clipboard.writeText(text).catch(e => console.error("Copy failed:", e));
+  window.performCopy = function () {
+    const selection = view.state.selection.main;
+    const text = view.state.sliceDoc(selection.from, selection.to);
+    navigator.clipboard.writeText(text).catch(e => console.error("Copy failed:", e));
   };
 
-  window.performPaste = async function() {
-      try {
-          const text = await navigator.clipboard.readText();
-          view.dispatch(view.state.replaceSelection(text));
-          view.focus();
-      } catch(e) {
-          console.error("Paste failed:", e);
-      }
+  window.performPaste = async function () {
+    try {
+      const text = await navigator.clipboard.readText();
+      view.dispatch(view.state.replaceSelection(text));
+      view.focus();
+    } catch (e) {
+      console.error("Paste failed:", e);
+    }
   };
 
-  window.performCut = function() {
-      const selection = view.state.selection.main;
-      const text = view.state.sliceDoc(selection.from, selection.to);
-      navigator.clipboard.writeText(text);
-      view.dispatch({
-          changes: { from: selection.from, to: selection.to }
-      });
+  window.performCut = function () {
+    const selection = view.state.selection.main;
+    const text = view.state.sliceDoc(selection.from, selection.to);
+    navigator.clipboard.writeText(text);
+    view.dispatch({
+      changes: { from: selection.from, to: selection.to }
+    });
   };
 
-  window.performUndo = function() {
-      undo(view);
+  window.performUndo = function () {
+    undo(view);
   };
 
-  window.performRedo = function() {
-      redo(view);
+  window.performRedo = function () {
+    redo(view);
   };
 
-  window.performSelectAll = function() {
-      view.dispatch({
-          selection: { anchor: 0, head: view.state.doc.length }
-      });
+  window.performSelectAll = function () {
+    view.dispatch({
+      selection: { anchor: 0, head: view.state.doc.length }
+    });
   };
 
-  window.performFind = function() {
-      openSearchPanel(view);
+  window.performFind = function () {
+    openSearchPanel(view);
   };
 
-  window.closeFindPanel = function() {
-      closeSearchPanel(view);
+  window.closeFindPanel = function () {
+    closeSearchPanel(view);
   };
 
+  // ... JSON parsing and WebSocket logic (same as before) ...
   function parseJSONMessages(text) {
     const messages = [];
     let depth = 0;
@@ -434,7 +486,7 @@ function setupEditor() {
             console.error('❌ LSP Error:', message.error);
             reject(message.error);
           } else {
-            console.log(`✓ Response for request ${message.id}`);
+            // console.log(`✓ Response for request ${message.id}`);
             resolve(message.result);
           }
         }
@@ -473,7 +525,7 @@ function setupEditor() {
 
       pendingRequests.set(id, { resolve, reject, timeoutId });
 
-      console.log(`→ Request ${id}: ${method}`);
+      // console.log(`→ Request ${id}: ${method}`);
       ws.send(JSON.stringify(message));
     });
   }

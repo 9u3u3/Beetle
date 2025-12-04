@@ -71,7 +71,7 @@ fun InitialEditorUI(navController: NavController) {
     val configuration = LocalConfiguration.current
 
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val layout = if (uiState.toggleKeyboard) KeyboardLayout.editorLayout else KeyboardLayout.qwertyLayout
+    val layout = if (uiState.keyboardMode == 1) KeyboardLayout.editorLayout else KeyboardLayout.qwertyLayout
 
     // UI States
     var showSidebar by rememberSaveable { mutableStateOf(false) }

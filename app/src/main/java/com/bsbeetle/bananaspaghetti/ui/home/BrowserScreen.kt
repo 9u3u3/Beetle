@@ -70,11 +70,7 @@ fun BrowserScreen(navController: NavController) {
 
     var showSidebar by rememberSaveable { mutableStateOf(false) }
 
-    val layout = if (uiState.toggleKeyboard) {
-        KeyboardLayout.editorLayout
-    } else {
-        KeyboardLayout.qwertyLayout
-    }
+    val layout = if (uiState.keyboardMode == 1) KeyboardLayout.editorLayout else KeyboardLayout.qwertyLayout
 
     Box {
         ConstraintLayout(modifier = Modifier.fillMaxSize()) {

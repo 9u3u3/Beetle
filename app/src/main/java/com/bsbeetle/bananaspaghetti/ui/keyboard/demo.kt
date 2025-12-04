@@ -48,11 +48,7 @@ fun DemoEditorUi () {
     }
 
     // for selecting the layout.
-    val layout = if (uiState.toggleKeyboard) {
-        KeyboardLayout.editorLayout
-    } else {
-        KeyboardLayout.qwertyLayout
-    }
+    val layout = if (uiState.keyboardMode == 1) KeyboardLayout.editorLayout else KeyboardLayout.qwertyLayout
 
     Box {
         ConstraintLayout(modifier = Modifier.fillMaxSize()) {

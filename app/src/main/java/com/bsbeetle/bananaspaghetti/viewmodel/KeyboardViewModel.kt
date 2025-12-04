@@ -109,7 +109,7 @@ class KeyboardViewModel : ViewModel() {
                         _uiState.update { state -> state.copy(isCtrlOn = false) }
                     } else {
                         // Editor / Browser shortcuts
-                        handleCtrlShortcut(key)
+                        handleCtrlShortcut(key, session)
                     }
                 } else {
                     // Single tap means single character
@@ -138,7 +138,7 @@ class KeyboardViewModel : ViewModel() {
     }
 
 
-    private fun handleCtrlShortcut(key: Key) {
+    private fun handleCtrlShortcut(key: Key, session: com.bsbeetle.bananaspaghetti.utils.sessionHandling.Session?) {
         val action = when (key.text.lowercase()) {
             "c" -> EditorAction.CtrlC  // Always interrupt
             "v" -> EditorAction.Paste
@@ -149,12 +149,16 @@ class KeyboardViewModel : ViewModel() {
             "a" -> EditorAction.SelectAll
             "f" -> EditorAction.Find
             "s" -> EditorAction.Save
-            else -> return
+            else -> null
         }
 
-        action?.let {
-            emitAction(it)
+        if (action != null) {
+            emitAction(action)
             // Turn off CTRL immediately after shortcut
+            _uiState.update { state -> state.copy(isCtrlOn = false) }
+        } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
+            // Generic Ctrl+Key for Editor
+            session.sendCtrlKey(key.text)
             _uiState.update { state -> state.copy(isCtrlOn = false) }
         }
     }
@@ -277,7 +281,14 @@ class KeyboardViewModel : ViewModel() {
     }
     fun toggleKeyboardVisibility() {
         _uiState.update { currentState ->
-            currentState.copy(toggleKeyboard = !currentState.toggleKeyboard)
+            val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
+            val maxModes = if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) 3 else 2
+            val nextMode = (currentState.keyboardMode + 1) % maxModes
+            
+            currentState.copy(
+                toggleKeyboard = nextMode != 0, // For backward compatibility
+                keyboardMode = nextMode
+            )
         }
     }
 
@@ -355,12 +366,15 @@ class KeyboardViewModel : ViewModel() {
             if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
                 when (action) {
                     is EditorAction.Copy -> session.performEditorAction("performCopy")
-                    is EditorAction.Paste -> session.performEditorAction("performPaste")
+                    is EditorAction.Paste -> session.pasteFromClipboard()
                     is EditorAction.Cut -> session.performEditorAction("performCut")
                     is EditorAction.Undo -> session.performEditorAction("performUndo")
                     is EditorAction.Redo -> session.performEditorAction("performRedo")
                     is EditorAction.SelectAll -> session.performEditorAction("performSelectAll")
                     is EditorAction.Find -> session.performEditorAction("performFind")
+                    is EditorAction.CtrlC -> session.performEditorAction("performCopy")
+                    is EditorAction.Save -> session.performEditorAction("performSave")
+                    is EditorAction.CtrlD -> session.performEditorAction("performDuplicate")
                     // Add other actions as needed
                     else -> _editorAction.emit(action)
                 }

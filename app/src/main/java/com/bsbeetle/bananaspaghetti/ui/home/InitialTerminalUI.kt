@@ -54,10 +54,10 @@ fun InitialTerminalUI(navController: NavController) {
 
     var showSidebar by rememberSaveable { mutableStateOf(false) }
 
-    val layout = if (uiState.toggleKeyboard) {
-        KeyboardLayout.terminalLayout
-    } else {
-        KeyboardLayout.qwertyLayout
+    val layout = when (uiState.keyboardMode) {
+        1 -> KeyboardLayout.terminalLayout
+        2 -> KeyboardLayout.terminalSymbolsLayout
+        else -> KeyboardLayout.qwertyLayout
     }
 
     BackHandler {

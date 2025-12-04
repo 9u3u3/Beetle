@@ -8,6 +8,7 @@ import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.content.ClipboardManager
 import com.bsbeetle.bananaspaghetti.utils.AppConfig
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.WebViewPool
@@ -72,6 +73,7 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                             }, 100);
                         })();
                     """.trimIndent(), null)
+                    updateLanguage(name)
                 }
 
                 override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
@@ -97,5 +99,41 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
 
     fun performEditorAction(action: String) {
         view?.evaluateJavascript("if(window.$action) window.$action();", null)
+    }
+
+    fun sendCtrlKey(key: String) {
+        val js = """
+            (function() {
+                const key = '$key';
+                const code = 'Key' + key.toUpperCase();
+                const event = new KeyboardEvent('keydown', {
+                    key: key,
+                    code: code,
+                    ctrlKey: true,
+                    bubbles: true,
+                    cancelable: true
+                });
+                document.activeElement.dispatchEvent(event);
+            })();
+        """.trimIndent()
+        view?.evaluateJavascript(js, null)
+    }
+
+    fun pasteFromClipboard() {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        if (clipboard.hasPrimaryClip()) {
+            val item = clipboard.primaryClip?.getItemAt(0)
+            val text = item?.text?.toString()
+            if (!text.isNullOrEmpty()) {
+                insertTextToEditor(text)
+            }
+        }
+    }
+
+    fun updateLanguage(filename: String) {
+        val extension = filename.substringAfterLast('.', "")
+        if (extension.isNotEmpty()) {
+            view?.evaluateJavascript("if(window.setLanguage) window.setLanguage('$extension');", null)
+        }
     }
 }
