@@ -71,7 +71,7 @@ fun BrowserScreen(navController: NavController) {
     var showSidebar by rememberSaveable { mutableStateOf(false) }
 
     val layout = if (uiState.toggleKeyboard) {
-        KeyboardLayout.developerLayout
+        KeyboardLayout.editorLayout
     } else {
         KeyboardLayout.qwertyLayout
     }
@@ -219,6 +219,7 @@ fun BrowserScreen(navController: NavController) {
             if (isKeyboardVisible) {
                 ExtraKeysRow(
                     keyboardViewModel = keyboardViewModel,
+                    mode = com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType.BROWSER,
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color(0xFF2E2E2E))

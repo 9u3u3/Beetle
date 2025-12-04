@@ -49,7 +49,7 @@ fun DemoEditorUi () {
 
     // for selecting the layout.
     val layout = if (uiState.toggleKeyboard) {
-        KeyboardLayout.developerLayout
+        KeyboardLayout.editorLayout
     } else {
         KeyboardLayout.qwertyLayout
     }
