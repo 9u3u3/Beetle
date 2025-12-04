@@ -135,11 +135,12 @@ fun ZoomOut(
                 onDismiss = { showNewSessionDialog = false },
                 onCreateSession = { sessionType, sessionName ->
                     // Create new session
+                    val finalName = if (sessionName.isBlank()) sessionType.name.lowercase().replaceFirstChar { it.uppercase() } else sessionName
                     when (sessionType) {
-                        SessionType.EDITOR -> EditorSession(navController.context)
-                        SessionType.BROWSER -> BrowserSession(navController.context)
-                        SessionType.TERMINAL -> TerminalSession(navController.context)
-                        SessionType.DEMO -> DemoSession(navController.context)
+                        SessionType.EDITOR -> EditorSession(navController.context, finalName)
+                        SessionType.BROWSER -> BrowserSession(navController.context, name = finalName)
+                        SessionType.TERMINAL -> TerminalSession(navController.context, finalName)
+                        SessionType.DEMO -> DemoSession(navController.context, finalName)
                     }
                     showNewSessionDialog = false
                 }
@@ -209,14 +210,10 @@ fun SessionCard(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = when (session.type) {
-                                SessionType.EDITOR -> "Editor"
-                                SessionType.BROWSER -> "Browser"
-                                SessionType.TERMINAL -> "Terminal"
-                                SessionType.DEMO -> "Demo"
-                            },
-                            color = Color(0xFF666666),
-                            fontSize = 16.sp
+                            text = session.name,
+                            color = Color(0xFFAAAAAA),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -281,12 +278,7 @@ fun SessionCard(
             }
 
             Text(
-                text = when (session.type) {
-                    SessionType.EDITOR -> "Editor"
-                    SessionType.BROWSER -> "Browser"
-                    SessionType.TERMINAL -> "Terminal"
-                    SessionType.DEMO -> "Demo"
-                },
+                text = session.name,
                 color = Color.White,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium

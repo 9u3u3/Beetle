@@ -14,7 +14,7 @@ import com.bsbeetle.bananaspaghetti.utils.AppConfig
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 import java.io.FileOutputStream
 
-class TerminalSession(context: Context) : Session(context, SessionType.TERMINAL) {
+class TerminalSession(context: Context, name: String = "Terminal") : Session(context, SessionType.TERMINAL, name) {
 
     var outputFd: FileOutputStream? = null
     private var tenebrio: Tenebrio? = null

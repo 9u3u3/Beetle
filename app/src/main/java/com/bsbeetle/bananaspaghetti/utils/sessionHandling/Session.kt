@@ -13,7 +13,8 @@ enum class SessionType {
 
 abstract class Session(
     val context: Context,
-    val type: SessionType
+    val type: SessionType,
+    var name: String = ""
 ) {
     var id: Int? = null
     var view: CustomWebView? = null

@@ -23,8 +23,9 @@ class BrowserSession(
     val onFrameworkDetected: (String, String) -> Unit = { _, _ -> },
     val onNetworkRequest: () -> Unit = {},
     val onConsoleLog: () -> Unit = {},
-    val onUrlChanged: (String) -> Unit = {}
-) : Session(context, SessionType.BROWSER) {
+    val onUrlChanged: (String) -> Unit = {},
+    name: String = "Browser"
+) : Session(context, SessionType.BROWSER, name) {
 
     init {
         createView()
