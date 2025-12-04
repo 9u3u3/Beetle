@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,9 +60,9 @@ import com.bsbeetle.bananaspaghetti.ui.theme.KarmaticFont
 import com.bsbeetle.bananaspaghetti.ui.theme.born2bsporty
 import com.bsbeetle.bananaspaghetti.ui.theme.codaRegular
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.fileLauncher
-import com.bsbeetle.bananaspaghetti.utils.sessionHandling.Session
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.BrowserSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
-import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
 import com.bsbeetle.bananaspaghetti.viewmodel.DevWebViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.TerminalViewModel
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -78,7 +79,7 @@ fun HomeScreen(navController: NavController) {
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    var isRecentsOpen by remember { mutableStateOf(false) }
+    var isRecentsOpen by rememberSaveable { mutableStateOf(false) }
     val mainMenuOffset by animateDpAsState(
         targetValue = if (isRecentsOpen) -150.dp else 0.dp,
         animationSpec = tween(durationMillis = 400),
@@ -253,8 +254,8 @@ fun HomeScreen(navController: NavController) {
                     }
                     .clickable(
                         onClick = {
-                            Session(context, SessionType.BROWSER)
-                            browserViewModel.setDevWebView(SessionList.sessions[SessionList.activeSessionIndex!!].browserView!!)
+                            BrowserSession(context)
+                            browserViewModel.setDevWebView(SessionList.sessions[SessionList.activeSessionIndex!!].view!!)
                             navController.navigate(Screen.Browser.route)
                         }))
 
@@ -527,8 +528,8 @@ fun MainMenu(
                     .clickable(
                         onClick = {
                             // Terminal Session handler (Will make a function for this later im to lazy to do that currently and this is also in the testing)
-                            Session(context.applicationContext, SessionType.TERMINAL)
-                            terminalViewModel.setTerminalWebView(SessionList.sessions[SessionList.activeSessionIndex!!].terminalView!!)
+                            TerminalSession(context.applicationContext)
+                            terminalViewModel.setTerminalWebView(SessionList.sessions[SessionList.activeSessionIndex!!].view!!)
                             navController.navigate(Screen.Terminal.route)
                         })
             ) {

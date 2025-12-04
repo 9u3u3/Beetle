@@ -5,47 +5,46 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.bsbeetle.bananaspaghetti.LocalBufferViewModel
-import com.bsbeetle.bananaspaghetti.LocalEditorViewModel
-import com.bsbeetle.bananaspaghetti.LocalFileViewModel
-import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
-import com.bsbeetle.bananaspaghetti.LocalSliderViewModel
+import com.bsbeetle.bananaspaghetti.*
 import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
 import com.bsbeetle.bananaspaghetti.data.sidebar.Sidebar
 import com.bsbeetle.bananaspaghetti.data.sidebar.SidebarTab
 import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
-import com.bsbeetle.bananaspaghetti.ui.components.BottomBar
-import com.bsbeetle.bananaspaghetti.ui.components.LeftTopBar
-import com.bsbeetle.bananaspaghetti.ui.components.RightTopBar
-import com.bsbeetle.bananaspaghetti.ui.components.TopBar
-import com.bsbeetle.bananaspaghetti.ui.components.TopLeftBox
-import com.bsbeetle.bananaspaghetti.ui.components.TopRightBox
+import com.bsbeetle.bananaspaghetti.ui.components.*
 import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
 import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboardHalf
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
-import com.bsbeetle.bananaspaghetti.utils.webViewHandling.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.readFromFile
+import com.bsbeetle.bananaspaghetti.utils.fileHandling.saveFile
+import com.bsbeetle.bananaspaghetti.utils.languageHandling.LanguageRegistry
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
-import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
-import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
-import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
-import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
-import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
-
+import com.bsbeetle.bananaspaghetti.utils.webViewHandling.loadContentWhenReady
+import com.bsbeetle.bananaspaghetti.viewmodel.*
+import kotlinx.coroutines.delay
 
 @SuppressLint("RememberReturnType")
 @Composable
@@ -53,15 +52,12 @@ fun InitialEditorUI(navController: NavController) {
 
     Log.e("Sessions", SessionList.sessions.toString())
 
-
-    // This can be buggy
     BackHandler {
         navController.navigate(Screen.Home.route) {
             popUpTo(Screen.OpenFolder.route) { inclusive = true }
         }
     }
 
-    // View models
     val fileViewModel: FileViewModel = LocalFileViewModel.current
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
     val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
@@ -78,24 +74,41 @@ fun InitialEditorUI(navController: NavController) {
     val layout = if (uiState.toggleKeyboard) KeyboardLayout.developerLayout else KeyboardLayout.qwertyLayout
     var showSidebar by rememberSaveable { mutableStateOf(false) }
 
+    // 🚀 LSP popup states
+    var showLanguagePopup by remember { mutableStateOf(false) }
+    var missingLanguageExt by remember { mutableStateOf("") }
+
+    // 🚀 File Load (fixed performance)
     LaunchedEffect(fileViewModel.selectedUri) {
+        delay(50) // allows UI to compose first so no freeze
         fileViewModel.selectedUri?.let { uri ->
             DocumentFile.fromSingleUri(context, uri)?.let { documentFile ->
+
                 if (bufferViewModel.filesOpenedList.none { it.uri.toString() == uri.toString() }) {
                     bufferViewModel.filesOpenedList.add(documentFile)
-                    Log.d("Buffer", "Added: ${documentFile.name}")
+                }
+
+                try {
+                    val extType = documentFile.name!!.substringAfterLast(".")
+                    if (!LanguageRegistry.isInstalled(extType)) {
+                        missingLanguageExt = extType
+                        showLanguagePopup = true
+                    }
+                } catch (e: Exception) {
+                    Log.e("Buffer", "Error in file extension handling $e")
                 }
 
                 val content = readFromFile(context, uri)
                 bufferViewModel.bufferLine[documentFile] = content
                 loadContentWhenReady(editorViewModel.webView, content)
                 fileViewModel.currentFilePath = uri.toString()
-                Log.d("Buffer", "Opened: ${documentFile.name}, total: ${bufferViewModel.filesOpenedList.size}")
             }
         }
     }
 
-    Box {
+    Box(Modifier.fillMaxSize()) {
+
+        // ---------------- MAIN UI ----------------
         ConstraintLayout(Modifier.fillMaxSize()) {
             val (topLeft, topMiddle, topRight, leftBox, rightBox, leftKb, editor, rightKb, bottomBarRef) = createRefs()
 
@@ -105,7 +118,8 @@ fun InitialEditorUI(navController: NavController) {
                     start.linkTo(parent.start)
                     end.linkTo(topMiddle.start)
                     width = Dimension.percent(0.2f)
-                }
+                },
+                onSaveClick = { saveFile(fileViewModel, context) }
             )
 
             TopBar(
@@ -159,8 +173,7 @@ fun InitialEditorUI(navController: NavController) {
                             start.linkTo(parent.start)
                             bottom.linkTo(parent.bottom)
                             width = Dimension.percent(sliderValue / 100f)
-                        }
-                            .background(Color(0xFF212121))
+                        }.background(Color(0xFF212121))
                     )
                 }
 
@@ -172,8 +185,7 @@ fun InitialEditorUI(navController: NavController) {
                             end.linkTo(parent.end)
                             bottom.linkTo(parent.bottom)
                             width = Dimension.percent(sliderValue / 100f)
-                        }
-                            .background(Color(0xFF212121))
+                        }.background(Color(0xFF212121))
                     )
                 }
             }
@@ -203,10 +215,99 @@ fun InitialEditorUI(navController: NavController) {
             if (!isLandscape) {
                 Sidebar(
                     showSidebar, { showSidebar = false },
-                    { fileViewModel.selectedUri = Uri.parse(it); fileViewModel.currentFilePath = it; showSidebar = false },
+                    {
+                        fileViewModel.selectedUri = Uri.parse(it)
+                        fileViewModel.currentFilePath = it
+                        showSidebar = false
+                    },
                     fileViewModel.currentFilePath,
                     listOf(SidebarTab.FILES, SidebarTab.SEARCH, SidebarTab.GIT, SidebarTab.EXTENSIONS, SidebarTab.SETTINGS)
                 )
+
+            }
+        }
+
+        if (!isLandscape) {
+            // Extra Keys Row for Portrait Mode
+            val imeInsets = WindowInsets.ime
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val isKeyboardVisible = imeInsets.getBottom(density) > 0
+
+            if (isKeyboardVisible) {
+                com.bsbeetle.bananaspaghetti.ui.components.ExtraKeysRow(
+                    keyboardViewModel = keyboardViewModel,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF2E2E2E))
+                        .windowInsetsPadding(imeInsets)
+                        .align(Alignment.BottomCenter)
+                )
+            }
+        }
+
+        // ---------------- POPUP OVERLAY ----------------
+        SlideLanguagePopup(
+            missingLanguageExt = missingLanguageExt,
+            show = showLanguagePopup,
+            onInstall = {
+                showLanguagePopup = false
+                // navigation handled by you
+                navController.navigate(Screen.Extensions.route)
+            },
+            onDismiss = {
+                showLanguagePopup = false
+            }
+        )
+    }
+}
+
+@Composable
+fun SlideLanguagePopup(
+    missingLanguageExt: String,
+    show: Boolean,
+    onInstall: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        AnimatedVisibility(
+            visible = show,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+        ) {
+            Box(
+                Modifier
+                    .width(340.dp)
+                    .background(Color(0xFF1E1E1E))
+                    .padding(18.dp)
+            ) {
+                Column {
+                    Text(
+                        text = "Language support missing",
+                        color = Color.White,
+                        fontSize = 16.sp
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Support for .$missingLanguageExt is not installed.\nInstall to enable syntax highlighting, autocomplete & LSP.",
+                        color = Color(0xFFCCCCCC),
+                        fontSize = 12.sp
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    Row {
+                        Button(
+                            onClick = onInstall,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2F7BDE))
+                        ) { Text("Install") }
+                        Spacer(Modifier.width(12.dp))
+                        Button(
+                            onClick = onDismiss,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3A3A3A))
+                        ) { Text("Maybe later") }
+                    }
+                }
             }
         }
     }

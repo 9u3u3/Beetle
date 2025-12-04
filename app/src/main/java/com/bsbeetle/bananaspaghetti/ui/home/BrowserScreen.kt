@@ -18,6 +18,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.ui.Alignment
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
 import com.bsbeetle.bananaspaghetti.LocalSliderViewModel
@@ -69,26 +74,40 @@ fun BrowserScreen(navController: NavController) {
 
             val (topLeft, topRight, leftBox, rightBox, leftKb, editor, rightKb) = createRefs()
 
-            LeftTermTopBar(
-                modifier = Modifier.constrainAs(topLeft) {
-                    top.linkTo(parent.top)
-                    start.linkTo(parent.start)
-                    end.linkTo(editor.start)
-                    width = Dimension.fillToConstraints
-                    height = Dimension.wrapContent
-                }
-            )
+            if (isLandscape) {
+                LeftTermTopBar(
+                    modifier = Modifier.constrainAs(topLeft) {
+                        top.linkTo(parent.top)
+                        start.linkTo(parent.start)
+                        end.linkTo(editor.start)
+                        width = Dimension.fillToConstraints
+                        height = Dimension.wrapContent
+                    }
+                )
 
-            RightTopBar(
-                modifier = Modifier.constrainAs(topRight) {
-                    top.linkTo(parent.top)
-                    start.linkTo(editor.end)
-                    end.linkTo(parent.end)
-                    width = Dimension.fillToConstraints
-                    height = Dimension.wrapContent
-                },
-                navController = navController
-            )
+                RightTopBar(
+                    modifier = Modifier.constrainAs(topRight) {
+                        top.linkTo(parent.top)
+                        start.linkTo(editor.end)
+                        end.linkTo(parent.end)
+                        width = Dimension.fillToConstraints
+                        height = Dimension.wrapContent
+                    },
+                    navController = navController
+                )
+            } else {
+                // Portrait Top Bar
+                RightTopBar(
+                    modifier = Modifier.constrainAs(topLeft) {
+                        top.linkTo(parent.top)
+                        start.linkTo(parent.start)
+                        end.linkTo(parent.end)
+                        width = Dimension.fillToConstraints
+                        height = Dimension.wrapContent
+                    },
+                    navController = navController
+                )
+            }
 
             if (isLandscape) {
                 TopLeftTermBox(
@@ -142,7 +161,11 @@ fun BrowserScreen(navController: NavController) {
 
             DevBrowserScreen(
                 modifier = Modifier.constrainAs(editor) {
-                    top.linkTo(parent.top) // Starts right after top bar
+                    if (isLandscape) {
+                        top.linkTo(parent.top)
+                    } else {
+                        top.linkTo(topLeft.bottom)
+                    }
                     bottom.linkTo(parent.bottom)
 
                     // adapt constraints depending on keyboard visibility & orientation
@@ -161,7 +184,7 @@ fun BrowserScreen(navController: NavController) {
                     width = Dimension.fillToConstraints
                     height = Dimension.fillToConstraints
                 },
-                webView = SessionList.sessions[SessionList.activeSessionIndex!!]._getBrowserView()
+                webView = SessionList.sessions[SessionList.activeSessionIndex!!].view!!
             )
 
             if(!isLandscape){
@@ -172,6 +195,25 @@ fun BrowserScreen(navController: NavController) {
                         SidebarTab.EXTENSIONS,
                         SidebarTab.SETTINGS
                     )
+                )
+
+            }
+        }
+
+        if (!isLandscape) {
+            // Extra Keys Row for Portrait Mode
+            val imeInsets = androidx.compose.foundation.layout.WindowInsets.ime
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val isKeyboardVisible = imeInsets.getBottom(density) > 0
+
+            if (isKeyboardVisible) {
+                com.bsbeetle.bananaspaghetti.ui.components.ExtraKeysRow(
+                    keyboardViewModel = keyboardViewModel,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF2E2E2E))
+                        .windowInsetsPadding(imeInsets)
+                        .align(Alignment.BottomCenter)
                 )
             }
         }

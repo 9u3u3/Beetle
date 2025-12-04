@@ -16,7 +16,17 @@ let currentCommand = '';
 setTimeout(() => {
   const textarea = term.textarea;
   if (textarea) {
-    textarea.setAttribute("inputmode", "none");
+    const updateInputMode = () => {
+      if (window.matchMedia("(orientation: landscape)").matches) {
+        textarea.setAttribute("inputmode", "none");
+      } else {
+        textarea.setAttribute("inputmode", "text");
+      }
+    };
+
+    window.addEventListener("resize", updateInputMode);
+    updateInputMode(); // Initial check
+
     textarea.focus();
     term.focus();
   }
@@ -82,7 +92,7 @@ window.performEnter = function () {
   currentCommand = '';
 };
 
-window.performCopy = function() {
+window.performCopy = function () {
   const selection = term.getSelection();
   if (selection) {
     navigator.clipboard.writeText(selection)
@@ -90,7 +100,7 @@ window.performCopy = function() {
   }
 };
 
-window.performPaste = async function() {
+window.performPaste = async function () {
   term.focus();
   try {
     const text = await navigator.clipboard.readText();
@@ -100,12 +110,12 @@ window.performPaste = async function() {
       AndroidTerminal.sendRaw(char);
       currentCommand += char;
     }
-  } catch(e) {
+  } catch (e) {
     console.error("Paste failed:", e);
   }
 };
 
-window.performCut = function() {
+window.performCut = function () {
   const selection = term.getSelection();
   if (selection) {
     navigator.clipboard.writeText(selection);
@@ -114,43 +124,43 @@ window.performCut = function() {
   }
 };
 
-window.performSelectAll = function() {
+window.performSelectAll = function () {
   term.selectAll();
 };
 
-window.performFind = function() {
+window.performFind = function () {
   // xterm.js doesn't have built-in search UI
   console.log("Find not supported in terminal");
 };
 
-window.performCtrlC = function() {
+window.performCtrlC = function () {
   term.focus();
   // Send Ctrl+C to PTY
   AndroidTerminal.sendRaw('\x03');
   currentCommand = '';
 };
 
-window.performCtrlD = function() {
+window.performCtrlD = function () {
   term.focus();
   // Send EOF (Ctrl+D) to PTY
   AndroidTerminal.sendRaw('\x04');
   currentCommand = '';
 };
 
-window.performEscape = function() {
+window.performEscape = function () {
   term.focus();
   // Send ESC to PTY
   AndroidTerminal.sendRaw('\x1B');
   currentCommand = '';
 };
 
-window.getCurrentCommand = function() {
+window.getCurrentCommand = function () {
   return currentCommand;
 };
 
 window.term = term;
 
-window.fitTerminal = function() {
+window.fitTerminal = function () {
   try {
     const container = document.getElementById('terminal');
     const rect = container.getBoundingClientRect();

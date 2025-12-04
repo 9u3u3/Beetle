@@ -12,6 +12,7 @@ enum class KeyType {
 
     ACTION_TAB,
     ACTION_CTRL,
+    ACTION_ALT,
     ACTION_ESCAPE
 }
 // Represents a single key on the keyboard

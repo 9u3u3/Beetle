@@ -36,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,8 +54,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
 import com.bsbeetle.bananaspaghetti.R
-import com.bsbeetle.bananaspaghetti.utils.sessionHandling.Session
-import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.DemoSession
+import com.bsbeetle.bananaspaghetti.viewmodel.ExpandViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 
 @Composable
@@ -64,11 +65,11 @@ fun KeyboardSettings(
 
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
-    var indentValue by remember { mutableStateOf("${uiState.indentValue}") }
+    var indentValue by rememberSaveable { mutableStateOf("${uiState.indentValue}") }
     val backgroundBoxSize = 250.dp
     val verticalScrollState = rememberScrollState()
     val horizontalScrollState = rememberScrollState()
-    var tapped by remember { mutableStateOf(false) }
+    var tapped by rememberSaveable { mutableStateOf(false) }
     val context: Context = LocalContext.current
 
     Column(
@@ -202,7 +203,7 @@ fun KeyboardSettings(
                 .padding(16.dp)
                 .clickable(onClick = { // Fix this demo thing later (not important for now)
 
-                    Session(context.applicationContext, SessionType.DEMO)
+                    DemoSession(context.applicationContext)
                     navController.navigate("demo")
 
                 })
