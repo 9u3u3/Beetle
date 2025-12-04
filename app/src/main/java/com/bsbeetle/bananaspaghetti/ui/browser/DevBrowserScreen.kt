@@ -2,6 +2,8 @@ package com.bsbeetle.bananaspaghetti.ui.browser
 
 import android.content.res.Configuration
 import android.text.Editable
+import android.text.TextWatcher
+import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
@@ -21,10 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
-import android.text.TextWatcher
-import android.view.inputmethod.EditorInfo
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
+import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 import com.bsbeetle.bananaspaghetti.viewmodel.DevWebViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,12 +32,14 @@ import com.bsbeetle.bananaspaghetti.viewmodel.DevWebViewModel
 fun DevBrowserScreen(
     modifier: Modifier = Modifier,
     webView: CustomWebView,
-    viewModel: DevWebViewModel // Add ViewModel parameter
+    viewModel: DevWebViewModel
 ) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Local state for the text field to prevent typing lag, synced with VM
     var urlInput by rememberSaveable { mutableStateOf("") }
     var showDevTools by rememberSaveable { mutableStateOf(false) }
 
@@ -49,9 +51,9 @@ fun DevBrowserScreen(
         }
     }
 
-    // Sync URL input with state
+    // Sync URL input with state (only when page finishes loading or changes externally)
     LaunchedEffect(uiState.url) {
-        if (urlInput != uiState.url) {
+        if (urlInput != uiState.url && !uiState.isLoading) {
             urlInput = uiState.url
         }
     }
@@ -61,7 +63,7 @@ fun DevBrowserScreen(
             .fillMaxSize()
             .background(if (isLandscape) Color.Transparent else Color.Black)
     ) {
-        // Conditional Top Bar
+        // Conditional Top Bar based on Orientation
         if (isLandscape) {
             LandscapeTopBar(
                 urlInput = urlInput,
@@ -155,6 +157,7 @@ private fun LandscapeTopBar(
             CompactIconButton(onClick = onForward, enabled = canGoForward, icon = Icons.Default.ArrowForward)
             CompactIconButton(onClick = onRefresh, enabled = true, icon = Icons.Default.Refresh)
 
+            // Using the specialized native input for custom keyboard support
             CompactTextFieldAlternative(
                 value = urlInput,
                 onValueChange = onUrlChange,
@@ -194,6 +197,10 @@ private fun PortraitTopBar(
         PortraitIconButton(onClick = onForward, enabled = canGoForward, icon = Icons.Default.ArrowForward)
         PortraitIconButton(onClick = onRefresh, enabled = true, icon = Icons.Default.Refresh)
 
+        // Wrapper for Portrait Mode Text Field
+        // Note: For full custom keyboard support in portrait, you might want to wrap
+        // CompactTextFieldAlternative in a box here too, but OutlinedTextField is used for standard UI.
+        // If you need the custom keyboard in Portrait, replace this OutlinedTextField with CompactTextFieldAlternative.
         OutlinedTextField(
             value = urlInput,
             onValueChange = onUrlChange,
@@ -238,7 +245,7 @@ private fun CompactIconButton(
     }
 
     IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(20.dp)) {
-        Icon(imageVector = icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(30.dp))
+        Icon(imageVector = icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(16.dp)) // Adjusted size to fit compact bar
     }
 }
 
@@ -268,6 +275,9 @@ private fun PortraitIconButton(
     }
 }
 
+/**
+ * Native EditText wrapper to support the custom virtual keyboard input connection.
+ */
 @Composable
 fun CompactTextFieldAlternative(
     value: String,
@@ -277,7 +287,10 @@ fun CompactTextFieldAlternative(
     onEnterPressed: () -> Unit
 ) {
     val editTextRef = remember { mutableStateOf<EditText?>(null) }
-    val activeSession = SessionList.sessions[SessionList.activeSessionIndex!!]
+    // Safe access to session
+    val activeSession = if (SessionList.sessions.isNotEmpty() && SessionList.activeSessionIndex != null) {
+        SessionList.sessions.getOrNull(SessionList.activeSessionIndex!!)
+    } else null
 
     AndroidView(
         factory = { ctx ->
@@ -290,24 +303,33 @@ fun CompactTextFieldAlternative(
                 hint = placeholder
                 setHintTextColor(android.graphics.Color.parseColor("#6A6A6A"))
                 setText(value)
+                setSingleLine(true)
 
                 editTextRef.value = this
 
                 addTextChangedListener(object : TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                         val txt = s?.toString() ?: ""
-                        onValueChange(txt)
+
+                        // Check for newline from custom keyboard
                         if (txt.endsWith("\n")) {
-                            onEnterPressed()
+                            val cleanedUrl = txt.trim()
+                            onValueChange(cleanedUrl) // Update state first
+                            onEnterPressed()          // Trigger navigation
+                        } else {
+                            onValueChange(txt)
                         }
                     }
+
                     override fun afterTextChanged(s: Editable?) {}
                 })
 
                 setOnFocusChangeListener { _, hasFocus ->
-                    if (hasFocus) {
+                    if (hasFocus && activeSession != null) {
                         post {
+                            // Link input connection to the active session for the virtual keyboard
                             activeSession._inputConnection = onCreateInputConnection(EditorInfo())
                         }
                     }
@@ -316,10 +338,18 @@ fun CompactTextFieldAlternative(
         },
         update = { editText ->
             if (editText.text.toString() != value) {
+                // Prevent cursor jumping if text is same
+                val selectionStart = editText.selectionStart
                 editText.setText(value)
-                editText.setSelection(editText.text.length)
+                try {
+                    editText.setSelection(Math.min(selectionStart, value.length))
+                } catch (e: Exception) {
+                    editText.setSelection(value.length)
+                }
             }
-            if (editText.isFocused && activeSession._inputConnection == null) {
+
+            // Re-establish connection if lost
+            if (editText.isFocused && activeSession != null && activeSession._inputConnection == null) {
                 editText.post {
                     activeSession._inputConnection = editText.onCreateInputConnection(EditorInfo())
                 }

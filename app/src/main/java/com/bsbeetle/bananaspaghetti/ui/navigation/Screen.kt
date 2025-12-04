@@ -14,4 +14,5 @@ sealed class Screen(val route: String) {
     object ZoomOut: Screen("zoom_out")
 
     object SessionOverview : Screen("session_overview")
+    object Extensions: Screen("extensions")
 }

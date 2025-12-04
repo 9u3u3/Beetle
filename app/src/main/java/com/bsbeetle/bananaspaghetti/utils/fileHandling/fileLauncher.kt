@@ -15,9 +15,8 @@ import com.bsbeetle.bananaspaghetti.LocalFileViewModel
 import com.bsbeetle.bananaspaghetti.data.FileData
 import com.bsbeetle.bananaspaghetti.data.OpenedFiles
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
-import com.bsbeetle.bananaspaghetti.utils.sessionHandling.Session
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
-import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 
@@ -48,16 +47,16 @@ fun fileLauncher(context: Context, navController: NavController): ActivityResult
                         fileViewModel.selectedUri = uri
 
                         // Adding to the newly created session here
-                        Session(context.applicationContext, SessionType.EDITOR)
-                        editorViewModel.setEditorWebView(SessionList.sessions[SessionList.activeSessionIndex!!].editorView!!)
+                        EditorSession(context.applicationContext)
+                        editorViewModel.setEditorWebView(SessionList.sessions[SessionList.activeSessionIndex!!].view!!)
 
                         navController.navigate(Screen.OpenFile.route)
                     } else {
                         fileViewModel.selectedFolderUri = uri
 
                         // Adding to the newly created session here
-                        Session(context.applicationContext, SessionType.EDITOR)
-                        editorViewModel.setEditorWebView(SessionList.sessions[SessionList.activeSessionIndex!!].editorView!!)
+                        EditorSession(context.applicationContext)
+                        editorViewModel.setEditorWebView(SessionList.sessions[SessionList.activeSessionIndex!!].view!!)
 
                         navController.navigate(Screen.OpenFolder.route)
                     }

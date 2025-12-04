@@ -46,9 +46,8 @@ import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.resourceHandling.ImageLoaderSingleton
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.readFromFile
-import com.bsbeetle.bananaspaghetti.utils.sessionHandling.Session
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.BrowserSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
-import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
@@ -392,8 +391,8 @@ fun RightTopBar(
             TopBarIconButton(
                 icon = R.drawable.web_icon,
                 onClick = {
-                    Session(context, SessionType.BROWSER)
-                    browserViewModel.setDevWebView(SessionList.sessions[SessionList.activeSessionIndex!!].browserView!!)
+                    BrowserSession(context)
+                    browserViewModel.setDevWebView(SessionList.sessions[SessionList.activeSessionIndex!!].view!!)
                     navController.navigate(Screen.Browser.route)
                 }
             )

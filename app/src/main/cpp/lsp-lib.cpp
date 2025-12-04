@@ -16,7 +16,7 @@
 #define ALOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 extern "C"
-JNIEXPORT jint JNICALL Java_com_bsbeetle_bananaspaghetti_tenebrio_LSP_cLsp_getCppLsp(
+JNIEXPORT jint JNICALL Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_cLsp_getCppLsp(
        JNIEnv *env,
        jobject /*thizz nutz*/,
        jstring prefix,

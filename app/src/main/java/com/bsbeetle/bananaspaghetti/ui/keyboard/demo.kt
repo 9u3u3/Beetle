@@ -43,7 +43,7 @@ fun DemoEditorUi () {
 
     DisposableEffect(Unit) {
         onDispose {
-            demoSession.destroySession()
+            demoSession.destroy()
         }
     }
 
@@ -100,7 +100,7 @@ fun DemoEditorUi () {
                         width = Dimension.fillToConstraints // Takes remaining 60% width
                         height = Dimension.fillToConstraints
                     },
-                webView = demoSession._getDemoView()
+                webView = demoSession.view!!
             )
 
             if (uiState.isRightKeyboardVisible) {

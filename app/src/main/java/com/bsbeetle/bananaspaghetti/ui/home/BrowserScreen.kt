@@ -5,16 +5,22 @@ import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -26,6 +32,7 @@ import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
 import com.bsbeetle.bananaspaghetti.data.sidebar.Sidebar
 import com.bsbeetle.bananaspaghetti.data.sidebar.SidebarTab
 import com.bsbeetle.bananaspaghetti.ui.browser.DevBrowserScreen
+import com.bsbeetle.bananaspaghetti.ui.components.ExtraKeysRow
 import com.bsbeetle.bananaspaghetti.ui.components.LeftTermTopBar
 import com.bsbeetle.bananaspaghetti.ui.components.RightTopBar
 import com.bsbeetle.bananaspaghetti.ui.components.TopLeftTermBox
@@ -34,9 +41,9 @@ import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
 import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboardHalf
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
+import com.bsbeetle.bananaspaghetti.viewmodel.DevWebViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
-import com.bsbeetle.bananaspaghetti.viewmodel.DevWebViewModel
 
 @Composable
 fun BrowserScreen(navController: NavController) {
@@ -51,7 +58,9 @@ fun BrowserScreen(navController: NavController) {
 
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
     val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
-    val devWebViewModel: DevWebViewModel = viewModel() // Add DevWebViewModel
+
+    // MERGE NOTE: Added DevWebViewModel from Block 1
+    val devWebViewModel: DevWebViewModel = viewModel()
 
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
@@ -72,26 +81,41 @@ fun BrowserScreen(navController: NavController) {
 
             val (topLeft, topRight, leftBox, rightBox, leftKb, editor, rightKb) = createRefs()
 
-            LeftTermTopBar(
-                modifier = Modifier.constrainAs(topLeft) {
-                    top.linkTo(parent.top)
-                    start.linkTo(parent.start)
-                    end.linkTo(editor.start)
-                    width = Dimension.fillToConstraints
-                    height = Dimension.wrapContent
-                }
-            )
+            // MERGE NOTE: Kept Block 2's logic for Portrait/Landscape TopBars
+            if (isLandscape) {
+                LeftTermTopBar(
+                    modifier = Modifier.constrainAs(topLeft) {
+                        top.linkTo(parent.top)
+                        start.linkTo(parent.start)
+                        end.linkTo(editor.start)
+                        width = Dimension.fillToConstraints
+                        height = Dimension.wrapContent
+                    }
+                )
 
-            RightTopBar(
-                modifier = Modifier.constrainAs(topRight) {
-                    top.linkTo(parent.top)
-                    start.linkTo(editor.end)
-                    end.linkTo(parent.end)
-                    width = Dimension.fillToConstraints
-                    height = Dimension.wrapContent
-                },
-                navController = navController
-            )
+                RightTopBar(
+                    modifier = Modifier.constrainAs(topRight) {
+                        top.linkTo(parent.top)
+                        start.linkTo(editor.end)
+                        end.linkTo(parent.end)
+                        width = Dimension.fillToConstraints
+                        height = Dimension.wrapContent
+                    },
+                    navController = navController
+                )
+            } else {
+                // Portrait Top Bar
+                RightTopBar(
+                    modifier = Modifier.constrainAs(topLeft) {
+                        top.linkTo(parent.top)
+                        start.linkTo(parent.start)
+                        end.linkTo(parent.end)
+                        width = Dimension.fillToConstraints
+                        height = Dimension.wrapContent
+                    },
+                    navController = navController
+                )
+            }
 
             if (isLandscape) {
                 TopLeftTermBox(
@@ -145,10 +169,14 @@ fun BrowserScreen(navController: NavController) {
 
             DevBrowserScreen(
                 modifier = Modifier.constrainAs(editor) {
-                    top.linkTo(parent.top) // Starts right after top bar
+                    // MERGE NOTE: Kept Block 2's smart constraints for Portrait mode
+                    if (isLandscape) {
+                        top.linkTo(parent.top)
+                    } else {
+                        top.linkTo(topLeft.bottom)
+                    }
                     bottom.linkTo(parent.bottom)
 
-                    // adapt constraints depending on keyboard visibility & orientation
                     if (isLandscape && uiState.isLeftKeyboardVisible) {
                         start.linkTo(leftKb.end)
                     } else {
@@ -164,8 +192,9 @@ fun BrowserScreen(navController: NavController) {
                     width = Dimension.fillToConstraints
                     height = Dimension.fillToConstraints
                 },
-                webView = SessionList.sessions[SessionList.activeSessionIndex!!]._getBrowserView(),
-                viewModel = devWebViewModel // Pass the ViewModel here
+                // MERGE NOTE: Used Block 2's session access (`.view!!`) + Block 1's ViewModel
+                webView = SessionList.sessions[SessionList.activeSessionIndex!!].view!!,
+                viewModel = devWebViewModel
             )
 
             if(!isLandscape){
@@ -177,8 +206,26 @@ fun BrowserScreen(navController: NavController) {
                         SidebarTab.SETTINGS
                     )
                 )
+
+            }
+        }
+
+        // MERGE NOTE: Kept Block 2's Extra Keys Row logic
+        if (!isLandscape) {
+            val imeInsets = WindowInsets.ime
+            val density = LocalDensity.current
+            val isKeyboardVisible = imeInsets.getBottom(density) > 0
+
+            if (isKeyboardVisible) {
+                ExtraKeysRow(
+                    keyboardViewModel = keyboardViewModel,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF2E2E2E))
+                        .windowInsetsPadding(imeInsets)
+                        .align(Alignment.BottomCenter)
+                )
             }
         }
     }
-
 }
