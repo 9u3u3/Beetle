@@ -12,4 +12,5 @@ sealed class Screen(val route: String) {
 
     // zoom out preview testing
     object ZoomOut: Screen("zoom_out")
+    object Extensions: Screen("extensions")
 }

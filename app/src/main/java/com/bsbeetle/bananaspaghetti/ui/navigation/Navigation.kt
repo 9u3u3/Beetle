@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.bsbeetle.bananaspaghetti.ui.Extension.ExtensionsScreen
 import com.bsbeetle.bananaspaghetti.ui.home.BrowserScreen
 import com.bsbeetle.bananaspaghetti.ui.home.HomeScreen
 import com.bsbeetle.bananaspaghetti.ui.home.InitialEditorUI
@@ -25,5 +26,6 @@ fun AppNavigation() {
         composable(Screen.Demo.route){DemoEditorUi()} // Demo editor used settings
         composable(Screen.Browser.route){BrowserScreen(navController)} // Developer browser UI
         composable(Screen.ZoomOut.route){ZoomOut(navController)} // Zoom out preview (Session switching)
+        composable(Screen.Extensions.route){ExtensionsScreen()}
     }
 }

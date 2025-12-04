@@ -65,7 +65,12 @@ class KeyboardViewModel : ViewModel() {
             KeyType.ACTION_TOGGLE -> if (gesture == KeyGesture.Tap) toggleKeyboardVisibility()
             KeyType.ACTION_CTRL -> handleCtrl(gesture)
             KeyType.ACTION_ESCAPE -> handleEscape(gesture)
+            KeyType.ACTION_ALT -> handleAlt(gesture)
         }
+    }
+
+    fun sendTerminalSequence(sequence: String) {
+        emitText(sequence)
     }
 
     private fun handleCharacter(key: Key, gesture: KeyGesture) {
@@ -93,9 +98,7 @@ class KeyboardViewModel : ViewModel() {
 
     private fun handleEscape(gesture: KeyGesture) {
         if (gesture == KeyGesture.Tap) {
-            viewModelScope.launch {
-                _editorAction.emit(EditorAction.Escape)
-            }
+            emitAction(EditorAction.Escape)
             _uiState.update { currentState ->
                 currentState.copy(isEscapeOn = !currentState.isEscapeOn)
             }
@@ -128,6 +131,14 @@ class KeyboardViewModel : ViewModel() {
         if (gesture == KeyGesture.Tap) {
             _uiState.update { currentState ->
                 currentState.copy(isCtrlOn = !currentState.isCtrlOn)
+            }
+        }
+    }
+
+    private fun handleAlt(gesture: KeyGesture) {
+        if (gesture == KeyGesture.Tap) {
+            _uiState.update { currentState ->
+                currentState.copy(isAltOn = !currentState.isAltOn)
             }
         }
     }
@@ -242,35 +253,74 @@ class KeyboardViewModel : ViewModel() {
 
     private fun emitText(text: String) {
         viewModelScope.launch {
-            // _editorAction.emit(EditorAction.InsertText(text))
-            SessionList.sessions[SessionList.activeSessionIndex!!]._inputConnection?.commitText(text, 1)
+            val session = SessionList.sessions[SessionList.activeSessionIndex!!]
+            if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
+                session.insertTextToEditor(text)
+            } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) {
+                session.insertText(text)
+            } else {
+                session._inputConnection?.commitText(text, 1)
+            }
         }
     }
 
     private fun onBackspace() {
         viewModelScope.launch {
-            //_editorAction.emit(EditorAction.Backspace)
-            SessionList.sessions[SessionList.activeSessionIndex!!]._inputConnection?.deleteSurroundingText(1, 0)
+            val session = SessionList.sessions[SessionList.activeSessionIndex!!]
+            if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
+                session.performEditorAction("performBackspace")
+            } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) {
+                // Send backspace char (0x7F)
+                session.insertText("\u007F")
+            } else {
+                session._inputConnection?.deleteSurroundingText(1, 0)
+            }
         }
     }
 
     private fun onEnter() {
         viewModelScope.launch {
-            // _editorAction.emit(EditorAction.Enter)
-            // First try key event (lets web editors intercept Enter)
-            val sent = SessionList.sessions[SessionList.activeSessionIndex!!]._inputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER)) == true &&
-                    SessionList.sessions[SessionList.activeSessionIndex!!]._inputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER)) == true
+            val session = SessionList.sessions[SessionList.activeSessionIndex!!]
+            if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
+                session.performEditorAction("performEnter")
+            } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) {
+                session.insertText("\n")
+            } else {
+                // First try key event (lets web editors intercept Enter)
+                val sent = session._inputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER)) == true &&
+                        session._inputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER)) == true
 
-            // If that didn’t trigger (common in WebViews), manually insert newline
-            if (!sent) {
-                SessionList.sessions[SessionList.activeSessionIndex!!]._inputConnection?.commitText("\n", 1)
+                // If that didn’t trigger (common in WebViews), manually insert newline
+                if (!sent) {
+                    session._inputConnection?.commitText("\n", 1)
+                }
             }
         }
     }
 
     private fun emitAction(action: EditorAction) {
         viewModelScope.launch {
-            _editorAction.emit(action)
+            val session = SessionList.sessions[SessionList.activeSessionIndex!!]
+            if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
+                when (action) {
+                    is EditorAction.Copy -> session.performEditorAction("performCopy")
+                    is EditorAction.Paste -> session.performEditorAction("performPaste")
+                    is EditorAction.Cut -> session.performEditorAction("performCut")
+                    is EditorAction.Undo -> session.performEditorAction("performUndo")
+                    is EditorAction.Redo -> session.performEditorAction("performRedo")
+                    is EditorAction.SelectAll -> session.performEditorAction("performSelectAll")
+                    is EditorAction.Find -> session.performEditorAction("performFind")
+                    // Add other actions as needed
+                    else -> _editorAction.emit(action)
+                }
+            } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) {
+                when (action) {
+                    is EditorAction.Escape -> session.insertText("\u001B")
+                    else -> _editorAction.emit(action)
+                }
+            } else {
+                _editorAction.emit(action)
+            }
         }
     }
 }

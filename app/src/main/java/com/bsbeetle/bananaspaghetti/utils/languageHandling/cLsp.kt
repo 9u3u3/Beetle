@@ -1,5 +1,6 @@
-package com.bsbeetle.bananaspaghetti.tenebrio.LSP
+package com.bsbeetle.bananaspaghetti.utils.languageHandling
 
+import android.content.Context
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import io.ktor.server.application.install
@@ -12,14 +13,25 @@ import io.ktor.server.websocket.timeout
 import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
-import kotlinx.coroutines.*
-import kotlinx.serialization.json.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.nio.file.Files
 import kotlin.time.Duration.Companion.seconds
 
-class cLsp(private val context: android.content.Context) {
+class cLsp(private val context: Context) {
 
     companion object {
         init {
@@ -65,8 +77,8 @@ class cLsp(private val context: android.content.Context) {
 
         val libtallocLink = File(PREFIX, "libtalloc.so.2")
         try {
-            java.nio.file.Files.deleteIfExists(libtallocLink.toPath())
-            java.nio.file.Files.createSymbolicLink(
+            Files.deleteIfExists(libtallocLink.toPath())
+            Files.createSymbolicLink(
                 libtallocLink.toPath(),
                 File(nativeDir, "libtalloc.so").toPath()
             )
@@ -98,7 +110,7 @@ class cLsp(private val context: android.content.Context) {
         input = FileInputStream(pfd!!.fileDescriptor)
 
         embeddedServer(Netty, port = 8081, host = "0.0.0.0") {
-            install(WebSockets) {
+            install(WebSockets.Plugin) {
                 pingPeriod = 15.seconds
                 timeout = 30.seconds
                 maxFrameSize = Long.MAX_VALUE
@@ -127,14 +139,16 @@ class cLsp(private val context: android.content.Context) {
                                     if (headersEnd == -1) break
 
                                     val headers = sb.substring(0, headersEnd)
-                                    val match = Regex("Content-Length:\\s*(\\d+)", RegexOption.IGNORE_CASE)
-                                        .find(headers) ?: break
+                                    val match =
+                                        Regex("Content-Length:\\s*(\\d+)", RegexOption.IGNORE_CASE)
+                                            .find(headers) ?: break
 
                                     val contentLen = match.groupValues[1].toInt()
                                     val messageStart = headersEnd + 4
                                     if (sb.length < messageStart + contentLen) break
 
-                                    val jsonBody = sb.substring(messageStart, messageStart + contentLen)
+                                    val jsonBody =
+                                        sb.substring(messageStart, messageStart + contentLen)
                                     sb.delete(0, messageStart + contentLen)
 
                                     val messageType = when {
@@ -177,7 +191,8 @@ class cLsp(private val context: android.content.Context) {
                                 val jsonElement = json.parseToJsonElement(text)
                                 val modifiedJson = injectFakeUri(jsonElement)
 
-                                val finalBytes = json.encodeToString(modifiedJson).toByteArray(Charsets.UTF_8)
+                                val finalBytes =
+                                    json.encodeToString(modifiedJson).toByteArray(Charsets.UTF_8)
                                 val header = "Content-Length: ${finalBytes.size}\r\n\r\n"
 
                                 synchronized(output!!) {
@@ -208,7 +223,9 @@ class cLsp(private val context: android.content.Context) {
                         val td = params["textDocument"]?.jsonObject
                         if (td != null && !td.containsKey("uri")) {
                             val modifiedTextDoc = td + ("uri" to JsonPrimitive("file:///main.cpp"))
-                            val modifiedParams = params + ("textDocument" to JsonObject(modifiedTextDoc))
+                            val modifiedParams = params + ("textDocument" to JsonObject(
+                                modifiedTextDoc
+                            ))
                             return JsonObject(jsonElement + ("params" to JsonObject(modifiedParams)))
                         }
                     }

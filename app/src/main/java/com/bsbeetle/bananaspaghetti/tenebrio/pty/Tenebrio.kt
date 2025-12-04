@@ -16,6 +16,8 @@ import java.io.FileOutputStream
 import java.nio.file.Files
 import kotlin.concurrent.thread
 
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
+
 class Tenebrio(private val context: Context, private val session: Session) {
 
     companion object {
@@ -125,7 +127,8 @@ class Tenebrio(private val context: Context, private val session: Session) {
             }
 
             // Global make it session wise
-            if(session.rows == null || session.cols == null) {
+            val terminalSession = session as TerminalSession
+            if(terminalSession.rows == null || terminalSession.cols == null) {
                 Log.d("Tenebrio", "Null sizes")
             }
 
@@ -140,7 +143,7 @@ class Tenebrio(private val context: Context, private val session: Session) {
                 "${alpineTmp.absolutePath}:/dev/shm",
                 alpine.absolutePath.toString(),
                 "${PREFIX.absolutePath}/init-alpine.sh",
-                session.rows!! , session.cols!!
+                terminalSession.rows!! , terminalSession.cols!!
             )
 
             if (masterFd < 0) {
@@ -155,8 +158,8 @@ class Tenebrio(private val context: Context, private val session: Session) {
             output = FileOutputStream(pfd!!.fileDescriptor)
             input = FileInputStream(pfd!!.fileDescriptor)
 
-            session.outputFd = output
-            val terminalWebView = SessionList.sessions[session.id!!].terminalView
+            terminalSession.outputFd = output
+            val terminalWebView = terminalSession.view
 
             thread {
                 try {

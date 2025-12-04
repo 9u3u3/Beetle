@@ -59,6 +59,11 @@ fun DevBrowserScreen(
                 isLoading = true
                 url?.let { urlInput = it }
             }
+
+            override fun onRenderProcessGone(view: android.webkit.WebView?, detail: android.webkit.RenderProcessGoneDetail?): Boolean {
+                android.util.Log.d("DevBrowserUI", "WebView Renderer Crashed")
+                return true
+            }
         }
 
         val chrome = object : android.webkit.WebChromeClient() {
