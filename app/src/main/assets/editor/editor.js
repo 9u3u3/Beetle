@@ -88,21 +88,70 @@ style.textContent = `
   text-decoration-skip-ink: none;
 }
 
-/* CURSOR - MUST BE VISIBLE */
-.cm-editor .cm-cursor, .cm-editor .cm-cursor-primary {
+/* CURSOR FIX - Single visible cursor only */
+.cm-editor .cm-cursor {
+    border-left: 2px solid #528bff !important;
+    visibility: visible !important;
+    display: block !important;
+}
+.cm-editor .cm-cursor-primary {
     border-left: 2px solid #528bff !important;
     visibility: visible !important;
 }
+/* Hide secondary/native cursors */
+.cm-editor .cm-cursor-secondary,
+.cm-editor .cm-secondaryCursor {
+    display: none !important;
+}
+/* Hide native caret completely */
 .cm-editor .cm-line {
-    caret-color: #528bff !important;
+    caret-color: transparent !important;
 }
 .cm-content {
+    caret-color: transparent !important;
     -webkit-user-select: none !important;
     user-select: none !important;
 }
 /* Hide native selection handles (Android specific) */
 * {
     -webkit-tap-highlight-color: transparent;
+}
+/* Bottom Status Bar */
+.editor-status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 24px;
+    background: #1e1e1e;
+    border-top: 1px solid #333;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-family: monospace;
+    font-size: 12px;
+    color: #888;
+    z-index: 1000;
+}
+.editor-status-bar .status-left,
+.editor-status-bar .status-right {
+    display: flex;
+    gap: 16px;
+}
+.editor-status-bar .status-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.editor-status-bar .status-error {
+    color: #ff5555;
+}
+.editor-status-bar .status-warning {
+    color: #ffb86c;
+}
+.editor-status-bar .status-ok {
+    color: #50fa7b;
 }
 `;
 document.head.appendChild(style);
@@ -129,6 +178,51 @@ debugHudEl.style.cssText = `
   white-space: pre;
 `;
 document.body.appendChild(debugHudEl);
+
+// --- Bottom Status Bar ---
+const statusBarEl = document.createElement('div');
+statusBarEl.className = 'editor-status-bar';
+statusBarEl.innerHTML = `
+  <div class="status-left">
+    <span class="status-item" id="status-position">Ln 1, Col 1</span>
+    <span class="status-item" id="status-language">C++</span>
+  </div>
+  <div class="status-right">
+    <span class="status-item status-ok" id="status-diagnostics">✓ No issues</span>
+    <span class="status-item" id="status-lsp">LSP: Connecting...</span>
+  </div>
+`;
+document.body.appendChild(statusBarEl);
+
+window.updateStatusBar = function (line, col, errors, warnings) {
+  const posEl = document.getElementById('status-position');
+  const diagEl = document.getElementById('status-diagnostics');
+
+  if (posEl) {
+    posEl.textContent = `Ln ${line}, Col ${col}`;
+  }
+
+  if (diagEl) {
+    if (errors > 0) {
+      diagEl.className = 'status-item status-error';
+      diagEl.textContent = `✗ ${errors} error${errors > 1 ? 's' : ''}${warnings > 0 ? `, ${warnings} warning${warnings > 1 ? 's' : ''}` : ''}`;
+    } else if (warnings > 0) {
+      diagEl.className = 'status-item status-warning';
+      diagEl.textContent = `⚠ ${warnings} warning${warnings > 1 ? 's' : ''}`;
+    } else {
+      diagEl.className = 'status-item status-ok';
+      diagEl.textContent = '✓ No issues';
+    }
+  }
+};
+
+window.updateLspStatus = function (status) {
+  const lspEl = document.getElementById('status-lsp');
+  if (lspEl) {
+    lspEl.textContent = `LSP: ${status}`;
+  }
+};
+// --------------------------
 
 window.updateDebugStats = function (stats) {
   const lowMemWarning = stats.lowMemory ? "⚠️ LOW MEMORY!" : "";
@@ -272,14 +366,14 @@ function setupEditor() {
           effects: setDiagnosticsEffect.of(diagnostics)
         })
 
-        // Force linter to update - but only if not actively typing
-        // forceLinting(view) // DISABLED - may cause freeze
+        // Force linter to update (safe because we debounce 1 second)
+        forceLinting(view);
 
         pendingDiagnostics = null;
       } catch (e) {
         console.error('Error in handleDiagnostics:', e)
       }
-    }, 1000); // 1 second debounce - even longer to prevent freeze
+    }, 1000); // 1 second debounce
   }
 
   function updateCompletionListUI() {
@@ -544,16 +638,15 @@ function setupEditor() {
           }
         }
 
-        // Throttle status updates (max once every 500ms)
-        const now = Date.now();
-        if (!window.lastStatusTime || now - window.lastStatusTime > 500) {
-          // Calculate status data only when needed
-          const state = view.state;
-          const pos = state.selection.main.head;
-          const line = state.doc.lineAt(pos);
-          const col = pos - line.from;
+        // Update position immediately on every change
+        const state = view.state;
+        const pos = state.selection.main.head;
+        const line = state.doc.lineAt(pos);
+        const col = pos - line.from;
 
-          // Count diagnostics
+        // Count diagnostics (throttled to avoid performance hit)
+        const now = Date.now();
+        if (!window.lastDiagTime || now - window.lastDiagTime > 500) {
           let errors = 0;
           let warnings = 0;
           const diags = state.field(diagnosticsField);
@@ -561,14 +654,16 @@ function setupEditor() {
             if (d.severity === 'error') errors++;
             if (d.severity === 'warning') warnings++;
           });
-
-          const statusMsg = `[LSP-STATUS] line:${line.number} col:${col + 1} err:${errors} warn:${warnings}`;
-          if (window.lastLspStatus !== statusMsg) {
-            // console.log(statusMsg); // Silenced
-            window.lastLspStatus = statusMsg;
-            window.lastStatusTime = now;
-          }
+          window.cachedErrors = errors;
+          window.cachedWarnings = warnings;
+          window.lastDiagTime = now;
         }
+
+        // Output for Kotlin bridge (EditorSession parses this)
+        console.log(`[LSP-STATUS] line:${line.number} col:${col + 1} err:${window.cachedErrors || 0} warn:${window.cachedWarnings || 0}`);
+
+        // Also update the JS status bar (redundant but visible in WebView)
+        window.updateStatusBar(line.number, col + 1, window.cachedErrors || 0, window.cachedWarnings || 0);
 
         // Full Text Sync - Re-enabled with longer debounce
         if (update.docChanged && ws.readyState === WebSocket.OPEN && view && isInitialized) {
@@ -671,19 +766,33 @@ function setupEditor() {
 
   window.insertText = function (text) {
     view.dispatch(view.state.replaceSelection(text));
-    // console.log("[LSP-JS] insertText called with: '" + text + "'"); // Silenced
-    view.focus(); // Re-enabled focus
+    view.focus();
 
-    // Manually trigger completion
-    if (window.completionTimeout) clearTimeout(window.completionTimeout);
-    window.completionTimeout = setTimeout(() => {
-      startCompletion(view);
-    }, 600); // Increased debounce to 600ms
+    // Close completion on space, punctuation, etc.
+    if (text === ' ' || text === '\t' || text === ';' || text === ',' || text === ')' || text === '}') {
+      if (window.completionActive) {
+        completionListEl.style.display = 'none';
+        window.completionActive = false;
+      }
+      return; // Don't trigger completion
+    }
+
+    // Only trigger completion on word characters
+    if (/[a-zA-Z_:]/.test(text)) {
+      if (window.completionTimeout) clearTimeout(window.completionTimeout);
+      window.completionTimeout = setTimeout(() => {
+        startCompletion(view);
+      }, 600);
+    }
   };
 
   window.performBackspace = function () {
+    // Close completion on backspace
+    if (window.completionActive) {
+      completionListEl.style.display = 'none';
+      window.completionActive = false;
+    }
     deleteCharBackward(view);
-    // view.focus();
   };
 
   window.performEnter = function () {
@@ -693,11 +802,9 @@ function setupEditor() {
       window.completionActive = false;
     }
 
-    // Simplified Enter: Just insert newline, no auto-indent for now
-    view.dispatch(view.state.replaceSelection("\n"));
-    console.log("[LSP-JS] Performed simple Enter (\\n)");
-    // insertNewlineAndIndent(view);
-    // view.focus();
+    // Use auto-indent for new lines
+    insertNewlineAndIndent(view);
+    console.log("[LSP-JS] Performed insertNewlineAndIndent");
   };
 
   window.performCopy = function () {
@@ -837,6 +944,7 @@ function setupEditor() {
     }, 15000).then((result) => {
       console.log('✅ Server initialized:', result.serverInfo?.name);
       isInitialized = true;
+      window.updateLspStatus('Connected');  // Update status bar
 
       sendNotification(ws, 'initialized', {});
 
@@ -858,6 +966,7 @@ function setupEditor() {
     }).catch(err => {
       console.error('Initialize error:', err);
       isInitialized = false;
+      window.updateLspStatus('Failed');  // Update status bar
       throw err;
     });
   };
@@ -865,11 +974,13 @@ function setupEditor() {
   ws.onerror = (error) => {
     console.error('❌ [LSP-JS] WebSocket error:', error);
     isInitialized = false;
+    window.updateLspStatus('Error');  // Update status bar
   }
 
   ws.onclose = (event) => {
     console.log(`[LSP-JS] WebSocket closed: ${event.code} - ${event.reason}`);
     isInitialized = false;
+    window.updateLspStatus('Disconnected');  // Update status bar
   }
 
   ws.onmessage = (event) => {
