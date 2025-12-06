@@ -116,43 +116,7 @@ style.textContent = `
 * {
     -webkit-tap-highlight-color: transparent;
 }
-/* Bottom Status Bar */
-.editor-status-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 24px;
-    background: #1e1e1e;
-    border-top: 1px solid #333;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 12px;
-    font-family: monospace;
-    font-size: 12px;
-    color: #888;
-    z-index: 1000;
-}
-.editor-status-bar .status-left,
-.editor-status-bar .status-right {
-    display: flex;
-    gap: 16px;
-}
-.editor-status-bar .status-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-.editor-status-bar .status-error {
-    color: #ff5555;
-}
-.editor-status-bar .status-warning {
-    color: #ffb86c;
-}
-.editor-status-bar .status-ok {
-    color: #50fa7b;
-}
+/* JS Status Bar CSS REMOVED - Using Kotlin BottomBar instead */
 `;
 document.head.appendChild(style);
 
@@ -160,88 +124,17 @@ const completionListEl = document.createElement('div');
 completionListEl.className = 'lsp-completion-list';
 document.body.appendChild(completionListEl);
 
-// --- Debug HUD ---
-const debugHudEl = document.createElement('div');
-debugHudEl.id = 'debug-hud';
-debugHudEl.style.cssText = `
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  background: rgba(0, 0, 0, 0.5);
-  color: #0f0;
-  font-family: monospace;
-  font-size: 10px;
-  padding: 5px;
-  border-radius: 4px;
-  pointer-events: none;
-  z-index: 9999;
-  white-space: pre;
-`;
-document.body.appendChild(debugHudEl);
+// --- Debug HUD (DISABLED) ---
+// (commented out for performance)
+// const debugHudEl = ...
 
-// --- Bottom Status Bar ---
-const statusBarEl = document.createElement('div');
-statusBarEl.className = 'editor-status-bar';
-statusBarEl.innerHTML = `
-  <div class="status-left">
-    <span class="status-item" id="status-position">Ln 1, Col 1</span>
-    <span class="status-item" id="status-language">C++</span>
-  </div>
-  <div class="status-right">
-    <span class="status-item status-ok" id="status-diagnostics">✓ No issues</span>
-    <span class="status-item" id="status-lsp">LSP: Connecting...</span>
-  </div>
-`;
-document.body.appendChild(statusBarEl);
+// --- JS Status Bar REMOVED - Using Kotlin BottomBar instead ---
+// statusBarEl, updateStatusBar, updateLspStatus all removed.
+// Kotlin BottomBar.kt is used for UI, EditorSession parses console.log([LSP-STATUS])
 
-window.updateStatusBar = function (line, col, errors, warnings) {
-  const posEl = document.getElementById('status-position');
-  const diagEl = document.getElementById('status-diagnostics');
-
-  if (posEl) {
-    posEl.textContent = `Ln ${line}, Col ${col}`;
-  }
-
-  if (diagEl) {
-    if (errors > 0) {
-      diagEl.className = 'status-item status-error';
-      diagEl.textContent = `✗ ${errors} error${errors > 1 ? 's' : ''}${warnings > 0 ? `, ${warnings} warning${warnings > 1 ? 's' : ''}` : ''}`;
-    } else if (warnings > 0) {
-      diagEl.className = 'status-item status-warning';
-      diagEl.textContent = `⚠ ${warnings} warning${warnings > 1 ? 's' : ''}`;
-    } else {
-      diagEl.className = 'status-item status-ok';
-      diagEl.textContent = '✓ No issues';
-    }
-  }
-};
-
-window.updateLspStatus = function (status) {
-  const lspEl = document.getElementById('status-lsp');
-  if (lspEl) {
-    lspEl.textContent = `LSP: ${status}`;
-  }
-};
-// --------------------------
-
+// Debug stats function (DISABLED)
 window.updateDebugStats = function (stats) {
-  const lowMemWarning = stats.lowMemory ? "⚠️ LOW MEMORY!" : "";
-  const latency = window.lastLspLatency ? `${window.lastLspLatency}ms` : "N/A";
-
-  debugHudEl.textContent = `
-RAM: ${stats.availMem}MB Free (Thres: ${stats.threshold}MB)
-Heap: ${stats.javaHeap}MB
-LSP Latency: ${latency}
-${lowMemWarning}
-  `.trim();
-
-  if (stats.lowMemory) {
-    debugHudEl.style.color = 'red';
-    debugHudEl.style.background = 'rgba(255, 0, 0, 0.2)';
-  } else {
-    debugHudEl.style.color = '#0f0';
-    debugHudEl.style.background = 'rgba(0, 0, 0, 0.5)';
-  }
+  // No-op: debugHudEl is disabled
 };
 // -----------------
 
@@ -368,6 +261,15 @@ function setupEditor() {
 
         // Force linter to update (safe because we debounce 1 second)
         forceLinting(view);
+
+        // Send diagnostics list to Kotlin bridge
+        const diagList = diagnostics.map(d => ({
+          msg: d.message,
+          line: view.state.doc.lineAt(d.from).number,
+          col: d.from - view.state.doc.lineAt(d.from).from + 1,
+          sev: d.severity
+        }));
+        console.log(`[LSP-DIAGS] ${JSON.stringify(diagList)}`);
 
         pendingDiagnostics = null;
       } catch (e) {
@@ -662,9 +564,6 @@ function setupEditor() {
         // Output for Kotlin bridge (EditorSession parses this)
         console.log(`[LSP-STATUS] line:${line.number} col:${col + 1} err:${window.cachedErrors || 0} warn:${window.cachedWarnings || 0}`);
 
-        // Also update the JS status bar (redundant but visible in WebView)
-        window.updateStatusBar(line.number, col + 1, window.cachedErrors || 0, window.cachedWarnings || 0);
-
         // Full Text Sync - Re-enabled with longer debounce
         if (update.docChanged && ws.readyState === WebSocket.OPEN && view && isInitialized) {
           if (window.didChangeTimeout) clearTimeout(window.didChangeTimeout);
@@ -786,13 +685,23 @@ function setupEditor() {
     }
   };
 
+  // Debounced backspace to prevent freeze on hold
+  let backspaceTimeout = null;
   window.performBackspace = function () {
     // Close completion on backspace
     if (window.completionActive) {
       completionListEl.style.display = 'none';
       window.completionActive = false;
     }
+
+    // Debounce to prevent freeze when holding backspace
+    if (backspaceTimeout) return; // Skip if already scheduled
+
     deleteCharBackward(view);
+
+    backspaceTimeout = setTimeout(() => {
+      backspaceTimeout = null;
+    }, 16); // ~60fps limit
   };
 
   window.performEnter = function () {
@@ -944,7 +853,7 @@ function setupEditor() {
     }, 15000).then((result) => {
       console.log('✅ Server initialized:', result.serverInfo?.name);
       isInitialized = true;
-      window.updateLspStatus('Connected');  // Update status bar
+      // LSP Connected (updateLspStatus removed)
 
       sendNotification(ws, 'initialized', {});
 
@@ -966,7 +875,7 @@ function setupEditor() {
     }).catch(err => {
       console.error('Initialize error:', err);
       isInitialized = false;
-      window.updateLspStatus('Failed');  // Update status bar
+      // LSP Failed (updateLspStatus removed)
       throw err;
     });
   };
@@ -974,13 +883,13 @@ function setupEditor() {
   ws.onerror = (error) => {
     console.error('❌ [LSP-JS] WebSocket error:', error);
     isInitialized = false;
-    window.updateLspStatus('Error');  // Update status bar
+    // LSP Error (updateLspStatus removed)
   }
 
   ws.onclose = (event) => {
     console.log(`[LSP-JS] WebSocket closed: ${event.code} - ${event.reason}`);
     isInitialized = false;
-    window.updateLspStatus('Disconnected');  // Update status bar
+    // LSP Disconnected (updateLspStatus removed)
   }
 
   ws.onmessage = (event) => {

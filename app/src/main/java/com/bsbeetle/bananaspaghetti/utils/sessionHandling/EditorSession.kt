@@ -225,7 +225,34 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                                 Log.e("WEBVERR", "Failed to parse LSP status: $msg", e)
                             }
                         }
-                        return false // Return false to allow the log to appear in Logcat
+                        return false
+                    }
+                    
+                    if (msg.startsWith("[LSP-DIAGS]")) {
+                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
+                            try {
+                                val jsonStr = msg.removePrefix("[LSP-DIAGS] ")
+                                val jsonArray = org.json.JSONArray(jsonStr)
+                                val diagnostics = mutableListOf<com.bsbeetle.bananaspaghetti.viewmodel.DiagnosticItem>()
+                                
+                                for (i in 0 until jsonArray.length()) {
+                                    val obj = jsonArray.getJSONObject(i)
+                                    diagnostics.add(
+                                        com.bsbeetle.bananaspaghetti.viewmodel.DiagnosticItem(
+                                            message = obj.optString("msg", "Unknown"),
+                                            line = obj.optInt("line", 1),
+                                            column = obj.optInt("col", 1),
+                                            severity = obj.optString("sev", "info")
+                                        )
+                                    )
+                                }
+                                
+                                viewModel.updateDiagnosticsList(diagnostics)
+                            } catch (e: Exception) {
+                                Log.e("WEBVERR", "Failed to parse LSP diagnostics: $msg", e)
+                            }
+                        }
+                        return false
                     }
                 }
                 return super.onConsoleMessage(consoleMessage)

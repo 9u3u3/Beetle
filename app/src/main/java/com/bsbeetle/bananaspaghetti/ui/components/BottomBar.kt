@@ -137,13 +137,26 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspView
                     .verticalScroll(rememberScrollState())
                     .background(Color(0xFF050505))
             ) {
-
-                Text(
-                    text = "Errors: ${lspStatus.errorCount}\nWarnings: ${lspStatus.warningCount}\nShow Fixes",
-                    color = Color.White,
-                    modifier = Modifier.padding(8.dp),
-                    fontSize = 12.sp
-                )
+                Column(modifier = Modifier.padding(8.dp)) {
+                    if (lspStatus.diagnostics.isEmpty()) {
+                        Text(
+                            text = "No issues",
+                            color = Color(0xFF50fa7b),
+                            fontSize = 12.sp
+                        )
+                    } else {
+                        lspStatus.diagnostics.forEach { diag ->
+                            val iconColor = if (diag.severity == "error") Color(0xFFff5555) else Color(0xFFffb86c)
+                            val icon = if (diag.severity == "error") "✗" else "⚠"
+                            Text(
+                                text = "$icon ${diag.message} [Ln ${diag.line}, Col ${diag.column}]",
+                                color = iconColor,
+                                fontSize = 11.sp,
+                                modifier = Modifier.padding(vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
