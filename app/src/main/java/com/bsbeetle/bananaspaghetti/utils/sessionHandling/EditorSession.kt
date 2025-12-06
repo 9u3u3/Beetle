@@ -11,6 +11,7 @@ import android.webkit.WebViewClient
 import com.bsbeetle.bananaspaghetti.utils.AppConfig
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.WebViewPool
+import kotlinx.coroutines.launch
 
 class EditorSession(context: Context, name: String = "Editor") : Session(context.applicationContext, SessionType.EDITOR, name) {
 
@@ -23,7 +24,9 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
     @SuppressLint("SetJavaScriptEnabled")
     override fun createView(): CustomWebView {
         if (view != null) return view!!
-        view = WebViewPool.get(context.applicationContext).apply {
+        // Disable WebViewPool to prevent recycling crashed views
+        // view = WebViewPool.get(context.applicationContext).apply {
+        view = CustomWebView(context.applicationContext, null).apply {
             session = this@EditorSession
             WebView.setWebContentsDebuggingEnabled(true)
             settings.apply {
@@ -35,6 +38,11 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                 useWideViewPort = true
                 loadWithOverviewMode = true
                 setSupportZoom(false)
+                // Memory optimizations
+                setSafeBrowsingEnabled(false)
+                saveFormData = false
+                databaseEnabled = false
+                // cacheMode = WebSettings.LOAD_NO_CACHE // Already set
             }
             loadUrl(AppConfig.EDITOR_URL)
             post {
@@ -88,11 +96,17 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                     
                     // Apply pending file path if any
                     currentFilePath?.let { setFilePath(it) }
+
+                    // Start Memory Monitor
+                    startMemoryMonitor()
                 }
 
                 override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
-                    Log.d("EditorSession", "WebView Crashed")
-                    destroy()
+                    Log.e("WEBVERR", "WebView Render Process Gone (Crash): $detail")
+                    // Do NOT recycle this view. Destroy it immediately.
+                    view?.destroy()
+                    this@EditorSession.view = null
+                    // Do not call super.destroy() which might recycle
                     return true
                 }
             }
@@ -100,8 +114,46 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
         return view!!
     }
 
+    private fun startMemoryMonitor() {
+        val monitor = object : Runnable {
+            override fun run() {
+                try {
+                    val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+                    val memInfo = android.app.ActivityManager.MemoryInfo()
+                    am.getMemoryInfo(memInfo)
+                    
+                    val runtime = Runtime.getRuntime()
+                    val usedJavaHeap = (runtime.totalMemory() - runtime.freeMemory()) / 1024 / 1024
+                    val availMem = memInfo.availMem / 1024 / 1024
+                    val threshold = memInfo.threshold / 1024 / 1024
+                    
+                    Log.i("WEBVERR", "RAM: SystemAvail=${availMem}MB, Threshold=${threshold}MB, LowMem=${memInfo.lowMemory}, JavaHeap=${usedJavaHeap}MB")
+                    
+                    // Send stats to WebView
+                    val jsonStats = """
+                        {
+                            "availMem": $availMem,
+                            "threshold": $threshold,
+                            "lowMemory": ${memInfo.lowMemory},
+                            "javaHeap": $usedJavaHeap
+                        }
+                    """.trimIndent()
+                    
+                    view?.evaluateJavascript("if(window.updateDebugStats) window.updateDebugStats($jsonStats);", null)
+                    
+                    view?.postDelayed(this, 2000) // Update every 2 seconds
+                } catch (e: Exception) {
+                    Log.e("WEBVERR", "Memory monitor failed", e)
+                }
+            }
+        }
+        view?.post(monitor)
+    }
+
     override fun destroy() {
-        view?.let { WebViewPool.recycle(it) }
+        // view?.let { WebViewPool.recycle(it) }
+        view?.destroy()
+        view = null
         super.destroy()
     }
 
@@ -136,29 +188,42 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
         // This avoids the need to reload the WebView which wipes content
         view?.webChromeClient = object : android.webkit.WebChromeClient() {
             override fun onConsoleMessage(consoleMessage: android.webkit.ConsoleMessage?): Boolean {
-                consoleMessage?.message()?.let { msg ->
+                consoleMessage?.let { cm ->
+                    val msg = cm.message()
+                    val level = cm.messageLevel()
+                    
+                    // Log all console messages with WEBVERR if they are errors or warnings, or if requested
+                    if (level == android.webkit.ConsoleMessage.MessageLevel.ERROR) {
+                        Log.e("WEBVERR", "Console Error: $msg at ${cm.sourceId()}:${cm.lineNumber()}")
+                    } else if (level == android.webkit.ConsoleMessage.MessageLevel.WARNING) {
+                        Log.w("WEBVERR", "Console Warning: $msg at ${cm.sourceId()}:${cm.lineNumber()}")
+                    }
+
                     if (msg.startsWith("[LSP-STATUS]")) {
-                        try {
-                            // Format: [LSP-STATUS] line:1 col:1 err:0 warn:0
-                            val parts = msg.removePrefix("[LSP-STATUS] ").split(" ")
-                            var line = 1
-                            var col = 1
-                            var err = 0
-                            var warn = 0
-                            
-                            parts.forEach { part ->
-                                when {
-                                    part.startsWith("line:") -> line = part.substringAfter("line:").toIntOrNull() ?: 1
-                                    part.startsWith("col:") -> col = part.substringAfter("col:").toIntOrNull() ?: 1
-                                    part.startsWith("err:") -> err = part.substringAfter("err:").toIntOrNull() ?: 0
-                                    part.startsWith("warn:") -> warn = part.substringAfter("warn:").toIntOrNull() ?: 0
+                        // Offload parsing to background thread to avoid blocking UI
+                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
+                            try {
+                                // Format: [LSP-STATUS] line:1 col:1 err:0 warn:0
+                                val parts = msg.removePrefix("[LSP-STATUS] ").split(" ")
+                                var line = 1
+                                var col = 1
+                                var err = 0
+                                var warn = 0
+                                
+                                parts.forEach { part ->
+                                    when {
+                                        part.startsWith("line:") -> line = part.substringAfter("line:").toIntOrNull() ?: 1
+                                        part.startsWith("col:") -> col = part.substringAfter("col:").toIntOrNull() ?: 1
+                                        part.startsWith("err:") -> err = part.substringAfter("err:").toIntOrNull() ?: 0
+                                        part.startsWith("warn:") -> warn = part.substringAfter("warn:").toIntOrNull() ?: 0
+                                    }
                                 }
+                                
+                                viewModel.updateCursorPosition(line, col)
+                                viewModel.updateDiagnostics(err, warn)
+                            } catch (e: Exception) {
+                                Log.e("WEBVERR", "Failed to parse LSP status: $msg", e)
                             }
-                            
-                            viewModel.updateCursorPosition(line, col)
-                            viewModel.updateDiagnostics(err, warn)
-                        } catch (e: Exception) {
-                            Log.e("EditorSession", "Failed to parse LSP status: $msg", e)
                         }
                         return false // Return false to allow the log to appear in Logcat
                     }

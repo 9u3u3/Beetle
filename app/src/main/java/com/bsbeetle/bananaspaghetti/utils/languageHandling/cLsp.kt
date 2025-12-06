@@ -25,6 +25,8 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.JsonArray
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -148,7 +150,8 @@ class cLsp(private val context: Context) {
                     val sendScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
                     readScope.launch {
-                        val buf = ByteArray(16384)
+                        // Increase buffer size to 64KB as requested
+                        val buf = ByteArray(65536)
                         val sb = StringBuilder()
 
                         try {
@@ -181,6 +184,7 @@ class cLsp(private val context: Context) {
 
                                     val messageType = when {
                                         jsonBody.contains("\"method\":\"textDocument/publishDiagnostics\"") -> "diagnostics"
+                                        jsonBody.contains("\"result\"") && jsonBody.contains("\"items\"") -> "completion_response" // Identify completion response
                                         jsonBody.contains("\"result\"") -> "response"
                                         else -> "other"
                                     }
@@ -188,7 +192,40 @@ class cLsp(private val context: Context) {
 
                                     sendScope.launch {
                                         try {
-                                            outgoing.send(Frame.Text(jsonBody))
+                                            var payloadToSend = jsonBody
+                                            
+                                            // SMART FILTER: Truncate completion list if it's too large
+                                            if (messageType == "completion_response") {
+                                                try {
+                                                    val jsonElement = json.parseToJsonElement(jsonBody)
+                                                    if (jsonElement is JsonObject) {
+                                                        val result = jsonElement["result"]
+                                                        if (result is JsonObject && result.containsKey("items")) {
+                                                            // Handle { result: { items: [...] } }
+                                                            val items = result["items"]?.jsonArray
+                                                            if (items != null && items.size > 10) {
+                                                                val topItems = JsonArray(items.take(10))
+                                                                val newResult = JsonObject(result + ("items" to topItems))
+                                                                val newJson = JsonObject(jsonElement + ("result" to newResult))
+                                                                payloadToSend = json.encodeToString(newJson)
+                                                                Log.i("cLsp", "Optimized completion: ${items.size} -> 10 items")
+                                                            }
+                                                        } else if (result is JsonArray) {
+                                                            // Handle { result: [...] }
+                                                            if (result.size > 10) {
+                                                                val topItems = JsonArray(result.take(10))
+                                                                val newJson = JsonObject(jsonElement + ("result" to topItems))
+                                                                payloadToSend = json.encodeToString(newJson)
+                                                                Log.i("cLsp", "Optimized completion: ${result.size} -> 10 items")
+                                                            }
+                                                        }
+                                                    }
+                                                } catch (e: Exception) {
+                                                    Log.e("cLsp", "Failed to optimize completion", e)
+                                                }
+                                            }
+
+                                            outgoing.send(Frame.Text(payloadToSend))
                                         } catch (ex: Exception) {
                                             Log.e("cLsp", "Failed to send to client: ${ex.message}")
                                         }

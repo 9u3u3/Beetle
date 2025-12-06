@@ -3,11 +3,24 @@ import { EditorView, basicSetup } from "codemirror"
 import { EditorState, StateEffect, StateField } from "@codemirror/state"
 import { oneDark } from "@codemirror/theme-one-dark"
 import { autocompletion, completionKeymap, closeCompletion, startCompletion, completionStatus } from "@codemirror/autocomplete"
-import { keymap } from "@codemirror/view"
+import { keymap, drawSelection } from "@codemirror/view"
 import { linter, lintGutter, forceLinting } from "@codemirror/lint"
 import { cpp } from "@codemirror/lang-cpp"
 import { insertNewlineAndIndent, deleteCharBackward, undo, redo } from "@codemirror/commands"
 import { openSearchPanel, closeSearchPanel } from "@codemirror/search"
+
+// --- Global Error Handling for WEBVERR ---
+window.onerror = function (message, source, lineno, colno, error) {
+  console.error(`[WEBVERR] JS Error: ${message} at ${source}:${lineno}:${colno} `);
+  if (error && error.stack) {
+    console.error(`[WEBVERR] Stack: ${error.stack} `);
+  }
+};
+
+window.onunhandledrejection = function (event) {
+  console.error(`[WEBVERR] Unhandled Promise Rejection: ${event.reason} `);
+};
+// -----------------------------------------
 
 window.code_ = ""
 window.completionActive = false;
@@ -18,63 +31,125 @@ window.completionItems = [];
 const style = document.createElement('style');
 style.textContent = `
   .lsp-completion-list {
-    position: absolute;
-    background: #1e1e1e;
-    border: 1px solid #333;
-    border-radius: 4px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-    z-index: 1000;
-    max-height: 200px;
-    overflow-y: auto;
-    width: 250px;
-    font-family: monospace;
-    display: none;
-  }
+  position: absolute;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  z-index: 10000; /* High z-index */
+  max-height: 200px;
+  overflow-y: auto;
+  width: 250px;
+  font-family: monospace;
+  display: none;
+}
   .lsp-completion-item {
-    padding: 4px 8px;
-    cursor: pointer;
-    color: #ccc;
-    display: flex;
-    align-items: center;
-    font-size: 12px;
-  }
+  padding: 6px 10px; /* Better padding */
+  cursor: pointer;
+  color: #ccc;
+  display: flex;
+  align-items: center;
+  font-size: 13px; /* Larger font */
+  border-bottom: 1px solid #2a2a2a;
+}
+  .lsp-completion-item:last-child {
+  border-bottom: none;
+}
   .lsp-completion-item.selected {
-    background: #2c313a;
-    color: #fff;
-  }
+  background: #005fcc; /* Blue selection */
+  color: #fff;
+}
   .lsp-completion-icon {
-    margin-right: 8px;
-    width: 14px;
-    text-align: center;
-    opacity: 0.7;
-  }
+  margin-right: 10px;
+  width: 16px;
+  text-align: center;
+  opacity: 0.8;
+  font-weight: bold;
+}
   .lsp-completion-detail {
-    margin-left: auto;
-    opacity: 0.5;
-    font-size: 10px;
-  }
+  margin-left: auto;
+  opacity: 0.6;
+  font-size: 11px;
+}
   /* Force diagnostic styles */
   .cm-lint-range-error {
-    background-image: none !important;
-    text-decoration: underline wavy #ff5555 !important;
-    text-decoration-skip-ink: none;
-  }
+  background-image: none!important;
+  text-decoration: underline wavy #ff5555!important;
+  text-decoration-skip-ink: none;
+}
   .cm-lint-range-warning {
-    background-image: none !important;
-    text-decoration: underline wavy #ffb86c !important;
-    text-decoration-skip-ink: none;
-  }
+  background-image: none!important;
+  text-decoration: underline wavy #ffb86c!important;
+  text-decoration-skip-ink: none;
+}
   .cm-lint-range-info {
-    background-image: none !important;
-    text-decoration: underline wavy #8be9fd !important;
-    text-decoration-skip-ink: none;
-  }
+  background-image: none!important;
+  text-decoration: underline wavy #8be9fd!important;
+  text-decoration-skip-ink: none;
+}
+
+/* CURSOR - MUST BE VISIBLE */
+.cm-editor .cm-cursor, .cm-editor .cm-cursor-primary {
+    border-left: 2px solid #528bff !important;
+    visibility: visible !important;
+}
+.cm-editor .cm-line {
+    caret-color: #528bff !important;
+}
+.cm-content {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+}
+/* Hide native selection handles (Android specific) */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
 `;
 document.head.appendChild(style);
 
 const completionListEl = document.createElement('div');
 completionListEl.className = 'lsp-completion-list';
 document.body.appendChild(completionListEl);
+
+// --- Debug HUD ---
+const debugHudEl = document.createElement('div');
+debugHudEl.id = 'debug-hud';
+debugHudEl.style.cssText = `
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #0f0;
+  font-family: monospace;
+  font-size: 10px;
+  padding: 5px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 9999;
+  white-space: pre;
+`;
+document.body.appendChild(debugHudEl);
+
+window.updateDebugStats = function (stats) {
+  const lowMemWarning = stats.lowMemory ? "⚠️ LOW MEMORY!" : "";
+  const latency = window.lastLspLatency ? `${window.lastLspLatency}ms` : "N/A";
+
+  debugHudEl.textContent = `
+RAM: ${stats.availMem}MB Free (Thres: ${stats.threshold}MB)
+Heap: ${stats.javaHeap}MB
+LSP Latency: ${latency}
+${lowMemWarning}
+  `.trim();
+
+  if (stats.lowMemory) {
+    debugHudEl.style.color = 'red';
+    debugHudEl.style.background = 'rgba(255, 0, 0, 0.2)';
+  } else {
+    debugHudEl.style.color = '#0f0';
+    debugHudEl.style.background = 'rgba(0, 0, 0, 0.5)';
+  }
+};
+// -----------------
 
 
 function setupEditor() {
@@ -90,6 +165,20 @@ function setupEditor() {
   let messageBuffer = '';
   let isInitialized = false;
   let initializationPromise = null;
+  let pendingCompletionId = null; // Track in-flight completion request
+
+  // Function to send cancel request
+  function sendCancelRequest(id) {
+    if (ws.readyState === WebSocket.OPEN) {
+      const cancel = {
+        jsonrpc: "2.0",
+        method: "$/cancelRequest",
+        params: { id: id }
+      };
+      ws.send(JSON.stringify(cancel));
+      console.log(`[LSP-JS] Cancelled request ${id}`);
+    }
+  }
 
   // StateEffect for updating diagnostics
   const setDiagnosticsEffect = StateEffect.define()
@@ -110,7 +199,7 @@ function setupEditor() {
   })
 
   window.setFilePath = (path) => {
-    // console.log(`[LSP-JS] Setting file path to: ${path}`);
+    // console.log(`[LSP - JS] Setting file path to: ${ path } `);
     const oldURI = URI;
     URI = `file://${path}`;
 
@@ -136,50 +225,61 @@ function setupEditor() {
 
   const setRootUri = (uri) => { rootURI = uri }
 
+  // Debounced diagnostics handling
+  let pendingDiagnostics = null;
+  let diagnosticsTimeout = null;
+
   function handleDiagnostics(params) {
-    if (!view) return
-    try {
-      const diagnostics = []
-      for (const d of params.diagnostics) {
-        try {
-          if (d.range.start.line < 0 || d.range.end.line < 0) continue
-          if (d.range.start.line + 1 > view.state.doc.lines || d.range.end.line + 1 > view.state.doc.lines) continue;
+    // Store the latest diagnostics and debounce processing
+    pendingDiagnostics = params;
 
-          const startLine = view.state.doc.line(d.range.start.line + 1)
-          const endLine = view.state.doc.line(d.range.end.line + 1)
-          const startChar = Math.min(d.range.start.character, startLine.length)
-          const endChar = Math.min(d.range.end.character, endLine.length)
-          const from = startLine.from + startChar
-          const to = endLine.from + endChar
+    if (diagnosticsTimeout) clearTimeout(diagnosticsTimeout);
 
-          if (to < from) continue
+    diagnosticsTimeout = setTimeout(() => {
+      if (!view || !pendingDiagnostics) return;
 
-          diagnostics.push({
-            from: from,
-            to: Math.max(from + 1, to),
-            severity: d.severity === 1 ? 'error' :
-              d.severity === 2 ? 'warning' : 'info',
-            message: d.message || 'Unknown error',
-            source: d.source || 'clangd'
-          })
-          // console.log(`[LSP-JS] Diagnostic mapped: ${d.message} at ${from}-${to}`);
-        } catch (e) {
-          console.error('Error processing diagnostic:', e)
+      try {
+        const diagnostics = []
+        for (const d of pendingDiagnostics.diagnostics) {
+          try {
+            if (d.range.start.line < 0 || d.range.end.line < 0) continue
+            if (d.range.start.line + 1 > view.state.doc.lines || d.range.end.line + 1 > view.state.doc.lines) continue;
+
+            const startLine = view.state.doc.line(d.range.start.line + 1)
+            const endLine = view.state.doc.line(d.range.end.line + 1)
+            const startChar = Math.min(d.range.start.character, startLine.length)
+            const endChar = Math.min(d.range.end.character, endLine.length)
+            const from = startLine.from + startChar
+            const to = endLine.from + endChar
+
+            if (to < from) continue
+
+            diagnostics.push({
+              from: from,
+              to: Math.max(from + 1, to),
+              severity: d.severity === 1 ? 'error' :
+                d.severity === 2 ? 'warning' : 'info',
+              message: d.message || 'Unknown error',
+              source: d.source || 'clangd'
+            })
+          } catch (e) {
+            console.error('Error processing diagnostic:', e)
+          }
         }
+
+        // Update diagnostics using StateEffect
+        view.dispatch({
+          effects: setDiagnosticsEffect.of(diagnostics)
+        })
+
+        // Force linter to update - but only if not actively typing
+        // forceLinting(view) // DISABLED - may cause freeze
+
+        pendingDiagnostics = null;
+      } catch (e) {
+        console.error('Error in handleDiagnostics:', e)
       }
-
-      // console.log(`📊 ${diagnostics.length} diagnostics`);
-
-      // Update diagnostics using StateEffect
-      view.dispatch({
-        effects: setDiagnosticsEffect.of(diagnostics)
-      })
-
-      // Force linter to update
-      forceLinting(view)
-    } catch (e) {
-      console.error('Error in handleDiagnostics:', e)
-    }
+    }, 1000); // 1 second debounce - even longer to prevent freeze
   }
 
   function updateCompletionListUI() {
@@ -258,22 +358,34 @@ function setupEditor() {
     }
     return false;
   };
+  // ...
+  window.insertText = function (text) {
+    view.dispatch(view.state.replaceSelection(text));
+    // console.log("[LSP-JS] insertText called with: '" + text + "'"); // Silenced
+    view.focus(); // Re-enabled focus
+
+    // Manually trigger completion
+    if (window.completionTimeout) clearTimeout(window.completionTimeout);
+    window.completionTimeout = setTimeout(() => {
+      startCompletion(view);
+    }, 600);
+  };
 
   async function lspCompletionSource(context) {
     // Wait for initialization
     if (!isInitialized) {
-      console.log('[LSP-JS] Completion skipped: Not initialized');
+      // console.log('[LSP-JS] Completion skipped: Not initialized');
       return null;
     }
 
-    console.log('[LSP-JS] Completion source triggered');
+    // console.log('[LSP-JS] Completion source triggered');
 
     const now = Date.now()
 
     // Always allow explicit completions
     if (!context.explicit) {
-      // For automatic completions, check timing (debounce 300ms)
-      if (now - lastCompletionTime < 300) {
+      // For automatic completions, check timing (debounce 500ms - increased)
+      if (now - lastCompletionTime < 500) {
         return null
       }
     }
@@ -284,15 +396,23 @@ function setupEditor() {
     const lineNumber = line.number - 1
     const character = context.pos - line.from
 
+    // CANCEL any pending completion request before starting a new one
+    if (pendingCompletionId !== null) {
+      sendCancelRequest(pendingCompletionId);
+      pendingRequests.delete(pendingCompletionId); // Remove from pending
+      pendingCompletionId = null;
+    }
+
     // Force flush pending didChange before requesting completion
     // This ensures the server has the latest text (e.g. "std::")
     if (window.didChangeTimeout) {
       clearTimeout(window.didChangeTimeout);
       window.didChangeTimeout = null;
+      window.lspVersion++;
       sendNotification(ws, 'textDocument/didChange', {
         textDocument: {
           uri: URI,
-          version: Date.now()
+          version: window.lspVersion
         },
         contentChanges: [{ text: context.state.doc.toString() }]
       });
@@ -300,13 +420,19 @@ function setupEditor() {
     }
 
     try {
+      // Store the request ID before sending
+      const currentRequestId = messageId + 1; // sendRequest will use this ID
+      pendingCompletionId = currentRequestId;
+
       const result = await sendRequest(ws, 'textDocument/completion', {
         textDocument: { uri: URI },
         position: { line: lineNumber, character },
         context: {
           triggerKind: context.explicit ? 1 : 2,
         }
-      }, 8000)
+      }, 5000) // Reduced timeout to 5 seconds
+
+      pendingCompletionId = null; // Clear on success
 
       if (!result) return null
 
@@ -316,16 +442,17 @@ function setupEditor() {
         return null
       }
 
-      console.log(`✨ Got ${items.length} completion items`);
+      // console.log(`✨ Got ${items.length} completion items`);
       if (items.length > 0) {
         const firstFew = items.slice(0, 5).map(i => i.label).join(', ');
-        console.log(`[LSP-JS] Suggestions: ${firstFew}...`);
+        // console.log(`[LSP-JS] Suggestions: ${firstFew}...`);
       }
 
       const wordBefore = context.matchBefore(/\w*/)
       const from = wordBefore ? wordBefore.from : context.pos;
 
-      window.completionItems = items.slice(0, 50).map(item => {
+      // Limit to 20 items to save memory
+      window.completionItems = items.slice(0, 20).map(item => {
         const cleanLabel = item.label.replace(/^[•\s]+/, '').trim()
         let textToInsert = cleanLabel
 
@@ -372,7 +499,8 @@ function setupEditor() {
     extensions: [
       basicSetup,
       oneDark,
-      cpp(),
+      drawSelection(), // Ensure custom cursor drawing
+      cpp(), // Revert to cpp()
       diagnosticsField, // Add StateField
       lspLinter,
       lintGutter(),
@@ -380,13 +508,14 @@ function setupEditor() {
       EditorView.contentAttributes.of({
         inputmode: "none"
       }),
+      // Autocompletion re-enabled after freeze fix
       autocompletion({
         override: [lspCompletionSource],
         activateOnTyping: true,
         defaultKeymap: true,
-        maxRenderedOptions: 50,
+        maxRenderedOptions: 10,
         closeOnBlur: false,
-        interactionToken: "lsp" // explicit token to help debugging
+        interactionToken: "lsp"
       }),
       keymap.of([
         ...completionKeymap,
@@ -397,6 +526,23 @@ function setupEditor() {
       ]),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) window.code_ = update.state.doc.toString()
+
+        // Handle Completion UI on selection change
+        if (update.selectionSet) {
+          if (window.completionActive) {
+            // If selection changed but not due to completion, hide it or update position
+            // For now, let's hide it if the cursor moved significantly, or update position
+            const coords = view.coordsAtPos(view.state.selection.main.head);
+            if (coords) {
+              completionListEl.style.left = `${coords.left}px`;
+              completionListEl.style.top = `${coords.bottom + 5}px`;
+            } else {
+              // Cursor off screen or invalid, hide
+              completionListEl.style.display = 'none';
+              window.completionActive = false;
+            }
+          }
+        }
 
         // Throttle status updates (max once every 500ms)
         const now = Date.now();
@@ -418,30 +564,28 @@ function setupEditor() {
 
           const statusMsg = `[LSP-STATUS] line:${line.number} col:${col + 1} err:${errors} warn:${warnings}`;
           if (window.lastLspStatus !== statusMsg) {
-            console.log(statusMsg);
+            // console.log(statusMsg); // Silenced
             window.lastLspStatus = statusMsg;
             window.lastStatusTime = now;
           }
         }
 
-        // Debounce didChange (200ms)
+        // Full Text Sync - Re-enabled with longer debounce
         if (update.docChanged && ws.readyState === WebSocket.OPEN && view && isInitialized) {
           if (window.didChangeTimeout) clearTimeout(window.didChangeTimeout);
+
           window.didChangeTimeout = setTimeout(() => {
-            // Skip if document is too large to prevent freezing
-            const docText = view.state.doc.toString();
-            if (docText.length > 50000) {
-              console.warn('[LSP-JS] Document too large, skipping didChange');
-              return;
-            }
-            sendNotification(ws, 'textDocument/didChange', {
+            window.lspVersion++;
+            const payload = {
               textDocument: {
                 uri: URI,
-                version: Date.now()
+                version: window.lspVersion
               },
-              contentChanges: [{ text: docText }]
-            })
-          }, 1000); // Increased to 1 second
+              contentChanges: [{ text: view.state.doc.toString() }]
+            };
+
+            sendNotification(ws, 'textDocument/didChange', payload);
+          }, 500); // 500ms debounce - prevent freeze on slow typing
         }
       })
     ]
@@ -456,19 +600,85 @@ function setupEditor() {
   window.isEditorReady = true
 
   const editorEl = document.querySelector('.cm-editor')
+  // --- Custom Touch Handling to Prevent Native Crash ---
+  // We prevent default on touch events to stop the WebView from showing native handles/popups.
+  // We then manually implement scrolling and cursor placement.
+
+  let lastTouchY = 0;
+  let lastTouchX = 0;
+  let isScrolling = false;
+
+  editorEl.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    e.preventDefault(); // STOP NATIVE HANDLES
+    lastTouchY = e.touches[0].clientY;
+    lastTouchX = e.touches[0].clientX;
+    isScrolling = false;
+  }, { passive: false });
+
+  editorEl.addEventListener('touchmove', (e) => {
+    if (e.touches.length !== 1) return;
+    e.preventDefault(); // STOP NATIVE SCROLLING (we do it manually)
+
+    const clientY = e.touches[0].clientY;
+    const clientX = e.touches[0].clientX;
+    const deltaY = lastTouchY - clientY;
+    const deltaX = lastTouchX - clientX;
+
+    // Manual Scroll
+    const scroller = document.querySelector('.cm-scroller');
+    if (scroller) {
+      scroller.scrollTop += deltaY;
+      scroller.scrollLeft += deltaX;
+    }
+
+    lastTouchY = clientY;
+    lastTouchX = clientX;
+
+    if (Math.abs(deltaY) > 2 || Math.abs(deltaX) > 2) {
+      isScrolling = true;
+    }
+  }, { passive: false });
+
+  editorEl.addEventListener('touchend', (e) => {
+    if (isScrolling) return;
+    e.preventDefault(); // STOP NATIVE CLICK/FOCUS
+
+    // Manual Cursor Placement
+    const touch = e.changedTouches[0];
+    const pos = view.posAtCoords({ x: touch.clientX, y: touch.clientY });
+
+    if (pos !== null) {
+      view.dispatch({
+        selection: { anchor: pos, head: pos },
+        scrollIntoView: true
+      });
+      view.focus();
+
+      // Trigger completion if needed (optional)
+      // startCompletion(view);
+    }
+  }, { passive: false });
+
+  // Prevent context menu
+  editorEl.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    return false;
+  });
+  // -------------------------------------------
   const bg = window.getComputedStyle(editorEl).backgroundColor
   document.body.style.backgroundColor = bg
 
   window.insertText = function (text) {
-    // console.log(`[LSP-JS] insertText called with: '${text}'`);
     view.dispatch(view.state.replaceSelection(text));
-    // view.focus(); // Removed to prevent potential layout thrashing during rapid typing
+    // console.log("[LSP-JS] insertText called with: '" + text + "'"); // Silenced
+    view.focus(); // Re-enabled focus
 
-    // Manually trigger completion since inputmode="none" disables default behavior
+    // Manually trigger completion
     if (window.completionTimeout) clearTimeout(window.completionTimeout);
     window.completionTimeout = setTimeout(() => {
       startCompletion(view);
-    }, 300);
+    }, 600); // Increased debounce to 600ms
   };
 
   window.performBackspace = function () {
@@ -477,7 +687,16 @@ function setupEditor() {
   };
 
   window.performEnter = function () {
-    insertNewlineAndIndent(view);
+    // Hide completion list if active
+    if (window.completionActive) {
+      completionListEl.style.display = 'none';
+      window.completionActive = false;
+    }
+
+    // Simplified Enter: Just insert newline, no auto-indent for now
+    view.dispatch(view.state.replaceSelection("\n"));
+    console.log("[LSP-JS] Performed simple Enter (\\n)");
+    // insertNewlineAndIndent(view);
     // view.focus();
   };
 
@@ -570,7 +789,12 @@ function setupEditor() {
         if (depth === 0 && startIdx !== -1) {
           const jsonStr = text.substring(startIdx, i + 1);
           try {
+            const t0 = Date.now();
             const parsed = JSON.parse(jsonStr);
+            const t1 = Date.now();
+            if (t1 - t0 > 20) {
+              console.warn(`[LSP-JS] Slow JSON.parse: ${t1 - t0}ms for ${jsonStr.length} bytes`);
+            }
             messages.push(parsed);
           } catch (e) {
             console.error('Failed to parse JSON:', jsonStr.substring(0, 100));
@@ -662,7 +886,7 @@ function setupEditor() {
         // console.log('[LSP-JS] RX JSON:', JSON.stringify(message).substring(0, 150)); // Log parsed JSON
 
         if (message.id !== undefined && pendingRequests.has(message.id)) {
-          const { resolve, reject, timeoutId } = pendingRequests.get(message.id);
+          const { resolve, reject, timeoutId, startTime } = pendingRequests.get(message.id);
           clearTimeout(timeoutId);
           pendingRequests.delete(message.id);
 
@@ -671,6 +895,9 @@ function setupEditor() {
             reject(message.error);
           } else {
             // console.log(`✓ [LSP-JS] Response for request ${message.id}`);
+            if (startTime) {
+              window.lastLspLatency = Date.now() - startTime;
+            }
             resolve(message.result);
           }
         }
@@ -700,6 +927,8 @@ function setupEditor() {
         params
       };
 
+      const startTime = Date.now(); // Start timing
+
       const timeoutId = setTimeout(() => {
         if (pendingRequests.has(id)) {
           pendingRequests.delete(id);
@@ -708,7 +937,7 @@ function setupEditor() {
         }
       }, timeout);
 
-      pendingRequests.set(id, { resolve, reject, timeoutId });
+      pendingRequests.set(id, { resolve, reject, timeoutId, startTime }); // Store startTime
 
       // Cleanup old requests if too many are pending (prevent memory leak)
       if (pendingRequests.size > 20) {
