@@ -13,8 +13,12 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.bsbeetle.bananaspaghetti.ui.DisableDefaultKeyboard
 import com.bsbeetle.bananaspaghetti.ui.EnterImmersiveMode
+import com.bsbeetle.bananaspaghetti.ui.browser.DevBrowserScreen
+import com.bsbeetle.bananaspaghetti.ui.home.BrowserScreen
 import com.bsbeetle.bananaspaghetti.ui.navigation.AppNavigation
 import com.bsbeetle.bananaspaghetti.ui.theme.BananaSpaghettiTheme
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
@@ -47,6 +51,8 @@ class MainActivity : ComponentActivity() {
                 EnterImmersiveMode()
                 DisableDefaultKeyboard()
 
+                val navController = rememberNavController()
+
                 // View Models used throughout the application
                 val fileViewModel: FileViewModel = viewModel()
                 val keyboardViewModel: KeyboardViewModel = viewModel()
@@ -72,6 +78,7 @@ class MainActivity : ComponentActivity() {
                             .fillMaxSize()
                     ) {
                         AppNavigation()
+//                        BrowserScreen(navController)
                     }
                 }
             }

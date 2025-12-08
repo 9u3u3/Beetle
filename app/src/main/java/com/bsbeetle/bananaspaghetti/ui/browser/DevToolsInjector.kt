@@ -1,4 +1,5 @@
 package com.bsbeetle.bananaspaghetti.ui.browser
+
 object DevToolsInjector {
 
     // THIS RUNS FIRST - Captures early console logs
@@ -40,14 +41,28 @@ object DevToolsInjector {
     console.info = wrap('INFO', original.info);
     console.debug = wrap('DEBUG', original.debug);
 
-    console.log('✅ Early console capture active');
 })();
 """.trimIndent()
 
-    // THIS RUNS AFTER - Loads Eruda (forced full-panel, no draggable)
+    // THIS RUNS AFTER - Loads Eruda with adaptive sizing for portrait/landscape
     val LATE_INJECTION = """
 (function() {
-    console.log('🚀 DevBrowser: Loading Eruda...');
+//    console.log('🚀 DevBrowser: Loading Eruda...');
+
+    // ============================================
+    // DETECT ORIENTATION & SET OPTIMAL SIZE
+    // ============================================
+    function getOptimalSize() {
+        const isPortrait = window.innerHeight > window.innerWidth;
+        const isLandscape = window.innerWidth > window.innerHeight;
+        
+        // Portrait: use less height (40%) since vertical space is limited
+        // Landscape: use more height (50%) since we have more vertical space
+        return {
+            height: isPortrait ? 40 : 50,
+            position: 'bottom' // Always at bottom for easier thumb access on mobile
+        };
+    }
 
     // ============================================
     // LOAD ERUDA
@@ -56,88 +71,296 @@ object DevToolsInjector {
         const script = document.createElement('script');
         script.src = 'https://cdn.jsdelivr.net/npm/eruda';
         script.onload = function() {
+            const optimalSize = getOptimalSize();
+            
             eruda.init({
                 tool: ['console', 'elements', 'network', 'resources', 'sources', 'info', 'snippets'],
                 useShadowDom: false,
                 autoScale: true,
                 defaults: {
-                    displaySize: 100,     // request full viewport height
+                    displaySize: optimalSize.height,
                     transparency: 0.95,
                     theme: 'dark'
                 }
             });
 
-            // Ensure eruda is hidden initially, then style it when shown
             eruda.hide();
 
-            // Inject CSS to force full-size panel and remove the resize handle
+            // Inject responsive CSS
             (function injectErudaStyles() {
+                const isPortrait = window.innerHeight > window.innerWidth;
+                const initialHeight = isPortrait ? 40 : 50;
+                
                 const css = `
-/* Force Eruda root to cover full viewport and dock to bottom without transform */
+/* Base Eruda positioning - responsive */
 #eruda, .eruda {
     position: fixed !important;
-    top: 0 !important;
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
     width: 100vw !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
-    transform: none !important;
+    height: ${'$'}{initialHeight}vh !important;
     margin: 0 !important;
     border-radius: 0 !important;
-    z-index: 2147483647 !important; /* very high so it sits above page */
+    z-index: 2147483647 !important;
+    transform: none !important;
+    transition: height 0.3s ease !important;
 }
 
-/* Make the dev-tools container fill the root */
-#eruda .eruda-dev-tools, .eruda .eruda-dev-tools, #eruda .eruda-wrapper, .eruda .eruda-wrapper {
-    height: 100% !important;
+/* Dev-tools container - adaptive sizing */
+#eruda .eruda-dev-tools, .eruda .eruda-dev-tools,
+#eruda .eruda-wrapper, .eruda .eruda-wrapper {
+    height: ${'$'}{initialHeight}% !important;
     max-height: 100% !important;
     width: 100% !important;
+    transition: height 0.3s ease !important;
 }
 
-/* Make internal panels scroll correctly and occupy full height */
-#eruda .eruda-panel, .eruda .eruda-panel, #eruda .eruda-viewport, .eruda .eruda-viewport {
+/* Make internal panels scroll correctly */
+#eruda .eruda-panel, .eruda .eruda-panel,
+#eruda .eruda-viewport, .eruda .eruda-viewport {
     height: 100% !important;
     max-height: 100% !important;
 }
 
-/* Remove/Hide resize handle and any resize-related UI */
-#eruda .eruda-resize, .eruda .eruda-resize, #eruda .eruda-drag, .eruda .eruda-drag {
+/* Hide Eruda's default resize handle */
+#eruda .eruda-resize, .eruda .eruda-resize {
     display: none !important;
-    pointer-events: none !important;
-    visibility: hidden !important;
 }
 
-/* If Eruda uses transforms or inline styles to set height, override them */
-#eruda[style], .eruda[style] {
-    height: 100vh !important;
-    max-height: 100vh !important;
-}
-
-/* Ensure entry button (floating) doesn't overlap awkwardly */
+/* Hide entry button */
 .eruda-entry-btn {
     display: none !important;
 }
 
-/* Make sure panels' scroll areas use full height */
+/* Panel scroll areas */
 .eruda-console .eruda-logs,
 .eruda-elements .eruda-section,
 .eruda-network .eruda-requests,
 .eruda-resources .eruda-section {
-    height: calc(100% - 40px) !important; /* leave small room for headers/tabs */
+    height: calc(100% - 40px) !important;
     overflow-y: auto !important;
 }
 
-/* keep pointer events for the panel itself */
+/* Keep pointer events */
 #eruda, .eruda {
     pointer-events: auto !important;
 }
+
+/* Responsive button styling */
+@media (max-width: 600px) {
+    #eruda-resize-buttons button {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 22px !important;
+    }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+    #eruda-resize-buttons {
+        top: 4px !important;
+    }
+    #eruda-resize-buttons button {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 18px !important;
+    }
+}
 `;
                 const s = document.createElement('style');
-                s.id = 'eruda-forced-fullstyle';
+                s.id = 'eruda-adaptive-style';
                 s.innerHTML = css;
                 document.head.appendChild(s);
+            })();
+
+            // Add enhanced resize buttons with orientation awareness
+            (function addResizeButtons() {
+                const isPortrait = window.innerHeight > window.innerWidth;
+                let currentHeight = isPortrait ? 40 : 50; // Adaptive initial height
+
+                // Wait for Eruda dev-tools wrapper to be in DOM
+                const checkInterval = setInterval(() => {
+                    const devToolsEl = document.querySelector('#eruda .eruda-dev-tools') ||
+                                      document.querySelector('.eruda .eruda-dev-tools') ||
+                                      document.querySelector('#eruda .eruda-wrapper') ||
+                                      document.querySelector('.eruda .eruda-wrapper');
+                    
+                    const erudaContainer = document.getElementById('eruda') || document.querySelector('.eruda');
+
+                    if (devToolsEl && erudaContainer) {
+                        clearInterval(checkInterval);
+
+                        // Create button container
+                        const buttonContainer = document.createElement('div');
+                        buttonContainer.id = 'eruda-resize-buttons';
+                        buttonContainer.style.cssText = `
+                            position: absolute;
+                            top: 6px;
+                            right: 45px;
+                            display: flex;
+                            gap: 6px;
+                            z-index: 999999;
+                            user-select: none;
+                        `;
+
+                        // Create - button (decrease height)
+                        const minusBtn = document.createElement('button');
+                        minusBtn.innerHTML = '−';
+                        minusBtn.style.cssText = `
+                            width: 32px;
+                            height: 32px;
+                            background: rgba(244, 67, 54, 0.85);
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            font-size: 20px;
+                            font-weight: bold;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            transition: all 0.2s ease;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                            padding: 0;
+                            line-height: 1;
+                        `;
+
+                        // Create + button (increase height)
+                        const plusBtn = document.createElement('button');
+                        plusBtn.innerHTML = '+';
+                        plusBtn.style.cssText = `
+                            width: 32px;
+                            height: 32px;
+                            background: rgba(76, 175, 80, 0.85);
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            font-size: 20px;
+                            font-weight: bold;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            transition: all 0.2s ease;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                            padding: 0;
+                            line-height: 1;
+                        `;
+
+                        // Function to update height with smooth animation
+                        function updateHeight(newHeight) {
+                            const isCurrentlyPortrait = window.innerHeight > window.innerWidth;
+                            
+                            // Different limits for portrait vs landscape
+                            const minHeight = isCurrentlyPortrait ? 25 : 30;
+                            const maxHeight = isCurrentlyPortrait ? 75 : 85;
+                            
+                            currentHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+                            
+                            // Update both containers for smooth transition
+                            devToolsEl.style.setProperty('height', currentHeight + '%', 'important');
+                            erudaContainer.style.setProperty('height', currentHeight + 'vh', 'important');
+                            
+//                            console.log('📏 Eruda height: ' + currentHeight + '% (orientation: ' + 
+//                                       (isCurrentlyPortrait ? 'portrait' : 'landscape') + ')');
+                        }
+
+                        // - button handlers
+                        minusBtn.addEventListener('click', (e) => {
+                            updateHeight(currentHeight - 10);
+                            e.stopPropagation();
+                        });
+
+                        minusBtn.addEventListener('mouseenter', () => {
+                            minusBtn.style.background = 'rgba(244, 67, 54, 1)';
+                            minusBtn.style.transform = 'scale(1.1)';
+                        });
+
+                        minusBtn.addEventListener('mouseleave', () => {
+                            minusBtn.style.background = 'rgba(244, 67, 54, 0.85)';
+                            minusBtn.style.transform = 'scale(1)';
+                        });
+
+                        minusBtn.addEventListener('touchstart', () => {
+                            minusBtn.style.background = 'rgba(244, 67, 54, 1)';
+                            minusBtn.style.transform = 'scale(1.1)';
+                        });
+
+                        minusBtn.addEventListener('touchend', () => {
+                            setTimeout(() => {
+                                minusBtn.style.background = 'rgba(244, 67, 54, 0.85)';
+                                minusBtn.style.transform = 'scale(1)';
+                            }, 100);
+                        });
+
+                        // + button handlers
+                        plusBtn.addEventListener('click', (e) => {
+                            updateHeight(currentHeight + 10);
+                            e.stopPropagation();
+                        });
+
+                        plusBtn.addEventListener('mouseenter', () => {
+                            plusBtn.style.background = 'rgba(76, 175, 80, 1)';
+                            plusBtn.style.transform = 'scale(1.1)';
+                        });
+
+                        plusBtn.addEventListener('mouseleave', () => {
+                            plusBtn.style.background = 'rgba(76, 175, 80, 0.85)';
+                            plusBtn.style.transform = 'scale(1)';
+                        });
+
+                        plusBtn.addEventListener('touchstart', () => {
+                            plusBtn.style.background = 'rgba(76, 175, 80, 1)';
+                            plusBtn.style.transform = 'scale(1.1)';
+                        });
+
+                        plusBtn.addEventListener('touchend', () => {
+                            setTimeout(() => {
+                                plusBtn.style.background = 'rgba(76, 175, 80, 0.85)';
+                                plusBtn.style.transform = 'scale(1)';
+                            }, 100);
+                        });
+
+                        buttonContainer.appendChild(minusBtn);
+                        buttonContainer.appendChild(plusBtn);
+                        devToolsEl.appendChild(buttonContainer);
+
+                        // Set initial height
+                        updateHeight(currentHeight);
+
+                        // Handle orientation changes
+                        window.addEventListener('orientationchange', () => {
+                            setTimeout(() => {
+                                const newIsPortrait = window.innerHeight > window.innerWidth;
+                                const newOptimalHeight = newIsPortrait ? 40 : 50;
+                                currentHeight = newOptimalHeight;
+                                updateHeight(newOptimalHeight);
+                                console.log('🔄 Orientation changed, adjusted to ' + newOptimalHeight + '%');
+                            }, 300);
+                        });
+
+                        // Also handle resize events (for desktop)
+                        let resizeTimeout;
+                        window.addEventListener('resize', () => {
+                            clearTimeout(resizeTimeout);
+                            resizeTimeout = setTimeout(() => {
+                                const newIsPortrait = window.innerHeight > window.innerWidth;
+                                const wasPortrait = currentHeight <= 50;
+                                
+                                // Only auto-adjust if orientation actually changed
+                                if (newIsPortrait !== wasPortrait) {
+                                    const newOptimalHeight = newIsPortrait ? 40 : 50;
+                                    currentHeight = newOptimalHeight;
+                                    updateHeight(newOptimalHeight);
+                                }
+                            }, 300);
+                        });
+
+                        console.log('✅ Adaptive resize buttons added (portrait: 40%, landscape: 50%)');
+                    }
+                }, 100);
+
+                setTimeout(() => clearInterval(checkInterval), 5000);
             })();
 
             // Replay early logs
@@ -153,7 +376,7 @@ object DevToolsInjector {
                 console.log('✅ Replayed ' + window._earlyLogs.length + ' early logs');
             }
 
-            console.log('✅ Eruda initialized (forced full-panel)');
+            console.log('✅ Eruda initialized with adaptive sizing');
         };
 
         script.onerror = function() {
@@ -164,7 +387,7 @@ object DevToolsInjector {
     }
 
     // ============================================
-    // NETWORK INTERCEPTOR
+    // ENHANCED NETWORK INTERCEPTOR
     // ============================================
     (function() {
         const originalFetch = window.fetch;
@@ -196,7 +419,7 @@ object DevToolsInjector {
                     return response;
                 })
                 .catch(error => {
-                    console.error('Fetch error:', error);
+                    console.error('❌ Fetch error:', error);
                     throw error;
                 });
         };
@@ -230,22 +453,41 @@ object DevToolsInjector {
                 } catch(e) {}
             });
 
+            xhr.addEventListener('error', function() {
+                console.error('❌ XHR error:', xhr._devData.url);
+            });
+
             return originalSend.apply(this, arguments);
         };
 
         const OriginalWebSocket = window.WebSocket;
         window.WebSocket = function(url, protocols) {
-            console.log('🔌 WebSocket:', url);
+            console.log('🔌 WebSocket connected:', url);
             const ws = new OriginalWebSocket(url, protocols);
 
+            ws.addEventListener('open', () => {
+//                console.log('✅ WebSocket opened:', url);
+            });
+
             ws.addEventListener('message', (event) => {
-                console.log('📩 WS Message:', event.data?.substring(0, 100));
+                const preview = typeof event.data === 'string' 
+                    ? event.data.substring(0, 100) 
+                    : '[Binary data]';
+//                console.log('📩 WS Message:', preview);
+            });
+
+            ws.addEventListener('error', () => {
+//                console.error('❌ WebSocket error:', url);
+            });
+
+            ws.addEventListener('close', () => {
+//                console.log('🔒 WebSocket closed:', url);
             });
 
             return ws;
         };
 
-        console.log('✅ Network interceptor active');
+//        console.log('✅ Enhanced network interceptor active');
     })();
 
     // ============================================
@@ -253,45 +495,60 @@ object DevToolsInjector {
     // ============================================
     setTimeout(function() {
         try {
+            const detected = [];
+
             if (window.React) {
                 window.DevBridge.detectFramework('React', window.React.version || 'unknown');
+                detected.push('React ' + (window.React.version || '?'));
             } else if (document.querySelector('[data-reactroot], [data-reactid]')) {
                 window.DevBridge.detectFramework('React', 'detected');
+                detected.push('React');
             }
 
             if (window.Vue) {
                 window.DevBridge.detectFramework('Vue', window.Vue.version || 'unknown');
+                detected.push('Vue ' + (window.Vue.version || '?'));
             } else if (document.querySelector('[data-v-]') || window.__VUE__) {
                 window.DevBridge.detectFramework('Vue', 'detected');
+                detected.push('Vue');
             }
 
             if (window.ng || window.getAllAngularRootElements) {
                 window.DevBridge.detectFramework('Angular', window.ng?.version?.full || 'detected');
+                detected.push('Angular');
             }
 
             if (window.__NEXT_DATA__) {
                 window.DevBridge.detectFramework('Next.js', 'detected');
+                detected.push('Next.js');
             }
 
             if (window.__SVELTE__) {
                 window.DevBridge.detectFramework('Svelte', 'detected');
+                detected.push('Svelte');
             }
 
             if (window.jQuery || window.$) {
                 window.DevBridge.detectFramework('jQuery', window.jQuery?.fn?.jquery || 'detected');
+                detected.push('jQuery ' + (window.jQuery?.fn?.jquery || '?'));
             }
 
             if (window.__APOLLO_CLIENT__) {
                 window.DevBridge.detectFramework('Apollo', 'detected');
+                detected.push('Apollo GraphQL');
             }
 
-            console.log('✅ Framework detection complete');
+            if (detected.length > 0) {
+                console.log('🎯 Frameworks detected: ' + detected.join(', '));
+            } else {
+//                console.log('ℹ️ No major frameworks detected (vanilla JS)');
+            }
         } catch(e) {
-            console.error('Framework detection error:', e);
+//            console.error('❌ Framework detection error:', e);
         }
     }, 1500);
 
-    console.log('🎉 DevBrowser: All tools loaded!');
+//    console.log('🎉 DevBrowser: All tools loaded and optimized!');
 })();
 """.trimIndent()
 }

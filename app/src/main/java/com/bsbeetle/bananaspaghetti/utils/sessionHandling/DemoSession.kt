@@ -10,15 +10,15 @@ import android.webkit.WebViewClient
 import com.bsbeetle.bananaspaghetti.utils.AppConfig
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 
-class DemoSession(context: Context) : Session(context, SessionType.DEMO) {
+class DemoSession(context: Context, name: String = "Demo") : Session(context.applicationContext, SessionType.DEMO, name) {
 
     init {
         createView()
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    override fun createView() {
-        if (view != null) return
+    override fun createView(): CustomWebView {
+        if (view != null) return view!!
         view = CustomWebView(context, this).apply {
             WebView.setWebContentsDebuggingEnabled(true)
             settings.apply {
@@ -40,5 +40,6 @@ class DemoSession(context: Context) : Session(context, SessionType.DEMO) {
                 }
             }
         }
+        return view!!
     }
 }

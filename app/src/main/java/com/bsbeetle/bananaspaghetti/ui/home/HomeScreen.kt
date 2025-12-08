@@ -61,7 +61,9 @@ import com.bsbeetle.bananaspaghetti.ui.theme.born2bsporty
 import com.bsbeetle.bananaspaghetti.ui.theme.codaRegular
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.fileLauncher
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.BrowserSession
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.Session
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
 import com.bsbeetle.bananaspaghetti.viewmodel.DevWebViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.TerminalViewModel
@@ -240,6 +242,8 @@ fun HomeScreen(navController: NavController) {
                     }
                     .clickable(
                         onClick = {
+                            BrowserSession(context)
+                            browserViewModel.setDevWebView(SessionList.sessions[SessionList.activeSessionIndex!!].getOrInitView())
                             navController.navigate(Screen.Settings.route)
                         }))
 
@@ -255,7 +259,7 @@ fun HomeScreen(navController: NavController) {
                     .clickable(
                         onClick = {
                             BrowserSession(context)
-                            browserViewModel.setDevWebView(SessionList.sessions[SessionList.activeSessionIndex!!].view!!)
+                            browserViewModel.setDevWebView(SessionList.sessions[SessionList.activeSessionIndex!!].getOrInitView())
                             navController.navigate(Screen.Browser.route)
                         }))
 

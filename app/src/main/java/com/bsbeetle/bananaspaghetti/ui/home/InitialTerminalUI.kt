@@ -55,7 +55,7 @@ fun InitialTerminalUI(navController: NavController) {
     var showSidebar by rememberSaveable { mutableStateOf(false) }
 
     val layout = if (uiState.toggleKeyboard) {
-        KeyboardLayout.developerLayout
+        KeyboardLayout.terminalLayout
     } else {
         KeyboardLayout.qwertyLayout
     }
@@ -210,6 +210,7 @@ fun InitialTerminalUI(navController: NavController) {
             if (isKeyboardVisible) {
                 com.bsbeetle.bananaspaghetti.ui.components.ExtraKeysRow(
                     keyboardViewModel = keyboardViewModel,
+                    mode = com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType.TERMINAL,
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color(0xFF2E2E2E))

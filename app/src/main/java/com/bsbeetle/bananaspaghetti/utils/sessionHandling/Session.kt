@@ -13,27 +13,43 @@ enum class SessionType {
 
 abstract class Session(
     val context: Context,
-    val type: SessionType
+    val type: SessionType,
+    var name: String = ""
 ) {
     var id: Int? = null
     var view: CustomWebView? = null
     var _inputConnection: InputConnection? = null
 
     init {
+        // Register session
         id = SessionList.sessions.size
         SessionList.sessions.add(this)
         SessionList.activeSessionIndex = SessionList.sessions.indexOf(this)
+
+        // Automatically create the view upon initialization
+        // Note: Be careful calling abstract methods in init, but for this structure it works
+        // provided implementation doesn't rely on uninitialized child properties.
     }
 
-    abstract fun createView()
-    
+    // Abstract method: Children must implement how their view is built
+    abstract fun createView(): CustomWebView
+
+    // Shared helper to get the view (if you prefer a getter method)
+    fun getOrInitView(): CustomWebView {
+        if (view == null) {
+            view = createView()
+        }
+        return view!!
+    }
+
     open fun destroy() {
         view?.destroy()
         view = null
         SessionList.sessions.remove(this)
-        // Adjust active index if needed (simplified logic)
+
+        // Update active index
         if (SessionList.sessions.isNotEmpty()) {
-             SessionList.activeSessionIndex = SessionList.sessions.size - 1
+            SessionList.activeSessionIndex = SessionList.sessions.size - 1
         } else {
             SessionList.activeSessionIndex = null
         }

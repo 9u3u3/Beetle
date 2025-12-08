@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -199,7 +200,9 @@ fun LeftTopBar(
     onUndoClick: () -> Unit = {},
     onRedoClick: () -> Unit = {},
     onRunClick: () -> Unit = {},
-    onDebugClick: () -> Unit = {}
+    onDebugClick: () -> Unit = {},
+    onMenuClick: () -> Unit = {},
+    showMenuIcon: Boolean = false
 ) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -217,6 +220,24 @@ fun LeftTopBar(
             horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Add menu icon for sidebar (portrait only)
+            if (showMenuIcon) {
+                IconButton(onClick = onMenuClick) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Toggle Sidebar",
+                        tint = Color(0xFF858585)
+                    )
+                }
+
+
+                VerticalDivider(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(1.dp),
+                    color = Color(0xFF3E3E42)
+                )
+            }
 
             VerticalDivider(
                 modifier = Modifier
@@ -224,7 +245,6 @@ fun LeftTopBar(
                     .width(1.dp),
                 color = Color(0xFF3E3E42)
             )
-
             // Save button
             TopBarIconButton(
                 icon = R.drawable.save_icon,
@@ -301,7 +321,6 @@ fun LeftTopBar(
         }
     }
 }
-
 @Composable
 private fun TopBarIconButton(
     icon: Int,

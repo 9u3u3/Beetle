@@ -31,15 +31,6 @@ fun FileTreeItem(
     onToggleExpand: () -> Unit,
     onFileClick: () -> Unit
 ) {
-//    val backgroundColor by animateColorAsState(
-//        targetValue = when {
-//            isSelected -> Color(0xFF2A2D2E)
-//            else -> Color.Transparent
-//        },
-//        animationSpec = tween(200),
-//        label = "backgroundColor"
-//    )
-
     val rotationAngle by animateFloatAsState(
         targetValue = if (isExpanded) 90f else 0f,
         animationSpec = spring(
@@ -54,7 +45,6 @@ fun FileTreeItem(
             .fillMaxWidth()
             .height(34.dp)
             .clip(RoundedCornerShape(4.dp))
-            .background(Color(0xFF050505))
             .clickable {
                 if (file.isDirectory) {
                     onToggleExpand()

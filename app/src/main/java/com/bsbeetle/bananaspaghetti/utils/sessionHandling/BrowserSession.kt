@@ -23,16 +23,17 @@ class BrowserSession(
     val onFrameworkDetected: (String, String) -> Unit = { _, _ -> },
     val onNetworkRequest: () -> Unit = {},
     val onConsoleLog: () -> Unit = {},
-    val onUrlChanged: (String) -> Unit = {}
-) : Session(context, SessionType.BROWSER) {
+    val onUrlChanged: (String) -> Unit = {},
+    name: String = "Browser"
+) : Session(context.applicationContext, SessionType.BROWSER, name) {
 
     init {
         createView()
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    override fun createView() {
-        if (view != null) return
+    override fun createView(): CustomWebView {
+        if (view != null) return view!!
         view = WebViewPool.get(context.applicationContext).apply {
             session = this@BrowserSession
             settings.apply {
@@ -134,6 +135,7 @@ class BrowserSession(
                 }
             }
         }
+        return view!!
     }
 
     override fun destroy() {

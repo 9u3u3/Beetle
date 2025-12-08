@@ -30,35 +30,64 @@ import com.bsbeetle.bananaspaghetti.viewmodel.EditorAction
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyGesture
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
+
 @Composable
 fun ExtraKeysRow(
     keyboardViewModel: KeyboardViewModel,
+    mode: SessionType,
     modifier: Modifier = Modifier
 ) {
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
 
-    // Row 1 keys
-    val row1 = listOf(
+    // Editor Keys
+    val editorRow1 = listOf(
         "ESC" to KeyType.ACTION_ESCAPE,
         "/" to KeyType.CHARACTER,
         "-" to KeyType.CHARACTER,
-        "HOME" to KeyType.ACTION_CTRL, // Placeholder type, handled manually
-        "UP" to KeyType.ACTION_CTRL,
-        "END" to KeyType.ACTION_CTRL,
-        "PGUP" to KeyType.ACTION_CTRL
+        "{" to KeyType.CHARACTER,
+        "}" to KeyType.CHARACTER,
+        "(" to KeyType.CHARACTER,
+        ")" to KeyType.CHARACTER
     )
 
-    // Row 2 keys
-    val row2 = listOf(
+    val editorRow2 = listOf(
         "TAB" to KeyType.ACTION_TAB,
         "CTRL" to KeyType.ACTION_CTRL,
-        "ALT" to KeyType.ACTION_CTRL, // Will add ALT type later
-        "LEFT" to KeyType.ACTION_CTRL,
-        "DOWN" to KeyType.ACTION_CTRL,
-        "RIGHT" to KeyType.ACTION_CTRL,
-        "PGDN" to KeyType.ACTION_CTRL
+        "ALT" to KeyType.ACTION_CTRL,
+        "[" to KeyType.CHARACTER,
+        "]" to KeyType.CHARACTER,
+        "<" to KeyType.CHARACTER,
+        ">" to KeyType.CHARACTER
     )
+
+    // Terminal Keys
+    val terminalRow1 = listOf(
+        "ESC" to KeyType.ACTION_ESCAPE,
+        "/" to KeyType.CHARACTER,
+        "-" to KeyType.CHARACTER,
+        "HOME" to KeyType.ACTION_HOME,
+        "UP" to KeyType.ACTION_UP,
+        "END" to KeyType.ACTION_END,
+        "PGUP" to KeyType.ACTION_PGUP
+    )
+
+    val terminalRow2 = listOf(
+        "TAB" to KeyType.ACTION_TAB,
+        "CTRL" to KeyType.ACTION_CTRL,
+        "ALT" to KeyType.ACTION_ALT,
+        "LEFT" to KeyType.ACTION_LEFT,
+        "DOWN" to KeyType.ACTION_DOWN,
+        "RIGHT" to KeyType.ACTION_RIGHT,
+        "PGDN" to KeyType.ACTION_PGDN
+    )
+
+    val (row1, row2) = if (mode == SessionType.TERMINAL) {
+        terminalRow1 to terminalRow2
+    } else {
+        editorRow1 to editorRow2
+    }
 
     Column(
         modifier = modifier
@@ -145,22 +174,24 @@ fun handleExtraKey(label: String, viewModel: KeyboardViewModel) {
         "CTRL" -> viewModel.onKeyEvent(Key("CTRL", type = KeyType.ACTION_CTRL), KeyGesture.Tap)
         "ALT" -> viewModel.onKeyEvent(Key("ALT", type = KeyType.ACTION_ALT), KeyGesture.Tap)
         
-        // Special sequences for Terminal
-        "HOME" -> sendSequence(viewModel, "\u001B[H")
-        "END" -> sendSequence(viewModel, "\u001B[F")
-        "PGUP" -> sendSequence(viewModel, "\u001B[5~")
-        "PGDN" -> sendSequence(viewModel, "\u001B[6~")
-        "UP" -> sendSequence(viewModel, "\u001B[A")
-        "DOWN" -> sendSequence(viewModel, "\u001B[B")
-        "RIGHT" -> sendSequence(viewModel, "\u001B[C")
-        "LEFT" -> sendSequence(viewModel, "\u001B[D")
-    }
-}
+        // Editor Symbols
+        "{" -> viewModel.onKeyEvent(Key("{", type = KeyType.CHARACTER), KeyGesture.Tap)
+        "}" -> viewModel.onKeyEvent(Key("}", type = KeyType.CHARACTER), KeyGesture.Tap)
+        "(" -> viewModel.onKeyEvent(Key("(", type = KeyType.CHARACTER), KeyGesture.Tap)
+        ")" -> viewModel.onKeyEvent(Key(")", type = KeyType.CHARACTER), KeyGesture.Tap)
+        "[" -> viewModel.onKeyEvent(Key("[", type = KeyType.CHARACTER), KeyGesture.Tap)
+        "]" -> viewModel.onKeyEvent(Key("]", type = KeyType.CHARACTER), KeyGesture.Tap)
+        "<" -> viewModel.onKeyEvent(Key("<", type = KeyType.CHARACTER), KeyGesture.Tap)
+        ">" -> viewModel.onKeyEvent(Key(">", type = KeyType.CHARACTER), KeyGesture.Tap)
 
-fun sendSequence(viewModel: KeyboardViewModel, sequence: String) {
-    // We need to expose a way to send raw sequence or use emitText
-    // Since emitText is private, we might need to use a public method or add one.
-    // For now, let's assume we can add a method to ViewModel or use a workaround.
-    // Actually, we can add a public method `sendTerminalSequence` to KeyboardViewModel.
-    viewModel.sendTerminalSequence(sequence)
+        // Navigation Keys (now handled by ViewModel)
+        "HOME" -> viewModel.onKeyEvent(Key("HOME", type = KeyType.ACTION_HOME), KeyGesture.Tap)
+        "END" -> viewModel.onKeyEvent(Key("END", type = KeyType.ACTION_END), KeyGesture.Tap)
+        "PGUP" -> viewModel.onKeyEvent(Key("PGUP", type = KeyType.ACTION_PGUP), KeyGesture.Tap)
+        "PGDN" -> viewModel.onKeyEvent(Key("PGDN", type = KeyType.ACTION_PGDN), KeyGesture.Tap)
+        "UP" -> viewModel.onKeyEvent(Key("UP", type = KeyType.ACTION_UP), KeyGesture.Tap)
+        "DOWN" -> viewModel.onKeyEvent(Key("DOWN", type = KeyType.ACTION_DOWN), KeyGesture.Tap)
+        "RIGHT" -> viewModel.onKeyEvent(Key("RIGHT", type = KeyType.ACTION_RIGHT), KeyGesture.Tap)
+        "LEFT" -> viewModel.onKeyEvent(Key("LEFT", type = KeyType.ACTION_LEFT), KeyGesture.Tap)
+    }
 }

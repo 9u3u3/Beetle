@@ -5,24 +5,26 @@ import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
-import androidx.compose.ui.Alignment
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
 import com.bsbeetle.bananaspaghetti.LocalSliderViewModel
@@ -30,6 +32,7 @@ import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
 import com.bsbeetle.bananaspaghetti.data.sidebar.Sidebar
 import com.bsbeetle.bananaspaghetti.data.sidebar.SidebarTab
 import com.bsbeetle.bananaspaghetti.ui.browser.DevBrowserScreen
+import com.bsbeetle.bananaspaghetti.ui.components.ExtraKeysRow
 import com.bsbeetle.bananaspaghetti.ui.components.LeftTermTopBar
 import com.bsbeetle.bananaspaghetti.ui.components.RightTopBar
 import com.bsbeetle.bananaspaghetti.ui.components.TopLeftTermBox
@@ -38,6 +41,7 @@ import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
 import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboardHalf
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
+import com.bsbeetle.bananaspaghetti.viewmodel.DevWebViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 
@@ -55,6 +59,9 @@ fun BrowserScreen(navController: NavController) {
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
     val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
 
+    // MERGE NOTE: Added DevWebViewModel from Block 1
+    val devWebViewModel: DevWebViewModel = viewModel()
+
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -64,7 +71,7 @@ fun BrowserScreen(navController: NavController) {
     var showSidebar by rememberSaveable { mutableStateOf(false) }
 
     val layout = if (uiState.toggleKeyboard) {
-        KeyboardLayout.developerLayout
+        KeyboardLayout.editorLayout
     } else {
         KeyboardLayout.qwertyLayout
     }
@@ -74,6 +81,7 @@ fun BrowserScreen(navController: NavController) {
 
             val (topLeft, topRight, leftBox, rightBox, leftKb, editor, rightKb) = createRefs()
 
+            // MERGE NOTE: Kept Block 2's logic for Portrait/Landscape TopBars
             if (isLandscape) {
                 LeftTermTopBar(
                     modifier = Modifier.constrainAs(topLeft) {
@@ -161,6 +169,7 @@ fun BrowserScreen(navController: NavController) {
 
             DevBrowserScreen(
                 modifier = Modifier.constrainAs(editor) {
+                    // MERGE NOTE: Kept Block 2's smart constraints for Portrait mode
                     if (isLandscape) {
                         top.linkTo(parent.top)
                     } else {
@@ -168,7 +177,6 @@ fun BrowserScreen(navController: NavController) {
                     }
                     bottom.linkTo(parent.bottom)
 
-                    // adapt constraints depending on keyboard visibility & orientation
                     if (isLandscape && uiState.isLeftKeyboardVisible) {
                         start.linkTo(leftKb.end)
                     } else {
@@ -184,7 +192,9 @@ fun BrowserScreen(navController: NavController) {
                     width = Dimension.fillToConstraints
                     height = Dimension.fillToConstraints
                 },
-                webView = SessionList.sessions[SessionList.activeSessionIndex!!].view!!
+                // MERGE NOTE: Used Block 2's session access (`.view!!`) + Block 1's ViewModel
+                webView = SessionList.sessions[SessionList.activeSessionIndex!!].view!!,
+                viewModel = devWebViewModel
             )
 
             if(!isLandscape){
@@ -200,15 +210,16 @@ fun BrowserScreen(navController: NavController) {
             }
         }
 
+        // MERGE NOTE: Kept Block 2's Extra Keys Row logic
         if (!isLandscape) {
-            // Extra Keys Row for Portrait Mode
-            val imeInsets = androidx.compose.foundation.layout.WindowInsets.ime
-            val density = androidx.compose.ui.platform.LocalDensity.current
+            val imeInsets = WindowInsets.ime
+            val density = LocalDensity.current
             val isKeyboardVisible = imeInsets.getBottom(density) > 0
 
             if (isKeyboardVisible) {
-                com.bsbeetle.bananaspaghetti.ui.components.ExtraKeysRow(
+                ExtraKeysRow(
                     keyboardViewModel = keyboardViewModel,
+                    mode = com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType.BROWSER,
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color(0xFF2E2E2E))
@@ -218,5 +229,4 @@ fun BrowserScreen(navController: NavController) {
             }
         }
     }
-
 }

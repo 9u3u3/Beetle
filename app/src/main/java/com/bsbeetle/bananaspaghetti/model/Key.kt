@@ -13,7 +13,15 @@ enum class KeyType {
     ACTION_TAB,
     ACTION_CTRL,
     ACTION_ALT,
-    ACTION_ESCAPE
+    ACTION_ESCAPE,
+    ACTION_LEFT,
+    ACTION_RIGHT,
+    ACTION_UP,
+    ACTION_DOWN,
+    ACTION_HOME,
+    ACTION_END,
+    ACTION_PGUP,
+    ACTION_PGDN
 }
 // Represents a single key on the keyboard
 data class Key(

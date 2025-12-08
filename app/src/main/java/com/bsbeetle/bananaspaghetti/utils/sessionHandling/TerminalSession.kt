@@ -14,7 +14,7 @@ import com.bsbeetle.bananaspaghetti.utils.AppConfig
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 import java.io.FileOutputStream
 
-class TerminalSession(context: Context) : Session(context, SessionType.TERMINAL) {
+class TerminalSession(context: Context, name: String = "Terminal") : Session(context.applicationContext, SessionType.TERMINAL, name) {
 
     var outputFd: FileOutputStream? = null
     private var tenebrio: Tenebrio? = null
@@ -33,8 +33,8 @@ class TerminalSession(context: Context) : Session(context, SessionType.TERMINAL)
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    override fun createView() {
-        if (view != null) return
+    override fun createView(): CustomWebView {
+        if (view != null) return view!!
         view = CustomWebView(context.applicationContext, this).apply {
             WebView.setWebContentsDebuggingEnabled(true)
             settings.apply {
@@ -97,6 +97,7 @@ class TerminalSession(context: Context) : Session(context, SessionType.TERMINAL)
                 }
             }
         }
+        return view!!
     }
 
     fun insertText(text: String) {

@@ -50,7 +50,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun InitialEditorUI(navController: NavController) {
 
-    Log.e("Sessions", SessionList.sessions.toString())
+    // Log.d("Sessions", "Active Session Index: ${SessionList.activeSessionIndex}")
 
     BackHandler {
         navController.navigate(Screen.Home.route) {
@@ -63,6 +63,15 @@ fun InitialEditorUI(navController: NavController) {
     val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
     val editorViewModel: EditorViewModel = LocalEditorViewModel.current
     val bufferViewModel: BufferViewModel = LocalBufferViewModel.current
+    val lspViewModel: LspViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+
+    // Pass LspViewModel to active session if it's an EditorSession
+    LaunchedEffect(Unit) {
+        val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
+        if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
+            session.setLspViewModel(lspViewModel)
+        }
+    }
 
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
@@ -71,14 +80,14 @@ fun InitialEditorUI(navController: NavController) {
     val configuration = LocalConfiguration.current
 
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val layout = if (uiState.toggleKeyboard) KeyboardLayout.developerLayout else KeyboardLayout.qwertyLayout
-    var showSidebar by rememberSaveable { mutableStateOf(false) }
+    val layout = if (uiState.toggleKeyboard) KeyboardLayout.editorLayout else KeyboardLayout.qwertyLayout
 
-    // 🚀 LSP popup states
+    // UI States
+    var showSidebar by rememberSaveable { mutableStateOf(false) }
     var showLanguagePopup by remember { mutableStateOf(false) }
     var missingLanguageExt by remember { mutableStateOf("") }
 
-    // 🚀 File Load (fixed performance)
+    // 🚀 File Load (with LSP check & Performance fix)
     LaunchedEffect(fileViewModel.selectedUri) {
         delay(50) // allows UI to compose first so no freeze
         fileViewModel.selectedUri?.let { uri ->
@@ -86,8 +95,10 @@ fun InitialEditorUI(navController: NavController) {
 
                 if (bufferViewModel.filesOpenedList.none { it.uri.toString() == uri.toString() }) {
                     bufferViewModel.filesOpenedList.add(documentFile)
+                    Log.d("Buffer", "Added: ${documentFile.name}")
                 }
 
+                // Check for Language Support (LSP)
                 try {
                     val extType = documentFile.name!!.substringAfterLast(".")
                     if (!LanguageRegistry.isInstalled(extType)) {
@@ -102,6 +113,17 @@ fun InitialEditorUI(navController: NavController) {
                 bufferViewModel.bufferLine[documentFile] = content
                 loadContentWhenReady(editorViewModel.webView, content)
                 fileViewModel.currentFilePath = uri.toString()
+                
+                // Re-inject LspViewModel when file changes/session might change
+                val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
+                if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
+                    session.setLspViewModel(lspViewModel)
+                    // Use a clean filename for LSP to avoid content:// URI issues
+                    val cleanName = documentFile.name?.replace(" ", "_") ?: "main.cpp"
+                    session.setFilePath("/src/$cleanName")
+                }
+
+                Log.d("Buffer", "Opened: ${documentFile.name}, total: ${bufferViewModel.filesOpenedList.size}")
             }
         }
     }
@@ -112,6 +134,7 @@ fun InitialEditorUI(navController: NavController) {
         ConstraintLayout(Modifier.fillMaxSize()) {
             val (topLeft, topMiddle, topRight, leftBox, rightBox, leftKb, editor, rightKb, bottomBarRef) = createRefs()
 
+            // Merged LeftTopBar: Includes Menu toggle (Block 1) AND Save functionality (Block 2)
             LeftTopBar(
                 modifier = Modifier.constrainAs(topLeft) {
                     top.linkTo(parent.top)
@@ -119,6 +142,8 @@ fun InitialEditorUI(navController: NavController) {
                     end.linkTo(topMiddle.start)
                     width = Dimension.percent(0.2f)
                 },
+                onMenuClick = { showSidebar = true },
+                showMenuIcon = !isLandscape,
                 onSaveClick = { saveFile(fileViewModel, context) }
             )
 
@@ -209,7 +234,8 @@ fun InitialEditorUI(navController: NavController) {
                     end.linkTo(editor.end)
                     width = Dimension.fillToConstraints
                 },
-                color = Color(0xFF1B1B1B)
+                color = Color(0xFF1B1B1B),
+                lspViewModel = lspViewModel
             )
 
             if (!isLandscape) {
@@ -227,8 +253,8 @@ fun InitialEditorUI(navController: NavController) {
             }
         }
 
+        // Extra Keys Row for Portrait Mode (From Block 2)
         if (!isLandscape) {
-            // Extra Keys Row for Portrait Mode
             val imeInsets = WindowInsets.ime
             val density = androidx.compose.ui.platform.LocalDensity.current
             val isKeyboardVisible = imeInsets.getBottom(density) > 0
@@ -236,6 +262,7 @@ fun InitialEditorUI(navController: NavController) {
             if (isKeyboardVisible) {
                 com.bsbeetle.bananaspaghetti.ui.components.ExtraKeysRow(
                     keyboardViewModel = keyboardViewModel,
+                    mode = com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType.EDITOR,
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color(0xFF2E2E2E))
@@ -251,7 +278,6 @@ fun InitialEditorUI(navController: NavController) {
             show = showLanguagePopup,
             onInstall = {
                 showLanguagePopup = false
-                // navigation handled by you
                 navController.navigate(Screen.Extensions.route)
             },
             onDismiss = {
