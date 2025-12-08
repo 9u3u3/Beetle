@@ -176,10 +176,17 @@ function setupEditor() {
       return []
     },
     update(diagnostics, tr) {
+      // Handle explicit diagnostic updates via effect
       for (let effect of tr.effects) {
         if (effect.is(setDiagnosticsEffect)) {
           return effect.value
         }
+      }
+      // CRITICAL FIX: Clear diagnostics when document changes
+      // This prevents position mapping errors when old diagnostics
+      // reference positions that no longer exist in the shrunken document
+      if (tr.docChanged) {
+        return []
       }
       return diagnostics
     }
@@ -254,32 +261,44 @@ function setupEditor() {
           }
         }
 
-        // Update diagnostics using StateEffect
-        view.dispatch({
-          effects: setDiagnosticsEffect.of(diagnostics)
-        })
+        // Use requestAnimationFrame to avoid blocking the main thread
+        // This ensures diagnostics update doesn't interfere with user input
+        requestAnimationFrame(() => {
+          if (!view) return;
 
-        // forceLinting disabled - view.dispatch above should trigger linter automatically
-        // forceLinting(view);
+          // CRITICAL: Filter diagnostics that are now out of bounds
+          // Document may have changed since diagnostics were calculated
+          const docLen = view.state.doc.length;
+          const validDiagnostics = diagnostics.filter(d =>
+            d.from >= 0 && d.from <= docLen && d.to >= 0 && d.to <= docLen
+          );
 
-        // Send diagnostics to Kotlin bridge (throttled - only if 2+ seconds since last send)
-        const now = Date.now();
-        if (!window.lastDiagsSentTime || now - window.lastDiagsSentTime > 2000) {
-          window.lastDiagsSentTime = now;
-          const diagList = diagnostics.slice(0, 10).map(d => ({  // Limit to 10 items
-            msg: d.message.substring(0, 100),  // Truncate long messages
-            line: view.state.doc.lineAt(d.from).number,
-            col: d.from - view.state.doc.lineAt(d.from).from + 1,
-            sev: d.severity
-          }));
-          console.log(`[LSP-DIAGS] ${JSON.stringify(diagList)}`);
-        }
+          // Only dispatch if we have valid diagnostics
+          if (validDiagnostics.length > 0 || diagnostics.length === 0) {
+            view.dispatch({
+              effects: setDiagnosticsEffect.of(validDiagnostics)
+            });
+          }
+
+          // Send diagnostics to Kotlin bridge (throttled - only if 2+ seconds since last send)
+          const now = Date.now();
+          if (!window.lastDiagsSentTime || now - window.lastDiagsSentTime > 2000) {
+            window.lastDiagsSentTime = now;
+            const diagList = validDiagnostics.slice(0, 10).map(d => ({
+              msg: d.message.substring(0, 100),
+              line: view.state.doc.lineAt(d.from).number,
+              col: d.from - view.state.doc.lineAt(d.from).from + 1,
+              sev: d.severity
+            }));
+            console.log(`[LSP-DIAGS] ${JSON.stringify(diagList)}`);
+          }
+        });
 
         pendingDiagnostics = null;
       } catch (e) {
         console.error('Error in handleDiagnostics:', e)
       }
-    }, 2000); // 2 second debounce (increased from 1 second)
+    }, 2000); // 2 second debounce
   }
 
   function updateCompletionListUI() {
