@@ -6,8 +6,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyGesture
 import kotlinx.coroutines.*
 
-private const val CONTINUOUS_PRESS_INITIAL_DELAY_MS: Long = 500  // The delay for the key to realise if the key is held or not...
-private const val CONTINUOUS_PRESS_REPEAT_INTERVAL_MS: Long = 100 // The delay between the consecutive hold like the delay between first backspace and the next when the backspace is held
+private const val CONTINUOUS_PRESS_INITIAL_DELAY_MS: Long = 400  // Reduced from 500ms for faster response
+private const val CONTINUOUS_PRESS_REPEAT_INTERVAL_MS: Long = 150 // Increased from 100ms to reduce pressure on WebView
 
 fun Modifier.continuousPress(
     key: Any?,

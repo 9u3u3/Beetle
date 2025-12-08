@@ -259,23 +259,27 @@ function setupEditor() {
           effects: setDiagnosticsEffect.of(diagnostics)
         })
 
-        // Force linter to update (safe because we debounce 1 second)
-        forceLinting(view);
+        // forceLinting disabled - view.dispatch above should trigger linter automatically
+        // forceLinting(view);
 
-        // Send diagnostics list to Kotlin bridge
-        const diagList = diagnostics.map(d => ({
-          msg: d.message,
-          line: view.state.doc.lineAt(d.from).number,
-          col: d.from - view.state.doc.lineAt(d.from).from + 1,
-          sev: d.severity
-        }));
-        console.log(`[LSP-DIAGS] ${JSON.stringify(diagList)}`);
+        // Send diagnostics to Kotlin bridge (throttled - only if 2+ seconds since last send)
+        const now = Date.now();
+        if (!window.lastDiagsSentTime || now - window.lastDiagsSentTime > 2000) {
+          window.lastDiagsSentTime = now;
+          const diagList = diagnostics.slice(0, 10).map(d => ({  // Limit to 10 items
+            msg: d.message.substring(0, 100),  // Truncate long messages
+            line: view.state.doc.lineAt(d.from).number,
+            col: d.from - view.state.doc.lineAt(d.from).from + 1,
+            sev: d.severity
+          }));
+          console.log(`[LSP-DIAGS] ${JSON.stringify(diagList)}`);
+        }
 
         pendingDiagnostics = null;
       } catch (e) {
         console.error('Error in handleDiagnostics:', e)
       }
-    }, 1000); // 1 second debounce
+    }, 2000); // 2 second debounce (increased from 1 second)
   }
 
   function updateCompletionListUI() {
@@ -561,8 +565,14 @@ function setupEditor() {
           window.lastDiagTime = now;
         }
 
-        // Output for Kotlin bridge (EditorSession parses this)
-        console.log(`[LSP-STATUS] line:${line.number} col:${col + 1} err:${window.cachedErrors || 0} warn:${window.cachedWarnings || 0}`);
+        // Output for Kotlin bridge - THROTTLED to prevent flooding on rapid typing/backspace
+        // Only send status if position changed AND at least 100ms since last update
+        const statusKey = `${line.number}-${col}`;
+        if (statusKey !== window.lastStatusKey && (!window.lastStatusTime || now - window.lastStatusTime > 100)) {
+          window.lastStatusKey = statusKey;
+          window.lastStatusTime = now;
+          console.log(`[LSP-STATUS] line:${line.number} col:${col + 1} err:${window.cachedErrors || 0} warn:${window.cachedWarnings || 0}`);
+        }
 
         // Full Text Sync - Re-enabled with longer debounce
         if (update.docChanged && ws.readyState === WebSocket.OPEN && view && isInitialized) {
@@ -579,7 +589,7 @@ function setupEditor() {
             };
 
             sendNotification(ws, 'textDocument/didChange', payload);
-          }, 500); // 500ms debounce - prevent freeze on slow typing
+          }, 500); // 500ms debounce - prevent freeze on rapid changes
         }
       })
     ]
@@ -685,8 +695,7 @@ function setupEditor() {
     }
   };
 
-  // Debounced backspace to prevent freeze on hold
-  let backspaceTimeout = null;
+  // Simple backspace - deletes one character
   window.performBackspace = function () {
     // Close completion on backspace
     if (window.completionActive) {
@@ -694,14 +703,11 @@ function setupEditor() {
       window.completionActive = false;
     }
 
-    // Debounce to prevent freeze when holding backspace
-    if (backspaceTimeout) return; // Skip if already scheduled
+    // Guard: don't try to delete at position 0 (causes freeze)
+    const pos = view.state.selection.main.head;
+    if (pos === 0) return;
 
     deleteCharBackward(view);
-
-    backspaceTimeout = setTimeout(() => {
-      backspaceTimeout = null;
-    }, 16); // ~60fps limit
   };
 
   window.performEnter = function () {

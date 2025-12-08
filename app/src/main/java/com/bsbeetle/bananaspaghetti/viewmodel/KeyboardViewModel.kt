@@ -308,7 +308,6 @@ class KeyboardViewModel : ViewModel() {
         }
     }
 
-
     // Emitter functions -> Basic it helps to implements better things
 
     private fun emitText(text: String) {
@@ -337,16 +336,28 @@ class KeyboardViewModel : ViewModel() {
         }
     }
 
+    // Simple backspace throttling - max one call per 150ms
+    private var _lastBackspaceTime = 0L
+    
     private fun onBackspace() {
+        val now = System.currentTimeMillis()
+        
+        // Throttle: only allow one backspace per 150ms
+        if (now - _lastBackspaceTime < 150) return
+        _lastBackspaceTime = now
+        
         viewModelScope.launch {
-            val session = SessionList.sessions[SessionList.activeSessionIndex!!]
+            val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
             if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
+                // Guard: don't send backspace if cursor is at start of file (line 1, col 1)
+                if (session.cursorLine == 1 && session.cursorColumn == 1) {
+                    return@launch
+                }
                 session.performEditorAction("performBackspace")
             } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) {
-                // Send backspace char (0x7F)
                 session.insertText("\u007F")
             } else {
-                session._inputConnection?.deleteSurroundingText(1, 0)
+                session?._inputConnection?.deleteSurroundingText(1, 0)
             }
         }
     }

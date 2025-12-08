@@ -16,6 +16,17 @@ import kotlinx.coroutines.launch
 class EditorSession(context: Context, name: String = "Editor") : Session(context.applicationContext, SessionType.EDITOR, name) {
 
     private var currentFilePath: String? = null
+    
+    // Track cursor position for backspace guard (updated by LSP-STATUS parsing)
+    var cursorLine: Int = 1
+        private set
+    var cursorColumn: Int = 1
+        private set
+    
+    fun updateCursorPosition(line: Int, col: Int) {
+        cursorLine = line
+        cursorColumn = col
+    }
 
     init {
         createView()
@@ -171,6 +182,11 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
     fun performEditorAction(action: String) {
         view?.evaluateJavascript("if(window.$action) window.$action();", null)
     }
+    
+    // Overload for actions with count parameter (e.g., batched backspace)
+    fun performEditorAction(action: String, count: Int) {
+        view?.evaluateJavascript("if(window.$action) window.$action($count);", null)
+    }
 
     fun performNavigation(type: com.bsbeetle.bananaspaghetti.model.KeyType) {
         val action = when(type) {
@@ -218,6 +234,9 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                                         part.startsWith("warn:") -> warn = part.substringAfter("warn:").toIntOrNull() ?: 0
                                     }
                                 }
+                                
+                                // Update EditorSession cursor position for backspace guard
+                                this@EditorSession.updateCursorPosition(line, col)
                                 
                                 viewModel.updateCursorPosition(line, col)
                                 viewModel.updateDiagnostics(err, warn)
