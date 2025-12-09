@@ -87,6 +87,7 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                 javaScriptEnabled = true
                 domStorageEnabled = true
                 allowFileAccess = true
+                allowUniversalAccessFromFileURLs = true // Required for dynamic imports from file://
                 cacheMode = WebSettings.LOAD_NO_CACHE
                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                 useWideViewPort = true
@@ -220,6 +221,15 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
     fun setFilePath(path: String) {
         currentFilePath = path
         view?.evaluateJavascript("if(window.setFilePath) window.setFilePath('$path');", null)
+    }
+
+    fun setLanguage(slug: String, port: Int = 8081) {
+        val jsPath = "http://localhost:8080/plugins/$slug/$slug.js"
+        view?.evaluateJavascript("if(window.setLanguage) window.setLanguage('$slug', $port);", null)
+    }
+    
+    fun clearLanguage() {
+        view?.evaluateJavascript("if(window.clearLanguage) window.clearLanguage();", null)
     }
 
     fun performEditorAction(action: String) {

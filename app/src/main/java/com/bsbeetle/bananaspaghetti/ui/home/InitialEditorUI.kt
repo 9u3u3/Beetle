@@ -107,24 +107,43 @@ fun InitialEditorUI(navController: NavController) {
         fileViewModel.selectedUri?.let { uri ->
             DocumentFile.fromSingleUri(context, uri)?.let { documentFile ->
 
+                if (documentFile.isDirectory) {
+                    Log.d("Buffer", "Opened directory: ${documentFile.name}, skipping LSP setup")
+                    return@let
+                }
+
                 if (bufferViewModel.filesOpenedList.none { it.uri.toString() == uri.toString() }) {
                     bufferViewModel.filesOpenedList.add(documentFile)
                     Log.d("Buffer", "Added: ${documentFile.name}")
                 }
 
                 // Check for Language Support (LSP)
+                val extType = documentFile.name!!.substringAfterLast(".")
+                val slug = LanguageRegistry.getSlugForExtension(extType)
+                
+                var lspPort = 8081 // Default port
+                
                 try {
-                    val extType = documentFile.name!!.substringAfterLast(".")
-                    if (!LanguageRegistry.isInstalled(extType)) {
-                        missingLanguageExt = extType
-                        showLanguagePopup = true
+                    if (slug != "plaintext") {
+                        if (!LanguageRegistry.isInstalled(slug)) {
+                            missingLanguageExt = extType
+                            showLanguagePopup = true
+                        } else {
+                            // Start LSP and get port
+                            lspPort = editorViewModel.startLsp(slug)
+                            android.widget.Toast.makeText(context, "Initializing $slug support on port $lspPort...", android.widget.Toast.LENGTH_SHORT).show()
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e("Buffer", "Error in file extension handling $e")
                 }
 
+                // Save current content before loading new file
+                bufferViewModel.saveCurrentContentToBuffer()
+
                 val content = readFromFile(context, uri)
                 bufferViewModel.bufferLine[documentFile] = content
+                bufferViewModel.currentFile.value = documentFile // Track current file
                 loadContentWhenReady(editorViewModel.webView, content)
                 fileViewModel.currentFilePath = uri.toString()
                 
@@ -135,6 +154,13 @@ fun InitialEditorUI(navController: NavController) {
                     // Use a clean filename for LSP to avoid content:// URI issues
                     val cleanName = documentFile.name?.replace(" ", "_") ?: "main.cpp"
                     session.setFilePath("/src/$cleanName")
+                    
+                    if (slug != "plaintext" && LanguageRegistry.isInstalled(slug)) {
+                        session.setLanguage(slug, lspPort)
+                    } else {
+                        // Clear language support for unsupported files
+                        session.clearLanguage()
+                    }
                 }
 
                 Log.d("Buffer", "Opened: ${documentFile.name}, total: ${bufferViewModel.filesOpenedList.size}")

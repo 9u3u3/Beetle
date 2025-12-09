@@ -85,8 +85,14 @@ fun TopBar(
                     fileName = documentFile.name ?: "Unknown",
                     isSelected = documentFile.uri.toString() == fileViewModel.currentFilePath,
                     onClick = {
+                        // Save current content before switching
+                        bufferViewModel.saveCurrentContentToBuffer()
+                        
                         fileViewModel.selectedUri = documentFile.uri
                         fileViewModel.currentFilePath = documentFile.uri.toString()
+                        
+                        // Update current file tracker
+                        bufferViewModel.currentFile.value = documentFile
 
                         val bufferedContent = bufferViewModel.bufferLine[documentFile]
                         if (bufferedContent != null) {
