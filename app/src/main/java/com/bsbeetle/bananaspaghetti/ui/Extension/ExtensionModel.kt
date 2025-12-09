@@ -8,5 +8,8 @@ data class ExtensionModel(
     val version: String,
     val size: String,
     val rating: Double,
-    val installed: Boolean
+    val installed: Boolean,
+    val iconResId: Int, // Resource ID for the icon
+    val downloads: String,
+    val stars: Int
 )

@@ -1,5 +1,7 @@
 package com.bsbeetle.bananaspaghetti.ui.Extension
 
+import com.bsbeetle.bananaspaghetti.R
+
 object ExtensionsRepo {
     val extensions = listOf(
         ExtensionModel(
@@ -10,7 +12,10 @@ object ExtensionsRepo {
             version = "1.50.0",
             size = "179 MB",
             rating = 4.5,
-            installed = false
+            installed = false,
+            iconResId = R.drawable.extension, 
+            downloads = "35M",
+            stars = 591
         ),
         ExtensionModel(
             id = "python",
@@ -20,7 +25,10 @@ object ExtensionsRepo {
             version = "2025.18.1",
             size = "140 MB",
             rating = 4.7,
-            installed = true
+            installed = true,
+            iconResId = R.drawable.extension,
+            downloads = "128M",
+            stars = 842
         ),
         ExtensionModel(
             id = "cpp",
@@ -30,7 +38,10 @@ object ExtensionsRepo {
             version = "3.4.0",
             size = "122 MB",
             rating = 4.3,
-            installed = false
+            installed = false,
+            iconResId = R.drawable.cplusplus_plain,
+            downloads = "91M",
+            stars = 591
         ),
         ExtensionModel(
             id = "rust",
@@ -40,7 +51,10 @@ object ExtensionsRepo {
             version = "0.10.1",
             size = "97 MB",
             rating = 4.6,
-            installed = false
+            installed = false,
+            iconResId = R.drawable.extension,
+            downloads = "12M",
+            stars = 320
         )
     )
 }

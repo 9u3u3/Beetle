@@ -41,6 +41,7 @@ import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.readFromFile
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.saveFile
 import com.bsbeetle.bananaspaghetti.utils.languageHandling.LanguageRegistry
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.viewmodel.*
@@ -50,9 +51,22 @@ import kotlinx.coroutines.delay
 @Composable
 fun InitialEditorUI(navController: NavController) {
 
-    Log.e("Sessions", SessionList.sessions.toString())
+    // Log.d("Sessions", "Active Session Index: ${SessionList.activeSessionIndex}")
+
+    // Get current editor session for content preservation
+    val currentSession = remember {
+        SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? EditorSession
+    }
+    
+    // Restore content when screen appears (after navigation back)
+    LaunchedEffect(Unit) {
+        delay(200) // Wait for WebView to be ready
+        currentSession?.restoreContent()
+    }
 
     BackHandler {
+        // Save content before navigating away
+        currentSession?.saveContent()
         navController.navigate(Screen.Home.route) {
             popUpTo(Screen.OpenFolder.route) { inclusive = true }
         }
@@ -63,6 +77,15 @@ fun InitialEditorUI(navController: NavController) {
     val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
     val editorViewModel: EditorViewModel = LocalEditorViewModel.current
     val bufferViewModel: BufferViewModel = LocalBufferViewModel.current
+    val lspViewModel: LspViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+
+    // Pass LspViewModel to active session if it's an EditorSession
+    LaunchedEffect(Unit) {
+        val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
+        if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
+            session.setLspViewModel(lspViewModel)
+        }
+    }
 
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
@@ -104,6 +127,16 @@ fun InitialEditorUI(navController: NavController) {
                 bufferViewModel.bufferLine[documentFile] = content
                 loadContentWhenReady(editorViewModel.webView, content)
                 fileViewModel.currentFilePath = uri.toString()
+                
+                // Re-inject LspViewModel when file changes/session might change
+                val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
+                if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
+                    session.setLspViewModel(lspViewModel)
+                    // Use a clean filename for LSP to avoid content:// URI issues
+                    val cleanName = documentFile.name?.replace(" ", "_") ?: "main.cpp"
+                    session.setFilePath("/src/$cleanName")
+                }
+
                 Log.d("Buffer", "Opened: ${documentFile.name}, total: ${bufferViewModel.filesOpenedList.size}")
             }
         }
@@ -215,7 +248,8 @@ fun InitialEditorUI(navController: NavController) {
                     end.linkTo(editor.end)
                     width = Dimension.fillToConstraints
                 },
-                color = Color(0xFF1B1B1B)
+                color = Color(0xFF1B1B1B),
+                lspViewModel = lspViewModel
             )
 
             if (!isLandscape) {

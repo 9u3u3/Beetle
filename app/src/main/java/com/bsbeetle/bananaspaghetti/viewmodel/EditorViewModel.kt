@@ -13,8 +13,20 @@ import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 // Implementation of the sessions
 // Write functions to swap the webViews on call
 
+import androidx.lifecycle.viewModelScope
+import com.bsbeetle.bananaspaghetti.utils.languageHandling.cLsp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
 class EditorViewModel(app: Application) : AndroidViewModel(app) {
-    init { AssetServer(getApplication(), 8080).start() } // Start the server for editor files
+    init { 
+        AssetServer(getApplication(), 8080).start() 
+        
+        // Start LSP Server
+        viewModelScope.launch(Dispatchers.IO) {
+            cLsp(getApplication()).init()
+        }
+    }
     @SuppressLint("StaticFieldLeak")
     var webView: CustomWebView? = null
 

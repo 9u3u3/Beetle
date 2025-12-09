@@ -47,6 +47,7 @@ import com.bsbeetle.bananaspaghetti.utils.resourceHandling.ImageLoaderSingleton
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.readFromFile
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.BrowserSession
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
@@ -352,6 +353,9 @@ fun RightTopBar(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val context = LocalContext.current
     val browserViewModel = LocalBrowserViewModel.current
+    
+    // Helper to save content before navigation
+    val currentEditorSession = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? EditorSession
 
     Box(
         modifier = modifier
@@ -377,6 +381,7 @@ fun RightTopBar(
             TopBarIconButton(
                 icon = R.drawable.zoom_in,
                 onClick = {
+                    currentEditorSession?.saveContent()
                     navController.navigate(Screen.ZoomOut.route)
                 }
             )
@@ -391,6 +396,7 @@ fun RightTopBar(
             TopBarIconButton(
                 icon = R.drawable.web_icon,
                 onClick = {
+                    currentEditorSession?.saveContent()
                     BrowserSession(context)
                     browserViewModel.setDevWebView(SessionList.sessions[SessionList.activeSessionIndex!!].view!!)
                     navController.navigate(Screen.Browser.route)
@@ -425,7 +431,8 @@ fun RightTopBar(
             TopBarIconButton(
                 icon = R.drawable.extension,
                 onClick = {
-                    /*TODO*/
+                    currentEditorSession?.saveContent()
+                    navController.navigate(Screen.Extensions.route)
                 }
             )
 
@@ -440,6 +447,7 @@ fun RightTopBar(
             TopBarIconButton(
                 icon = R.drawable.settings_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
                 onClick = {
+                    currentEditorSession?.saveContent()
                     navController.navigate(Screen.Settings.route)
                 }
             )
