@@ -88,6 +88,7 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
 
     override fun destroy() {
         view?.let { WebViewPool.recycle(it) }
+        view = null // Prevent super.destroy() from destroying the recycled view
         super.destroy()
     }
 

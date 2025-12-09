@@ -142,4 +142,6 @@ dependencies {
 
     implementation("io.coil-kt:coil-compose:2.5.0")
     implementation("io.coil-kt:coil-svg:2.5.0")
+    implementation(libs.jgit)
+    implementation(libs.androidx.security.crypto)
 }

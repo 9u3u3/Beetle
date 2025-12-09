@@ -140,6 +140,7 @@ class BrowserSession(
 
     override fun destroy() {
         view?.let { WebViewPool.recycle(it) }
+        view = null // Prevent super.destroy() from destroying the recycled view
         super.destroy()
     }
 }
