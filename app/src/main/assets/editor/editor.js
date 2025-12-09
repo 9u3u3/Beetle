@@ -182,11 +182,13 @@ function setupEditor() {
           return effect.value
         }
       }
-      // CRITICAL FIX: Clear diagnostics when document changes
-      // This prevents position mapping errors when old diagnostics
-      // reference positions that no longer exist in the shrunken document
+      // CRITICAL FIX: Filter out-of-bounds diagnostics when document changes
+      // This prevents position mapping errors while keeping valid diagnostics visible
       if (tr.docChanged) {
-        return []
+        const docLen = tr.newDoc.length;
+        return diagnostics.filter(d =>
+          d.from >= 0 && d.from <= docLen && d.to >= 0 && d.to <= docLen
+        );
       }
       return diagnostics
     }
@@ -298,7 +300,7 @@ function setupEditor() {
       } catch (e) {
         console.error('Error in handleDiagnostics:', e)
       }
-    }, 2000); // 2 second debounce
+    }, 500); // 500ms debounce - fast diagnostics updates
   }
 
   function updateCompletionListUI() {
@@ -608,7 +610,7 @@ function setupEditor() {
             };
 
             sendNotification(ws, 'textDocument/didChange', payload);
-          }, 500); // 500ms debounce - prevent freeze on rapid changes
+          }, 300); // 300ms debounce - faster LSP updates
         }
       })
     ]

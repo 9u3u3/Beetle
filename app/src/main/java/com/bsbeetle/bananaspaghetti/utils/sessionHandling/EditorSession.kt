@@ -23,9 +23,52 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
     var cursorColumn: Int = 1
         private set
     
+    // Content preservation: save editor content when navigating away
+    private var savedContent: String? = null
+    private var needsRestore: Boolean = false
+    
     fun updateCursorPosition(line: Int, col: Int) {
         cursorLine = line
         cursorColumn = col
+    }
+    
+    /**
+     * Save the current editor content before navigating away.
+     * Call this when leaving the editor screen.
+     */
+    fun saveContent() {
+        view?.evaluateJavascript("window.code_") { result ->
+            if (result != null && result != "null" && result != "\"\"") {
+                savedContent = result.removeSurrounding("\"")
+                    .replace("\\n", "\n")
+                    .replace("\\u003C", "<")
+                    .replace("\\u003E", ">")
+                    .replace("\\\"", "\"")
+                needsRestore = true
+                Log.d("EditorSession", "Content saved (${savedContent?.length ?: 0} chars)")
+            }
+        }
+    }
+    
+    /**
+     * Restore saved content after navigating back to the editor.
+     * Call this when the editor screen is shown again.
+     */
+    fun restoreContent() {
+        if (needsRestore && savedContent != null) {
+            val content = savedContent!!
+            val jsCommand = """
+                if (window.isEditorReady === true) {
+                    window.editor.dispatch({
+                        changes: { from: 0, to: window.editor.state.doc.length, insert: ${org.json.JSONObject.quote(content)} }
+                    });
+                }
+            """.trimIndent()
+            view?.evaluateJavascript(jsCommand) { result ->
+                Log.d("EditorSession", "Content restored")
+            }
+            needsRestore = false
+        }
     }
 
     init {

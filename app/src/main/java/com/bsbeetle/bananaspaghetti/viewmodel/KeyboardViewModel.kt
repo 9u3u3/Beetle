@@ -336,14 +336,14 @@ class KeyboardViewModel : ViewModel() {
         }
     }
 
-    // Simple backspace throttling - max one call per 150ms
+    // Simple backspace throttling - max one call per 50ms
     private var _lastBackspaceTime = 0L
     
     private fun onBackspace() {
         val now = System.currentTimeMillis()
         
-        // Throttle: only allow one backspace per 150ms
-        if (now - _lastBackspaceTime < 150) return
+        // Throttle: only allow one backspace per 50ms (safe after position validation fix)
+        if (now - _lastBackspaceTime < 50) return
         _lastBackspaceTime = now
         
         viewModelScope.launch {

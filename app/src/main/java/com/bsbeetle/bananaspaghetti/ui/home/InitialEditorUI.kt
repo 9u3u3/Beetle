@@ -41,6 +41,7 @@ import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.readFromFile
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.saveFile
 import com.bsbeetle.bananaspaghetti.utils.languageHandling.LanguageRegistry
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.viewmodel.*
@@ -52,7 +53,20 @@ fun InitialEditorUI(navController: NavController) {
 
     // Log.d("Sessions", "Active Session Index: ${SessionList.activeSessionIndex}")
 
+    // Get current editor session for content preservation
+    val currentSession = remember {
+        SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? EditorSession
+    }
+    
+    // Restore content when screen appears (after navigation back)
+    LaunchedEffect(Unit) {
+        delay(200) // Wait for WebView to be ready
+        currentSession?.restoreContent()
+    }
+
     BackHandler {
+        // Save content before navigating away
+        currentSession?.saveContent()
         navController.navigate(Screen.Home.route) {
             popUpTo(Screen.OpenFolder.route) { inclusive = true }
         }
