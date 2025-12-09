@@ -66,7 +66,8 @@ class KeyboardViewModel : ViewModel() {
             KeyType.ACTION_ENTER -> handleEnter(gesture)
             KeyType.ACTION_SPACE -> handleSpace(gesture)
             KeyType.ACTION_TAB -> handleTab(gesture)
-            KeyType.ACTION_TOGGLE -> if (gesture == KeyGesture.Tap) toggleKeyboardVisibility()
+            KeyType.ACTION_TOGGLE -> if (gesture == KeyGesture.Tap) nextKeyboardPage()
+            KeyType.ACTION_TOGGLE_BACK -> if (gesture == KeyGesture.Tap) previousKeyboardPage()
             KeyType.ACTION_CTRL -> handleCtrl(gesture)
             KeyType.ACTION_ESCAPE -> handleEscape(gesture)
             KeyType.ACTION_ALT -> handleAlt(gesture)
@@ -284,9 +285,19 @@ class KeyboardViewModel : ViewModel() {
         }
 
     }
-    fun toggleKeyboardVisibility() {
+    fun nextKeyboardPage() {
         _uiState.update { currentState ->
-            currentState.copy(toggleKeyboard = !currentState.toggleKeyboard)
+            // Cycle through pages: 0 -> 1 -> 2 -> 0
+            val nextPage = (currentState.keyboardPage + 1) % 3
+            currentState.copy(keyboardPage = nextPage)
+        }
+    }
+    
+    fun previousKeyboardPage() {
+        _uiState.update { currentState ->
+            // Cycle backwards: 0 -> 2 -> 1 -> 0
+            val prevPage = (currentState.keyboardPage - 1 + 3) % 3
+            currentState.copy(keyboardPage = prevPage)
         }
     }
 

@@ -290,6 +290,21 @@ fun HomeScreen(navController: NavController) {
                         onClick = {
                             isRecentsOpen = !isRecentsOpen
                         }))
+            
+            // Extensions button
+            Image(
+                painter = painterResource(R.drawable.extension),
+                contentDescription = "Extensions",
+                modifier = Modifier
+                    .size(20.dp)
+                    .constrainAs(createRef()) {
+                        top.linkTo(recents.bottom, margin = 20.dp)
+                        end.linkTo(parent.end, margin = 20.dp)
+                    }
+                    .clickable(
+                        onClick = {
+                            navController.navigate(Screen.Extensions.route)
+                        }))
         }
     }
 }

@@ -24,6 +24,7 @@ fun RowScope.KeyboardKey(
     key: Key,
     isShiftOn: Boolean,
     isCapsLockOn: Boolean,
+    isCtrlOn: Boolean = false,
     onKeyEvent: (Key, KeyGesture) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -52,12 +53,21 @@ fun RowScope.KeyboardKey(
         }
     }
 
+    // Determine background color based on modifier state
+    val isModifierActive = when (key.type) {
+        KeyType.ACTION_CTRL -> isCtrlOn
+        KeyType.ACTION_SHIFT -> isShiftOn || isCapsLockOn
+        else -> false
+    }
+    val backgroundColor = if (isModifierActive) Color(0xFF3A3A3A) else Color(0xFF212121)
+    val textColor = if (isModifierActive) Color(0xFFCCCCCC) else if (isPressed) Color(0xFFB0C4DE) else Color.White
+
     Surface(
         modifier = modifier
             .weight(key.weight)
             .fillMaxHeight()
             .then(gestureModifier),
-         color = Color(0xFF212121),
+         color = backgroundColor,
     ) {
         Box(
             contentAlignment = Alignment.Center,
@@ -66,7 +76,7 @@ fun RowScope.KeyboardKey(
             Text(
                 text = textToShow,
                 style = MaterialTheme.typography.bodySmall,
-                color = if (isPressed) Color(0xFFB0C4DE) else Color.White,
+                color = textColor,
                 fontFamily = codaRegular
             )
         }

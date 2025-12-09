@@ -70,10 +70,10 @@ fun BrowserScreen(navController: NavController) {
 
     var showSidebar by rememberSaveable { mutableStateOf(false) }
 
-    val layout = if (uiState.toggleKeyboard) {
-        KeyboardLayout.editorLayout
-    } else {
-        KeyboardLayout.qwertyLayout
+    val layout = when (uiState.keyboardPage) {
+        0 -> KeyboardLayout.qwertyLayout    // Alphabets
+        1 -> KeyboardLayout.editorLayout    // Symbols
+        else -> KeyboardLayout.terminalLayout // Navigation
     }
 
     Box {
@@ -143,7 +143,7 @@ fun BrowserScreen(navController: NavController) {
                 if (uiState.isLeftKeyboardVisible) {
                     SplitKeyboardHalf(
                         layout, KeyboardSide.LEFT, uiState.isCapsLockOn,
-                        uiState.isShiftOn, keyboardViewModel::onKeyEvent,
+                        uiState.isShiftOn, uiState.isCtrlOn, keyboardViewModel::onKeyEvent,
                         Modifier.constrainAs(leftKb) {
                             start.linkTo(parent.start)
                             bottom.linkTo(parent.bottom)
@@ -156,7 +156,7 @@ fun BrowserScreen(navController: NavController) {
                 if (uiState.isRightKeyboardVisible) {
                     SplitKeyboardHalf(
                         layout, KeyboardSide.RIGHT, uiState.isCapsLockOn,
-                        uiState.isShiftOn, keyboardViewModel::onKeyEvent,
+                        uiState.isShiftOn, uiState.isCtrlOn, keyboardViewModel::onKeyEvent,
                         Modifier.constrainAs(rightKb) {
                             end.linkTo(parent.end)
                             bottom.linkTo(parent.bottom)
