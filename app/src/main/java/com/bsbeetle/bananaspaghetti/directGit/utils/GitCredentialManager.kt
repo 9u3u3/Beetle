@@ -10,17 +10,17 @@ class GitCredentialManager(context: Context) {
     private val sharedPreferences: SharedPreferences
 
     init {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
+        val masterKey =
+                MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
 
-        sharedPreferences = EncryptedSharedPreferences.create(
-            context,
-            "git_credentials",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        sharedPreferences =
+                EncryptedSharedPreferences.create(
+                        context,
+                        "git_credentials",
+                        masterKey,
+                        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                )
     }
 
     fun saveCredentials(remoteUrl: String, username: String, token: String) {
@@ -28,9 +28,7 @@ class GitCredentialManager(context: Context) {
         // In a real app, might want more complex matching for different repos on same host
         val key = getHostFromUrl(remoteUrl)
         if (key.isNotEmpty()) {
-            sharedPreferences.edit()
-                .putString(key, "$username:$token")
-                .apply()
+            sharedPreferences.edit().putString(key, "$username:$token").apply()
         }
     }
 

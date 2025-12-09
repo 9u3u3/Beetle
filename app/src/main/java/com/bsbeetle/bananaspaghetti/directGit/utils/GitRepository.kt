@@ -1,11 +1,11 @@
 package com.bsbeetle.bananaspaghetti.utils.git
 
 import android.util.Log
+import java.io.File
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.Status
 import org.eclipse.jgit.api.errors.*
 import org.eclipse.jgit.errors.RepositoryNotFoundException
-import java.io.File
 
 // Result wrapper for Git operations
 sealed class GitResult<out T> {
@@ -139,7 +139,10 @@ class GitRepository(private val rootDir: File) {
             GitResult.Error("Nothing to commit", "No changes are staged")
         } catch (e: WrongRepositoryStateException) {
             GitLogger.log("Commit failed: Wrong state", LogType.ERROR)
-            GitResult.Error("Repository in wrong state", "Resolve conflicts or complete previous operation first")
+            GitResult.Error(
+                    "Repository in wrong state",
+                    "Resolve conflicts or complete previous operation first"
+            )
         } catch (e: ConcurrentRefUpdateException) {
             GitLogger.log("Commit failed: Concurrent update", LogType.ERROR)
             GitResult.Error("Concurrent update detected", "Try again")
@@ -209,28 +212,71 @@ class GitRepository(private val rootDir: File) {
         if (remote.isEmpty()) {
             return GitResult.Error("No remote configured", "Set a remote URL first in settings")
         }
-        GitLogger.log("git push origin", LogType.COMMAND)
+        val currentBranch = getCurrentBranch()
+        GitLogger.log("git push -u origin $currentBranch", LogType.COMMAND)
         return try {
-            val credentialsProvider = org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider(username, token)
-            val result = git?.push()?.setCredentialsProvider(credentialsProvider)?.call()
+            val credentialsProvider =
+                    org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider(username, token)
+
+            // Set up tracking branch for first push
+            val config = git?.repository?.config
+            val trackingBranch = config?.getString("branch", currentBranch, "remote")
+            if (trackingBranch.isNullOrEmpty()) {
+                // Set up tracking
+                config?.setString("branch", currentBranch, "remote", "origin")
+                config?.setString("branch", currentBranch, "merge", "refs/heads/$currentBranch")
+                config?.save()
+                GitLogger.log(
+                        "Set up tracking: $currentBranch -> origin/$currentBranch",
+                        LogType.INFO
+                )
+            }
+
+            val result =
+                    git?.push()
+                            ?.setRemote("origin")
+                            ?.add(currentBranch)
+                            ?.setCredentialsProvider(credentialsProvider)
+                            ?.call()
+
             val updates = result?.flatMap { it.remoteUpdates } ?: emptyList()
             if (updates.isEmpty()) {
                 GitLogger.log("Everything up-to-date", LogType.SUCCESS)
                 GitResult.Success(Unit, "Everything up-to-date")
             } else {
-                GitLogger.log("Pushed ${updates.size} refs", LogType.SUCCESS)
-                GitResult.Success(Unit, "Pushed ${updates.size} ref(s) to origin")
+                val successUpdates =
+                        updates.filter {
+                            it.status == org.eclipse.jgit.transport.RemoteRefUpdate.Status.OK ||
+                                    it.status ==
+                                            org.eclipse.jgit.transport.RemoteRefUpdate.Status
+                                                    .UP_TO_DATE
+                        }
+                if (successUpdates.isNotEmpty()) {
+                    GitLogger.log("Pushed ${successUpdates.size} refs", LogType.SUCCESS)
+                    GitResult.Success(Unit, "Pushed to origin/$currentBranch")
+                } else {
+                    val firstError =
+                            updates.firstOrNull {
+                                it.status != org.eclipse.jgit.transport.RemoteRefUpdate.Status.OK
+                            }
+                    GitLogger.log(
+                            "Push failed: ${firstError?.message ?: "Unknown error"}",
+                            LogType.ERROR
+                    )
+                    GitResult.Error("Push failed", firstError?.message)
+                }
             }
         } catch (e: TransportException) {
             Log.e("GitRepository", "Push transport error", e)
             GitLogger.log("Push failed: ${e.message}", LogType.ERROR)
             when {
-                e.message?.contains("not authorized") == true || e.message?.contains("Authentication") == true ->
-                    GitResult.Error("Authentication failed", "Check your username and token")
+                e.message?.contains("not authorized") == true ||
+                        e.message?.contains("Authentication") == true ->
+                        GitResult.Error("Authentication failed", "Check your username and token")
                 e.message?.contains("not found") == true ->
-                    GitResult.Error("Repository not found", "Check your remote URL")
+                        GitResult.Error("Repository not found", "Check your remote URL")
                 e.message?.contains("rejected") == true ->
-                    GitResult.Error("Push rejected", "Pull changes first or force push")
+                        GitResult.Error("Push rejected", "Pull changes first or force push")
                 else -> GitResult.Error("Push failed", e.message)
             }
         } catch (e: Exception) {
@@ -245,14 +291,25 @@ class GitRepository(private val rootDir: File) {
         if (remote.isEmpty()) {
             return GitResult.Error("No remote configured", "Set a remote URL first in settings")
         }
-        GitLogger.log("git pull origin", LogType.COMMAND)
+        val currentBranch = getCurrentBranch()
+        GitLogger.log("git pull origin $currentBranch", LogType.COMMAND)
         return try {
-            val credentialsProvider = org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider(username, token)
-            val result = git?.pull()?.setCredentialsProvider(credentialsProvider)?.call()
+            val credentialsProvider =
+                    org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider(username, token)
+            val result =
+                    git?.pull()
+                            ?.setRemote("origin")
+                            ?.setRemoteBranchName(currentBranch)
+                            ?.setCredentialsProvider(credentialsProvider)
+                            ?.call()
+
             when {
                 result?.mergeResult?.mergeStatus?.isSuccessful == true -> {
                     GitLogger.log("Pull successful", LogType.SUCCESS)
-                    GitResult.Success(Unit, "Pull complete: ${result.fetchResult?.messages ?: "Updated"}")
+                    GitResult.Success(
+                            Unit,
+                            "Pull complete: ${result.fetchResult?.messages ?: "Updated"}"
+                    )
                 }
                 result?.isSuccessful == true -> {
                     GitLogger.log("Already up-to-date", LogType.SUCCESS)
@@ -267,10 +324,11 @@ class GitRepository(private val rootDir: File) {
             Log.e("GitRepository", "Pull transport error", e)
             GitLogger.log("Pull failed: ${e.message}", LogType.ERROR)
             when {
-                e.message?.contains("not authorized") == true || e.message?.contains("Authentication") == true ->
-                    GitResult.Error("Authentication failed", "Check your username and token")
+                e.message?.contains("not authorized") == true ||
+                        e.message?.contains("Authentication") == true ->
+                        GitResult.Error("Authentication failed", "Check your username and token")
                 e.message?.contains("not found") == true ->
-                    GitResult.Error("Repository not found", "Check your remote URL")
+                        GitResult.Error("Repository not found", "Check your remote URL")
                 else -> GitResult.Error("Pull failed", e.message)
             }
         } catch (e: CheckoutConflictException) {
@@ -290,7 +348,8 @@ class GitRepository(private val rootDir: File) {
         }
         GitLogger.log("git fetch origin", LogType.COMMAND)
         return try {
-            val credentialsProvider = org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider(username, token)
+            val credentialsProvider =
+                    org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider(username, token)
             val result = git?.fetch()?.setCredentialsProvider(credentialsProvider)?.call()
             val updates = result?.trackingRefUpdates?.size ?: 0
             if (updates > 0) {
@@ -303,8 +362,9 @@ class GitRepository(private val rootDir: File) {
         } catch (e: TransportException) {
             GitLogger.log("Fetch failed: ${e.message}", LogType.ERROR)
             when {
-                e.message?.contains("not authorized") == true || e.message?.contains("Authentication") == true ->
-                    GitResult.Error("Authentication failed", "Check your username and token")
+                e.message?.contains("not authorized") == true ||
+                        e.message?.contains("Authentication") == true ->
+                        GitResult.Error("Authentication failed", "Check your username and token")
                 else -> GitResult.Error("Fetch failed", e.message)
             }
         } catch (e: Exception) {
@@ -321,14 +381,17 @@ class GitRepository(private val rootDir: File) {
             val out = java.io.ByteArrayOutputStream()
             val df = org.eclipse.jgit.diff.DiffFormatter(out)
             df.setRepository(git?.repository)
-            
+
             val relativePath = toRelativePath(filePath)
-            val diffs = git?.diff()?.setPathFilter(org.eclipse.jgit.treewalk.filter.PathFilter.create(relativePath))?.call()
-            
-            diffs?.forEach { entry ->
-                df.format(entry)
-            }
-            
+            val diffs =
+                    git?.diff()
+                            ?.setPathFilter(
+                                    org.eclipse.jgit.treewalk.filter.PathFilter.create(relativePath)
+                            )
+                            ?.call()
+
+            diffs?.forEach { entry -> df.format(entry) }
+
             val result = out.toString()
             if (result.isBlank()) "No changes detected" else result
         } catch (e: Exception) {
@@ -352,16 +415,19 @@ class GitRepository(private val rootDir: File) {
         val branches = mutableListOf<BranchInfo>()
         try {
             val currentBranch = getCurrentBranch()
-            
+
             git?.branchList()?.call()?.forEach { ref ->
                 val name = ref.name.removePrefix("refs/heads/")
                 branches.add(BranchInfo(name, isRemote = false, isCurrent = name == currentBranch))
             }
-            
-            git?.branchList()?.setListMode(org.eclipse.jgit.api.ListBranchCommand.ListMode.REMOTE)?.call()?.forEach { ref ->
-                val name = ref.name.removePrefix("refs/remotes/")
-                branches.add(BranchInfo(name, isRemote = true, isCurrent = false))
-            }
+
+            git?.branchList()
+                    ?.setListMode(org.eclipse.jgit.api.ListBranchCommand.ListMode.REMOTE)
+                    ?.call()
+                    ?.forEach { ref ->
+                        val name = ref.name.removePrefix("refs/remotes/")
+                        branches.add(BranchInfo(name, isRemote = true, isCurrent = false))
+                    }
         } catch (e: Exception) {
             Log.e("GitRepository", "Failed to get branches", e)
         }
@@ -401,7 +467,10 @@ class GitRepository(private val rootDir: File) {
             GitResult.Success(Unit, "Switched to '$name'")
         } catch (e: CheckoutConflictException) {
             GitLogger.log("Checkout conflict", LogType.ERROR)
-            GitResult.Error("Checkout conflict", "Commit or stash changes before switching: ${e.conflictingPaths.take(3).joinToString()}")
+            GitResult.Error(
+                    "Checkout conflict",
+                    "Commit or stash changes before switching: ${e.conflictingPaths.take(3).joinToString()}"
+            )
         } catch (e: RefNotFoundException) {
             GitLogger.log("Branch not found", LogType.ERROR)
             GitResult.Error("Branch not found", "Branch '$name' doesn't exist")
@@ -415,7 +484,10 @@ class GitRepository(private val rootDir: File) {
     fun deleteBranch(name: String): GitResult<Unit> {
         GitLogger.log("git branch -D $name", LogType.COMMAND)
         if (name == getCurrentBranch()) {
-            return GitResult.Error("Cannot delete current branch", "Switch to a different branch first")
+            return GitResult.Error(
+                    "Cannot delete current branch",
+                    "Switch to a different branch first"
+            )
         }
         return try {
             git?.branchDelete()?.setBranchNames(name)?.setForce(true)?.call()
@@ -437,15 +509,17 @@ class GitRepository(private val rootDir: File) {
         val commits = mutableListOf<CommitInfo>()
         try {
             git?.log()?.setMaxCount(limit)?.call()?.forEach { revCommit ->
-                commits.add(CommitInfo(
-                    hash = revCommit.name,
-                    shortHash = revCommit.abbreviate(7).name(),
-                    message = revCommit.shortMessage,
-                    fullMessage = revCommit.fullMessage,
-                    author = revCommit.authorIdent.name,
-                    email = revCommit.authorIdent.emailAddress,
-                    date = java.util.Date(revCommit.commitTime * 1000L)
-                ))
+                commits.add(
+                        CommitInfo(
+                                hash = revCommit.name,
+                                shortHash = revCommit.abbreviate(7).name(),
+                                message = revCommit.shortMessage,
+                                fullMessage = revCommit.fullMessage,
+                                author = revCommit.authorIdent.name,
+                                email = revCommit.authorIdent.emailAddress,
+                                date = java.util.Date(revCommit.commitTime * 1000L)
+                        )
+                )
             }
         } catch (e: Exception) {
             Log.e("GitRepository", "Failed to get commit log", e)
@@ -498,11 +572,13 @@ class GitRepository(private val rootDir: File) {
         val stashes = mutableListOf<StashInfo>()
         try {
             git?.stashList()?.call()?.forEachIndexed { index, revCommit ->
-                stashes.add(StashInfo(
-                    index = index,
-                    message = revCommit.shortMessage,
-                    date = java.util.Date(revCommit.commitTime * 1000L)
-                ))
+                stashes.add(
+                        StashInfo(
+                                index = index,
+                                message = revCommit.shortMessage,
+                                date = java.util.Date(revCommit.commitTime * 1000L)
+                        )
+                )
             }
         } catch (e: Exception) {
             Log.e("GitRepository", "Failed to list stashes", e)
@@ -516,6 +592,15 @@ class GitRepository(private val rootDir: File) {
         return try {
             val repo = git?.repository ?: return Pair(0, 0)
             val branch = repo.branch ?: return Pair(0, 0)
+
+            // Check if branch has upstream tracking
+            val config = repo.config
+            val remote = config.getString("branch", branch, "remote")
+            if (remote.isNullOrEmpty()) {
+                // No tracking branch set up yet
+                return Pair(0, 0)
+            }
+
             val trackingStatus = org.eclipse.jgit.lib.BranchTrackingStatus.of(repo, branch)
             Pair(trackingStatus?.aheadCount ?: 0, trackingStatus?.behindCount ?: 0)
         } catch (e: Exception) {
@@ -535,24 +620,36 @@ class GitRepository(private val rootDir: File) {
     }
 
     companion object {
-        fun clone(url: String, directory: File, username: String, token: String): GitResult<GitRepository> {
+        fun clone(
+                url: String,
+                directory: File,
+                username: String,
+                token: String
+        ): GitResult<GitRepository> {
             GitLogger.log("git clone $url ${directory.name}", LogType.COMMAND)
             return try {
-                val credentialsProvider = org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider(username, token)
+                val credentialsProvider =
+                        org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider(
+                                username,
+                                token
+                        )
                 Git.cloneRepository()
-                    .setURI(url)
-                    .setDirectory(directory)
-                    .setCredentialsProvider(credentialsProvider)
-                    .call()
+                        .setURI(url)
+                        .setDirectory(directory)
+                        .setCredentialsProvider(credentialsProvider)
+                        .call()
                 GitLogger.log("Cloned successfully", LogType.SUCCESS)
                 GitResult.Success(GitRepository(directory), "Cloned to ${directory.name}")
             } catch (e: TransportException) {
                 GitLogger.log("Clone failed: ${e.message}", LogType.ERROR)
                 when {
                     e.message?.contains("not authorized") == true ->
-                        GitResult.Error("Authentication failed", "Check your username and token")
+                            GitResult.Error(
+                                    "Authentication failed",
+                                    "Check your username and token"
+                            )
                     e.message?.contains("not found") == true ->
-                        GitResult.Error("Repository not found", "Check the URL")
+                            GitResult.Error("Repository not found", "Check the URL")
                     else -> GitResult.Error("Clone failed", e.message)
                 }
             } catch (e: Exception) {
@@ -565,24 +662,16 @@ class GitRepository(private val rootDir: File) {
 }
 
 // Data classes
-data class BranchInfo(
-    val name: String,
-    val isRemote: Boolean,
-    val isCurrent: Boolean
-)
+data class BranchInfo(val name: String, val isRemote: Boolean, val isCurrent: Boolean)
 
 data class CommitInfo(
-    val hash: String,
-    val shortHash: String,
-    val message: String,
-    val fullMessage: String,
-    val author: String,
-    val email: String,
-    val date: java.util.Date
+        val hash: String,
+        val shortHash: String,
+        val message: String,
+        val fullMessage: String,
+        val author: String,
+        val email: String,
+        val date: java.util.Date
 )
 
-data class StashInfo(
-    val index: Int,
-    val message: String,
-    val date: java.util.Date
-)
+data class StashInfo(val index: Int, val message: String, val date: java.util.Date)

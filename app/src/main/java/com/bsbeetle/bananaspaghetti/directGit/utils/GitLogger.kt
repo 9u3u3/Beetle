@@ -1,11 +1,11 @@
 package com.bsbeetle.bananaspaghetti.utils.git
 
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 object GitLogger {
     private val _logs = MutableStateFlow<List<LogEntry>>(emptyList())
@@ -14,11 +14,7 @@ object GitLogger {
     private val dateFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
     fun log(command: String, type: LogType = LogType.INFO) {
-        val entry = LogEntry(
-            timestamp = dateFormat.format(Date()),
-            message = command,
-            type = type
-        )
+        val entry = LogEntry(timestamp = dateFormat.format(Date()), message = command, type = type)
         // Keep last 100 logs
         val current = _logs.value.toMutableList()
         current.add(entry)
@@ -33,12 +29,11 @@ object GitLogger {
     }
 }
 
-data class LogEntry(
-    val timestamp: String,
-    val message: String,
-    val type: LogType
-)
+data class LogEntry(val timestamp: String, val message: String, val type: LogType)
 
 enum class LogType {
-    INFO, COMMAND, ERROR, SUCCESS
+    INFO,
+    COMMAND,
+    ERROR,
+    SUCCESS
 }

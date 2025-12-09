@@ -73,6 +73,7 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
     var showNewBranchDialog by remember { mutableStateOf(false) }
     var showHistoryDialog by remember { mutableStateOf(false) }
     var showConsole by remember { mutableStateOf(false) }
+    var showCloneDialog by remember { mutableStateOf(false) }
 
     // Action to retry after auth
     var authAction by remember { mutableStateOf<((String, String, Boolean) -> Unit)?>(null) }
@@ -120,6 +121,16 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                 onConfirm = { username, token, save ->
                     authAction?.invoke(username, token, save)
                     showAuthDialog = false
+                }
+        )
+    }
+
+    if (showCloneDialog) {
+        CloneDialog(
+                onDismiss = { showCloneDialog = false },
+                onClone = { url, directory, username, token ->
+                    viewModel.cloneRepository(url, directory, username, token)
+                    showCloneDialog = false
                 }
         )
     }
@@ -193,7 +204,7 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
         // --- Main Content ---
         Box(modifier = Modifier.weight(1f)) {
             if (!uiState.isInitialized) {
-                EmptyState(onInit = { viewModel.initRepo() })
+                EmptyState(onInit = { viewModel.initRepo() }, onClone = { showCloneDialog = true })
             } else {
                 Column(modifier = Modifier.fillMaxSize()) {
                     // Changes List
@@ -763,7 +774,7 @@ private fun ConsoleStatusBar(
 }
 
 @Composable
-private fun EmptyState(onInit: () -> Unit) {
+private fun EmptyState(onInit: () -> Unit, onClone: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Rounded.Source, null, tint = TextTertiary, modifier = Modifier.size(64.dp))
@@ -776,16 +787,32 @@ private fun EmptyState(onInit: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                    "Initialize a new repository to start tracking changes.",
+                    "Initialize a new repository or clone an existing one.",
                     color = TextTertiary,
                     fontSize = 12.sp
             )
             Spacer(modifier = Modifier.height(24.dp))
-            Button(
-                    onClick = onInit,
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
-                    shape = RoundedCornerShape(6.dp)
-            ) { Text("Initialize Repository") }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                        onClick = onInit,
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+                        shape = RoundedCornerShape(6.dp)
+                ) {
+                    Icon(Icons.Rounded.Add, null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Initialize Repository")
+                }
+                Button(
+                        onClick = onClone,
+                        colors = ButtonDefaults.buttonColors(containerColor = BgHover),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                        shape = RoundedCornerShape(6.dp)
+                ) {
+                    Icon(Icons.Rounded.CloudDownload, null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Clone Repository")
+                }
+            }
         }
     }
 }
@@ -1039,6 +1066,113 @@ private fun RemoteDialog(currentUrl: String, onDismiss: () -> Unit, onConfirm: (
 }
 
 @Composable
+private fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String, String, String) -> Unit) {
+    val context = LocalContext.current
+    var url by remember { mutableStateOf("") }
+    var targetPath by remember { mutableStateOf("/storage/emulated/0/") }
+    var username by remember { mutableStateOf("") }
+    var token by remember { mutableStateOf("") }
+
+    StyledDialog(title = "Clone Repository", onDismiss = onDismiss) {
+        Text("Clone a Git repository from a remote URL.", color = TextSecondary, fontSize = 12.sp)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+                value = url,
+                onValueChange = { url = it },
+                label = { Text("Repository URL") },
+                placeholder = { Text("https://github.com/user/repo.git") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                colors =
+                        OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = AccentBlue,
+                                unfocusedBorderColor = BorderColor,
+                                focusedLabelColor = AccentBlue,
+                                unfocusedLabelColor = TextTertiary
+                        )
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+                value = targetPath,
+                onValueChange = { targetPath = it },
+                label = { Text("Clone To (Full Path)") },
+                placeholder = { Text("/storage/emulated/0/my-project") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                colors =
+                        OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = AccentBlue,
+                                unfocusedBorderColor = BorderColor,
+                                focusedLabelColor = AccentBlue,
+                                unfocusedLabelColor = TextTertiary
+                        )
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+                "Tip: Use /storage/emulated/0/YourFolder for accessible storage",
+                color = TextTertiary,
+                fontSize = 10.sp,
+                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text("Authentication", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("GitHub Username") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                colors =
+                        OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = AccentBlue,
+                                unfocusedBorderColor = BorderColor,
+                                focusedLabelColor = AccentBlue,
+                                unfocusedLabelColor = TextTertiary
+                        )
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+                value = token,
+                onValueChange = { token = it },
+                label = { Text("Personal Access Token") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                colors =
+                        OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = AccentBlue,
+                                unfocusedBorderColor = BorderColor,
+                                focusedLabelColor = AccentBlue,
+                                unfocusedLabelColor = TextTertiary
+                        )
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+                onClick = { onClone(url, targetPath, username, token) },
+                enabled =
+                        url.isNotBlank() &&
+                                targetPath.isNotBlank() &&
+                                username.isNotBlank() &&
+                                token.isNotBlank(),
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+                shape = RoundedCornerShape(6.dp)
+        ) {
+            Icon(Icons.Rounded.CloudDownload, null, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Clone Repository")
+        }
+    }
+}
+
+@Composable
 private fun CommitHistoryDialog(commits: List<CommitInfo>, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -1147,5 +1281,5 @@ private fun DiffDialog(diffText: String, onDismiss: () -> Unit) {
 }
 
 // Helper for Modifier.scale
-fun Modifier.scale(scale: Float): Modifier =
-        this.then(Modifier.graphicsLayer(scaleX = scale, scaleY = scale))
+private fun Modifier.scale(scale: Float): Modifier =
+        this.graphicsLayer(scaleX = scale, scaleY = scale)

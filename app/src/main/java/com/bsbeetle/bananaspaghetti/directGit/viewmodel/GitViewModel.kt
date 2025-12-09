@@ -4,39 +4,39 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsbeetle.bananaspaghetti.utils.git.*
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.io.File
 
 data class GitUiState(
-    val isInitialized: Boolean = false,
-    val modifiedFiles: List<String> = emptyList(),
-    val stagedFiles: List<String> = emptyList(),
-    val untrackedFiles: List<String> = emptyList(),
-    val isLoading: Boolean = false,
-    val userName: String = "",
-    val userEmail: String = "",
-    val remoteUrl: String = "",
-    val lastError: String? = null,
-    val lastSuccess: String? = null,
-    val currentDiff: String? = null,
-    // Branch
-    val currentBranch: String = "",
-    val branches: List<BranchInfo> = emptyList(),
-    // History
-    val commits: List<CommitInfo> = emptyList(),
-    // Stash
-    val stashes: List<StashInfo> = emptyList(),
-    // Sync status
-    val aheadCount: Int = 0,
-    val behindCount: Int = 0,
-    // Operation status
-    val operationInProgress: String? = null,
-    // Logs
-    val logs: List<LogEntry> = emptyList()
+        val isInitialized: Boolean = false,
+        val modifiedFiles: List<String> = emptyList(),
+        val stagedFiles: List<String> = emptyList(),
+        val untrackedFiles: List<String> = emptyList(),
+        val isLoading: Boolean = false,
+        val userName: String = "",
+        val userEmail: String = "",
+        val remoteUrl: String = "",
+        val lastError: String? = null,
+        val lastSuccess: String? = null,
+        val currentDiff: String? = null,
+        // Branch
+        val currentBranch: String = "",
+        val branches: List<BranchInfo> = emptyList(),
+        // History
+        val commits: List<CommitInfo> = emptyList(),
+        // Stash
+        val stashes: List<StashInfo> = emptyList(),
+        // Sync status
+        val aheadCount: Int = 0,
+        val behindCount: Int = 0,
+        // Operation status
+        val operationInProgress: String? = null,
+        // Logs
+        val logs: List<LogEntry> = emptyList()
 )
 
 class GitViewModel(application: Application) : AndroidViewModel(application) {
@@ -70,18 +70,20 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     fun refreshStatus() {
         viewModelScope.launch(Dispatchers.IO) {
             val repo = repository ?: return@launch
-            _uiState.value = _uiState.value.copy(
-                isLoading = true, 
-                lastError = null,
-                operationInProgress = "Refreshing..."
-            )
-            
+            _uiState.value =
+                    _uiState.value.copy(
+                            isLoading = true,
+                            lastError = null,
+                            operationInProgress = "Refreshing..."
+                    )
+
             if (!repo.isInitialized()) {
-                _uiState.value = _uiState.value.copy(
-                    isInitialized = false, 
-                    isLoading = false,
-                    operationInProgress = null
-                )
+                _uiState.value =
+                        _uiState.value.copy(
+                                isInitialized = false,
+                                isLoading = false,
+                                operationInProgress = null
+                        )
                 return@launch
             }
 
@@ -93,34 +95,32 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
             val commits = repo.getCommitLog(30)
             val stashes = repo.listStashes()
             val (ahead, behind) = repo.getAheadBehind()
-            
+
             if (status != null) {
                 val modified = status.modified + status.missing
                 val staged = status.added + status.changed + status.removed
                 val untracked = status.untracked
-                
-                _uiState.value = _uiState.value.copy(
-                    isInitialized = true,
-                    modifiedFiles = modified.toList().sorted(),
-                    stagedFiles = staged.toList().sorted(),
-                    untrackedFiles = untracked.toList().sorted(),
-                    userName = name,
-                    userEmail = email,
-                    remoteUrl = remote,
-                    currentBranch = currentBranch,
-                    branches = branches,
-                    commits = commits,
-                    stashes = stashes,
-                    aheadCount = ahead,
-                    behindCount = behind,
-                    isLoading = false,
-                    operationInProgress = null
-                )
+
+                _uiState.value =
+                        _uiState.value.copy(
+                                isInitialized = true,
+                                modifiedFiles = modified.toList().sorted(),
+                                stagedFiles = staged.toList().sorted(),
+                                untrackedFiles = untracked.toList().sorted(),
+                                userName = name,
+                                userEmail = email,
+                                remoteUrl = remote,
+                                currentBranch = currentBranch,
+                                branches = branches,
+                                commits = commits,
+                                stashes = stashes,
+                                aheadCount = ahead,
+                                behindCount = behind,
+                                isLoading = false,
+                                operationInProgress = null
+                        )
             } else {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    operationInProgress = null
-                )
+                _uiState.value = _uiState.value.copy(isLoading = false, operationInProgress = null)
             }
         }
     }
@@ -164,10 +164,10 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     fun commit(message: String, filesToCommit: List<String>) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(operationInProgress = "Committing changes...")
-            
+
             // 1. Reset Mixed (Unstage all) to ensure we only commit what is selected
             repository?.resetMixed()
-            
+
             // 2. Stage selected files
             val stageResult = repository?.stageFiles(filesToCommit)
             if (stageResult is GitResult.Error) {
@@ -185,10 +185,15 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun commitAndPush(message: String, filesToCommit: List<String>, username: String? = null, token: String? = null) {
+    fun commitAndPush(
+            message: String,
+            filesToCommit: List<String>,
+            username: String? = null,
+            token: String? = null
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(operationInProgress = "Committing...")
-            
+
             // 1. Reset Mixed
             repository?.resetMixed()
 
@@ -202,14 +207,15 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
 
             val commitResult = repository?.commit(message)
             if (commitResult !is GitResult.Success) {
-                if (commitResult is GitResult.Error) showError(commitResult.message, commitResult.details)
+                if (commitResult is GitResult.Error)
+                        showError(commitResult.message, commitResult.details)
                 refreshStatus()
                 return@launch
             }
 
             // 2. Push
             _uiState.value = _uiState.value.copy(operationInProgress = "Pushing...")
-            
+
             val remote = repository?.getRemote() ?: ""
             var finalUser = username
             var finalToken = token
@@ -229,7 +235,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
 
             // Save if new credentials provided (logic handled in UI usually, but good to have here)
             if (username != null && token != null && remote.isNotEmpty()) {
-                 credentialManager.saveCredentials(remote, username, token)
+                credentialManager.saveCredentials(remote, username, token)
             }
 
             when (val result = repository?.push(finalUser, finalToken)) {
@@ -262,11 +268,18 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(operationInProgress = "Setting remote...")
             when (val result = repository?.setRemote(url)) {
-                is GitResult.Success -> showSuccess(result.message)
+                is GitResult.Success -> {
+                    _uiState.value =
+                            _uiState.value.copy(
+                                    remoteUrl = url,
+                                    lastSuccess = result.message,
+                                    lastError = null,
+                                    operationInProgress = null
+                            )
+                }
                 is GitResult.Error -> showError(result.message, result.details)
-                null -> {}
+                null -> showError("No repository initialized")
             }
-            refreshStatus()
         }
     }
 
@@ -279,8 +292,13 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
 
     fun push(username: String? = null, token: String? = null, save: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.value = _uiState.value.copy(isLoading = true, lastError = null, operationInProgress = "Pushing to remote...")
-            
+            _uiState.value =
+                    _uiState.value.copy(
+                            isLoading = true,
+                            lastError = null,
+                            operationInProgress = "Pushing to remote..."
+                    )
+
             val remote = repository?.getRemote() ?: ""
             var finalUser = username
             var finalToken = token
@@ -320,8 +338,13 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
 
     fun pull(username: String? = null, token: String? = null, save: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.value = _uiState.value.copy(isLoading = true, lastError = null, operationInProgress = "Pulling from remote...")
-            
+            _uiState.value =
+                    _uiState.value.copy(
+                            isLoading = true,
+                            lastError = null,
+                            operationInProgress = "Pulling from remote..."
+                    )
+
             val remote = repository?.getRemote() ?: ""
             var finalUser = username
             var finalToken = token
@@ -359,8 +382,13 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
 
     fun fetch(username: String? = null, token: String? = null, save: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.value = _uiState.value.copy(isLoading = true, lastError = null, operationInProgress = "Fetching from remote...")
-            
+            _uiState.value =
+                    _uiState.value.copy(
+                            isLoading = true,
+                            lastError = null,
+                            operationInProgress = "Fetching from remote..."
+                    )
+
             val remote = repository?.getRemote() ?: ""
             var finalUser = username
             var finalToken = token
@@ -376,7 +404,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
             // Fetch might work without auth for public repos, but usually needs it for private
             // If no creds, try without (pass empty strings or handle differently)
             // For now, assume we need them if it's a private repo, but let's try with what we have
-            
+
             val userToUse = finalUser ?: ""
             val tokenToUse = finalToken ?: ""
 
@@ -393,17 +421,14 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(operationInProgress = "Loading diff...")
             val diff = repository?.getDiff(filePath) ?: "No diff available"
-            _uiState.value = _uiState.value.copy(
-                currentDiff = diff,
-                operationInProgress = null
-            )
+            _uiState.value = _uiState.value.copy(currentDiff = diff, operationInProgress = null)
         }
     }
 
     fun clearDiff() {
         _uiState.value = _uiState.value.copy(currentDiff = null)
     }
-    
+
     fun clearMessages() {
         _uiState.value = _uiState.value.copy(lastError = null, lastSuccess = null)
     }
@@ -424,10 +449,11 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
 
     fun checkoutBranch(name: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.value = _uiState.value.copy(
-                isLoading = true,
-                operationInProgress = "Switching to '$name'..."
-            )
+            _uiState.value =
+                    _uiState.value.copy(
+                            isLoading = true,
+                            operationInProgress = "Switching to '$name'..."
+                    )
             when (val result = repository?.checkoutBranch(name)) {
                 is GitResult.Success -> showSuccess(result.message)
                 is GitResult.Error -> showError(result.message, result.details)
@@ -478,22 +504,71 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     // === Helpers ===
 
     private fun showSuccess(message: String) {
-        _uiState.value = _uiState.value.copy(
-            lastSuccess = message,
-            lastError = null,
-            operationInProgress = null
-        )
+        _uiState.value =
+                _uiState.value.copy(
+                        lastSuccess = message,
+                        lastError = null,
+                        operationInProgress = null
+                )
     }
 
     private fun showError(message: String, details: String? = null) {
         val fullMessage = if (details != null) "$message: $details" else message
-        _uiState.value = _uiState.value.copy(
-            lastError = fullMessage,
-            lastSuccess = null,
-            operationInProgress = null
-        )
+        _uiState.value =
+                _uiState.value.copy(
+                        lastError = fullMessage,
+                        lastSuccess = null,
+                        operationInProgress = null
+                )
     }
-    
+
+    fun cloneRepository(url: String, targetPath: String, username: String, token: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.value =
+                    _uiState.value.copy(
+                            operationInProgress = "Cloning repository...",
+                            isLoading = true
+                    )
+
+            // Use the full path provided by user
+            val targetDir = File(targetPath)
+
+            // Check if parent directory exists
+            val parentDir = targetDir.parentFile
+            if (parentDir == null || !parentDir.exists()) {
+                showError(
+                        "Invalid path",
+                        "Parent directory does not exist: ${parentDir?.absolutePath}"
+                )
+                return@launch
+            }
+
+            if (targetDir.exists()) {
+                showError(
+                        "Directory already exists",
+                        "Choose a different path or delete the existing directory"
+                )
+                return@launch
+            }
+
+            when (val result = GitRepository.clone(url, targetDir, username, token)) {
+                is GitResult.Success -> {
+                    // Save credentials for this repo
+                    credentialManager.saveCredentials(url, username, token)
+
+                    // Set this as the current repository
+                    repository?.close()
+                    repository = result.data
+                    currentRoot = targetDir
+
+                    showSuccess("Cloned successfully to ${targetDir.absolutePath}")
+                    refreshStatus()
+                }
+                is GitResult.Error -> showError(result.message, result.details)
+            }
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         repository?.close()
