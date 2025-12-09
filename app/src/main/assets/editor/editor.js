@@ -1,13 +1,70 @@
-// Imports
 import { EditorView, basicSetup } from "codemirror"
-import { EditorState, StateEffect, StateField } from "@codemirror/state"
+import { EditorState, StateEffect, StateField, Compartment } from "@codemirror/state"
 import { oneDark } from "@codemirror/theme-one-dark"
 import { autocompletion, completionKeymap, closeCompletion, startCompletion, completionStatus } from "@codemirror/autocomplete"
 import { keymap, drawSelection } from "@codemirror/view"
 import { linter, lintGutter, forceLinting } from "@codemirror/lint"
 import { cpp } from "@codemirror/lang-cpp"
+import { python } from "@codemirror/lang-python"
 import { insertNewlineAndIndent, deleteCharBackward, undo, redo } from "@codemirror/commands"
 import { openSearchPanel, closeSearchPanel } from "@codemirror/search"
+
+const languageCompartment = new Compartment()
+let currentLanguageId = 'cpp'; // Track current language for LSP
+
+window.setLanguage = async function (slug, port = 8081) {
+  console.log(`[LSP-JS] setLanguage called for ${slug} port: ${port}`);
+  currentLanguageId = slug; // Update current language
+
+  // Connect to LSP
+  if (window.connectLsp) {
+    window.connectLsp(port);
+  }
+
+  let langModule;
+  try {
+    if (slug === 'cpp') {
+      langModule = cpp();
+    } else if (slug === 'python') {
+      langModule = python();
+    } else {
+      // Dynamic import
+      const moduleUrl = `http://localhost:8080/plugins/${slug}/${slug}.js`;
+      const module = await import(moduleUrl);
+
+      // Check if default export is a function or the extension itself
+      langModule = typeof module.default === 'function' ? module.default() : module.default;
+    }
+
+    if (window.view && langModule) {
+      window.view.dispatch({
+        effects: languageCompartment.reconfigure(langModule)
+      })
+      console.log(`[LSP-JS] Language reconfigured to ${slug}`);
+    }
+  } catch (e) {
+    console.error(`[LSP-JS] Failed to load language ${slug}`, e);
+  }
+}
+
+// Clear language support (for unsupported files)
+window.clearLanguage = function () {
+  console.log('[LSP-JS] Clearing language support (plaintext mode)');
+  currentLanguageId = 'plaintext';
+
+  // Close any existing LSP connection
+  if (window.ws) {
+    try { window.ws.close(); } catch (e) { }
+    window.ws = null;
+  }
+
+  // Reconfigure to empty (no syntax highlighting)
+  if (window.view) {
+    window.view.dispatch({
+      effects: languageCompartment.reconfigure([])
+    });
+  }
+}
 
 // --- Global Error Handling for WEBVERR ---
 window.onerror = function (message, source, lineno, colno, error) {
@@ -140,7 +197,7 @@ window.updateDebugStats = function (stats) {
 
 
 function setupEditor() {
-  const ws = new WebSocket("ws://localhost:8081/clsp")
+  let ws = null;
   let view = null
 
   let lastCompletionTime = 0
@@ -235,6 +292,9 @@ function setupEditor() {
       if (!view || !pendingDiagnostics) return;
 
       try {
+        // Debug: Log raw diagnostics from LSP
+        console.log('[LSP-RAW-DIAG] Received:', JSON.stringify(pendingDiagnostics.diagnostics?.slice(0, 3)));
+
         const diagnostics = []
         for (const d of pendingDiagnostics.diagnostics) {
           try {
@@ -521,7 +581,7 @@ function setupEditor() {
       basicSetup,
       oneDark,
       drawSelection(), // Ensure custom cursor drawing
-      cpp(), // Revert to cpp()
+      languageCompartment.of(cpp()), // Default
       diagnosticsField, // Add StateField
       lspLinter,
       lintGutter(),
@@ -596,7 +656,7 @@ function setupEditor() {
         }
 
         // Full Text Sync - Re-enabled with longer debounce
-        if (update.docChanged && ws.readyState === WebSocket.OPEN && view && isInitialized) {
+        if (update.docChanged && ws && ws.readyState === WebSocket.OPEN && view && isInitialized) {
           if (window.didChangeTimeout) clearTimeout(window.didChangeTimeout);
 
           window.didChangeTimeout = setTimeout(() => {
@@ -618,10 +678,11 @@ function setupEditor() {
 
   view = new EditorView({
     state: startState,
-    parent: document.body
+    parent: document.getElementById("editor")
   })
+  window.view = view; // Expose globally
+  window.editor = view; // Alias for compatibility
 
-  window.editor = view
   window.isEditorReady = true
 
   const editorEl = document.querySelector('.cm-editor')
@@ -776,11 +837,206 @@ function setupEditor() {
     redo(view);
   };
 
-  window.performSelectAll = function () {
-    view.dispatch({
-      selection: { anchor: 0, head: view.state.doc.length }
+  // --- Helper to send requests ---
+  function sendRequest(socket, method, params, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+      if (socket.readyState !== WebSocket.OPEN) {
+        reject(new Error('WebSocket not open'));
+        return;
+      }
+
+      const id = ++messageId;
+      const request = {
+        jsonrpc: "2.0",
+        id: id,
+        method: method,
+        params: params
+      };
+
+      const timer = setTimeout(() => {
+        if (pendingRequests.has(id)) {
+          pendingRequests.delete(id);
+          reject(new Error(`Request ${method} timed out`));
+        }
+      }, timeout);
+
+      pendingRequests.set(id, { resolve, reject, timer });
+      socket.send(JSON.stringify(request));
     });
+  }
+
+  function sendNotification(socket, method, params) {
+    if (socket.readyState === WebSocket.OPEN) {
+      const notification = {
+        jsonrpc: "2.0",
+        method: method,
+        params: params
+      };
+      socket.send(JSON.stringify(notification));
+    }
+  }
+
+  // --- Connect LSP ---
+  // This function is now internal to setupEditor or called via setLanguage
+  // But since we need it globally accessible for setLanguage, we should expose it or define it outside?
+  // Actually, setLanguage is defined outside setupEditor, but it needs access to 'editor' (which is 'view').
+  // And 'connectLsp' needs access to 'ws' which is inside setupEditor.
+  // This structure is a bit messy. 
+  // Let's make connectLsp a global function or attached to window so setLanguage can call it.
+
+  let intentionalClose = false;
+  let reconnectPort = 8081;
+
+  // Track which ports have already been initialized (server keeps running)
+  const initializedPorts = new Set();
+
+  window.connectLsp = function (port) {
+    // Clear any pending reconnect attempts
+    reconnectPort = port;
+
+    if (ws) {
+      console.log("Closing existing WebSocket connection...");
+      intentionalClose = true; // Don't reconnect on this close
+      try { ws.close(); } catch (e) { }
+      ws = null;
+    }
+
+    const socketUrl = `ws://localhost:${port}/clsp`;
+    console.log(`Connecting to LSP at ${socketUrl}`);
+
+    try {
+      ws = new WebSocket(socketUrl);
+    } catch (e) {
+      console.error("WebSocket creation failed:", e);
+      setTimeout(() => window.connectLsp(port), 3000);
+      return;
+    }
+
+    ws.onopen = () => {
+      console.log("Connected to LSP server");
+      intentionalClose = false; // Reset flag on successful connection
+
+      // Check if this server is already initialized
+      if (initializedPorts.has(port)) {
+        console.log(`Server on port ${port} already initialized, skipping initialize`);
+        isInitialized = true;
+
+        // Just send didOpen for the current file
+        if (URI) {
+          sendNotification(ws, 'textDocument/didOpen', {
+            textDocument: {
+              uri: URI,
+              languageId: currentLanguageId || 'cpp',
+              version: 1,
+              text: view?.state.doc.toString() || ''
+            }
+          });
+        }
+        return;
+      }
+
+      // First time connecting to this server - do full initialize
+      isInitialized = false;
+      initializationPromise = sendRequest(ws, 'initialize', {
+        processId: null,
+        rootUri: rootURI,
+        capabilities: {
+          textDocument: {
+            completion: {
+              completionItem: {
+                snippetSupport: false,
+                documentationFormat: ['plaintext', 'markdown']
+              },
+              contextSupport: true
+            },
+            publishDiagnostics: {},
+            hover: {
+              contentFormat: ['plaintext']
+            }
+          }
+        }
+      }, 15000).then((result) => {
+        console.log('✅ Server initialized:', result.serverInfo?.name);
+        isInitialized = true;
+        initializedPorts.add(port); // Mark as initialized
+        sendNotification(ws, 'initialized', {});
+
+        // Send didOpen if we have a file
+        if (URI) {
+          sendNotification(ws, 'textDocument/didOpen', {
+            textDocument: {
+              uri: URI,
+              languageId: currentLanguageId || 'cpp',
+              version: 1,
+              text: view?.state.doc.toString() || ''
+            }
+          });
+        }
+      }).catch(e => {
+        console.error("LSP Init failed:", JSON.stringify(e));
+        // If server says "already initialized", mark it and retry
+        if (e && e.code === -32600 && e.message && e.message.includes('already initialized')) {
+          console.log("Server already initialized, marking and retrying...");
+          initializedPorts.add(port);
+          isInitialized = true;
+          // Send didOpen
+          if (URI) {
+            sendNotification(ws, 'textDocument/didOpen', {
+              textDocument: {
+                uri: URI,
+                languageId: currentLanguageId || 'cpp',
+                version: 1,
+                text: view?.state.doc.toString() || ''
+              }
+            });
+          }
+        }
+      });
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+
+        // Handle Responses
+        if (msg.id !== undefined && pendingRequests.has(msg.id)) {
+          const { resolve, reject, timer } = pendingRequests.get(msg.id);
+          clearTimeout(timer);
+          pendingRequests.delete(msg.id);
+          if (msg.error) reject(msg.error);
+          else resolve(msg.result);
+          return;
+        }
+
+        // Handle Notifications
+        if (msg.method === "textDocument/publishDiagnostics") {
+          handleDiagnostics(msg.params);
+        }
+      } catch (e) {
+        console.error("Error parsing LSP message:", e);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    ws.onclose = (event) => {
+      console.log("WebSocket closed:", event.code, event.reason);
+
+      // Only reconnect if it was not an intentional close
+      if (!intentionalClose) {
+        setTimeout(() => {
+          console.log("Attempting to reconnect...");
+          window.connectLsp(reconnectPort);
+        }, 3000);
+      }
+      intentionalClose = false; // Reset for next time
+    };
   };
+
+  // Initial connection (default)
+  // window.connectLsp(8081); 
 
   window.performFind = function () {
     openSearchPanel(view);
@@ -790,232 +1046,12 @@ function setupEditor() {
     closeSearchPanel(view);
   };
 
-  function parseJSONMessages(text) {
-    const messages = [];
-    let depth = 0;
-    let inString = false;
-    let escape = false;
-    let startIdx = -1;
-    let i = 0;
-
-    while (i < text.length) {
-      const char = text[i];
-
-      if (escape) {
-        escape = false;
-        i++;
-        continue;
-      }
-
-      if (char === '\\' && inString) {
-        escape = true;
-        i++;
-        continue;
-      }
-
-      if (char === '"' && !escape) {
-        inString = !inString;
-        i++;
-        continue;
-      }
-
-      if (inString) {
-        i++;
-        continue;
-      }
-
-      if (char === '{') {
-        if (depth === 0) startIdx = i;
-        depth++;
-      } else if (char === '}') {
-        depth--;
-        if (depth === 0 && startIdx !== -1) {
-          const jsonStr = text.substring(startIdx, i + 1);
-          try {
-            const t0 = Date.now();
-            const parsed = JSON.parse(jsonStr);
-            const t1 = Date.now();
-            if (t1 - t0 > 20) {
-              console.warn(`[LSP-JS] Slow JSON.parse: ${t1 - t0}ms for ${jsonStr.length} bytes`);
-            }
-            messages.push(parsed);
-          } catch (e) {
-            console.error('Failed to parse JSON:', jsonStr.substring(0, 100));
-          }
-          startIdx = -1;
-        }
-      }
-
-      i++;
-    }
-
-    return {
-      messages,
-      remaining: startIdx !== -1 ? text.substring(startIdx) : ''
-    };
-  }
-
-  ws.onopen = () => {
-    console.log('✓ [LSP-JS] WebSocket Connected');
-    // console.log('[LSP-STATUS] line:1 col:1 err:0 warn:0'); // Reset status
-
-    initializationPromise = sendRequest(ws, 'initialize', {
-      processId: null,
-      rootUri: rootURI,
-      capabilities: {
-        textDocument: {
-          completion: {
-            completionItem: {
-              snippetSupport: false,
-              documentationFormat: ['plaintext', 'markdown']
-            },
-            contextSupport: true
-          },
-          publishDiagnostics: {},
-          hover: {
-            contentFormat: ['plaintext']
-          }
-        }
-      }
-    }, 15000).then((result) => {
-      console.log('✅ Server initialized:', result.serverInfo?.name);
-      isInitialized = true;
-      // LSP Connected (updateLspStatus removed)
-
-      sendNotification(ws, 'initialized', {});
-
-      sendNotification(ws, 'textDocument/didOpen', {
-        textDocument: {
-          uri: URI,
-          languageId: 'cpp',
-          version: 1,
-          text: view?.state.doc.toString() || ''
-        }
-      });
-
-      // Request initial diagnostics
-      console.log('[LSP-JS] Requesting initial diagnostics');
-      // Some servers might need a change notification to trigger diagnostics if open didn't
-      // But usually didOpen is enough. We can try a fake change if needed.
-
-      return result;
-    }).catch(err => {
-      console.error('Initialize error:', err);
-      isInitialized = false;
-      // LSP Failed (updateLspStatus removed)
-      throw err;
+  window.performSelectAll = function () {
+    view.dispatch({
+      selection: { anchor: 0, head: view.state.doc.length }
     });
   };
 
-  ws.onerror = (error) => {
-    console.error('❌ [LSP-JS] WebSocket error:', error);
-    isInitialized = false;
-    // LSP Error (updateLspStatus removed)
-  }
-
-  ws.onclose = (event) => {
-    console.log(`[LSP-JS] WebSocket closed: ${event.code} - ${event.reason}`);
-    isInitialized = false;
-    // LSP Disconnected (updateLspStatus removed)
-  }
-
-  ws.onmessage = (event) => {
-    try {
-      const data = event.data.toString();
-      // console.log('[LSP-JS] RX RAW:', data.substring(0, 100)); // Log raw data snippet
-      messageBuffer += data;
-      messageBuffer = messageBuffer.replace(/Content-Length:\s*\d+\s*/g, '');
-
-      const { messages, remaining } = parseJSONMessages(messageBuffer);
-      messageBuffer = remaining;
-
-      for (const message of messages) {
-        // console.log('[LSP-JS] RX JSON:', JSON.stringify(message).substring(0, 150)); // Log parsed JSON
-
-        if (message.id !== undefined && pendingRequests.has(message.id)) {
-          const { resolve, reject, timeoutId, startTime } = pendingRequests.get(message.id);
-          clearTimeout(timeoutId);
-          pendingRequests.delete(message.id);
-
-          if (message.error) {
-            console.error('❌ [LSP-JS] LSP Error:', message.error);
-            reject(message.error);
-          } else {
-            // console.log(`✓ [LSP-JS] Response for request ${message.id}`);
-            if (startTime) {
-              window.lastLspLatency = Date.now() - startTime;
-            }
-            resolve(message.result);
-          }
-        }
-
-        if (message.method === 'textDocument/publishDiagnostics') {
-          // console.log(`[LSP-JS] Diagnostics received for ${message.params.uri}`);
-          handleDiagnostics(message.params);
-        }
-      }
-    } catch (e) {
-      console.error('Error processing WebSocket message:', e);
-    }
-  };
-
-  function sendRequest(ws, method, params, timeout = 10000) {
-    return new Promise((resolve, reject) => {
-      if (ws.readyState !== WebSocket.OPEN) {
-        reject(new Error('WebSocket not open'));
-        return;
-      }
-
-      const id = messageId++;
-      const message = {
-        jsonrpc: '2.0',
-        id,
-        method,
-        params
-      };
-
-      const startTime = Date.now(); // Start timing
-
-      const timeoutId = setTimeout(() => {
-        if (pendingRequests.has(id)) {
-          pendingRequests.delete(id);
-          console.error(`⏱️ Request ${id} (${method}) timed out`);
-          reject(new Error(`Request timeout: ${method}`));
-        }
-      }, timeout);
-
-      pendingRequests.set(id, { resolve, reject, timeoutId, startTime }); // Store startTime
-
-      // Cleanup old requests if too many are pending (prevent memory leak)
-      if (pendingRequests.size > 20) {
-        const oldestId = Math.min(...pendingRequests.keys());
-        const oldest = pendingRequests.get(oldestId);
-        if (oldest) {
-          clearTimeout(oldest.timeoutId);
-          pendingRequests.delete(oldestId);
-          console.warn(`[LSP-JS] Cleaned up old request ${oldestId}`);
-        }
-      }
-
-      // console.log(`→ [LSP-JS] Request ${id}: ${method}`, JSON.stringify(params).substring(0, 200));
-      ws.send(JSON.stringify(message));
-    });
-  }
-
-  function sendNotification(ws, method, params) {
-    if (ws.readyState !== WebSocket.OPEN) {
-      console.warn('Cannot send notification, WebSocket not open');
-      return;
-    }
-
-    const message = {
-      jsonrpc: '2.0',
-      method,
-      params
-    };
-
-    ws.send(JSON.stringify(message));
-  }
-}
+} // End of setupEditor
 
 setupEditor();
