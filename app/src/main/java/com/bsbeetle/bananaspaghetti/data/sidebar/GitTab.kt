@@ -96,7 +96,7 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
         }
     }
 
-    // Initialize with current project root
+    // Initialize with current project root from file path
     LaunchedEffect(fileViewModel.currentFilePath) {
         val currentPath = fileViewModel.currentFilePath
         if (currentPath != null) {
@@ -110,6 +110,58 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
             }
             if (dir == null && currentPath.isNotEmpty()) {
                 viewModel.setRootDir(File(currentPath).parentFile?.absolutePath ?: "")
+            }
+        }
+    }
+
+    // Also watch for folder selection (when user opens a folder directly)
+    LaunchedEffect(fileViewModel.selectedFolderUri) {
+        val folderUri = fileViewModel.selectedFolderUri
+        if (folderUri != null) {
+            // Extract real file path from DocumentFile URI
+            // URI format: content://com.android.externalstorage.documents/tree/primary%3Afolder
+            val uriPath = folderUri.toString()
+
+            // Extract the path after "primary:" or "primary%3A"
+            val realPath =
+                    when {
+                        uriPath.contains("primary:") -> {
+                            val pathPart =
+                                    uriPath.substringAfter("primary:")
+                                            .substringBefore("/document/")
+                                            .replace("%2F", "/")
+                                            .replace("%3A", ":")
+                            "/storage/emulated/0/$pathPart"
+                        }
+                        uriPath.contains("primary%3A") -> {
+                            val pathPart =
+                                    uriPath.substringAfter("primary%3A")
+                                            .substringBefore("/document/")
+                                            .replace("%2F", "/")
+                                            .replace("%3A", ":")
+                            "/storage/emulated/0/$pathPart"
+                        }
+                        else -> null
+                    }
+
+            if (realPath != null) {
+                val dir = File(realPath)
+
+                // ALWAYS check if this folder itself is a Git repo first
+                if (dir.exists() && File(dir, ".git").exists()) {
+                    // Use THIS folder's .git, not parent's
+                    viewModel.setRootDir(dir.absolutePath)
+                } else if (dir.exists()) {
+                    // Only walk up if current folder doesn't have .git
+                    var parentDir = dir.parentFile
+                    while (parentDir != null) {
+                        if (File(parentDir, ".git").exists()) {
+                            viewModel.setRootDir(parentDir.absolutePath)
+                            break
+                        }
+                        parentDir = parentDir.parentFile
+                    }
+                }
             }
         }
     }
