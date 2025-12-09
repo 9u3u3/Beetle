@@ -1,9 +1,11 @@
-package com.bsbeetle.bananaspaghetti.viewmodel
+package com.bsbeetle.bananaspaghetti.directGit.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.bsbeetle.bananaspaghetti.directGit.utils.GitCredentialManager
+import com.bsbeetle.bananaspaghetti.directGit.utils.GitSshKeyManager
+import com.bsbeetle.bananaspaghetti.directGit.utils.GitSshSessionFactory
+import com.bsbeetle.bananaspaghetti.directGit.utils.GitUrlConverter
 import com.bsbeetle.bananaspaghetti.utils.git.*
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -11,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.eclipse.jgit.transport.SshSessionFactory
 
 data class GitUiState(
         val isInitialized: Boolean = false,
@@ -37,7 +40,9 @@ data class GitUiState(
         // Operation status
         val operationInProgress: String? = null,
         // Logs
-        val logs: List<LogEntry> = emptyList()
+        val logs: List<LogEntry> = emptyList(),
+        // SSH status
+        val sshKeysConfigured: Boolean = false
 )
 
 class GitViewModel(application: Application) : AndroidViewModel(application) {
@@ -47,9 +52,18 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
 
     private var repository: GitRepository? = null
     private var currentRoot: File? = null
-    private val credentialManager = GitCredentialManager(application)
+
+    // SSH key manager (replaces PAT credential manager)
+    private val sshKeyManager = GitSshKeyManager(application)
+    private val sshSessionFactory = GitSshSessionFactory(sshKeyManager)
 
     init {
+        // Configure SSH for all Git operations
+        SshSessionFactory.setInstance(sshSessionFactory)
+
+        // Check if SSH is configured
+        _uiState.value = _uiState.value.copy(sshKeysConfigured = sshKeyManager.hasKeys())
+
         // Observe logs
         viewModelScope.launch {
             GitLogger.logs.collect { logs ->
@@ -117,6 +131,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                                 stashes = stashes,
                                 aheadCount = ahead,
                                 behindCount = behind,
+                                sshKeysConfigured = sshKeyManager.hasKeys(),
                                 isLoading = false,
                                 operationInProgress = null
                         )
@@ -125,6 +140,8 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    fun getSshKeyManager(): GitSshKeyManager = sshKeyManager
 
     fun initRepo() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -162,7 +179,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun commit(message: String, filesToCommit: List<String>) {
+    fun doCommit(message: String, files: List<String>) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(operationInProgress = "Committing changes...")
 
@@ -170,7 +187,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
             repository?.resetMixed()
 
             // 2. Stage selected files
-            val stageResult = repository?.stageFiles(filesToCommit)
+            val stageResult = repository?.stageFiles(files)
             if (stageResult is GitResult.Error) {
                 showError(stageResult.message, stageResult.details)
                 refreshStatus()
@@ -186,70 +203,41 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun commitAndPush(
-            message: String,
-            filesToCommit: List<String>,
-            username: String? = null,
-            token: String? = null
-    ) {
+    /**
+     * Commits changes and pushes to remote using SSH. No credentials needed - uses SSH keys
+     * automatically.
+     */
+    fun commitAndPush(message: String, files: List<String>) {
         viewModelScope.launch(Dispatchers.IO) {
+            // Check if SSH is configured
+            if (!sshKeyManager.hasKeys()) {
+                showError("SSH not configured", "Please set up SSH keys first")
+                return@launch
+            }
+
             _uiState.value = _uiState.value.copy(operationInProgress = "Committing...")
 
-            // 1. Reset Mixed
+            // Stage and commit
             repository?.resetMixed()
-
-            // 2. Stage & Commit
-            val stageResult = repository?.stageFiles(filesToCommit)
+            val stageResult = repository?.stageFiles(files)
             if (stageResult is GitResult.Error) {
                 showError(stageResult.message, stageResult.details)
                 refreshStatus()
                 return@launch
             }
 
-            val commitResult = repository?.commit(message)
-            if (commitResult !is GitResult.Success) {
-                if (commitResult is GitResult.Error)
-                        showError(commitResult.message, commitResult.details)
-                refreshStatus()
-                return@launch
-            }
-
-            // 2. Push
-            _uiState.value = _uiState.value.copy(operationInProgress = "Pushing...")
-
-            val remote = repository?.getRemote() ?: ""
-            var finalUser = username
-            var finalToken = token
-
-            if (finalUser == null || finalToken == null) {
-                val stored = credentialManager.getCredentials(remote)
-                if (stored != null) {
-                    finalUser = stored.first
-                    finalToken = stored.second
+            when (val result = repository?.commit(message)) {
+                is GitResult.Success -> {
+                    // Then push
+                    _uiState.value = _uiState.value.copy(operationInProgress = "Pushing...")
+                    push()
                 }
-            }
-
-            if (finalUser == null || finalToken == null) {
-                showError("Authentication required", "Please enter credentials")
-                return@launch
-            }
-
-            // Save if new credentials provided (logic handled in UI usually, but good to have here)
-            if (username != null && token != null && remote.isNotEmpty()) {
-                credentialManager.saveCredentials(remote, username, token)
-            }
-
-            when (val result = repository?.push(finalUser, finalToken)) {
-                is GitResult.Success -> showSuccess("Committed & Pushed: ${commitResult.data}")
                 is GitResult.Error -> {
-                    if (result.message.contains("Authentication failed")) {
-                        credentialManager.clearCredentials(remote)
-                    }
                     showError(result.message, result.details)
+                    refreshStatus()
                 }
                 null -> showError("No repository")
             }
-            refreshStatus()
         }
     }
 
@@ -284,15 +272,20 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // === Network Operations with Credentials ===
+    // === Network Operations (SSH-Only) ===
 
-    fun getStoredCredentials(): Pair<String, String>? {
-        val remote = repository?.getRemote() ?: return null
-        return credentialManager.getCredentials(remote)
-    }
-
-    fun push(username: String? = null, token: String? = null, save: Boolean = false) {
+    /**
+     * Push commits to remote using SSH authentication. No credentials needed - uses SSH keys
+     * automatically.
+     */
+    fun push() {
         viewModelScope.launch(Dispatchers.IO) {
+            // Check if SSH is configured
+            if (!sshKeyManager.hasKeys()) {
+                showError("SSH not configured", "Please set up SSH keys first")
+                return@launch
+            }
+
             _uiState.value =
                     _uiState.value.copy(
                             isLoading = true,
@@ -300,45 +293,27 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                             operationInProgress = "Pushing to remote..."
                     )
 
-            val remote = repository?.getRemote() ?: ""
-            var finalUser = username
-            var finalToken = token
-
-            // Try stored credentials if not provided
-            if (finalUser == null || finalToken == null) {
-                val stored = credentialManager.getCredentials(remote)
-                if (stored != null) {
-                    finalUser = stored.first
-                    finalToken = stored.second
-                }
-            }
-
-            if (finalUser == null || finalToken == null) {
-                showError("Authentication required", "Please enter credentials")
-                return@launch
-            }
-
-            if (save && remote.isNotEmpty()) {
-                credentialManager.saveCredentials(remote, finalUser, finalToken)
-            }
-
-            when (val result = repository?.push(finalUser, finalToken)) {
+            when (val result = repository?.push()) {
                 is GitResult.Success -> showSuccess(result.message)
-                is GitResult.Error -> {
-                    // If auth failed, maybe clear credentials?
-                    if (result.message.contains("Authentication failed")) {
-                        credentialManager.clearCredentials(remote)
-                    }
-                    showError(result.message, result.details)
-                }
+                is GitResult.Error -> showError(result.message, result.details)
                 null -> showError("No repository")
             }
             refreshStatus()
         }
     }
 
-    fun pull(username: String? = null, token: String? = null, save: Boolean = false) {
+    /**
+     * Pull changes from remote using SSH authentication. No credentials needed - uses SSH keys
+     * automatically.
+     */
+    fun pull() {
         viewModelScope.launch(Dispatchers.IO) {
+            // Check if SSH is configured
+            if (!sshKeyManager.hasKeys()) {
+                showError("SSH not configured", "Please set up SSH keys first")
+                return@launch
+            }
+
             _uiState.value =
                     _uiState.value.copy(
                             isLoading = true,
@@ -346,43 +321,27 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                             operationInProgress = "Pulling from remote..."
                     )
 
-            val remote = repository?.getRemote() ?: ""
-            var finalUser = username
-            var finalToken = token
-
-            if (finalUser == null || finalToken == null) {
-                val stored = credentialManager.getCredentials(remote)
-                if (stored != null) {
-                    finalUser = stored.first
-                    finalToken = stored.second
-                }
-            }
-
-            if (finalUser == null || finalToken == null) {
-                showError("Authentication required", "Please enter credentials")
-                return@launch
-            }
-
-            if (save && remote.isNotEmpty()) {
-                credentialManager.saveCredentials(remote, finalUser, finalToken)
-            }
-
-            when (val result = repository?.pull(finalUser, finalToken)) {
+            when (val result = repository?.pull()) {
                 is GitResult.Success -> showSuccess(result.message)
-                is GitResult.Error -> {
-                    if (result.message.contains("Authentication failed")) {
-                        credentialManager.clearCredentials(remote)
-                    }
-                    showError(result.message, result.details)
-                }
+                is GitResult.Error -> showError(result.message, result.details)
                 null -> showError("No repository")
             }
             refreshStatus()
         }
     }
 
-    fun fetch(username: String? = null, token: String? = null, save: Boolean = false) {
+    /**
+     * Fetch changes from remote using SSH authentication. No credentials needed - uses SSH keys
+     * automatically.
+     */
+    fun fetch() {
         viewModelScope.launch(Dispatchers.IO) {
+            // Check if SSH is configured
+            if (!sshKeyManager.hasKeys()) {
+                showError("SSH not configured", "Please set up SSH keys first")
+                return@launch
+            }
+
             _uiState.value =
                     _uiState.value.copy(
                             isLoading = true,
@@ -390,26 +349,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                             operationInProgress = "Fetching from remote..."
                     )
 
-            val remote = repository?.getRemote() ?: ""
-            var finalUser = username
-            var finalToken = token
-
-            if (finalUser == null || finalToken == null) {
-                val stored = credentialManager.getCredentials(remote)
-                if (stored != null) {
-                    finalUser = stored.first
-                    finalToken = stored.second
-                }
-            }
-
-            // Fetch might work without auth for public repos, but usually needs it for private
-            // If no creds, try without (pass empty strings or handle differently)
-            // For now, assume we need them if it's a private repo, but let's try with what we have
-
-            val userToUse = finalUser ?: ""
-            val tokenToUse = finalToken ?: ""
-
-            when (val result = repository?.fetch(userToUse, tokenToUse)) {
+            when (val result = repository?.fetch()) {
                 is GitResult.Success -> showSuccess(result.message)
                 is GitResult.Error -> showError(result.message, result.details)
                 null -> showError("No repository")
@@ -504,7 +444,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
 
     // === Helpers ===
 
-    private fun showSuccess(message: String) {
+    fun showSuccess(message: String) {
         _uiState.value =
                 _uiState.value.copy(
                         lastSuccess = message,
@@ -513,7 +453,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                 )
     }
 
-    private fun showError(message: String, details: String? = null) {
+    fun showError(message: String, details: String? = null) {
         val fullMessage = if (details != null) "$message: $details" else message
         _uiState.value =
                 _uiState.value.copy(
@@ -523,13 +463,26 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                 )
     }
 
-    fun cloneRepository(url: String, targetPath: String, username: String, token: String) {
+    /**
+     * Clone a repository using SSH authentication. Automatically converts HTTPS URLs to SSH format.
+     * No credentials needed - uses SSH keys automatically.
+     */
+    fun cloneRepository(url: String, targetPath: String) {
         viewModelScope.launch(Dispatchers.IO) {
+            // Check if SSH is configured
+            if (!sshKeyManager.hasKeys()) {
+                showError("SSH not configured", "Please set up SSH keys first")
+                return@launch
+            }
+
             _uiState.value =
                     _uiState.value.copy(
                             operationInProgress = "Cloning repository...",
                             isLoading = true
                     )
+
+            // Convert HTTPS URL to SSH if needed
+            val sshUrl = GitUrlConverter.ensureSsh(url)
 
             // Use the full path provided by user
             val targetDir = File(targetPath)
@@ -552,11 +505,8 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
-            when (val result = GitRepository.clone(url, targetDir, username, token)) {
+            when (val result = GitRepository.clone(sshUrl, targetDir)) {
                 is GitResult.Success -> {
-                    // Save credentials for this repo
-                    credentialManager.saveCredentials(url, username, token)
-
                     // Set this as the current repository
                     repository?.close()
                     repository = result.data

@@ -16,6 +16,7 @@ ui = "1.9.5"
 foundationVersion = "1.9.5"
 animation = "1.9.5"
 jgit = "6.8.0.202311291450-r"
+jsch = "0.1.55"
 securityCrypto = "1.1.0-alpha06"
 
 [libraries]
@@ -41,6 +42,8 @@ androidx-compose-ui = { group = "androidx.compose.ui", name = "ui", version.ref 
 androidx-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundationVersion" }
 androidx-compose-animation = { group = "androidx.compose.animation", name = "animation", version.ref = "animation" }
 jgit = { group = "org.eclipse.jgit", name = "org.eclipse.jgit", version.ref = "jgit" }
+jgit-ssh-jsch = { group = "org.eclipse.jgit", name = "org.eclipse.jgit.ssh.jsch", version.ref = "jgit" }
+jsch = { group = "com.jcraft", name = "jsch", version.ref = "jsch" }
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 
 [plugins]

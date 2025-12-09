@@ -201,7 +201,11 @@ class GitRepository(private val rootDir: File) {
 
     // === Network Operations ===
 
-    fun push(username: String, token: String): GitResult<Unit> {
+    /**
+     * Push changes to remote using SSH authentication. SSH session factory must be configured
+     * before calling.
+     */
+    fun push(): GitResult<Unit> {
         val remote = getRemote()
         if (remote.isEmpty()) {
             return GitResult.Error("No remote configured", "Set a remote URL first in settings")
@@ -209,9 +213,6 @@ class GitRepository(private val rootDir: File) {
         val currentBranch = getCurrentBranch()
         GitLogger.log("git push -u origin $currentBranch", LogType.COMMAND)
         return try {
-            val credentialsProvider =
-                    org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider(username, token)
-
             // Set up tracking branch for first push
             val config = git?.repository?.config
             val trackingBranch = config?.getString("branch", currentBranch, "remote")
@@ -226,12 +227,7 @@ class GitRepository(private val rootDir: File) {
                 )
             }
 
-            val result =
-                    git?.push()
-                            ?.setRemote("origin")
-                            ?.add(currentBranch)
-                            ?.setCredentialsProvider(credentialsProvider)
-                            ?.call()
+            val result = git?.push()?.setRemote("origin")?.add(currentBranch)?.call()
 
             val updates = result?.flatMap { it.remoteUpdates } ?: emptyList()
             if (updates.isEmpty()) {
@@ -300,7 +296,11 @@ class GitRepository(private val rootDir: File) {
         }
     }
 
-    fun pull(username: String, token: String): GitResult<Unit> {
+    /**
+     * Pull changes from remote using SSH authentication. SSH session factory must be configured
+     * before calling.
+     */
+    fun pull(): GitResult<Unit> {
         val remote = getRemote()
         if (remote.isEmpty()) {
             return GitResult.Error("No remote configured", "Set a remote URL first in settings")
@@ -308,14 +308,8 @@ class GitRepository(private val rootDir: File) {
         val currentBranch = getCurrentBranch()
         GitLogger.log("git pull origin $currentBranch", LogType.COMMAND)
         return try {
-            val credentialsProvider =
-                    org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider(username, token)
             val result =
-                    git?.pull()
-                            ?.setRemote("origin")
-                            ?.setRemoteBranchName(currentBranch)
-                            ?.setCredentialsProvider(credentialsProvider)
-                            ?.call()
+                    git?.pull()?.setRemote("origin")?.setRemoteBranchName(currentBranch)?.call()
 
             when {
                 result?.mergeResult?.mergeStatus?.isSuccessful == true -> {
@@ -334,24 +328,6 @@ class GitRepository(private val rootDir: File) {
                     GitResult.Error("Pull failed", result?.mergeResult?.mergeStatus?.toString())
                 }
             }
-        } catch (e: TransportException) {
-            Log.e("GitRepository", "Pull transport error", e)
-            GitLogger.log("Pull failed: ${e.message}", LogType.ERROR)
-            when {
-                e.message?.contains("not authorized") == true ||
-                        e.message?.contains("Authentication") == true ->
-                        GitResult.Error("Authentication failed", "Check your username and token")
-                e.message?.contains("not found") == true ->
-                        GitResult.Error("Repository not found", "Check your remote URL")
-                else -> GitResult.Error("Pull failed", e.message)
-            }
-        } catch (e: CheckoutConflictException) {
-            val conflictingFiles = e.conflictingPaths.take(3).joinToString(", ")
-            GitLogger.log("Pull conflict: $conflictingFiles", LogType.ERROR)
-            GitResult.Error(
-                    "Pull conflict",
-                    "Commit or stash changes in: $conflictingFiles${if (e.conflictingPaths.size > 3) "..." else ""}"
-            )
         } catch (e: Exception) {
             Log.e("GitRepository", "Failed to pull", e)
             GitLogger.log("Pull failed: ${e.message}", LogType.ERROR)
@@ -359,16 +335,18 @@ class GitRepository(private val rootDir: File) {
         }
     }
 
-    fun fetch(username: String, token: String): GitResult<Unit> {
+    /**
+     * Fetch changes from remote using SSH authentication. SSH session factory must be configured
+     * before calling.
+     */
+    fun fetch(): GitResult<Unit> {
         val remote = getRemote()
         if (remote.isEmpty()) {
             return GitResult.Error("No remote configured", "Set a remote URL first in settings")
         }
         GitLogger.log("git fetch origin", LogType.COMMAND)
         return try {
-            val credentialsProvider =
-                    org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider(username, token)
-            val result = git?.fetch()?.setCredentialsProvider(credentialsProvider)?.call()
+            val result = git?.fetch()?.call()
             val updates = result?.trackingRefUpdates?.size ?: 0
             if (updates > 0) {
                 GitLogger.log("Fetched $updates updates", LogType.SUCCESS)
@@ -638,38 +616,18 @@ class GitRepository(private val rootDir: File) {
     }
 
     companion object {
-        fun clone(
-                url: String,
-                directory: File,
-                username: String,
-                token: String
-        ): GitResult<GitRepository> {
-            GitLogger.log("git clone $url ${directory.name}", LogType.COMMAND)
+        /**
+         * Clone a repository using SSH authentication. SSH keys must be configured before calling
+         * this.
+         */
+        fun clone(url: String, directory: File): GitResult<GitRepository> {
+            GitLogger.log("git clone $url ${directory.absolutePath}", LogType.COMMAND)
             return try {
-                val credentialsProvider =
-                        org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider(
-                                username,
-                                token
-                        )
-                Git.cloneRepository()
-                        .setURI(url)
-                        .setDirectory(directory)
-                        .setCredentialsProvider(credentialsProvider)
-                        .call()
+                // Clone using SSH (credentials handled by SSH session factory)
+                val git = Git.cloneRepository().setURI(url).setDirectory(directory).call()
+
                 GitLogger.log("Cloned successfully", LogType.SUCCESS)
                 GitResult.Success(GitRepository(directory), "Cloned to ${directory.name}")
-            } catch (e: TransportException) {
-                GitLogger.log("Clone failed: ${e.message}", LogType.ERROR)
-                when {
-                    e.message?.contains("not authorized") == true ->
-                            GitResult.Error(
-                                    "Authentication failed",
-                                    "Check your username and token"
-                            )
-                    e.message?.contains("not found") == true ->
-                            GitResult.Error("Repository not found", "Check the URL")
-                    else -> GitResult.Error("Clone failed", e.message)
-                }
             } catch (e: Exception) {
                 Log.e("GitRepository", "Failed to clone", e)
                 GitLogger.log("Clone failed: ${e.message}", LogType.ERROR)

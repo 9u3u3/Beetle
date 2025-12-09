@@ -38,13 +38,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.bsbeetle.bananaspaghetti.LocalFileViewModel
 import com.bsbeetle.bananaspaghetti.data.sidebar.FileIconUtils
+import com.bsbeetle.bananaspaghetti.directGit.viewmodel.GitViewModel
 import com.bsbeetle.bananaspaghetti.utils.git.BranchInfo
 import com.bsbeetle.bananaspaghetti.utils.git.CommitInfo
 import com.bsbeetle.bananaspaghetti.utils.git.LogEntry
 import com.bsbeetle.bananaspaghetti.utils.git.LogType
 import com.bsbeetle.bananaspaghetti.utils.resourceHandling.ImageLoaderSingleton
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
-import com.bsbeetle.bananaspaghetti.viewmodel.GitViewModel
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -55,6 +55,7 @@ private val BgCard = Color(0xFF252526)
 private val BgHover = Color(0xFF2D2D2D)
 private val AccentBlue = Color(0xFF007ACC)
 private val AccentGreen = Color(0xFF73C991)
+private val AccentOrange = Color(0xFFFF8C00)
 private val AccentRed = Color(0xFFF48771)
 private val AccentYellow = Color(0xFFE2C08D)
 private val TextPrimary = Color(0xFFE1E1E1)
@@ -77,6 +78,16 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
     var showHistoryDialog by remember { mutableStateOf(false) }
     var showConsole by remember { mutableStateOf(false) }
     var showCloneDialog by remember { mutableStateOf(false) }
+    var showSshSetupDialog by remember { mutableStateOf(false) }
+
+    // Show SSH setup dialog if keys are not configured (only once per session)
+    var hasShownSshDialog by remember { mutableStateOf(false) }
+    LaunchedEffect(uiState.sshKeysConfigured) {
+        if (!uiState.sshKeysConfigured && !showSshSetupDialog && !hasShownSshDialog) {
+            showSshSetupDialog = true
+            hasShownSshDialog = true
+        }
+    }
 
     // Action to retry after auth
     var authAction by remember { mutableStateOf<((String, String, Boolean) -> Unit)?>(null) }
@@ -169,22 +180,28 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
         }
     }
 
-    // Dialogs
+    // === Dialogs ===
+    // SSH Setup Dialog
+    if (showSshSetupDialog) {
+        SshSetupDialog(
+                viewModel = viewModel,
+                onDismiss = { showSshSetupDialog = false },
+                onComplete = { viewModel.refreshStatus() }
+        )
+    }
+
     if (showAuthDialog) {
         AuthDialog(
                 onDismiss = { showAuthDialog = false },
-                onConfirm = { username, token, save ->
-                    authAction?.invoke(username, token, save)
-                    showAuthDialog = false
-                }
+                onConfirm = { u, t, s -> authAction?.invoke(u, t, s) }
         )
     }
 
     if (showCloneDialog) {
         CloneDialog(
                 onDismiss = { showCloneDialog = false },
-                onClone = { url, directory, username, token ->
-                    viewModel.cloneRepository(url, directory, username, token)
+                onClone = { url, directory ->
+                    viewModel.cloneRepository(url, directory)
                     showCloneDialog = false
                 }
         )
@@ -234,26 +251,20 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
 
     Column(modifier = Modifier.fillMaxSize().background(BgDark)) {
         // --- Header ---
+        // === Git Header ===
         GitHeader(
                 branch = uiState.currentBranch.ifEmpty { "master" },
                 ahead = uiState.aheadCount,
                 behind = uiState.behindCount,
                 onBranchClick = { showBranchDialog = true },
-                onFetch = {
-                    authAction = { u, t, s -> viewModel.fetch(u, t, s) }
-                    viewModel.fetch()
-                },
-                onPull = {
-                    authAction = { u, t, s -> viewModel.pull(u, t, s) }
-                    viewModel.pull()
-                },
-                onPush = {
-                    authAction = { u, t, s -> viewModel.push(u, t, s) }
-                    viewModel.push()
-                },
+                onFetch = { viewModel.fetch() },
+                onPull = { viewModel.pull() },
+                onPush = { viewModel.push() },
                 onHistory = { showHistoryDialog = true },
                 onSettings = { showRemoteDialog = true },
-                onRefresh = { viewModel.refreshStatus() }
+                onRefresh = { viewModel.refreshStatus() },
+                onSshSetupClick = { showSshSetupDialog = true },
+                sshKeysConfigured = uiState.sshKeysConfigured
         )
 
         // --- Main Content ---
@@ -411,7 +422,10 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                             Button(
                                     onClick = {
                                         if (commitMessage.isNotBlank()) {
-                                            viewModel.commit(commitMessage, selectedFiles.toList())
+                                            viewModel.doCommit(
+                                                    commitMessage,
+                                                    selectedFiles.toList()
+                                            )
                                             commitMessage = ""
                                         }
                                     },
@@ -431,18 +445,10 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                                 Text("Commit", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
 
-                            // Push Button
+                            // Commit & Push Button
                             Button(
                                     onClick = {
                                         if (commitMessage.isNotBlank()) {
-                                            authAction = { u, t, s ->
-                                                viewModel.commitAndPush(
-                                                        commitMessage,
-                                                        selectedFiles.toList(),
-                                                        u,
-                                                        t
-                                                )
-                                            }
                                             viewModel.commitAndPush(
                                                     commitMessage,
                                                     selectedFiles.toList()
@@ -458,11 +464,7 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                                                     disabledContainerColor =
                                                             BgHover.copy(alpha = 0.5f)
                                             ),
-                                    border =
-                                        BorderStroke(
-                                                1.dp,
-                                                BorderColor
-                                        ),
+                                    border = BorderStroke(1.dp, BorderColor),
                                     shape = RoundedCornerShape(6.dp),
                                     enabled =
                                             selectedFiles.isNotEmpty() && commitMessage.isNotBlank()
@@ -509,7 +511,9 @@ private fun GitHeader(
         onPush: () -> Unit,
         onHistory: () -> Unit,
         onSettings: () -> Unit,
-        onRefresh: () -> Unit
+        onRefresh: () -> Unit,
+        onSshSetupClick: () -> Unit,
+        sshKeysConfigured: Boolean
 ) {
     Column(modifier = Modifier.fillMaxWidth().background(BgCard).border(0.dp, Color.Transparent)) {
         // Top Bar
@@ -598,17 +602,23 @@ private fun GitHeader(
             ActionButton(Icons.Rounded.ArrowUpward, "Push", onPush)
             ActionButton(Icons.Rounded.History, "History", onHistory)
             ActionButton(Icons.Rounded.Settings, "Settings", onSettings)
+
+            // SSH Setup Button with visual indicator
+            Box(
+                    modifier =
+                            Modifier.background(
+                                    if (!sshKeysConfigured) AccentOrange.copy(alpha = 0.2f)
+                                    else Color.Transparent,
+                                    RoundedCornerShape(4.dp)
+                            )
+            ) { ActionButton(Icons.Rounded.Key, "SSH Setup", onSshSetupClick) }
         }
         HorizontalDivider(color = BorderColor)
     }
 }
 
 @Composable
-private fun ActionButton(
-        icon: ImageVector,
-        tooltip: String,
-        onClick: () -> Unit
-) {
+private fun ActionButton(icon: ImageVector, tooltip: String, onClick: () -> Unit) {
     IconButton(onClick = onClick, modifier = Modifier.size(32.dp)) {
         Icon(icon, tooltip, tint = TextSecondary, modifier = Modifier.size(18.dp))
     }
@@ -1121,22 +1131,23 @@ private fun RemoteDialog(currentUrl: String, onDismiss: () -> Unit, onConfirm: (
 }
 
 @Composable
-private fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String, String, String) -> Unit) {
-    val context = LocalContext.current
+private fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String) -> Unit) {
     var url by remember { mutableStateOf("") }
     var targetPath by remember { mutableStateOf("/storage/emulated/0/") }
-    var username by remember { mutableStateOf("") }
-    var token by remember { mutableStateOf("") }
 
     StyledDialog(title = "Clone Repository", onDismiss = onDismiss) {
-        Text("Clone a Git repository from a remote URL.", color = TextSecondary, fontSize = 12.sp)
+        Text(
+                "Clone a Git repository using SSH authentication.",
+                color = TextSecondary,
+                fontSize = 12.sp
+        )
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
                 value = url,
                 onValueChange = { url = it },
                 label = { Text("Repository URL") },
-                placeholder = { Text("https://github.com/user/repo.git") },
+                placeholder = { Text("git@github.com:user/repo.git") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors =
@@ -1174,48 +1185,28 @@ private fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String, String,
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text("Authentication", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(8.dp))
+        // SSH Info
+        Row(
+                modifier =
+                        Modifier.fillMaxWidth()
+                                .background(AccentBlue.copy(alpha = 0.1f), RoundedCornerShape(6.dp))
+                                .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Rounded.Info, null, tint = AccentBlue, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                    "Using SSH authentication - ensure your SSH keys are configured",
+                    color = TextSecondary,
+                    fontSize = 11.sp
+            )
+        }
 
-        OutlinedTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = { Text("GitHub Username") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                colors =
-                        OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = AccentBlue,
-                                unfocusedBorderColor = BorderColor,
-                                focusedLabelColor = AccentBlue,
-                                unfocusedLabelColor = TextTertiary
-                        )
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-                value = token,
-                onValueChange = { token = it },
-                label = { Text("Personal Access Token") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                colors =
-                        OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = AccentBlue,
-                                unfocusedBorderColor = BorderColor,
-                                focusedLabelColor = AccentBlue,
-                                unfocusedLabelColor = TextTertiary
-                        )
-        )
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
-                onClick = { onClone(url, targetPath, username, token) },
-                enabled =
-                        url.isNotBlank() &&
-                                targetPath.isNotBlank() &&
-                                username.isNotBlank() &&
-                                token.isNotBlank(),
+                onClick = { onClone(url, targetPath) },
+                enabled = url.isNotBlank() && targetPath.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
                 shape = RoundedCornerShape(6.dp)
