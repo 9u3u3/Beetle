@@ -431,7 +431,8 @@ fun RightTopBar(
             TopBarIconButton(
                 icon = R.drawable.extension,
                 onClick = {
-                    /*TODO*/
+                    currentEditorSession?.saveContent()
+                    navController.navigate(Screen.Extensions.route)
                 }
             )
 
