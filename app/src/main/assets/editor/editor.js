@@ -47,6 +47,25 @@ window.setLanguage = async function (slug, port = 8081) {
   }
 }
 
+// Clear language support (for unsupported files)
+window.clearLanguage = function () {
+  console.log('[LSP-JS] Clearing language support (plaintext mode)');
+  currentLanguageId = 'plaintext';
+
+  // Close any existing LSP connection
+  if (window.ws) {
+    try { window.ws.close(); } catch (e) { }
+    window.ws = null;
+  }
+
+  // Reconfigure to empty (no syntax highlighting)
+  if (window.view) {
+    window.view.dispatch({
+      effects: languageCompartment.reconfigure([])
+    });
+  }
+}
+
 // --- Global Error Handling for WEBVERR ---
 window.onerror = function (message, source, lineno, colno, error) {
   console.error(`[WEBVERR] JS Error: ${message} at ${source}:${lineno}:${colno} `);
@@ -273,6 +292,9 @@ function setupEditor() {
       if (!view || !pendingDiagnostics) return;
 
       try {
+        // Debug: Log raw diagnostics from LSP
+        console.log('[LSP-RAW-DIAG] Received:', JSON.stringify(pendingDiagnostics.diagnostics?.slice(0, 3)));
+
         const diagnostics = []
         for (const d of pendingDiagnostics.diagnostics) {
           try {

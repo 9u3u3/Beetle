@@ -227,6 +227,10 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
         val jsPath = "http://localhost:8080/plugins/$slug/$slug.js"
         view?.evaluateJavascript("if(window.setLanguage) window.setLanguage('$slug', $port);", null)
     }
+    
+    fun clearLanguage() {
+        view?.evaluateJavascript("if(window.clearLanguage) window.clearLanguage();", null)
+    }
 
     fun performEditorAction(action: String) {
         view?.evaluateJavascript("if(window.$action) window.$action();", null)

@@ -138,8 +138,12 @@ fun InitialEditorUI(navController: NavController) {
                     Log.e("Buffer", "Error in file extension handling $e")
                 }
 
+                // Save current content before loading new file
+                bufferViewModel.saveCurrentContentToBuffer()
+
                 val content = readFromFile(context, uri)
                 bufferViewModel.bufferLine[documentFile] = content
+                bufferViewModel.currentFile.value = documentFile // Track current file
                 loadContentWhenReady(editorViewModel.webView, content)
                 fileViewModel.currentFilePath = uri.toString()
                 
@@ -153,6 +157,9 @@ fun InitialEditorUI(navController: NavController) {
                     
                     if (slug != "plaintext" && LanguageRegistry.isInstalled(slug)) {
                         session.setLanguage(slug, lspPort)
+                    } else {
+                        // Clear language support for unsupported files
+                        session.clearLanguage()
                     }
                 }
 
