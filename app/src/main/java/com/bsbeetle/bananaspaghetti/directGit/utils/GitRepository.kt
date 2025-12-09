@@ -259,11 +259,31 @@ class GitRepository(private val rootDir: File) {
                             updates.firstOrNull {
                                 it.status != org.eclipse.jgit.transport.RemoteRefUpdate.Status.OK
                             }
+                    // Log detailed error information
+                    val errorMsg = firstError?.message ?: "No error message"
+                    val errorStatus = firstError?.status?.toString() ?: "UNKNOWN"
                     GitLogger.log(
-                            "Push failed: ${firstError?.message ?: "Unknown error"}",
+                            "Push failed - Status: $errorStatus, Message: $errorMsg",
                             LogType.ERROR
                     )
-                    GitResult.Error("Push failed", firstError?.message)
+
+                    // Provide helpful error message based on status
+                    val userMessage =
+                            when (firstError?.status) {
+                                org.eclipse.jgit.transport.RemoteRefUpdate.Status
+                                        .REJECTED_NONFASTFORWARD ->
+                                        "Push rejected: Pull changes first"
+                                org.eclipse.jgit.transport.RemoteRefUpdate.Status
+                                        .REJECTED_NODELETE ->
+                                        "Push rejected: Cannot delete remote branch"
+                                org.eclipse.jgit.transport.RemoteRefUpdate.Status
+                                        .REJECTED_REMOTE_CHANGED ->
+                                        "Push rejected: Remote has changes, pull first"
+                                org.eclipse.jgit.transport.RemoteRefUpdate.Status
+                                        .REJECTED_OTHER_REASON -> "Push rejected: ${errorMsg}"
+                                else -> "Push failed: $errorStatus"
+                            }
+                    GitResult.Error(userMessage, errorMsg)
                 }
             }
         } catch (e: TransportException) {
@@ -332,8 +352,12 @@ class GitRepository(private val rootDir: File) {
                 else -> GitResult.Error("Pull failed", e.message)
             }
         } catch (e: CheckoutConflictException) {
-            GitLogger.log("Pull conflict", LogType.ERROR)
-            GitResult.Error("Checkout conflict", "Commit or stash your changes before pulling")
+            val conflictingFiles = e.conflictingPaths.take(3).joinToString(", ")
+            GitLogger.log("Pull conflict: $conflictingFiles", LogType.ERROR)
+            GitResult.Error(
+                    "Pull conflict",
+                    "Commit or stash changes in: $conflictingFiles${if (e.conflictingPaths.size > 3) "..." else ""}"
+            )
         } catch (e: Exception) {
             Log.e("GitRepository", "Failed to pull", e)
             GitLogger.log("Pull failed: ${e.message}", LogType.ERROR)
