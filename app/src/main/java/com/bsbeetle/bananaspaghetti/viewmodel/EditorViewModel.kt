@@ -14,17 +14,20 @@ import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 // Write functions to swap the webViews on call
 
 import androidx.lifecycle.viewModelScope
-import com.bsbeetle.bananaspaghetti.utils.languageHandling.cLsp
+import com.bsbeetle.bananaspaghetti.utils.languageHandling.LspServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class EditorViewModel(app: Application) : AndroidViewModel(app) {
+    private val lsp = LspServer(getApplication())
+
     init { 
         AssetServer(getApplication(), 8080).start() 
-        
-        // Start LSP Server
+    }
+
+    fun startLsp(slug: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            cLsp(getApplication()).init()
+            lsp.start(slug)
         }
     }
     @SuppressLint("StaticFieldLeak")

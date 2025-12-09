@@ -113,11 +113,19 @@ fun InitialEditorUI(navController: NavController) {
                 }
 
                 // Check for Language Support (LSP)
+                val extType = documentFile.name!!.substringAfterLast(".")
+                val slug = LanguageRegistry.getSlugForExtension(extType)
+                
                 try {
-                    val extType = documentFile.name!!.substringAfterLast(".")
-                    if (!LanguageRegistry.isInstalled(extType)) {
-                        missingLanguageExt = extType
-                        showLanguagePopup = true
+                    if (slug != "plaintext") {
+                        if (!LanguageRegistry.isInstalled(slug)) {
+                            missingLanguageExt = extType
+                            showLanguagePopup = true
+                        } else {
+                            // Start LSP
+                            editorViewModel.startLsp(slug)
+                            android.widget.Toast.makeText(context, "Initializing $slug support...", android.widget.Toast.LENGTH_SHORT).show()
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e("Buffer", "Error in file extension handling $e")
@@ -135,6 +143,10 @@ fun InitialEditorUI(navController: NavController) {
                     // Use a clean filename for LSP to avoid content:// URI issues
                     val cleanName = documentFile.name?.replace(" ", "_") ?: "main.cpp"
                     session.setFilePath("/src/$cleanName")
+                    
+                    if (slug != "plaintext" && LanguageRegistry.isInstalled(slug)) {
+                        session.setLanguage(slug)
+                    }
                 }
 
                 Log.d("Buffer", "Opened: ${documentFile.name}, total: ${bufferViewModel.filesOpenedList.size}")

@@ -17,10 +17,11 @@
 #define ALOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_cLsp_getCppLsp(
+Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_LspServer_startNativeLsp(
     JNIEnv *env, jobject /*thizz nutz*/, jstring prefix, jstring jNativeDirPath,
     jstring jProotTmpDir, jstring jProotLoader, jstring jProotLoader32,
-    jstring jProot, jstring jPublic, jstring jAlpineTmp, jstring jAlpine) {
+    jstring jProot, jstring jPublic, jstring jAlpineTmp, jstring jAlpine,
+    jstring jScriptName) {
 
   ALOGE("Called getCppLsp");
 
@@ -33,6 +34,7 @@ Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_cLsp_getCppLsp(
   const char *PUBLIC = env->GetStringUTFChars(jPublic, nullptr);
   const char *ALPINE_TMP = env->GetStringUTFChars(jAlpineTmp, nullptr);
   const char *ALPINE = env->GetStringUTFChars(jAlpine, nullptr);
+  const char *SCRIPT_NAME = env->GetStringUTFChars(jScriptName, nullptr);
 
   setenv("PREFIX", PREFIX, 1);
   setenv("NATIVE_DIR", NATIVE_DIR, 1);
@@ -42,8 +44,8 @@ Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_cLsp_getCppLsp(
   setenv("PROOT_LOADER32", PROOT_LOADER32, 1);
   setenv("PROOT", PROOT, 1);
 
-  // Construct command dynamically using PREFIX
-  std::string cmd = std::string(". ") + PREFIX + "/init-lsp.sh";
+  // Construct command dynamically using PREFIX and SCRIPT_NAME
+  std::string cmd = std::string(". ") + PREFIX + "/" + SCRIPT_NAME;
 
   char *argv[] = {const_cast<char *>(PROOT),
 

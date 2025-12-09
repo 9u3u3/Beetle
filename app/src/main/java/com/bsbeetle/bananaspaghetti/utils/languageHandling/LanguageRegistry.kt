@@ -56,4 +56,12 @@ object LanguageRegistry {
     private fun persist() {
         registryFile.writeText(json.toString(4))
     }
+
+    fun getSlugForExtension(ext: String): String {
+        return when (ext) {
+            "cpp", "c", "h", "hpp" -> "cpp"
+            "py" -> "python"
+            else -> "plaintext"
+        }
+    }
 }
