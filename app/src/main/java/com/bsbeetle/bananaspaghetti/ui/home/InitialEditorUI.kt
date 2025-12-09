@@ -107,6 +107,11 @@ fun InitialEditorUI(navController: NavController) {
         fileViewModel.selectedUri?.let { uri ->
             DocumentFile.fromSingleUri(context, uri)?.let { documentFile ->
 
+                if (documentFile.isDirectory) {
+                    Log.d("Buffer", "Opened directory: ${documentFile.name}, skipping LSP setup")
+                    return@let
+                }
+
                 if (bufferViewModel.filesOpenedList.none { it.uri.toString() == uri.toString() }) {
                     bufferViewModel.filesOpenedList.add(documentFile)
                     Log.d("Buffer", "Added: ${documentFile.name}")
@@ -116,15 +121,17 @@ fun InitialEditorUI(navController: NavController) {
                 val extType = documentFile.name!!.substringAfterLast(".")
                 val slug = LanguageRegistry.getSlugForExtension(extType)
                 
+                var lspPort = 8081 // Default port
+                
                 try {
                     if (slug != "plaintext") {
                         if (!LanguageRegistry.isInstalled(slug)) {
                             missingLanguageExt = extType
                             showLanguagePopup = true
                         } else {
-                            // Start LSP
-                            editorViewModel.startLsp(slug)
-                            android.widget.Toast.makeText(context, "Initializing $slug support...", android.widget.Toast.LENGTH_SHORT).show()
+                            // Start LSP and get port
+                            lspPort = editorViewModel.startLsp(slug)
+                            android.widget.Toast.makeText(context, "Initializing $slug support on port $lspPort...", android.widget.Toast.LENGTH_SHORT).show()
                         }
                     }
                 } catch (e: Exception) {
@@ -145,7 +152,7 @@ fun InitialEditorUI(navController: NavController) {
                     session.setFilePath("/src/$cleanName")
                     
                     if (slug != "plaintext" && LanguageRegistry.isInstalled(slug)) {
-                        session.setLanguage(slug)
+                        session.setLanguage(slug, lspPort)
                     }
                 }
 

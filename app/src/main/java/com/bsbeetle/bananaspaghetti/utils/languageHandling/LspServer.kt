@@ -7,6 +7,7 @@ import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.routing.routing
+import io.ktor.server.websocket.DefaultWebSocketServerSession
 import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.pingPeriod
 import io.ktor.server.websocket.timeout
@@ -19,22 +20,13 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.JsonArray
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import kotlin.time.Duration.Companion.seconds
 
-class LspServer(private val context: Context) {
+class LspServer(private val context: Context, private val port: Int = 8081) {
 
     companion object {
         init {
@@ -60,6 +52,13 @@ class LspServer(private val context: Context) {
     private var input: FileInputStream? = null
     private var output: FileOutputStream? = null
     private var server: io.ktor.server.engine.EmbeddedServer<*, *>? = null
+    
+    // Single persistent reader scope
+    private var readerScope: CoroutineScope? = null
+    
+    // Current active WebSocket session (volatile for thread safety)
+    @Volatile
+    private var currentSession: DefaultWebSocketServerSession? = null
 
     private val nativeDir = context.applicationInfo.nativeLibraryDir
     private val PREFIX = context.filesDir
@@ -79,12 +78,14 @@ class LspServer(private val context: Context) {
 
     fun stop() {
         try {
+            readerScope?.cancel()
+            readerScope = null
+            currentSession = null
             server?.stop(100, 100)
             server = null
             input?.close()
             output?.close()
             pfd?.close()
-            // Close masterFd? It's an int.
             Log.d("LspServer", "LSP server stopped")
         } catch (e: Exception) {
             Log.e("LspServer", "Error stopping LSP server", e)
@@ -93,7 +94,7 @@ class LspServer(private val context: Context) {
 
     fun start(slug: String) {
         stop() // Stop previous instance if any
-        Log.d("LspServer", "Starting LSP for $slug")
+        Log.d("LspServer", "Starting LSP for $slug on port $port")
 
         val libtallocLink = File(PREFIX, "libtalloc.so.2")
         try {
@@ -106,7 +107,7 @@ class LspServer(private val context: Context) {
             Log.e("LspServer", "Failed to create symlink", e)
         }
 
-        // Cleanup old init-lsp.sh if it exists (as requested)
+        // Cleanup old init-lsp.sh if it exists
         val initScript = File(PREFIX, "init-lsp.sh")
         if (initScript.exists()) {
             initScript.delete()
@@ -118,8 +119,6 @@ class LspServer(private val context: Context) {
         
         if (!targetScript.exists()) {
             Log.e("LspServer", "Script for $slug not found at ${targetScript.absolutePath}")
-            // Fallback to default if needed, or just return
-            // For now, we assume it exists or we can't start
             return
         }
         targetScript.setExecutable(true)
@@ -147,7 +146,49 @@ class LspServer(private val context: Context) {
         output = FileOutputStream(pfd!!.fileDescriptor)
         input = FileInputStream(pfd!!.fileDescriptor)
 
-        server = embeddedServer(Netty, port = 8081, host = "0.0.0.0") {
+        // Start persistent reader ONCE when LSP process starts
+        readerScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        readerScope!!.launch {
+            val buf = ByteArray(65536)
+            val sb = StringBuilder()
+
+            try {
+                while (true) {
+                    val n = input!!.read(buf)
+                    if (n <= 0) break
+                    val chunk = String(buf, 0, n, Charsets.UTF_8)
+                    sb.append(chunk)
+
+                    while (true) {
+                        val headersEnd = sb.indexOf("\r\n\r\n")
+                        if (headersEnd == -1) break
+
+                        val headers = sb.substring(0, headersEnd)
+                        val match = Regex("Content-Length:\\s*(\\d+)", RegexOption.IGNORE_CASE).find(headers) ?: break
+                        val contentLen = match.groupValues[1].toInt()
+                        val messageStart = headersEnd + 4
+                        if (sb.length < messageStart + contentLen) break
+
+                        val jsonBody = sb.substring(messageStart, messageStart + contentLen)
+                        sb.delete(0, messageStart + contentLen)
+
+                        // Send to current session (if any)
+                        val session = currentSession
+                        if (session != null) {
+                            try {
+                                session.outgoing.send(Frame.Text(jsonBody))
+                            } catch (ex: Exception) {
+                                Log.e("cLsp", "Failed to send to client: ${ex.message}")
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("cLsp", "Reader loop error", e)
+            }
+        }
+
+        server = embeddedServer(Netty, port = port, host = "0.0.0.0") {
             install(WebSockets.Plugin) {
                 pingPeriod = 15.seconds
                 timeout = 30.seconds
@@ -158,50 +199,11 @@ class LspServer(private val context: Context) {
             routing {
                 webSocket("/clsp") {
                     Log.d("cLsp", "Client connected to /clsp")
+                    
+                    // Register this session as the current one
+                    currentSession = this
 
-                    val readScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-                    val sendScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-
-                    readScope.launch {
-                        val buf = ByteArray(65536)
-                        val sb = StringBuilder()
-
-                        try {
-                            while (true) {
-                                val n = input!!.read(buf)
-                                if (n <= 0) break
-                                val chunk = String(buf, 0, n, Charsets.UTF_8)
-                                sb.append(chunk)
-
-                                while (true) {
-                                    val headersEnd = sb.indexOf("\r\n\r\n")
-                                    if (headersEnd == -1) break
-
-                                    val headers = sb.substring(0, headersEnd)
-                                    val match = Regex("Content-Length:\\s*(\\d+)", RegexOption.IGNORE_CASE).find(headers) ?: break
-                                    val contentLen = match.groupValues[1].toInt()
-                                    val messageStart = headersEnd + 4
-                                    if (sb.length < messageStart + contentLen) break
-
-                                    val jsonBody = sb.substring(messageStart, messageStart + contentLen)
-                                    sb.delete(0, messageStart + contentLen)
-
-                                    sendScope.launch {
-                                        try {
-                                            outgoing.send(Frame.Text(jsonBody))
-                                        } catch (ex: Exception) {
-                                            Log.e("cLsp", "Failed to send to client: ${ex.message}")
-                                        }
-                                    }
-                                }
-                            }
-                        } catch (e: Exception) {
-                            Log.e("cLsp", "Reader loop error", e)
-                        } finally {
-                            input?.close()
-                        }
-                    }
-
+                    // Handle incoming messages from client
                     for (frame in incoming) {
                         if (frame is Frame.Text) {
                             val text = frame.readText()
@@ -218,8 +220,12 @@ class LspServer(private val context: Context) {
                             }
                         }
                     }
-                    sendScope.cancel()
-                    readScope.cancel()
+                    
+                    // Client disconnected
+                    if (currentSession == this) {
+                        currentSession = null
+                    }
+                    Log.d("cLsp", "Client disconnected from /clsp")
                 }
             }
         }.start(wait = false)

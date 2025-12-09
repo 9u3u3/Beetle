@@ -17,18 +17,58 @@ import androidx.lifecycle.viewModelScope
 import com.bsbeetle.bananaspaghetti.utils.languageHandling.LspServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import android.util.Log
 
 class EditorViewModel(app: Application) : AndroidViewModel(app) {
-    private val lsp = LspServer(getApplication())
+    // Map of slug -> LspServer
+    private val lspServers = mutableMapOf<String, LspServer>()
+    // Map of slug -> Port
+    private val lspPorts = mutableMapOf<String, Int>()
+    
+    // LRU list to track usage (slugs)
+    private val lruSlugs = mutableListOf<String>()
+    
+    // Available ports (simple pool)
+    private val availablePorts = mutableListOf(8081, 8082)
 
     init { 
         AssetServer(getApplication(), 8080).start() 
     }
 
-    fun startLsp(slug: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            lsp.start(slug)
+    fun startLsp(slug: String): Int {
+        // If already running, move to front of LRU and return port
+        if (lspServers.containsKey(slug)) {
+            lruSlugs.remove(slug)
+            lruSlugs.add(slug)
+            return lspPorts[slug]!!
         }
+
+        // If max servers (2) reached, stop the least recently used one
+        if (lspServers.size >= 2) {
+            val victimSlug = lruSlugs.removeAt(0)
+            val victimServer = lspServers.remove(victimSlug)
+            val victimPort = lspPorts.remove(victimSlug)
+            
+            victimServer?.stop()
+            if (victimPort != null) {
+                availablePorts.add(victimPort)
+            }
+            Log.d("EditorViewModel", "Stopped LSP for $victimSlug to free up resources")
+        }
+
+        // Start new server
+        val port = availablePorts.removeAt(0)
+        val newServer = LspServer(getApplication(), port)
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            newServer.start(slug)
+        }
+        
+        lspServers[slug] = newServer
+        lspPorts[slug] = port
+        lruSlugs.add(slug)
+        
+        return port
     }
     @SuppressLint("StaticFieldLeak")
     var webView: CustomWebView? = null

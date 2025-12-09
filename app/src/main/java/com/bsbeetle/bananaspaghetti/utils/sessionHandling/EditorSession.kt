@@ -223,9 +223,9 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
         view?.evaluateJavascript("if(window.setFilePath) window.setFilePath('$path');", null)
     }
 
-    fun setLanguage(slug: String) {
+    fun setLanguage(slug: String, port: Int = 8081) {
         val jsPath = "http://localhost:8080/plugins/$slug/$slug.js"
-        view?.evaluateJavascript("if(window.setLanguage) window.setLanguage('$slug', '$jsPath');", null)
+        view?.evaluateJavascript("if(window.setLanguage) window.setLanguage('$slug', $port);", null)
     }
 
     fun performEditorAction(action: String) {
