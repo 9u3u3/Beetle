@@ -34,11 +34,12 @@ object LanguageRegistry {
         return json.optJSONObject(language)?.optString("version", null)
     }
 
-    /** Mark installed with version */
-    fun setInstalled(language: String, version: String) {
+    /** Mark installed with version and ID */
+    fun setInstalled(language: String, version: String, id: Int) {
         val entry = JSONObject()
         entry.put("installed", true)
         entry.put("version", version)
+        entry.put("id", id)
         json.put(language, entry)
         persist()
     }
