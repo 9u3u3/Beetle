@@ -55,10 +55,14 @@ export HOME=/home
 export TERM=xterm-256color
 export SHELL=\$(command -v bash)
 
+# Start in home directory
+cd
+
 EOF
     fi
 
     echo 'export PS1="\[\e[38;5;46m\]\u\[\e[0m\]@localhost \[\e[0m\]\w \[\e[0m\]\\$ "' >> $PREFIX/alpine/initrc
+    echo 'cd' >> $PREFIX/alpine/initrc
     chmod +x "$PREFIX/alpine/initrc"
     exec /bin/bash --rcfile /data/user/0/com.bsbeetle.bananaspaghetti/files/alpine/initrc -i
 

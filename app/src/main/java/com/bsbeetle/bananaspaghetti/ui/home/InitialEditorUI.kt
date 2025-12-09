@@ -94,7 +94,11 @@ fun InitialEditorUI(navController: NavController) {
     val configuration = LocalConfiguration.current
 
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val layout = if (uiState.toggleKeyboard) KeyboardLayout.editorLayout else KeyboardLayout.qwertyLayout
+    val layout = when (uiState.keyboardPage) {
+        0 -> KeyboardLayout.qwertyLayout    // Alphabets
+        1 -> KeyboardLayout.editorLayout    // Symbols
+        else -> KeyboardLayout.terminalLayout // Navigation
+    }
 
     // UI States
     var showSidebar by rememberSaveable { mutableStateOf(false) }
@@ -233,7 +237,7 @@ fun InitialEditorUI(navController: NavController) {
                 if (uiState.isLeftKeyboardVisible) {
                     SplitKeyboardHalf(
                         layout, KeyboardSide.LEFT, uiState.isCapsLockOn,
-                        uiState.isShiftOn, keyboardViewModel::onKeyEvent,
+                        uiState.isShiftOn, uiState.isCtrlOn, keyboardViewModel::onKeyEvent,
                         Modifier.constrainAs(leftKb) {
                             start.linkTo(parent.start)
                             bottom.linkTo(parent.bottom)
@@ -245,7 +249,7 @@ fun InitialEditorUI(navController: NavController) {
                 if (uiState.isRightKeyboardVisible) {
                     SplitKeyboardHalf(
                         layout, KeyboardSide.RIGHT, uiState.isCapsLockOn,
-                        uiState.isShiftOn, keyboardViewModel::onKeyEvent,
+                        uiState.isShiftOn, uiState.isCtrlOn, keyboardViewModel::onKeyEvent,
                         Modifier.constrainAs(rightKb) {
                             end.linkTo(parent.end)
                             bottom.linkTo(parent.bottom)

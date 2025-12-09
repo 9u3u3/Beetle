@@ -48,10 +48,10 @@ fun DemoEditorUi () {
     }
 
     // for selecting the layout.
-    val layout = if (uiState.toggleKeyboard) {
-        KeyboardLayout.editorLayout
-    } else {
-        KeyboardLayout.qwertyLayout
+    val layout = when (uiState.keyboardPage) {
+        0 -> KeyboardLayout.qwertyLayout    // Alphabets
+        1 -> KeyboardLayout.editorLayout    // Symbols
+        else -> KeyboardLayout.terminalLayout // Navigation
     }
 
     Box {
@@ -67,6 +67,7 @@ fun DemoEditorUi () {
                         side = KeyboardSide.LEFT,
                         isCapsLockOn = uiState.isCapsLockOn,
                         isShiftOn = uiState.isShiftOn,
+                        isCtrlOn = uiState.isCtrlOn,
                         onKeyEvent = keyboardViewModel::onKeyEvent,
                         modifier = Modifier.constrainAs(leftKeyboardRef) {
                             start.linkTo(parent.start)
@@ -113,6 +114,7 @@ fun DemoEditorUi () {
                         side = KeyboardSide.RIGHT,
                         isCapsLockOn = uiState.isCapsLockOn,
                         isShiftOn = uiState.isShiftOn,
+                        isCtrlOn = uiState.isCtrlOn,
                         onKeyEvent = keyboardViewModel::onKeyEvent,
                         modifier = Modifier.constrainAs(rightKeyboardRef) {
                             end.linkTo(parent.end)
