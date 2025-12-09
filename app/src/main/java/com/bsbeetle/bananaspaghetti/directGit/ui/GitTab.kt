@@ -1,7 +1,8 @@
-package com.bsbeetle.bananaspaghetti.data.sidebar
+package com.bsbeetle.bananaspaghetti.directGit.ui
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,7 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,9 +24,11 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -35,6 +37,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.bsbeetle.bananaspaghetti.LocalFileViewModel
+import com.bsbeetle.bananaspaghetti.data.sidebar.FileIconUtils
 import com.bsbeetle.bananaspaghetti.utils.git.BranchInfo
 import com.bsbeetle.bananaspaghetti.utils.git.CommitInfo
 import com.bsbeetle.bananaspaghetti.utils.git.LogEntry
@@ -456,10 +459,10 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                                                             BgHover.copy(alpha = 0.5f)
                                             ),
                                     border =
-                                            androidx.compose.foundation.BorderStroke(
-                                                    1.dp,
-                                                    BorderColor
-                                            ),
+                                        BorderStroke(
+                                                1.dp,
+                                                BorderColor
+                                        ),
                                     shape = RoundedCornerShape(6.dp),
                                     enabled =
                                             selectedFiles.isNotEmpty() && commitMessage.isNotBlank()
@@ -602,7 +605,7 @@ private fun GitHeader(
 
 @Composable
 private fun ActionButton(
-        icon: androidx.compose.ui.graphics.vector.ImageVector,
+        icon: ImageVector,
         tooltip: String,
         onClick: () -> Unit
 ) {
@@ -857,7 +860,7 @@ private fun EmptyState(onInit: () -> Unit, onClone: () -> Unit) {
                 Button(
                         onClick = onClone,
                         colors = ButtonDefaults.buttonColors(containerColor = BgHover),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                        border = BorderStroke(1.dp, BorderColor),
                         shape = RoundedCornerShape(6.dp)
                 ) {
                     Icon(Icons.Rounded.CloudDownload, null, modifier = Modifier.size(16.dp))
@@ -1166,7 +1169,7 @@ private fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String, String,
                 "Tip: Use /storage/emulated/0/YourFolder for accessible storage",
                 color = TextTertiary,
                 fontSize = 10.sp,
-                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                fontStyle = FontStyle.Italic
         )
 
         Spacer(modifier = Modifier.height(16.dp))

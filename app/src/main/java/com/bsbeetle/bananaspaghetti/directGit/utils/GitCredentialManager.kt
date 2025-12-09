@@ -1,9 +1,10 @@
-package com.bsbeetle.bananaspaghetti.utils.git
+package com.bsbeetle.bananaspaghetti.directGit.utils
 
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import java.net.URI
 
 class GitCredentialManager(context: Context) {
 
@@ -57,7 +58,7 @@ class GitCredentialManager(context: Context) {
         return try {
             // Extract host from URL (e.g., https://github.com/user/repo -> github.com)
             // Or just use the full URL if it's specific
-            val uri = java.net.URI(url)
+            val uri = URI(url)
             uri.host ?: url
         } catch (e: Exception) {
             url

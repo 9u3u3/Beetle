@@ -3,6 +3,7 @@ package com.bsbeetle.bananaspaghetti.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.bsbeetle.bananaspaghetti.directGit.utils.GitCredentialManager
 import com.bsbeetle.bananaspaghetti.utils.git.*
 import java.io.File
 import kotlinx.coroutines.Dispatchers

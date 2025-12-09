@@ -7,12 +7,6 @@ import org.eclipse.jgit.api.Status
 import org.eclipse.jgit.api.errors.*
 import org.eclipse.jgit.errors.RepositoryNotFoundException
 
-// Result wrapper for Git operations
-sealed class GitResult<out T> {
-    data class Success<T>(val data: T, val message: String) : GitResult<T>()
-    data class Error(val message: String, val details: String? = null) : GitResult<Nothing>()
-}
-
 class GitRepository(private val rootDir: File) {
 
     private var git: Git? = null
@@ -684,18 +678,3 @@ class GitRepository(private val rootDir: File) {
         }
     }
 }
-
-// Data classes
-data class BranchInfo(val name: String, val isRemote: Boolean, val isCurrent: Boolean)
-
-data class CommitInfo(
-        val hash: String,
-        val shortHash: String,
-        val message: String,
-        val fullMessage: String,
-        val author: String,
-        val email: String,
-        val date: java.util.Date
-)
-
-data class StashInfo(val index: Int, val message: String, val date: java.util.Date)

@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.bsbeetle.bananaspaghetti.directGit.ui.GitTab
 
 @Composable
 fun Sidebar(
