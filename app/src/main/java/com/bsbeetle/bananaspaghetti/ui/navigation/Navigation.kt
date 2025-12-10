@@ -23,10 +23,10 @@ fun AppNavigation() {
         composable(Screen.OpenFolder.route){InitialEditorUI(navController)} // Open or Create Folder
         composable(Screen.Terminal.route){InitialTerminalUI(navController)} // Open Terminal
         composable(Screen.Settings.route){SettingsScreen(navController)} // Open Settings
-        composable(Screen.Demo.route){DemoEditorUi()} // Demo editor used settings
+        composable(Screen.Demo.route){DemoEditorUi(navController)} // Demo editor used settings
         composable(Screen.Browser.route){BrowserScreen(navController)} // Developer browser UI
         composable(Screen.ZoomOut.route){ZoomOut(navController)} // Zoom out preview (Session switching)
 
-        composable(Screen.Extensions.route){ExtensionsScreen()}
+        composable(Screen.Extensions.route){ExtensionsScreen(navController)}
     }
 }

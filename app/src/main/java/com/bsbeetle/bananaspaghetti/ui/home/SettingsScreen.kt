@@ -1,5 +1,6 @@
 package com.bsbeetle.bananaspaghetti.ui.home
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -61,6 +62,10 @@ private val DividerColor = Color(0xFF404040)
 fun SettingsScreen(navController: NavController) {
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
     var selectedCategory by remember { mutableStateOf("Keyboard") }
+    
+    BackHandler {
+        navController.popBackStack()
+    }
     
     Row(
         modifier = Modifier

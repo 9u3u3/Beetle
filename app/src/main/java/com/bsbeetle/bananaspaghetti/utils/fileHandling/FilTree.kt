@@ -31,7 +31,7 @@ fun Tree (modifier: Modifier = Modifier) {
     var expandedFolders by remember { mutableStateOf(setOf<String>()) }
     val scrollState = rememberScrollState()
 
-    val files = remember(fileViewModel.selectedFolderUri, expandedFolders) {
+    val files = remember(fileViewModel.selectedFolderUri, expandedFolders, fileViewModel.fileTreeRefreshCounter) {
         val rootUri = fileViewModel.selectedFolderUri
         if (rootUri != null) {
             val rootDoc = DocumentFile.fromTreeUri(context, rootUri)

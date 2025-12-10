@@ -61,9 +61,7 @@ fun InitialTerminalUI(navController: NavController) {
     }
 
     BackHandler {
-        navController.navigate(Screen.Home.route) {
-            popUpTo(Screen.Terminal.route) { inclusive = true }
-        }
+        navController.popBackStack()
     }
 
     Box {

@@ -1,5 +1,6 @@
 package com.bsbeetle.bananaspaghetti.ui.keyboard
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -20,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
+import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
@@ -33,13 +35,17 @@ import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 
 @Composable
-fun DemoEditorUi () {
+fun DemoEditorUi(navController: NavController) {
 
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
     val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
     val demoSession: Session = SessionList.sessions[SessionList.activeSessionIndex!!]
+
+    BackHandler {
+        navController.popBackStack()
+    }
 
     DisposableEffect(Unit) {
         onDispose {
