@@ -38,6 +38,8 @@ import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
 import com.bsbeetle.bananaspaghetti.viewmodel.SessionViewModel
+import com.bsbeetle.bananaspaghetti.LocalFileViewModel
+import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 
 //NO_PORTRAIT
 
@@ -46,6 +48,7 @@ fun ZoomOut(
     navController: NavController,
     viewModel: SessionViewModel = viewModel()
 ) {
+    val fileViewModel: FileViewModel = LocalFileViewModel.current
     var showNewSessionDialog by remember { mutableStateOf(false) }
 
     // Capture snapshots when screen is shown
@@ -54,13 +57,15 @@ fun ZoomOut(
     }
 
     BackHandler {
-        if (SessionList.activeSessionIndex != null) {
-            val activeSession = SessionList.sessions[SessionList.activeSessionIndex!!]
-            navigateToSession(navController, activeSession)
-        } else {
-            navController.navigate(Screen.Home.route) {
-                popUpTo(Screen.ZoomOut.route) { inclusive = true }
+        if (SessionList.activeSessionIndex != null && SessionList.sessions.isNotEmpty()) {
+            val activeSession = SessionList.sessions.getOrNull(SessionList.activeSessionIndex!!)
+            if (activeSession != null) {
+                navigateToSession(navController, activeSession)
+            } else {
+                navController.popBackStack()
             }
+        } else {
+            navController.popBackStack()
         }
     }
 
@@ -119,6 +124,12 @@ fun ZoomOut(
                         snapshot = viewModel.sessionSnapshots[session.id],
                         onClick = {
                             SessionList.activeSessionIndex = session.id
+                            // Sync file tree with session's folder when switching to EditorSession
+                            if (session is EditorSession) {
+                                session.projectRoot?.let { projectRoot ->
+                                    fileViewModel.selectedFolderUri = projectRoot.uri
+                                }
+                            }
                             navigateToSession(navController, session)
                         },
                         onClose = {

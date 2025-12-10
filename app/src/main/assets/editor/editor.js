@@ -360,7 +360,7 @@ function setupEditor() {
       } catch (e) {
         console.error('Error in handleDiagnostics:', e)
       }
-    }, 500); // 500ms debounce - fast diagnostics updates
+    }, 250); // 250ms debounce - faster diagnostics updates
   }
 
   function updateCompletionListUI() {
@@ -670,7 +670,7 @@ function setupEditor() {
             };
 
             sendNotification(ws, 'textDocument/didChange', payload);
-          }, 300); // 300ms debounce - faster LSP updates
+          }, 150); // 150ms debounce - fastest LSP updates
         }
       })
     ]

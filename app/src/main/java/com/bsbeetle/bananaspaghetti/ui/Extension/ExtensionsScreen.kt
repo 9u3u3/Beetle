@@ -1,5 +1,6 @@
 package com.bsbeetle.bananaspaghetti.ui.Extension
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,6 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.decode.SvgDecoder
@@ -32,13 +34,17 @@ import coil.request.ImageRequest
 import com.bsbeetle.bananaspaghetti.R
 
 @Composable
-fun ExtensionsScreen(viewModel: ExtensionsViewModel = viewModel()) {
+fun ExtensionsScreen(navController: NavController, viewModel: ExtensionsViewModel = viewModel()) {
     val extensions by viewModel.extensions.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     var selectedExtension by remember { mutableStateOf<ExtensionModel?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+
+    BackHandler {
+        navController.popBackStack()
+    }
 
     // SVG Image Loader
     val imageLoader = remember {
