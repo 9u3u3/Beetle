@@ -58,6 +58,22 @@ fun InitialEditorUI(navController: NavController) {
         SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? EditorSession
     }
     
+    val fileViewModel: FileViewModel = LocalFileViewModel.current
+    val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
+    val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
+    val editorViewModel: EditorViewModel = LocalEditorViewModel.current
+    val bufferViewModel: BufferViewModel = LocalBufferViewModel.current
+    val lspViewModel: LspViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    
+    // Sync fileViewModel with current session's projectRoot
+    // This ensures each session shows its own folder in the file tree
+    LaunchedEffect(SessionList.activeSessionIndex) {
+        val activeSession = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? EditorSession
+        activeSession?.projectRoot?.let { projectRoot ->
+            fileViewModel.selectedFolderUri = projectRoot.uri
+        }
+    }
+    
     // Restore content when screen appears (after navigation back)
     LaunchedEffect(Unit) {
         delay(200) // Wait for WebView to be ready
@@ -67,17 +83,8 @@ fun InitialEditorUI(navController: NavController) {
     BackHandler {
         // Save content before navigating away
         currentSession?.saveContent()
-        navController.navigate(Screen.Home.route) {
-            popUpTo(Screen.OpenFolder.route) { inclusive = true }
-        }
+        navController.popBackStack()
     }
-
-    val fileViewModel: FileViewModel = LocalFileViewModel.current
-    val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
-    val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
-    val editorViewModel: EditorViewModel = LocalEditorViewModel.current
-    val bufferViewModel: BufferViewModel = LocalBufferViewModel.current
-    val lspViewModel: LspViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 
     // Pass LspViewModel to active session if it's an EditorSession
     LaunchedEffect(Unit) {
@@ -89,6 +96,7 @@ fun InitialEditorUI(navController: NavController) {
 
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
+
 
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
@@ -103,6 +111,7 @@ fun InitialEditorUI(navController: NavController) {
     // UI States
     var showSidebar by rememberSaveable { mutableStateOf(false) }
     var showLanguagePopup by remember { mutableStateOf(false) }
+    var showFileMenu by remember { mutableStateOf(false) }
     var missingLanguageExt by remember { mutableStateOf("") }
 
     // 🚀 File Load (with LSP check & Performance fix)
@@ -188,7 +197,14 @@ fun InitialEditorUI(navController: NavController) {
                 },
                 onMenuClick = { showSidebar = true },
                 showMenuIcon = !isLandscape,
-                onSaveClick = { saveFile(fileViewModel, context) }
+                onSaveClick = { saveFile(fileViewModel, context) },
+                onFileClick = { showFileMenu = true },
+                onUndoClick = { 
+                    editorViewModel.webView?.evaluateJavascript("if(window.performUndo) performUndo();", null)
+                },
+                onRedoClick = {
+                    editorViewModel.webView?.evaluateJavascript("if(window.performRedo) performRedo();", null)
+                }
             )
 
             TopBar(
@@ -326,6 +342,44 @@ fun InitialEditorUI(navController: NavController) {
             },
             onDismiss = {
                 showLanguagePopup = false
+            }
+        )
+        
+        // File Menu Dialog
+        FileMenuDialog(
+            show = showFileMenu,
+            onDismiss = { showFileMenu = false },
+            bufferViewModel = bufferViewModel,
+            fileViewModel = fileViewModel,
+            onFileOpened = { documentFile ->
+                // Add file to buffer and load it
+                if (bufferViewModel.filesOpenedList.none { it.uri == documentFile.uri }) {
+                    bufferViewModel.filesOpenedList.add(documentFile)
+                }
+                fileViewModel.selectedUri = documentFile.uri
+                fileViewModel.currentFilePath = documentFile.uri.toString()
+                bufferViewModel.currentFile.value = documentFile
+                
+                val content = readFromFile(context, documentFile.uri)
+                bufferViewModel.bufferLine[documentFile] = content
+                loadContentWhenReady(editorViewModel.webView, content)
+            },
+            onFolderOpened = { folder ->
+                // Create new editor session for folder
+                // Session auto-registers and sets activeSessionIndex in its init{}
+                val newSession = EditorSession(context.applicationContext, folder.name ?: "Project")
+                newSession.projectRoot = folder
+                
+                // Update FileViewModel to show new folder in file tree
+                fileViewModel.selectedFolderUri = folder.uri
+                
+                // Set up editor with new session's WebView
+                editorViewModel.setEditorWebView(newSession.getOrInitView())
+                
+                // Navigate to editor with new session
+                navController.navigate(Screen.OpenFolder.route) {
+                    popUpTo(Screen.Home.route) { inclusive = false }
+                }
             }
         )
     }

@@ -17,6 +17,9 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
 
     private var currentFilePath: String? = null
     
+    // Project root folder for the editor session
+    var projectRoot: androidx.documentfile.provider.DocumentFile? = null
+    
     // Track cursor position for backspace guard (updated by LSP-STATUS parsing)
     var cursorLine: Int = 1
         private set
@@ -182,7 +185,6 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                     val availMem = memInfo.availMem / 1024 / 1024
                     val threshold = memInfo.threshold / 1024 / 1024
                     
-                    Log.i("WEBVERR", "RAM: SystemAvail=${availMem}MB, Threshold=${threshold}MB, LowMem=${memInfo.lowMemory}, JavaHeap=${usedJavaHeap}MB")
                     
                     // Send stats to WebView
                     val jsonStats = """

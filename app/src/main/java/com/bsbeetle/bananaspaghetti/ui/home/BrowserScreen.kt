@@ -51,9 +51,7 @@ fun BrowserScreen(navController: NavController) {
     Log.d("BrowserScreen", "Loading the Browser screen, Session type: ${SessionList.sessions[SessionList.activeSessionIndex!!].type}")
 
     BackHandler {
-        navController.navigate(Screen.Home.route) {
-            popUpTo(Screen.Browser.route) { inclusive = true }
-        }
+        navController.popBackStack()
     }
 
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
