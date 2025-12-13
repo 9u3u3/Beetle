@@ -5,6 +5,8 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -54,33 +56,52 @@ class AlpineSshKeyManager(private val context: Context) {
                 try {
                     Log.d(TAG, "🔑 Generating ED25519 SSH key pair using Alpine...")
 
-                    // Initialize terminal
-                    terminalManager.initialize().getOrThrow()
+                    // Try to get an existing terminal session first
+                    val existingSession =
+                            SessionList.sessions.filterIsInstance<TerminalSession>().firstOrNull()
 
                     val session =
-                            terminalManager.getTerminalSession()
-                                    ?: throw Exception("Terminal session not available")
+                            if (existingSession != null) {
+                                Log.d(
+                                        TAG,
+                                        "✅ Using existing terminal session (Alpine already running!)"
+                                )
+                                existingSession
+                            } else {
+                                Log.d(TAG, "⚠️ No existing terminal found, creating new one...")
+                                // Use GitTerminalManager to create terminal
+                                terminalManager.initialize().getOrThrow()
+                                terminalManager.getTerminalSession()
+                                        ?: throw Exception("Terminal session not available")
+                            }
 
-                    Log.d(TAG, "⏳ Waiting for Alpine to fully initialize...")
-                    // CRITICAL: Wait for Alpine to extract rootfs AND start the shell
-                    // Alpine extraction takes ~2-3 seconds, then shell needs to start
-                    delay(5000) // Give Alpine plenty of time to be ready
-
-                    // Test if Alpine is responsive with multiple simple commands
-                    Log.d(TAG, "🧪 Testing Alpine responsiveness...")
-                    session.insertText("echo 'Test 1'\n")
-                    delay(1000)
-                    session.insertText("pwd\n")
-                    delay(1000)
-                    session.insertText("whoami\n")
-                    delay(1000)
+                    // If using existing session, Alpine is already ready!
+                    // If new session, wait for Alpine to initialize
+                    if (existingSession == null) {
+                        Log.d(TAG, "⏳ Waiting for Alpine to fully initialize...")
+                        delay(5000)
+                    } else {
+                        Log.d(TAG, "⚡ Alpine already running, executing immediately!")
+                        delay(500) // Just a small delay to be safe
+                    }
 
                     // Create .ssh directory
                     Log.d(TAG, "📁 Creating ~/.ssh directory...")
                     session.insertText("mkdir -p ~/.ssh\n")
-                    delay(1000)
+                    delay(500)
                     session.insertText("chmod 700 ~/.ssh\n")
-                    delay(1000)
+                    delay(500)
+
+                    // Update package index and install openssh
+                    Log.d(TAG, "📦 Updating package index...")
+                    session.insertText("apk update\n")
+                    delay(3000) // Wait for index update
+                    Log.d(TAG, "📦 apk update command sent")
+
+                    Log.d(TAG, "📦 Installing openssh...")
+                    session.insertText("apk add openssh\n")
+                    delay(7000) // Wait longer for installation
+                    Log.d(TAG, "📦 apk add openssh command sent")
 
                     // Generate key using Alpine's ssh-keygen
                     Log.d(TAG, "🔐 Running ssh-keygen...")
@@ -89,14 +110,12 @@ class AlpineSshKeyManager(private val context: Context) {
                     )
 
                     // Wait for ssh-keygen to complete
-                    delay(3000)
+                    delay(2000)
 
                     // Verify files were created
                     Log.d(TAG, "🔍 Verifying key files...")
                     session.insertText("ls -la ~/.ssh/\n")
-                    delay(1000)
-                    session.insertText("cat ~/.ssh/id_ed25519.pub\n")
-                    delay(1000)
+                    delay(500)
 
                     Log.d(TAG, "✅ ssh-keygen commands executed")
 
