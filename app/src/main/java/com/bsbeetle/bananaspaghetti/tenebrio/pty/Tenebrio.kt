@@ -159,7 +159,6 @@ class Tenebrio(private val context: Context, private val session: Session) {
             input = FileInputStream(pfd!!.fileDescriptor)
 
             terminalSession.outputFd = output
-            val terminalWebView = terminalSession.view
 
             thread {
                 try {
@@ -168,10 +167,15 @@ class Tenebrio(private val context: Context, private val session: Session) {
                         val bytesRead = input!!.read(buffer)
                         if (bytesRead > 0) {
                             val text = String(buffer, 0, bytesRead)
-                            Log.d("Shell", "Output: $text")
-                            terminalWebView!!.post {
-                                val jsCommand = "term.write(${JSONObject.quote(text)});"
-                                terminalWebView.evaluateJavascript(jsCommand, null)
+                            // Access view lazily - it may be created after init()
+                            val terminalWebView = terminalSession.view
+                            if (terminalWebView != null) {
+                                terminalWebView.post {
+                                    val jsCommand = "term.write(${JSONObject.quote(text)});"
+                                    terminalWebView.evaluateJavascript(jsCommand, null)
+                                }
+                            } else {
+                                terminalSession.onOutput?.invoke(text)
                             }
                         } else if (bytesRead < 0) {
                             break // EOF or error

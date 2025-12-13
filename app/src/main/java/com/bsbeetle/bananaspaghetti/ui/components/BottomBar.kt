@@ -182,6 +182,7 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspView
                 
                 // Add terminal button (only show when on Terminal tab)
                 if (selectedTab == BottomPanelTab.TERMINAL) {
+                    val fileViewModel = com.bsbeetle.bananaspaghetti.LocalFileViewModel.current
                     Text(
                         text = "+",
                         color = Color(0xFFCCCCCC),
@@ -189,7 +190,10 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspView
                         modifier = Modifier
                             .padding(horizontal = 8.dp)
                             .clickable {
-                                val newTerminal = TerminalSession(context.applicationContext, "bash ${panelTerminals.size + 1}")
+                                val currentPath = fileViewModel.currentFilePath ?: 
+                                                  (SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession)?.projectRoot?.uri?.toString()
+                                
+                                val newTerminal = TerminalSession(context.applicationContext, "bash ${panelTerminals.size + 1}", initialDir = currentPath)
                                 panelTerminals.add(newTerminal)
                                 activeTerminalIndex = panelTerminals.size - 1
                             }

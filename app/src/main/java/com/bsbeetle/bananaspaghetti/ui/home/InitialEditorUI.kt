@@ -164,7 +164,9 @@ fun InitialEditorUI(navController: NavController) {
                 val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
                 if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
                     session.setLspViewModel(lspViewModel)
-                    // Use a clean filename for LSP to avoid content:// URI issues
+                    
+                    // CRITICAL: Set file path FIRST to update URI,
+                    // THEN set language which triggers connectLsp and uses the updated URI
                     val cleanName = documentFile.name?.replace(" ", "_") ?: "main.cpp"
                     session.setFilePath("/src/$cleanName")
                     
@@ -177,6 +179,9 @@ fun InitialEditorUI(navController: NavController) {
                 }
 
                 Log.d("Buffer", "Opened: ${documentFile.name}, total: ${bufferViewModel.filesOpenedList.size}")
+                
+                // Save to Recent Files
+                com.bsbeetle.bananaspaghetti.utils.fileHandling.RecentFilesManager.addFile(context, uri, documentFile.name ?: "Unknown")
             }
         }
     }

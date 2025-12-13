@@ -61,6 +61,9 @@ object LanguageRegistry {
         return when (ext) {
             "cpp", "c", "h", "hpp" -> "cpp"
             "py" -> "python"
+            "html" -> "html"
+            "css" -> "css"
+            "js" -> "javascript"
             else -> "plaintext"
         }
     }

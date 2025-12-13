@@ -252,13 +252,12 @@ function setupEditor() {
   })
 
   window.setFilePath = (path) => {
-    // console.log(`[LSP - JS] Setting file path to: ${ path } `);
     const oldURI = URI;
     URI = `file://${path}`;
 
     // If we haven't initialized yet, just updating URI is enough.
     // The onopen handler will use the new URI.
-    if (isInitialized && oldURI !== URI && ws.readyState === WebSocket.OPEN) {
+    if (isInitialized && oldURI !== URI && ws && ws.readyState === WebSocket.OPEN) {
       // Close old file
       sendNotification(ws, 'textDocument/didClose', {
         textDocument: { uri: oldURI }
@@ -268,7 +267,7 @@ function setupEditor() {
       sendNotification(ws, 'textDocument/didOpen', {
         textDocument: {
           uri: URI,
-          languageId: 'cpp',
+          languageId: currentLanguageId || 'cpp',
           version: 1,
           text: view?.state.doc.toString() || ''
         }
@@ -360,7 +359,7 @@ function setupEditor() {
       } catch (e) {
         console.error('Error in handleDiagnostics:', e)
       }
-    }, 250); // 250ms debounce - faster diagnostics updates
+    }, 100); // 100ms debounce - faster diagnostics updates
   }
 
   function updateCompletionListUI() {
@@ -465,8 +464,8 @@ function setupEditor() {
 
     // Always allow explicit completions
     if (!context.explicit) {
-      // For automatic completions, check timing (debounce 500ms - increased)
-      if (now - lastCompletionTime < 500) {
+      // For automatic completions, check timing (debounce 300ms - faster)
+      if (now - lastCompletionTime < 300) {
         return null
       }
     }
@@ -482,6 +481,17 @@ function setupEditor() {
       sendCancelRequest(pendingCompletionId);
       pendingRequests.delete(pendingCompletionId); // Remove from pending
       pendingCompletionId = null;
+    }
+
+    // Determine trigger kind and character
+    let triggerKind = 1; // Invoked
+    let triggerCharacter = undefined;
+
+    // Check if triggered by a character (basic check)
+    const charBefore = context.state.sliceDoc(context.pos - 1, context.pos);
+    if (['.', ':', '<', '"', '/', '@'].includes(charBefore)) {
+      triggerKind = 2; // TriggerCharacter
+      triggerCharacter = charBefore;
     }
 
     // Force flush pending didChange before requesting completion
@@ -509,9 +519,10 @@ function setupEditor() {
         textDocument: { uri: URI },
         position: { line: lineNumber, character },
         context: {
-          triggerKind: context.explicit ? 1 : 2,
+          triggerKind: triggerKind,
+          triggerCharacter: triggerCharacter
         }
-      }, 5000) // Reduced timeout to 5 seconds
+      }, 5000) // 5 second timeout
 
       pendingCompletionId = null; // Clear on success
 
@@ -529,11 +540,38 @@ function setupEditor() {
         // console.log(`[LSP-JS] Suggestions: ${firstFew}...`);
       }
 
-      const wordBefore = context.matchBefore(/\w*/)
+      const wordBefore = context.matchBefore(/[\w\-]*/) // Match words and hyphens (for CSS/HTML)
       const from = wordBefore ? wordBefore.from : context.pos;
+      const prefix = wordBefore ? wordBefore.text.toLowerCase() : "";
+
+      // Filter and sort items
+      let filteredItems = items;
+
+      if (prefix) {
+        filteredItems = items.filter(item => {
+          const label = item.label.toLowerCase();
+          // Also check filterText if available
+          const filterText = (item.filterText || item.label).toLowerCase();
+          return label.includes(prefix) || filterText.includes(prefix);
+        });
+
+        // Sort by relevance: exact match > starts with > contains
+        filteredItems.sort((a, b) => {
+          const aLabel = (a.filterText || a.label).toLowerCase();
+          const bLabel = (b.filterText || b.label).toLowerCase();
+
+          const aStarts = aLabel.startsWith(prefix);
+          const bStarts = bLabel.startsWith(prefix);
+
+          if (aStarts && !bStarts) return -1;
+          if (!aStarts && bStarts) return 1;
+
+          return aLabel.localeCompare(bLabel);
+        });
+      }
 
       // Limit to 20 items to save memory
-      window.completionItems = items.slice(0, 20).map(item => {
+      window.completionItems = filteredItems.slice(0, 20).map(item => {
         const cleanLabel = item.label.replace(/^[•\s]+/, '').trim()
         let textToInsert = cleanLabel
 
@@ -670,7 +708,7 @@ function setupEditor() {
             };
 
             sendNotification(ws, 'textDocument/didChange', payload);
-          }, 150); // 150ms debounce - fastest LSP updates
+          }, 100); // 100ms debounce - fastest LSP updates
         }
       })
     ]
@@ -696,27 +734,19 @@ function setupEditor() {
 
   editorEl.addEventListener('touchstart', (e) => {
     if (e.touches.length !== 1) return;
-    e.preventDefault(); // STOP NATIVE HANDLES
+    // DON'T prevent default on touchstart - it might block subsequent touch events
     lastTouchY = e.touches[0].clientY;
     lastTouchX = e.touches[0].clientX;
     isScrolling = false;
-  }, { passive: false });
+  }, { passive: true }); // Use passive for touchstart
 
   editorEl.addEventListener('touchmove', (e) => {
     if (e.touches.length !== 1) return;
-    e.preventDefault(); // STOP NATIVE SCROLLING (we do it manually)
 
     const clientY = e.touches[0].clientY;
     const clientX = e.touches[0].clientX;
     const deltaY = lastTouchY - clientY;
     const deltaX = lastTouchX - clientX;
-
-    // Manual Scroll
-    const scroller = document.querySelector('.cm-scroller');
-    if (scroller) {
-      scroller.scrollTop += deltaY;
-      scroller.scrollLeft += deltaX;
-    }
 
     lastTouchY = clientY;
     lastTouchX = clientX;
@@ -724,11 +754,11 @@ function setupEditor() {
     if (Math.abs(deltaY) > 2 || Math.abs(deltaX) > 2) {
       isScrolling = true;
     }
-  }, { passive: false });
+  }, { passive: true }); // Use passive for touchmove
 
   editorEl.addEventListener('touchend', (e) => {
     if (isScrolling) return;
-    e.preventDefault(); // STOP NATIVE CLICK/FOCUS
+    e.preventDefault(); // Only prevent default on touchend to stop native click
 
     // Manual Cursor Placement
     const touch = e.changedTouches[0];

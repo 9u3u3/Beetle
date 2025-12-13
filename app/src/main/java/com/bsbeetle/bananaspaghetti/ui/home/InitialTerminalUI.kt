@@ -183,7 +183,7 @@ fun InitialTerminalUI(navController: NavController) {
                     height = Dimension.fillToConstraints
                 },
                 // Change the webview used here
-                webView = SessionList.sessions[SessionList.activeSessionIndex!!].view!!
+                webView = SessionList.sessions[SessionList.activeSessionIndex!!].getOrInitView()
             )
 
             if(!isLandscape){

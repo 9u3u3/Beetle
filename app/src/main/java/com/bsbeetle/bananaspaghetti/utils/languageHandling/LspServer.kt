@@ -149,30 +149,63 @@ class LspServer(private val context: Context, private val port: Int = 8081) {
         // Start persistent reader ONCE when LSP process starts
         readerScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         readerScope!!.launch {
-            val buf = ByteArray(65536)
-            val sb = StringBuilder()
+            val buffer = ByteArray(4 * 1024 * 1024) // 4MB buffer
+            var bufferSize = 0
+            val readBuf = ByteArray(65536)
 
             try {
                 while (true) {
-                    val n = input!!.read(buf)
+                    val n = input!!.read(readBuf)
                     if (n <= 0) break
-                    val chunk = String(buf, 0, n, Charsets.UTF_8)
-                    sb.append(chunk)
+                    
+                    // Simple resize if needed (doubling)
+                    if (bufferSize + n > buffer.size) {
+                         Log.e("cLsp", "Buffer overflow, clearing buffer. Message too large?")
+                         bufferSize = 0 // Resetting is drastic but prevents crash. ideally we'd resize.
+                         // For now, let's assume 4MB is enough. If not, we drop data.
+                         continue
+                    }
+
+                    System.arraycopy(readBuf, 0, buffer, bufferSize, n)
+                    bufferSize += n
 
                     while (true) {
-                        val headersEnd = sb.indexOf("\r\n\r\n")
+                        // Scan for \r\n\r\n
+                        var headersEnd = -1
+                        for (i in 0 until bufferSize - 3) {
+                            if (buffer[i] == 13.toByte() && buffer[i+1] == 10.toByte() && 
+                                buffer[i+2] == 13.toByte() && buffer[i+3] == 10.toByte()) {
+                                headersEnd = i
+                                break
+                            }
+                        }
+
                         if (headersEnd == -1) break
 
-                        val headers = sb.substring(0, headersEnd)
-                        val match = Regex("Content-Length:\\s*(\\d+)", RegexOption.IGNORE_CASE).find(headers) ?: break
+                        // Parse headers
+                        val headersString = String(buffer, 0, headersEnd, Charsets.US_ASCII)
+                        val match = Regex("Content-Length:\\s*(\\d+)", RegexOption.IGNORE_CASE).find(headersString)
+                        
+                        if (match == null) {
+                            // No Content-Length found in what looked like headers. 
+                            // Treat as garbage and skip past this \r\n\r\n
+                            val consumed = headersEnd + 4
+                            System.arraycopy(buffer, consumed, buffer, 0, bufferSize - consumed)
+                            bufferSize -= consumed
+                            continue
+                        }
+
                         val contentLen = match.groupValues[1].toInt()
                         val messageStart = headersEnd + 4
-                        if (sb.length < messageStart + contentLen) break
 
-                        val jsonBody = sb.substring(messageStart, messageStart + contentLen)
-                        sb.delete(0, messageStart + contentLen)
+                        if (bufferSize < messageStart + contentLen) break // Wait for more data
 
-                        // Send to current session (if any)
+                        // Extract message
+                        val messageBytes = ByteArray(contentLen)
+                        System.arraycopy(buffer, messageStart, messageBytes, 0, contentLen)
+                        val jsonBody = String(messageBytes, Charsets.UTF_8)
+
+                        // Send to current session
                         val session = currentSession
                         if (session != null) {
                             try {
@@ -181,6 +214,11 @@ class LspServer(private val context: Context, private val port: Int = 8081) {
                                 Log.e("cLsp", "Failed to send to client: ${ex.message}")
                             }
                         }
+
+                        // Shift buffer
+                        val consumed = messageStart + contentLen
+                        System.arraycopy(buffer, consumed, buffer, 0, bufferSize - consumed)
+                        bufferSize -= consumed
                     }
                 }
             } catch (e: Exception) {

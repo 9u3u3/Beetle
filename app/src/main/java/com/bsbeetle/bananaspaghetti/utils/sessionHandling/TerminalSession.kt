@@ -14,22 +14,37 @@ import com.bsbeetle.bananaspaghetti.utils.AppConfig
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 import java.io.FileOutputStream
 
-class TerminalSession(context: Context, name: String = "Terminal") : Session(context.applicationContext, SessionType.TERMINAL, name) {
+class TerminalSession(context: Context, name: String = "Terminal", val initialDir: String? = null) : Session(context.applicationContext, SessionType.TERMINAL, name) {
 
     var outputFd: FileOutputStream? = null
     private var tenebrio: Tenebrio? = null
-    var rows: Int? = null
-    var cols: Int? = null
+    var rows: Int? = 24
+    var cols: Int? = 80
+    var onOutput: ((String) -> Unit)? = null
 
     init {
         Log.d("TerminalSession", "Creating tenebrio for ID: $id")
         tenebrio = Tenebrio(context.applicationContext, this)
         try {
             tenebrio!!.init()
+            
+            // If initial directory is provided, cd into it
+            initialDir?.let { dir ->
+                // We need to wait a bit or just write it? 
+                // Writing immediately might be lost if shell isn't fully ready, 
+                // but usually it buffers.
+                // Also need to handle internal vs external paths.
+                // For now, assume the path is valid for the shell (or mapped).
+                // If it's a content URI, we can't cd into it.
+                if (dir.startsWith("/")) {
+                     // It's a path
+                     insertText("cd \"$dir\"\n")
+                     insertText("clear\n") // Optional: clear the cd command from view
+                }
+            }
         } catch (e: Exception) {
             Log.e("TerminalSession", "Null tenebrio, object creation failed!")
         }
-        createView()
     }
 
     @SuppressLint("SetJavaScriptEnabled")
