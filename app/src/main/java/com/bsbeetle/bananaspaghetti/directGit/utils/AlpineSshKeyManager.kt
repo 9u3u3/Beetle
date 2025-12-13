@@ -56,34 +56,22 @@ class AlpineSshKeyManager(private val context: Context) {
                 try {
                     Log.d(TAG, "🔑 Generating ED25519 SSH key pair using Alpine...")
 
-                    // Try to get an existing terminal session first
-                    val existingSession =
-                            SessionList.sessions.filterIsInstance<TerminalSession>().firstOrNull()
-
+                    // MUST use an existing terminal session where Alpine is already running
                     val session =
-                            if (existingSession != null) {
-                                Log.d(
-                                        TAG,
-                                        "✅ Using existing terminal session (Alpine already running!)"
-                                )
-                                existingSession
-                            } else {
-                                Log.d(TAG, "⚠️ No existing terminal found, creating new one...")
-                                // Use GitTerminalManager to create terminal
-                                terminalManager.initialize().getOrThrow()
-                                terminalManager.getTerminalSession()
-                                        ?: throw Exception("Terminal session not available")
+                            SessionList.sessions.filterIsInstance<TerminalSession>().firstOrNull {
+                                it.outputFd != null
                             }
 
-                    // If using existing session, Alpine is already ready!
-                    // If new session, wait for Alpine to initialize
-                    if (existingSession == null) {
-                        Log.d(TAG, "⏳ Waiting for Alpine to fully initialize...")
-                        delay(5000)
-                    } else {
-                        Log.d(TAG, "⚡ Alpine already running, executing immediately!")
-                        delay(500) // Just a small delay to be safe
+                    if (session == null) {
+                        Log.e(TAG, "❌ No active terminal found! User must open a terminal first.")
+                        throw Exception(
+                                "Please open a Terminal first (tap + in bottom bar), wait for Alpine to load, then try again."
+                        )
                     }
+
+                    Log.d(TAG, "✅ Using existing terminal session (Alpine already running!)")
+                    Log.d(TAG, "⚡ Executing commands immediately...")
+                    delay(300) // Small delay to be safe
 
                     // Create .ssh directory
                     Log.d(TAG, "📁 Creating ~/.ssh directory...")
@@ -120,10 +108,11 @@ class AlpineSshKeyManager(private val context: Context) {
                     Log.d(TAG, "✅ ssh-keygen commands executed")
 
                     // Read generated keys from Alpine filesystem
+                    // NOTE: $HOME is /home in Alpine init script, so ~/.ssh = /home/.ssh
                     val alpinePrivateKeyPath =
-                            java.io.File(context.filesDir, "alpine/root/.ssh/id_ed25519")
+                            java.io.File(context.filesDir, "alpine/home/.ssh/id_ed25519")
                     val alpinePublicKeyPath =
-                            java.io.File(context.filesDir, "alpine/root/.ssh/id_ed25519.pub")
+                            java.io.File(context.filesDir, "alpine/home/.ssh/id_ed25519.pub")
 
                     // Wait for files to appear (with retry)
                     var retries = 10
