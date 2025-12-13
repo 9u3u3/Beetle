@@ -184,7 +184,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                                 stashes = stashes,
                                 aheadCount = ahead,
                                 behindCount = behind,
-                                sshKeysConfigured = sshKeyManager.hasKeys(),
+                                sshKeysConfigured = alpineSshKeyManager.hasKeys(),
                                 isLoading = false,
                                 operationInProgress = null
                         )
@@ -267,7 +267,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     fun commitAndPush(message: String, files: List<String>) {
         viewModelScope.launch(Dispatchers.IO) {
             // Check if SSH is configured
-            if (!sshKeyManager.hasKeys()) {
+            if (!alpineSshKeyManager.hasKeys()) {
                 showError("SSH not configured", "Please set up SSH keys first")
                 return@launch
             }
@@ -338,7 +338,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     fun push() {
         viewModelScope.launch(Dispatchers.IO) {
             // Check if SSH is configured
-            if (!sshKeyManager.hasKeys()) {
+            if (!alpineSshKeyManager.hasKeys()) {
                 showError("SSH not configured", "Please set up SSH keys first")
                 return@launch
             }
@@ -366,7 +366,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     fun pull() {
         viewModelScope.launch(Dispatchers.IO) {
             // Check if SSH is configured
-            if (!sshKeyManager.hasKeys()) {
+            if (!alpineSshKeyManager.hasKeys()) {
                 showError("SSH not configured", "Please set up SSH keys first")
                 return@launch
             }
@@ -394,7 +394,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     fun fetch() {
         viewModelScope.launch(Dispatchers.IO) {
             // Check if SSH is configured
-            if (!sshKeyManager.hasKeys()) {
+            if (!alpineSshKeyManager.hasKeys()) {
                 showError("SSH not configured", "Please set up SSH keys first")
                 return@launch
             }
@@ -527,7 +527,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     fun cloneRepository(url: String, targetPath: String) {
         viewModelScope.launch(Dispatchers.IO) {
             // Check if SSH is configured
-            if (!sshKeyManager.hasKeys()) {
+            if (!alpineSshKeyManager.hasKeys()) {
                 showError("SSH not configured", "Please set up SSH keys first")
                 return@launch
             }

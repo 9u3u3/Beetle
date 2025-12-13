@@ -343,7 +343,7 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Text(
-                        text = "cuoh",
+                        text = "fahhh",
                         fontFamily = KarmaticFont,
                         color = Color.White,
                         fontSize = 45.sp,

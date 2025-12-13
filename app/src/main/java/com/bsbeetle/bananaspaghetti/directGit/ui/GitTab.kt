@@ -135,6 +135,7 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
             // Extract real file path from DocumentFile URI
             // URI format: content://com.android.externalstorage.documents/tree/primary%3Afolder
             val uriPath = folderUri.toString()
+            android.util.Log.d("GitTab", "🔍 Folder URI: $uriPath")
 
             // Extract the path after "primary:" or "primary%3A"
             val realPath =
@@ -155,25 +156,47 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                                             .replace("%3A", ":")
                             "/storage/emulated/0/$pathPart"
                         }
+                        // Also handle raw file paths from fileViewModel.currentFilePath
                         else -> null
                     }
 
+            android.util.Log.d("GitTab", "📂 Extracted path: $realPath")
+
             if (realPath != null) {
                 val dir = File(realPath)
+                android.util.Log.d(
+                        "GitTab",
+                        "📁 Dir exists: ${dir.exists()}, .git exists: ${File(dir, ".git").exists()}"
+                )
 
                 // ALWAYS check if this folder itself is a Git repo first
                 if (dir.exists() && File(dir, ".git").exists()) {
                     // Use THIS folder's .git, not parent's
+                    android.util.Log.d("GitTab", "✅ Found .git in: ${dir.absolutePath}")
                     viewModel.setRootDir(dir.absolutePath)
                 } else if (dir.exists()) {
                     // Only walk up if current folder doesn't have .git
                     var parentDir = dir.parentFile
+                    var foundGit = false
                     while (parentDir != null) {
                         if (File(parentDir, ".git").exists()) {
+                            android.util.Log.d(
+                                    "GitTab",
+                                    "✅ Found .git in parent: ${parentDir.absolutePath}"
+                            )
                             viewModel.setRootDir(parentDir.absolutePath)
+                            foundGit = true
                             break
                         }
                         parentDir = parentDir.parentFile
+                    }
+                    // Even if no .git found, set root dir so Git tab can show "init repo" option
+                    if (!foundGit) {
+                        android.util.Log.d(
+                                "GitTab",
+                                "⚠️ No .git found, setting root anyway: ${dir.absolutePath}"
+                        )
+                        viewModel.setRootDir(dir.absolutePath)
                     }
                 }
             }

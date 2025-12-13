@@ -5,8 +5,6 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
-import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -41,8 +39,6 @@ class AlpineSshKeyManager(private val context: Context) {
         )
     }
 
-    private val terminalManager = GitTerminalManager(context)
-
     /** Check if SSH keys exist */
     fun hasKeys(): Boolean {
         val hasPrivate = encryptedPrefs.contains(KEY_PRIVATE)
@@ -50,85 +46,140 @@ class AlpineSshKeyManager(private val context: Context) {
         return hasPrivate && hasPublic
     }
 
-    /** Generate ED25519 SSH key pair using Alpine's native ssh-keygen */
+    /** Generate ED25519 SSH key pair using Alpine's native ssh-keygen via proot */
     suspend fun generateKeyPair(): Boolean =
             withContext(Dispatchers.IO) {
                 try {
-                    Log.d(TAG, "🔑 Generating ED25519 SSH key pair using Alpine...")
+                    Log.d(TAG, "🔑 Generating ED25519 SSH key pair using Alpine/proot...")
 
-                    // MUST use an existing terminal session where Alpine is already running
-                    val session =
-                            SessionList.sessions.filterIsInstance<TerminalSession>().firstOrNull {
-                                it.outputFd != null
-                            }
+                    // Path configuration - same as Tenebrio uses
+                    val PREFIX = context.filesDir
+                    val nativeDir = context.applicationInfo.nativeLibraryDir
+                    val alpine = java.io.File(PREFIX, "alpine")
+                    val tmp = java.io.File(PREFIX, "tmp")
+                    val proot = java.io.File(nativeDir, "libproot-xed.so")
+                    val prootLoader = java.io.File(nativeDir, "libproot.so")
+                    val prootLoader32 = java.io.File(nativeDir, "libproot32.so")
 
-                    if (session == null) {
-                        Log.e(TAG, "❌ No active terminal found! User must open a terminal first.")
+                    // Check if Alpine is installed
+                    val alpineBusybox = java.io.File(alpine, "bin/busybox")
+                    if (!alpineBusybox.exists()) {
+                        Log.e(
+                                TAG,
+                                "❌ Alpine not installed - please open terminal once to initialize"
+                        )
                         throw Exception(
-                                "Please open a Terminal first (tap + in bottom bar), wait for Alpine to load, then try again."
+                                "Alpine not initialized. Please open a Terminal once to set up Alpine, then try again."
                         )
                     }
 
-                    Log.d(TAG, "✅ Using existing terminal session (Alpine already running!)")
-                    Log.d(TAG, "⚡ Executing commands immediately...")
-                    delay(300) // Small delay to be safe
+                    // Ensure tmp directory exists
+                    if (!tmp.exists()) tmp.mkdirs()
 
-                    // Create .ssh directory
-                    Log.d(TAG, "📁 Creating ~/.ssh directory...")
-                    session.insertText("mkdir -p ~/.ssh\n")
-                    delay(500)
-                    session.insertText("chmod 700 ~/.ssh\n")
-                    delay(500)
+                    // Ensure libtalloc symlink exists (delete and recreate if needed)
+                    val libtallocLink = java.io.File(PREFIX, "libtalloc.so.2")
+                    val libtallocTarget = java.io.File(nativeDir, "libtalloc.so")
+                    // Check using NOFOLLOW_LINKS to detect broken symlinks too
+                    val linkPath = libtallocLink.toPath()
+                    if (java.nio.file.Files.exists(
+                                    linkPath,
+                                    java.nio.file.LinkOption.NOFOLLOW_LINKS
+                            )
+                    ) {
+                        // Delete existing file/symlink to ensure clean state
+                        java.nio.file.Files.delete(linkPath)
+                    }
+                    java.nio.file.Files.createSymbolicLink(linkPath, libtallocTarget.toPath())
 
-                    // Update package index and install openssh
-                    Log.d(TAG, "📦 Updating package index...")
-                    session.insertText("apk update\n")
-                    delay(3000) // Wait for index update
-                    Log.d(TAG, "📦 apk update command sent")
+                    // Environment for proot
+                    val envMap =
+                            mapOf(
+                                    "PREFIX" to PREFIX.absolutePath,
+                                    "LD_LIBRARY_PATH" to PREFIX.absolutePath,
+                                    "PROOT_TMP_DIR" to tmp.absolutePath,
+                                    "PROOT_LOADER" to prootLoader.absolutePath,
+                                    "PROOT_LOADER_32" to prootLoader32.absolutePath,
+                                    "HOME" to "/home",
+                                    "TERM" to "xterm-256color",
+                                    "PATH" to
+                                            "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
+                            )
 
-                    Log.d(TAG, "📦 Installing openssh...")
-                    session.insertText("apk add openssh\n")
-                    delay(7000) // Wait longer for installation
-                    Log.d(TAG, "📦 apk add openssh command sent")
+                    // Create the SSH key generation script
+                    val sshGenScript =
+                            """
+                        #!/bin/sh
+                        set -e
+                        
+                        # Set PATH explicitly for Alpine
+                        export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
+                        export HOME=/home
+                        
+                        # Create .ssh directory
+                        mkdir -p /home/.ssh
+                        chmod 700 /home/.ssh
+                        
+                        # Install openssh if ssh-keygen not found
+                        if ! command -v ssh-keygen > /dev/null 2>&1; then
+                            echo "Installing openssh..."
+                            apk update
+                            apk add openssh
+                        fi
+                        
+                        # Remove existing keys if present
+                        rm -f /home/.ssh/id_ed25519 /home/.ssh/id_ed25519.pub
+                        
+                        # Generate ED25519 key pair
+                        ssh-keygen -t ed25519 -f /home/.ssh/id_ed25519 -N "" -C "bananaspaghetti@android"
+                        
+                        # Verify keys were created
+                        if [ -f /home/.ssh/id_ed25519 ] && [ -f /home/.ssh/id_ed25519.pub ]; then
+                            echo "SUCCESS: Keys generated"
+                            cat /home/.ssh/id_ed25519.pub
+                        else
+                            echo "FAILED: Keys not found"
+                            exit 1
+                        fi
+                    """.trimIndent()
 
-                    // Generate key using Alpine's ssh-keygen
-                    Log.d(TAG, "🔐 Running ssh-keygen...")
-                    session.insertText(
-                            "ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N '' -C 'bananaspaghetti@android'\n"
-                    )
+                    // Write script to Alpine filesystem
+                    val scriptFile = java.io.File(alpine, "tmp/gen_ssh_key.sh")
+                    scriptFile.parentFile?.mkdirs()
+                    scriptFile.writeText(sshGenScript)
+                    scriptFile.setExecutable(true)
 
-                    // Wait for ssh-keygen to complete
-                    delay(2000)
+                    Log.d(TAG, "🔐 Running SSH key generation script...")
 
-                    // Verify files were created
-                    Log.d(TAG, "🔍 Verifying key files...")
-                    session.insertText("ls -la ~/.ssh/\n")
-                    delay(500)
-
-                    Log.d(TAG, "✅ ssh-keygen commands executed")
+                    // Execute the script through /bin/sh
+                    val keygenResult =
+                            runProotCommand(proot, alpine, envMap, "/bin/sh", "/tmp/gen_ssh_key.sh")
+                    Log.d(TAG, "Script output: $keygenResult")
 
                     // Read generated keys from Alpine filesystem
-                    // NOTE: $HOME is /home in Alpine init script, so ~/.ssh = /home/.ssh
                     val alpinePrivateKeyPath =
                             java.io.File(context.filesDir, "alpine/home/.ssh/id_ed25519")
                     val alpinePublicKeyPath =
                             java.io.File(context.filesDir, "alpine/home/.ssh/id_ed25519.pub")
 
-                    // Wait for files to appear (with retry)
+                    // Wait for files with retry
                     var retries = 10
                     while (retries > 0 &&
                             (!alpinePrivateKeyPath.exists() || !alpinePublicKeyPath.exists())) {
-                        Log.d(TAG, "⏳ Waiting for key files to appear... (retries left: $retries)")
+                        Log.d(TAG, "⏳ Waiting for key files... (retries: $retries)")
                         delay(500)
                         retries--
                     }
 
                     if (!alpinePrivateKeyPath.exists() || !alpinePublicKeyPath.exists()) {
                         Log.e(TAG, "❌ Key files not found after generation")
-                        Log.e(TAG, "Private key exists: ${alpinePrivateKeyPath.exists()}")
-                        Log.e(TAG, "Public key exists: ${alpinePublicKeyPath.exists()}")
-                        Log.e(TAG, "Private key path: ${alpinePrivateKeyPath.absolutePath}")
-                        Log.e(TAG, "Public key path: ${alpinePublicKeyPath.absolutePath}")
+                        Log.e(
+                                TAG,
+                                "Private key path: ${alpinePrivateKeyPath.absolutePath}, exists: ${alpinePrivateKeyPath.exists()}"
+                        )
+                        Log.e(
+                                TAG,
+                                "Public key path: ${alpinePublicKeyPath.absolutePath}, exists: ${alpinePublicKeyPath.exists()}"
+                        )
                         return@withContext false
                     }
 
@@ -151,6 +202,45 @@ class AlpineSshKeyManager(private val context: Context) {
                     false
                 }
             }
+
+    /** Run a command inside Alpine using proot */
+    private fun runProotCommand(
+            proot: java.io.File,
+            alpine: java.io.File,
+            env: Map<String, String>,
+            vararg command: String
+    ): String {
+        val pb =
+                ProcessBuilder(
+                        proot.absolutePath,
+                        "--link2symlink",
+                        "-0", // Run as root
+                        "-r",
+                        alpine.absolutePath, // Root filesystem
+                        "-b",
+                        "/dev",
+                        "-b",
+                        "/proc",
+                        "-b",
+                        "/sys",
+                        "-w",
+                        "/home", // Working directory
+                        *command
+                )
+        pb.environment().putAll(env)
+        pb.redirectErrorStream(true)
+
+        val process = pb.start()
+        val output = process.inputStream.bufferedReader().readText()
+        val exitCode = process.waitFor()
+
+        if (exitCode != 0) {
+            Log.w(TAG, "Command ${command.joinToString(" ")} exited with code $exitCode")
+            Log.w(TAG, "Output: $output")
+        }
+
+        return output
+    }
 
     /** Get public key in OpenSSH format */
     fun getPublicKey(): String? {
