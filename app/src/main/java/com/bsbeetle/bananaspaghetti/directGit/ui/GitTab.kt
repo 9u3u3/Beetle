@@ -275,7 +275,9 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                     viewModel.checkoutBranch(name)
                     showBranchDialog = false
                 },
-                onDelete = { name -> viewModel.deleteBranch(name) },
+                onDelete = { name, deleteRemote ->
+                    viewModel.deleteBranchWithRemote(name, deleteRemote)
+                },
                 onNewBranch = { showNewBranchDialog = true }
         )
     }
@@ -1284,7 +1286,7 @@ private fun BranchDialog(
         branches: List<BranchInfo>,
         onDismiss: () -> Unit,
         onCheckout: (String) -> Unit,
-        onDelete: (String) -> Unit,
+        onDelete: (String, Boolean) -> Unit,
         onNewBranch: () -> Unit
 ) {
     StyledDialog(title = "Branches", onDismiss = onDismiss) {
@@ -1332,8 +1334,55 @@ private fun BranchDialog(
 private fun BranchItem(
         branch: BranchInfo,
         onCheckout: (String) -> Unit,
-        onDelete: (String) -> Unit
+        onDelete: (String, Boolean) -> Unit
 ) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var deleteFromRemote by remember { mutableStateOf(false) }
+
+    // Delete Confirmation Dialog
+    if (showDeleteDialog) {
+        AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                containerColor = BgCard,
+                titleContentColor = TextPrimary,
+                textContentColor = TextSecondary,
+                title = { Text("Delete Branch") },
+                text = {
+                    Column {
+                        Text("Delete branch '${branch.name}'?")
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                    checked = deleteFromRemote,
+                                    onCheckedChange = { deleteFromRemote = it },
+                                    colors =
+                                            CheckboxDefaults.colors(
+                                                    checkedColor = AccentRed,
+                                                    uncheckedColor = TextTertiary
+                                            )
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Also delete from remote", color = TextSecondary, fontSize = 13.sp)
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                            onClick = {
+                                onDelete(branch.name, deleteFromRemote)
+                                showDeleteDialog = false
+                                deleteFromRemote = false
+                            }
+                    ) { Text("Delete", color = AccentRed) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("Cancel", color = TextTertiary)
+                    }
+                }
+        )
+    }
+
     Row(
             modifier =
                     Modifier.fillMaxWidth()
@@ -1356,7 +1405,7 @@ private fun BranchItem(
         )
 
         if (!branch.isCurrent && !branch.isRemote) {
-            IconButton(onClick = { onDelete(branch.name) }, modifier = Modifier.size(24.dp)) {
+            IconButton(onClick = { showDeleteDialog = true }, modifier = Modifier.size(24.dp)) {
                 Icon(
                         Icons.Rounded.Delete,
                         null,
