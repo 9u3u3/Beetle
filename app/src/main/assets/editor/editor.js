@@ -316,12 +316,14 @@ function setupEditor() {
         requestAnimationFrame(() => {
           if (!view) return;
 
-          // CRITICAL: Filter diagnostics that are now out of bounds
+          // CRITICAL: Clamp diagnostics to valid document bounds
           // Document may have changed since diagnostics were calculated
           const docLen = view.state.doc.length;
-          const validDiagnostics = diagnostics.filter(d =>
-            d.from >= 0 && d.from <= docLen && d.to >= 0 && d.to <= docLen
-          );
+          const validDiagnostics = diagnostics.map(d => ({
+            ...d,
+            from: Math.max(0, Math.min(d.from, docLen)),
+            to: Math.max(0, Math.min(d.to, docLen))
+          })).filter(d => d.from < docLen); // Only filter if completely out of bounds
 
           // Count errors and warnings for status bar
           let errorCount = 0;
@@ -332,10 +334,18 @@ function setupEditor() {
           });
           window.currentErrorCount = errorCount;
           window.currentWarningCount = warningCount;
+          window.cachedErrors = errorCount;
+          window.cachedWarnings = warningCount;
 
           // Use CodeMirror's built-in setDiagnostics for proper linting display
           console.log(`[LSP-JS] Applying ${validDiagnostics.length} diagnostics (${errorCount} errors, ${warningCount} warnings)`);
           view.dispatch(setDiagnostics(view.state, validDiagnostics));
+
+          // IMMEDIATELY send status update when diagnostics change (for bottom bar)
+          const pos = view.state.selection.main.head;
+          const line = view.state.doc.lineAt(pos);
+          const col = pos - line.from;
+          console.log(`[LSP-STATUS] line:${line.number} col:${col + 1} err:${errorCount} warn:${warningCount}`);
 
           // Send diagnostics to Kotlin bridge (throttled - only if 2+ seconds since last send)
           const now = Date.now();

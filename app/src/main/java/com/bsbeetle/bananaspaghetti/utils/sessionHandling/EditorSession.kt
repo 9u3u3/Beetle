@@ -299,6 +299,7 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                                 
                                 viewModel.updateCursorPosition(line, col)
                                 viewModel.updateDiagnostics(err, warn)
+                                android.util.Log.d("LspStatus", "Updated: line=$line col=$col err=$err warn=$warn")
                             } catch (e: Exception) {
                                 Log.e("WEBVERR", "Failed to parse LSP status: $msg", e)
                             }
