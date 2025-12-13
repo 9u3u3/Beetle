@@ -123,6 +123,99 @@ class LspServer(private val context: Context, private val port: Int = 8081) {
         }
         targetScript.setExecutable(true)
 
+        // For Rust (rust-analyzer), auto-generate Cargo.toml if not exists
+        // This enables rust-analyzer to work with standalone .rs files
+        if (slug == "rust") {
+            try {
+                val cargoToml = File(alpine, "home/Cargo.toml")
+                if (!cargoToml.exists()) {
+                    cargoToml.parentFile?.mkdirs()
+                    cargoToml.writeText("""
+[package]
+name = "workspace"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "main"
+path = "main.rs"
+
+[dependencies]
+""".trimIndent())
+                    Log.d("LspServer", "Created Cargo.toml at ${cargoToml.absolutePath}")
+                }
+            } catch (e: Exception) {
+                Log.w("LspServer", "Failed to create Cargo.toml", e)
+            }
+        }
+
+        // For Java (jdtls), auto-generate Eclipse project files if not exists
+        // This enables jdtls to work with standalone .java files
+        if (slug == "java") {
+            try {
+                val homeDir = File(alpine, "home")
+                homeDir.mkdirs()
+                
+                // Create .project file (Eclipse project descriptor)
+                val projectFile = File(homeDir, ".project")
+                if (!projectFile.exists()) {
+                    projectFile.writeText("""
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+    <name>workspace</name>
+    <comment></comment>
+    <projects></projects>
+    <buildSpec>
+        <buildCommand>
+            <name>org.eclipse.jdt.core.javabuilder</name>
+            <arguments></arguments>
+        </buildCommand>
+    </buildSpec>
+    <natures>
+        <nature>org.eclipse.jdt.core.javanature</nature>
+    </natures>
+</projectDescription>
+""".trimIndent())
+                    Log.d("LspServer", "Created .project at ${projectFile.absolutePath}")
+                }
+                
+                // Create .classpath file
+                val classpathFile = File(homeDir, ".classpath")
+                if (!classpathFile.exists()) {
+                    classpathFile.writeText("""
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+    <classpathentry kind="src" path="."/>
+    <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+    <classpathentry kind="output" path="bin"/>
+</classpath>
+""".trimIndent())
+                    Log.d("LspServer", "Created .classpath at ${classpathFile.absolutePath}")
+                }
+            } catch (e: Exception) {
+                Log.w("LspServer", "Failed to create Java project files", e)
+            }
+        }
+
+        // For Go (gopls), auto-generate go.mod if not exists
+        // This enables gopls to work with standalone .go files
+        if (slug == "go") {
+            try {
+                val goMod = File(alpine, "home/go.mod")
+                if (!goMod.exists()) {
+                    goMod.parentFile?.mkdirs()
+                    goMod.writeText("""
+module workspace
+
+go 1.21
+""".trimIndent())
+                    Log.d("LspServer", "Created go.mod at ${goMod.absolutePath}")
+                }
+            } catch (e: Exception) {
+                Log.w("LspServer", "Failed to create go.mod", e)
+            }
+        }
+
         gMasterFd = startNativeLsp(
             PREFIX.absolutePath,
             nativeDir,

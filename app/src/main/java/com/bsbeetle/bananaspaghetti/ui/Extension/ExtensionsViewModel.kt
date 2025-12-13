@@ -112,11 +112,18 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                 val wrapperFile = File(publicDir, "wrapper_${extension.slug}.sh")
                 wrapperFile.writeText("""
                     #!/bin/sh
+                    # Override both exec and exit to detect installation completion
                     exec() {
                         echo "INSTALLATION_COMPLETE"
-                        exit 0
+                        command exit 0
+                    }
+                    exit() {
+                        echo "INSTALLATION_COMPLETE"
+                        command exit 0
                     }
                     . /public/${tempScript.name}
+                    # If script doesn't call exit explicitly, mark complete anyway
+                    echo "INSTALLATION_COMPLETE"
                 """.trimIndent())
                 wrapperFile.setExecutable(true)
 
@@ -124,6 +131,9 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                 val session = TerminalSession(context, "Install-${extension.slug}")
                 
                 session.onOutput = { output ->
+                    // Log all shell output to logcat
+                    Log.d("PluginInstall", "[${extension.slug}] $output")
+                    
                     if (output.contains("INSTALLATION_COMPLETE")) {
                         installComplete.complete(true)
                     }
