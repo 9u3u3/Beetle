@@ -230,6 +230,10 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
         view?.evaluateJavascript("if(window.setLanguage) window.setLanguage('$slug', $port);", null)
     }
     
+    fun setRootUri(rootUri: String) {
+        view?.evaluateJavascript("if(window.setRootUri) window.setRootUri('$rootUri');", null)
+    }
+    
     fun clearLanguage() {
         view?.evaluateJavascript("if(window.clearLanguage) window.clearLanguage();", null)
     }

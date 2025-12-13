@@ -209,6 +209,9 @@ class LspServer(private val context: Context, private val port: Int = 8081) {
                         val session = currentSession
                         if (session != null) {
                             try {
+                                // Log first 200 chars of message for debugging
+                                val preview = if (jsonBody.length > 200) jsonBody.take(200) + "..." else jsonBody
+                                Log.d("cLsp", "LSP response (len=${jsonBody.length}): $preview")
                                 session.outgoing.send(Frame.Text(jsonBody))
                             } catch (ex: Exception) {
                                 Log.e("cLsp", "Failed to send to client: ${ex.message}")
