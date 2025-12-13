@@ -511,7 +511,14 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun clearMessages() {
-        _uiState.value = _uiState.value.copy(lastError = null, lastSuccess = null)
+        _uiState.value =
+                _uiState.value.copy(
+                        lastError = null,
+                        lastSuccess = null,
+                        logs = emptyList(),
+                        terminalHistory = emptyList()
+                )
+        alpineGitHelper.clearHistory()
     }
 
     // === Branch Operations ===

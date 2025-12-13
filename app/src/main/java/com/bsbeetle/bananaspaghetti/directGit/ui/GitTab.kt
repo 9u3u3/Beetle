@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -423,6 +424,7 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                             FileChangeItem(
                                     path = path,
                                     status = status,
+                                    isStaged = isStaged,
                                     isSelected = selectedFiles.contains(path),
                                     onToggle = {
                                         selectedFiles =
@@ -594,32 +596,51 @@ private fun GitHeader(
     Column(modifier = Modifier.fillMaxWidth().background(BgCard).border(0.dp, Color.Transparent)) {
         // Top Bar
         Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier =
-                            Modifier.clip(RoundedCornerShape(4.dp))
-                                    .clickable(onClick = onBranchClick)
-                                    .padding(4.dp)
+            // Branch Selector (Pill Shape)
+            Surface(
+                    color = BgDark,
+                    shape = RoundedCornerShape(50),
+                    border = BorderStroke(1.dp, BorderColor),
+                    modifier = Modifier.clickable(onClick = onBranchClick)
             ) {
-                Icon(
-                        Icons.Rounded.AccountTree,
-                        null,
-                        tint = AccentBlue,
-                        modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(branch, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Icon(
+                            Icons.Rounded.AccountTree,
+                            null,
+                            tint = AccentBlue,
+                            modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                            branch,
+                            color = TextPrimary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                            Icons.Rounded.ExpandMore,
+                            null,
+                            tint = TextTertiary,
+                            modifier = Modifier.size(14.dp)
+                    )
+                }
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // Ahead/Behind Indicator
                 if (ahead > 0 || behind > 0) {
                     Row(
                             modifier =
                                     Modifier.background(BgDark, RoundedCornerShape(4.dp))
+                                            .border(1.dp, BorderColor, RoundedCornerShape(4.dp))
                                             .padding(horizontal = 8.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -628,12 +649,13 @@ private fun GitHeader(
                                     Icons.Rounded.ArrowDownward,
                                     null,
                                     tint = AccentBlue,
-                                    modifier = Modifier.size(14.dp)
+                                    modifier = Modifier.size(12.dp)
                             )
                             Text(
                                     "$behind",
                                     color = AccentBlue,
                                     fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(start = 2.dp, end = 6.dp)
                             )
                         }
@@ -642,25 +664,47 @@ private fun GitHeader(
                                     Icons.Rounded.ArrowUpward,
                                     null,
                                     tint = AccentGreen,
-                                    modifier = Modifier.size(14.dp)
+                                    modifier = Modifier.size(12.dp)
                             )
                             Text(
                                     "$ahead",
                                     color = AccentGreen,
                                     fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(start = 2.dp)
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                 }
 
-                IconButton(onClick = onRefresh, modifier = Modifier.size(28.dp)) {
+                // SSH Setup Button
+                Box(
+                        modifier =
+                                Modifier.padding(end = 4.dp)
+                                        .background(
+                                                if (!sshKeysConfigured)
+                                                        AccentOrange.copy(alpha = 0.2f)
+                                                else Color.Transparent,
+                                                RoundedCornerShape(4.dp)
+                                        )
+                ) {
+                    IconButton(onClick = onSshSetupClick, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                                Icons.Rounded.Key,
+                                null,
+                                tint = if (!sshKeysConfigured) AccentOrange else TextSecondary,
+                                modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                IconButton(onClick = onRefresh, modifier = Modifier.size(32.dp)) {
                     Icon(
                             Icons.Rounded.Refresh,
                             null,
                             tint = TextSecondary,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(18.dp)
                     )
                 }
             }
@@ -670,7 +714,7 @@ private fun GitHeader(
 
         // Actions Toolbar
         Row(
-                modifier = Modifier.fillMaxWidth().padding(4.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             ActionButton(Icons.Rounded.ArrowDownward, "Pull", onPull)
@@ -680,18 +724,42 @@ private fun GitHeader(
             // Stash Dropdown
             var showStashMenu by remember { mutableStateOf(false) }
             Box {
-                IconButton(onClick = { showStashMenu = true }, modifier = Modifier.size(32.dp)) {
+                Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier =
+                                Modifier.clip(RoundedCornerShape(8.dp))
+                                        .clickable { showStashMenu = true }
+                                        .padding(vertical = 8.dp, horizontal = 12.dp)
+                ) {
                     Icon(
                             Icons.Rounded.Archive,
                             "Stash",
                             tint = TextSecondary,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(20.dp)
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                                "Stash",
+                                color = TextSecondary,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium
+                        )
+                        Icon(
+                                Icons.Rounded.ArrowDropDown,
+                                null,
+                                tint = TextTertiary,
+                                modifier = Modifier.size(10.dp)
+                        )
+                    }
                 }
+
                 DropdownMenu(
                         expanded = showStashMenu,
                         onDismissRequest = { showStashMenu = false },
-                        modifier = Modifier.background(BgCard)
+                        modifier =
+                                Modifier.background(BgCard)
+                                        .border(1.dp, BorderColor, RoundedCornerShape(4.dp))
                 ) {
                     DropdownMenuItem(
                             text = { Text("Stash Changes", color = TextPrimary) },
@@ -725,18 +793,7 @@ private fun GitHeader(
                     )
                 }
             }
-
             ActionButton(Icons.Rounded.History, "History", onHistory)
-
-            // SSH Setup Button with visual indicator
-            Box(
-                    modifier =
-                            Modifier.background(
-                                    if (!sshKeysConfigured) AccentOrange.copy(alpha = 0.2f)
-                                    else Color.Transparent,
-                                    RoundedCornerShape(4.dp)
-                            )
-            ) { ActionButton(Icons.Rounded.Key, "SSH Setup", onSshSetupClick) }
         }
         HorizontalDivider(color = BorderColor)
     }
@@ -744,8 +801,16 @@ private fun GitHeader(
 
 @Composable
 private fun ActionButton(icon: ImageVector, tooltip: String, onClick: () -> Unit) {
-    IconButton(onClick = onClick, modifier = Modifier.size(32.dp)) {
-        Icon(icon, tooltip, tint = TextSecondary, modifier = Modifier.size(18.dp))
+    Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier =
+                    Modifier.clip(RoundedCornerShape(8.dp))
+                            .clickable(onClick = onClick)
+                            .padding(vertical = 8.dp, horizontal = 12.dp)
+    ) {
+        Icon(icon, tooltip, tint = TextSecondary, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(tooltip, color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -754,11 +819,14 @@ private fun ActionButton(icon: ImageVector, tooltip: String, onClick: () -> Unit
 private fun FileChangeItem(
         path: String,
         status: String,
+        isStaged: Boolean,
         isSelected: Boolean,
         onToggle: () -> Unit,
         onClick: () -> Unit
 ) {
-    val fileName = File(path).name
+    val file = File(path)
+    val fileName = file.name
+    val parentPath = file.parent ?: ""
     val iconPath = FileIconUtils.getIconPath(fileName)
 
     Row(
@@ -766,7 +834,7 @@ private fun FileChangeItem(
                     Modifier.fillMaxWidth()
                             .clickable(onClick = onClick)
                             .background(if (isSelected) BgHover else Color.Transparent)
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
     ) {
         CompositionLocalProvider(LocalMinimumInteractiveComponentEnforcement provides false) {
@@ -782,47 +850,86 @@ private fun FileChangeItem(
                     modifier = Modifier.scale(0.8f)
             )
         }
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
         AsyncImage(
                 model = iconPath,
                 imageLoader = ImageLoaderSingleton.get(LocalContext.current),
                 contentDescription = null,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(18.dp)
         )
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (isStaged) {
+                    Icon(
+                            Icons.Rounded.CheckCircle,
+                            null,
+                            tint = AccentBlue,
+                            modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
+                Text(
+                        fileName,
+                        color =
+                                if (status == "U") AccentGreen
+                                else if (status == "M") AccentYellow else TextPrimary,
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontWeight = if (isStaged) FontWeight.Bold else FontWeight.Normal
+                )
+            }
+            if (parentPath.isNotEmpty()) {
+                Text(
+                        parentPath,
+                        color = TextTertiary,
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        Text(
-                fileName,
+        // Status Badge
+        Surface(
                 color =
-                        if (status == "U") AccentGreen
-                        else if (status == "M") AccentYellow else TextPrimary,
-                fontSize = 13.sp,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-        )
-
-        Badge(
-                containerColor =
                         when (status) {
-                            "U" -> AccentGreen.copy(alpha = 0.2f)
-                            "M" -> AccentYellow.copy(alpha = 0.2f)
-                            else -> AccentBlue.copy(alpha = 0.2f)
+                            "U" -> AccentGreen.copy(alpha = 0.1f)
+                            "M" -> AccentYellow.copy(alpha = 0.1f)
+                            else -> AccentBlue.copy(alpha = 0.1f)
                         },
-                contentColor =
-                        when (status) {
-                            "U" -> AccentGreen
-                            "M" -> AccentYellow
-                            else -> AccentBlue
-                        }
+                shape = RoundedCornerShape(4.dp),
+                border =
+                        BorderStroke(
+                                1.dp,
+                                when (status) {
+                                    "U" -> AccentGreen.copy(alpha = 0.3f)
+                                    "M" -> AccentYellow.copy(alpha = 0.3f)
+                                    else -> AccentBlue.copy(alpha = 0.3f)
+                                }
+                        )
         ) {
             Text(
-                    status,
+                    when (status) {
+                        "U" -> "Added"
+                        "M" -> "Modified"
+                        else -> status
+                    },
+                    color =
+                            when (status) {
+                                "U" -> AccentGreen
+                                "M" -> AccentYellow
+                                else -> AccentBlue
+                            },
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 4.dp)
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
             )
         }
     }
@@ -841,6 +948,8 @@ private fun ConsoleStatusBar(
         onClearMessages: () -> Unit,
         onAuthRequest: () -> Unit
 ) {
+    var selectedTab by remember { mutableIntStateOf(0) } // 0: Terminal, 1: Git Logs
+
     Column(modifier = Modifier.fillMaxWidth().background(BgCard)) {
         HorizontalDivider(color = BorderColor)
 
@@ -848,9 +957,10 @@ private fun ConsoleStatusBar(
         Row(
                 modifier =
                         Modifier.fillMaxWidth()
-                                .height(28.dp)
+                                .height(32.dp)
+                                .background(BgDark)
                                 .clickable(onClick = onToggleConsole)
-                                .padding(horizontal = 8.dp),
+                                .padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
         ) {
             val rotation by animateFloatAsState(if (showConsole) 180f else 0f)
@@ -930,86 +1040,106 @@ private fun ConsoleStatusBar(
         // Console Content
         AnimatedVisibility(visible = showConsole) {
             Column(
-                    modifier =
-                            Modifier.fillMaxWidth().height(250.dp).background(BgDark).padding(8.dp)
+                    modifier = Modifier.fillMaxWidth().height(300.dp).background(Color(0xFF121212))
             ) {
-                // Combined list: terminal history + git logs
-                LazyColumn(reverseLayout = false) {
-                    // Terminal commands section
-                    if (terminalHistory.isNotEmpty()) {
-                        item {
-                            Text(
-                                    "─── Terminal ───",
-                                    color = TextTertiary,
-                                    fontSize = 10.sp,
-                                    fontFamily = FontFamily.Monospace,
-                                    modifier = Modifier.padding(vertical = 4.dp)
-                            )
-                        }
-                        items(terminalHistory) { line ->
-                            val color =
-                                    when {
-                                        line.startsWith("$") -> AccentBlue // Command
-                                        line.startsWith("✅") -> AccentGreen // Success
-                                        line.startsWith("❌") -> AccentRed // Error
-                                        line.startsWith("🔑") ||
-                                                line.startsWith("🔐") ||
-                                                line.startsWith("📦") -> AccentYellow // SSH/Install
-                                        line.startsWith("📁") ||
-                                                line.startsWith("📂") ||
-                                                line.startsWith("📥") -> AccentBlue // Files
-                                        line.startsWith("⚠️") -> AccentOrange // Warning
-                                        else -> TextSecondary
-                                    }
-                            Text(
-                                    line,
-                                    color = color,
-                                    fontSize = 11.sp,
-                                    fontFamily = FontFamily.Monospace,
-                                    modifier = Modifier.padding(vertical = 1.dp)
-                            )
-                        }
+                // Tabs
+                Row(
+                        modifier = Modifier.fillMaxWidth().background(BgDark),
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ConsoleTab("Terminal", selectedTab == 0) { selectedTab = 0 }
+                    ConsoleTab("Git Logs", selectedTab == 1) { selectedTab = 1 }
+                    Spacer(modifier = Modifier.weight(1f))
+                    IconButton(onClick = onClearMessages, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                                Icons.Rounded.Delete,
+                                null,
+                                tint = TextTertiary,
+                                modifier = Modifier.size(14.dp)
+                        )
                     }
+                }
+                HorizontalDivider(color = BorderColor)
 
-                    // Git logs section
-                    if (logs.isNotEmpty()) {
-                        item {
-                            Text(
-                                    "─── Git Logs ───",
-                                    color = TextTertiary,
-                                    fontSize = 10.sp,
-                                    fontFamily = FontFamily.Monospace,
-                                    modifier = Modifier.padding(vertical = 4.dp)
-                            )
-                        }
-                        items(logs.reversed()) { log ->
-                            val color =
-                                    when (log.type) {
-                                        LogType.COMMAND -> AccentBlue
-                                        LogType.ERROR -> AccentRed
-                                        LogType.SUCCESS -> AccentGreen
-                                        LogType.INFO -> TextSecondary
+                SelectionContainer {
+                    Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                        if (selectedTab == 0) {
+                            // Terminal View
+                            LazyColumn(reverseLayout = true) {
+                                items(terminalHistory.reversed()) { line ->
+                                    val color =
+                                            when {
+                                                line.startsWith("$") -> AccentBlue
+                                                line.startsWith("✅") -> AccentGreen
+                                                line.startsWith("❌") -> AccentRed
+                                                line.startsWith("🔑") ||
+                                                        line.startsWith("🔐") ||
+                                                        line.startsWith("📦") -> AccentYellow
+                                                line.startsWith("📁") ||
+                                                        line.startsWith("📂") ||
+                                                        line.startsWith("📥") -> AccentBlue
+                                                line.startsWith("⚠️") -> AccentOrange
+                                                else -> TextSecondary
+                                            }
+                                    Text(
+                                            line,
+                                            color = color,
+                                            fontSize = 12.sp,
+                                            fontFamily = FontFamily.Monospace,
+                                            modifier = Modifier.padding(vertical = 1.dp)
+                                    )
+                                }
+                            }
+                        } else {
+                            // Git Logs View
+                            LazyColumn(reverseLayout = false) {
+                                items(logs.reversed()) { log ->
+                                    val color =
+                                            when (log.type) {
+                                                LogType.COMMAND -> AccentBlue
+                                                LogType.ERROR -> AccentRed
+                                                LogType.SUCCESS -> AccentGreen
+                                                LogType.INFO -> TextSecondary
+                                            }
+                                    Row(modifier = Modifier.padding(vertical = 2.dp)) {
+                                        Text(
+                                                log.timestamp,
+                                                color = TextTertiary,
+                                                fontSize = 11.sp,
+                                                fontFamily = FontFamily.Monospace,
+                                                modifier = Modifier.width(60.dp)
+                                        )
+                                        Text(
+                                                "> ${log.message}",
+                                                color = color,
+                                                fontSize = 12.sp,
+                                                fontFamily = FontFamily.Monospace
+                                        )
                                     }
-                            Row(modifier = Modifier.padding(vertical = 1.dp)) {
-                                Text(
-                                        log.timestamp,
-                                        color = TextTertiary,
-                                        fontSize = 10.sp,
-                                        fontFamily = FontFamily.Monospace,
-                                        modifier = Modifier.width(60.dp)
-                                )
-                                Text(
-                                        "> ${log.message}",
-                                        color = color,
-                                        fontSize = 11.sp,
-                                        fontFamily = FontFamily.Monospace
-                                )
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ConsoleTab(title: String, isSelected: Boolean, onClick: () -> Unit) {
+    Box(
+            modifier =
+                    Modifier.clickable(onClick = onClick)
+                            .background(if (isSelected) Color(0xFF121212) else Color.Transparent)
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text(
+                title,
+                color = if (isSelected) AccentBlue else TextSecondary,
+                fontSize = 12.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+        )
     }
 }
 
