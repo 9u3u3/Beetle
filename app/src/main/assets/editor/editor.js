@@ -3,7 +3,7 @@ import { EditorState, StateEffect, StateField, Compartment } from "@codemirror/s
 import { oneDark } from "@codemirror/theme-one-dark"
 import { autocompletion, completionKeymap, closeCompletion, startCompletion, completionStatus } from "@codemirror/autocomplete"
 import { keymap, drawSelection } from "@codemirror/view"
-import { linter, lintGutter, forceLinting } from "@codemirror/lint"
+import { linter, lintGutter, forceLinting, setDiagnostics } from "@codemirror/lint"
 import { cpp } from "@codemirror/lang-cpp"
 import { python } from "@codemirror/lang-python"
 import { insertNewlineAndIndent, deleteCharBackward, undo, redo } from "@codemirror/commands"
@@ -225,32 +225,8 @@ function setupEditor() {
     }
   }
 
-  // StateEffect for updating diagnostics
-  const setDiagnosticsEffect = StateEffect.define()
-
-  // StateField to store diagnostics
-  const diagnosticsField = StateField.define({
-    create() {
-      return []
-    },
-    update(diagnostics, tr) {
-      // Handle explicit diagnostic updates via effect
-      for (let effect of tr.effects) {
-        if (effect.is(setDiagnosticsEffect)) {
-          return effect.value
-        }
-      }
-      // CRITICAL FIX: Filter out-of-bounds diagnostics when document changes
-      // This prevents position mapping errors while keeping valid diagnostics visible
-      if (tr.docChanged) {
-        const docLen = tr.newDoc.length;
-        return diagnostics.filter(d =>
-          d.from >= 0 && d.from <= docLen && d.to >= 0 && d.to <= docLen
-        );
-      }
-      return diagnostics
-    }
-  })
+  // Note: Diagnostics are handled via setDiagnostics() from @codemirror/lint
+  // No custom StateEffect/StateField needed
 
   window.setFilePath = (path) => {
     const oldURI = URI;
@@ -347,12 +323,19 @@ function setupEditor() {
             d.from >= 0 && d.from <= docLen && d.to >= 0 && d.to <= docLen
           );
 
-          // Only dispatch if we have valid diagnostics
-          if (validDiagnostics.length > 0 || diagnostics.length === 0) {
-            view.dispatch({
-              effects: setDiagnosticsEffect.of(validDiagnostics)
-            });
-          }
+          // Count errors and warnings for status bar
+          let errorCount = 0;
+          let warningCount = 0;
+          validDiagnostics.forEach(d => {
+            if (d.severity === 'error') errorCount++;
+            else if (d.severity === 'warning') warningCount++;
+          });
+          window.currentErrorCount = errorCount;
+          window.currentWarningCount = warningCount;
+
+          // Use CodeMirror's built-in setDiagnostics for proper linting display
+          console.log(`[LSP-JS] Applying ${validDiagnostics.length} diagnostics (${errorCount} errors, ${warningCount} warnings)`);
+          view.dispatch(setDiagnostics(view.state, validDiagnostics));
 
           // Send diagnostics to Kotlin bridge (throttled - only if 2+ seconds since last send)
           const now = Date.now();
@@ -624,10 +607,7 @@ function setupEditor() {
     }
   }
 
-  // Linter function that reads from StateField
-  const lspLinter = linter((view) => {
-    return view.state.field(diagnosticsField)
-  })
+  // Note: No custom linter needed - we use setDiagnostics() directly from handleDiagnostics
 
   const startState = EditorState.create({
     doc: "",
@@ -636,9 +616,7 @@ function setupEditor() {
       oneDark,
       drawSelection(), // Ensure custom cursor drawing
       languageCompartment.of(cpp()), // Default
-      diagnosticsField, // Add StateField
-      lspLinter,
-      lintGutter(),
+      lintGutter(), // Gutter for diagnostic markers
       // EditorState.readOnly.of(true), // Makes the editor readOnly for the user (to block the default from popping up)
       EditorView.contentAttributes.of({
         inputmode: "none"
@@ -686,15 +664,15 @@ function setupEditor() {
         const col = pos - line.from;
 
         // Count diagnostics (throttled to avoid performance hit)
+        // Use forEachDiagnostic from @codemirror/lint to access diagnostics
         const now = Date.now();
         if (!window.lastDiagTime || now - window.lastDiagTime > 500) {
           let errors = 0;
           let warnings = 0;
-          const diags = state.field(diagnosticsField);
-          diags.forEach(d => {
-            if (d.severity === 'error') errors++;
-            if (d.severity === 'warning') warnings++;
-          });
+          // Get diagnostics from the lint state - they're stored internally by setDiagnostics
+          // We track our own counts from handleDiagnostics instead
+          errors = window.currentErrorCount || 0;
+          warnings = window.currentWarningCount || 0;
           window.cachedErrors = errors;
           window.cachedWarnings = warnings;
           window.lastDiagTime = now;

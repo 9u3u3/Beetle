@@ -10,7 +10,113 @@ body {
 }
 
 /* CRITICAL: Force enable native scrolling */
-.cm-editor, .cm-scroller, .cm-content {
+.cm-editor,
+.cm-scroller,
+.cm-content {
   touch-action: auto !important;
   overflow: auto !important;
+}
+
+/* ===== DIAGNOSTIC STYLING ===== */
+
+/* Error underline - red squiggly */
+.cm-lintRange-error {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='3'%3E%3Cpath d='m0 3 l2 -2 l1 0 l2 2 l1 0' stroke='%23ff5555' fill='none' stroke-width='1.2'/%3E%3C/svg%3E");
+  background-position: left bottom;
+  background-repeat: repeat-x;
+  padding-bottom: 2px;
+}
+
+/* Warning underline - yellow squiggly */
+.cm-lintRange-warning {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='3'%3E%3Cpath d='m0 3 l2 -2 l1 0 l2 2 l1 0' stroke='%23ffcc00' fill='none' stroke-width='1.2'/%3E%3C/svg%3E");
+  background-position: left bottom;
+  background-repeat: repeat-x;
+  padding-bottom: 2px;
+}
+
+/* Info underline - blue squiggly */
+.cm-lintRange-info {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='3'%3E%3Cpath d='m0 3 l2 -2 l1 0 l2 2 l1 0' stroke='%2366b3ff' fill='none' stroke-width='1.2'/%3E%3C/svg%3E");
+  background-position: left bottom;
+  background-repeat: repeat-x;
+  padding-bottom: 2px;
+}
+
+/* Gutter markers */
+.cm-lint-marker {
+  width: 12px;
+  height: 12px;
+  cursor: pointer;
+}
+
+.cm-lint-marker-error {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23ff5555'/%3E%3Cpath d='M5 5l6 6M11 5l-6 6' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E");
+}
+
+.cm-lint-marker-warning {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 2l7 12H1z' fill='%23ffcc00'/%3E%3Cpath d='M8 6v4M8 11v1' stroke='%23000' stroke-width='1.5'/%3E%3C/svg%3E");
+}
+
+.cm-lint-marker-info {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%2366b3ff'/%3E%3Cpath d='M8 5v1M8 7v4' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E");
+}
+
+/* Diagnostic tooltip/panel */
+.cm-diagnostic {
+  padding: 6px 10px;
+  margin: 2px 0;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1.4;
+  min-width: 200px;
+  max-width: 400px;
+}
+
+.cm-diagnostic-error {
+  background: rgba(255, 85, 85, 0.15);
+  border-left: 4px solid #ff5555;
+  color: #ff8888;
+}
+
+.cm-diagnostic-warning {
+  background: rgba(255, 204, 0, 0.15);
+  border-left: 4px solid #ffcc00;
+  color: #ffdd66;
+}
+
+.cm-diagnostic-info {
+  background: rgba(102, 179, 255, 0.15);
+  border-left: 4px solid #66b3ff;
+  color: #88ccff;
+}
+
+/* Panel styling (shows when hovering gutter or clicking on error) */
+.cm-panel.cm-lint-panel {
+  background: #1e1e1e;
+  border-top: 1px solid #333;
+  color: #ccc;
+  padding: 8px;
+  font-size: 13px;
+}
+
+.cm-panel.cm-lint-panel ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.cm-panel.cm-lint-panel li {
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.cm-panel.cm-lint-panel li:hover {
+  background: #333;
+}
+
+/* Lint gutter */
+.cm-gutter-lint {
+  width: 16px;
 }
