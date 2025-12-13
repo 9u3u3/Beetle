@@ -104,7 +104,8 @@ Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_startAlpine(
                   "-w",
                   "/home",
 
-                  "/bin/sh",
+                  "/bin/busybox",
+                  "ash",
                   "-c",
                   command,
                   NULL};

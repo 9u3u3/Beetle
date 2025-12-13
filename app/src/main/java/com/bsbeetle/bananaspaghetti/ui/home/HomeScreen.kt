@@ -29,7 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,11 +60,8 @@ import com.bsbeetle.bananaspaghetti.ui.theme.born2bsporty
 import com.bsbeetle.bananaspaghetti.ui.theme.codaRegular
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.fileLauncher
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.BrowserSession
-import com.bsbeetle.bananaspaghetti.utils.sessionHandling.Session
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
-import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
-import com.bsbeetle.bananaspaghetti.viewmodel.DevWebViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.TerminalViewModel
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
@@ -82,296 +78,295 @@ fun HomeScreen(navController: NavController) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     var isRecentsOpen by rememberSaveable { mutableStateOf(false) }
-    val mainMenuOffset by animateDpAsState(
-        targetValue = if (isRecentsOpen) -150.dp else 0.dp,
-        animationSpec = tween(durationMillis = 400),
-        label = "mainMenuOffset"
-    ) // Animated offset or main menu
+    val mainMenuOffset by
+            animateDpAsState(
+                    targetValue = if (isRecentsOpen) -150.dp else 0.dp,
+                    animationSpec = tween(durationMillis = 400),
+                    label = "mainMenuOffset"
+            ) // Animated offset or main menu
     val targetOffset = if (isRecentsOpen) 0.dp else 300.dp
-    val recentsPanelOffset by animateDpAsState(
-        targetValue = if (isLandscape) targetOffset else targetOffset,
-        label = "recentsPanelOffset"
-    ) // Animated offset for recent panel
+    val recentsPanelOffset by
+            animateDpAsState(
+                    targetValue = if (isLandscape) targetOffset else targetOffset,
+                    label = "recentsPanelOffset"
+            ) // Animated offset for recent panel
     val context: Context = LocalContext.current
     val browserViewModel = LocalBrowserViewModel.current
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.primary),
-        contentAlignment = Alignment.Center
+            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primary),
+            contentAlignment = Alignment.Center
     ) {
-
-        ConstraintLayout(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            val (gridLayout, beetleAsciiLeft, beetleAsciiRight, vignette, mainMenu, settings, recents, recentsPanel, browser, windowPreview) = createRefs()
+        ConstraintLayout(modifier = Modifier.fillMaxSize()) {
+            val (
+                    gridLayout,
+                    beetleAsciiLeft,
+                    beetleAsciiRight,
+                    vignette,
+                    mainMenu,
+                    settings,
+                    recents,
+                    recentsPanel,
+                    browser,
+                    windowPreview) =
+                    createRefs()
 
             GridBackground(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .constrainAs(gridLayout) {
-                        top.linkTo(parent.top)
-                        bottom.linkTo(parent.bottom)
-                        start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                    })
+                    modifier =
+                            Modifier.fillMaxSize().constrainAs(gridLayout) {
+                                top.linkTo(parent.top)
+                                bottom.linkTo(parent.bottom)
+                                start.linkTo(parent.start)
+                                end.linkTo(parent.end)
+                            }
+            )
 
             beetleAscii(
-                modifier = Modifier
-                    .size(400.dp)
-                    .constrainAs(beetleAsciiLeft) {
-                        start.linkTo(parent.start)
-                        bottom.linkTo(parent.bottom)
-                    }
-                    .alpha(0.6f))
+                    modifier =
+                            Modifier.size(400.dp)
+                                    .constrainAs(beetleAsciiLeft) {
+                                        start.linkTo(parent.start)
+                                        bottom.linkTo(parent.bottom)
+                                    }
+                                    .alpha(0.6f)
+            )
 
             beetleAscii(
-                modifier = Modifier
-                    .size(400.dp)
-                    .constrainAs(beetleAsciiRight) {
-                        end.linkTo(parent.end)
-                        top.linkTo(parent.top)
-                    }
-                    .rotate(180f)
-                    .alpha(0.6f))
+                    modifier =
+                            Modifier.size(400.dp)
+                                    .constrainAs(beetleAsciiRight) {
+                                        end.linkTo(parent.end)
+                                        top.linkTo(parent.top)
+                                    }
+                                    .rotate(180f)
+                                    .alpha(0.6f)
+            )
 
             VignetteEffect(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .constrainAs(vignette) {
-                        top.linkTo(parent.top)
-                        bottom.linkTo(parent.bottom)
-                        start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                    }, intensity = 1f
+                    modifier =
+                            Modifier.fillMaxSize().constrainAs(vignette) {
+                                top.linkTo(parent.top)
+                                bottom.linkTo(parent.bottom)
+                                start.linkTo(parent.start)
+                                end.linkTo(parent.end)
+                            },
+                    intensity = 1f
             )
 
             MainMenu(
-                modifier = Modifier
-                    .size(390.dp)
-                    .then(
-                        if (isLandscape)
-                            Modifier.offset(x = mainMenuOffset, y = 0.dp)
-                        else
-                            Modifier.offset(x = 0.dp, y = mainMenuOffset)
-                    )
-                    .constrainAs(mainMenu) {
-                        top.linkTo(parent.top)
-                        bottom.linkTo(parent.bottom)
-                        start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                    },
-                navController
+                    modifier =
+                            Modifier.size(390.dp)
+                                    .then(
+                                            if (isLandscape)
+                                                    Modifier.offset(x = mainMenuOffset, y = 0.dp)
+                                            else Modifier.offset(x = 0.dp, y = mainMenuOffset)
+                                    )
+                                    .constrainAs(mainMenu) {
+                                        top.linkTo(parent.top)
+                                        bottom.linkTo(parent.bottom)
+                                        start.linkTo(parent.start)
+                                        end.linkTo(parent.end)
+                                    },
+                    navController
             )
 
             if (isLandscape) {
                 Box(
-                    modifier = Modifier
-                        .width(300.dp)
-                        .fillMaxHeight()
-                        .offset(x = recentsPanelOffset)
-                        .constrainAs(recentsPanel) {
-                            top.linkTo(parent.top)
-                            bottom.linkTo(parent.bottom)
-                            end.linkTo(parent.end)
-                        }
+                        modifier =
+                                Modifier.width(300.dp)
+                                        .fillMaxHeight()
+                                        .offset(x = recentsPanelOffset)
+                                        .constrainAs(recentsPanel) {
+                                            top.linkTo(parent.top)
+                                            bottom.linkTo(parent.bottom)
+                                            end.linkTo(parent.end)
+                                        }
                 ) {
-                    LiquidGlassBox(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(50.dp)
-                        ) {
+                    LiquidGlassBox(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                        Box(modifier = Modifier.fillMaxWidth().height(50.dp)) {
                             Text(
-                                text = "Recent",
-                                fontFamily = codaRegular,
-                                color = Color(0xFFFFFFFF),
-                                fontSize = 35.sp
+                                    text = "Recent",
+                                    fontFamily = codaRegular,
+                                    color = Color(0xFFFFFFFF),
+                                    fontSize = 35.sp
                             )
                         }
                     }
                 }
-            }
-            else {
+            } else {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(250.dp)
-                        .offset(y = recentsPanelOffset)
-                        .constrainAs(recentsPanel) {
-                            bottom.linkTo(parent.bottom)
-                            start.linkTo(parent.start)
-                            end.linkTo(parent.end)
-                        }
+                        modifier =
+                                Modifier.fillMaxWidth()
+                                        .height(250.dp)
+                                        .offset(y = recentsPanelOffset)
+                                        .constrainAs(recentsPanel) {
+                                            bottom.linkTo(parent.bottom)
+                                            start.linkTo(parent.start)
+                                            end.linkTo(parent.end)
+                                        }
                 ) {
-                    LiquidGlassBox(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                    ) {
+                    LiquidGlassBox(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(50.dp),
-                            contentAlignment = Alignment.Center
+                                modifier = Modifier.fillMaxWidth().height(50.dp),
+                                contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "Recent",
-                                fontFamily = codaRegular,
-                                color = Color(0xFFFFFFFF),
-                                fontSize = 30.sp
+                                    text = "Recent",
+                                    fontFamily = codaRegular,
+                                    color = Color(0xFFFFFFFF),
+                                    fontSize = 30.sp
                             )
                         }
                     }
                 }
-
             }
             Image(
-                painter = painterResource(R.drawable.settings_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
-                contentDescription = "Settings",
-                modifier = Modifier
-                    .size(20.dp)
-                    .constrainAs(settings) {
-                        top.linkTo(parent.top, margin = 20.dp)
-                        end.linkTo(parent.end, margin = 20.dp)
-                    }
-                    .clickable(
-                        onClick = {
-                            BrowserSession(context)
-                            browserViewModel.setDevWebView(SessionList.sessions[SessionList.activeSessionIndex!!].getOrInitView())
-                            navController.navigate(Screen.Settings.route)
-                        }))
+                    painter =
+                            painterResource(
+                                    R.drawable.settings_24dp_e3e3e3_fill0_wght400_grad0_opsz24
+                            ),
+                    contentDescription = "Settings",
+                    modifier =
+                            Modifier.size(20.dp)
+                                    .constrainAs(settings) {
+                                        top.linkTo(parent.top, margin = 20.dp)
+                                        end.linkTo(parent.end, margin = 20.dp)
+                                    }
+                                    .clickable(
+                                            onClick = {
+                                                BrowserSession(context)
+                                                browserViewModel.setDevWebView(
+                                                        SessionList.sessions[
+                                                                        SessionList
+                                                                                .activeSessionIndex!!]
+                                                                .getOrInitView()
+                                                )
+                                                navController.navigate(Screen.Settings.route)
+                                            }
+                                    )
+            )
 
             Image(
-                painter = painterResource(R.drawable.web_icon),
-                contentDescription = "browser",
-                modifier = Modifier
-                    .size(20.dp)
-                    .constrainAs(browser) {
-                        top.linkTo(settings.bottom, margin = 20.dp)
-                        end.linkTo(parent.end, margin = 20.dp)
-                    }
-                    .clickable(
-                        onClick = {
-                            BrowserSession(context)
-                            browserViewModel.setDevWebView(SessionList.sessions[SessionList.activeSessionIndex!!].getOrInitView())
-                            navController.navigate(Screen.Browser.route)
-                        }))
+                    painter = painterResource(R.drawable.web_icon),
+                    contentDescription = "browser",
+                    modifier =
+                            Modifier.size(20.dp)
+                                    .constrainAs(browser) {
+                                        top.linkTo(settings.bottom, margin = 20.dp)
+                                        end.linkTo(parent.end, margin = 20.dp)
+                                    }
+                                    .clickable(
+                                            onClick = {
+                                                BrowserSession(context)
+                                                browserViewModel.setDevWebView(
+                                                        SessionList.sessions[
+                                                                        SessionList
+                                                                                .activeSessionIndex!!]
+                                                                .getOrInitView()
+                                                )
+                                                navController.navigate(Screen.Browser.route)
+                                            }
+                                    )
+            )
 
             Image(
-                painter = painterResource(R.drawable.zoom_in),
-                contentDescription = "window preview",
-                modifier = Modifier
-                    .size(20.dp)
-                    .constrainAs(windowPreview) {
-                        top.linkTo(browser.bottom, margin = 20.dp)
-                        end.linkTo(parent.end, margin = 20.dp)
-                    }
-                    .clickable(
-                        onClick = {
-                            navController.navigate(Screen.ZoomOut.route)
-                        }))
+                    painter = painterResource(R.drawable.zoom_in),
+                    contentDescription = "window preview",
+                    modifier =
+                            Modifier.size(20.dp)
+                                    .constrainAs(windowPreview) {
+                                        top.linkTo(browser.bottom, margin = 20.dp)
+                                        end.linkTo(parent.end, margin = 20.dp)
+                                    }
+                                    .clickable(
+                                            onClick = {
+                                                navController.navigate(Screen.ZoomOut.route)
+                                            }
+                                    )
+            )
 
             Image(
-                painter = painterResource(R.drawable.history_2_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
-                contentDescription = "Recents",
-                modifier = Modifier
-                    .size(20.dp)
-                    .constrainAs(recents) {
-                        top.linkTo(windowPreview.bottom, margin = 20.dp)
-                        end.linkTo(parent.end, margin = 20.dp)
-                    }
-                    .clickable(
-                        onClick = {
-                            isRecentsOpen = !isRecentsOpen
-                        }))
-            
+                    painter =
+                            painterResource(
+                                    R.drawable.history_2_24dp_e3e3e3_fill0_wght400_grad0_opsz24
+                            ),
+                    contentDescription = "Recents",
+                    modifier =
+                            Modifier.size(20.dp)
+                                    .constrainAs(recents) {
+                                        top.linkTo(windowPreview.bottom, margin = 20.dp)
+                                        end.linkTo(parent.end, margin = 20.dp)
+                                    }
+                                    .clickable(onClick = { isRecentsOpen = !isRecentsOpen })
+            )
+
             // Extensions button
             Image(
-                painter = painterResource(R.drawable.extension),
-                contentDescription = "Extensions",
-                modifier = Modifier
-                    .size(20.dp)
-                    .constrainAs(createRef()) {
-                        top.linkTo(recents.bottom, margin = 20.dp)
-                        end.linkTo(parent.end, margin = 20.dp)
-                    }
-                    .clickable(
-                        onClick = {
-                            navController.navigate(Screen.Extensions.route)
-                        }))
+                    painter = painterResource(R.drawable.extension),
+                    contentDescription = "Extensions",
+                    modifier =
+                            Modifier.size(20.dp)
+                                    .constrainAs(createRef()) {
+                                        top.linkTo(recents.bottom, margin = 20.dp)
+                                        end.linkTo(parent.end, margin = 20.dp)
+                                    }
+                                    .clickable(
+                                            onClick = {
+                                                navController.navigate(Screen.Extensions.route)
+                                            }
+                                    )
+            )
         }
     }
 }
 
 @Composable
-fun MainMenu(
-    modifier: Modifier = Modifier,
-    navController: NavController
-) {
+fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
     val context = LocalContext.current
     val launcher = fileLauncher(context, navController)
     val buttonFontSize = 30.sp
     val terminalViewModel: TerminalViewModel = LocalTerminalViewModel.current
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(10.dp),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = modifier.fillMaxSize().padding(10.dp), contentAlignment = Alignment.Center) {
         Column {
-
             Row(
-                modifier = Modifier
-                    .width(400.dp)
-                    .height(80.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start
+                    modifier = Modifier.width(400.dp).height(80.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
             ) {
                 Image(
-                    painter = painterResource(R.drawable.beetle_logo),
-                    contentDescription = "Beetle logo",
-                    modifier = Modifier
-                        .size(65.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        painter = painterResource(R.drawable.beetle_logo),
+                        contentDescription = "Beetle logo",
+                        modifier = Modifier.size(65.dp).clip(RoundedCornerShape(12.dp))
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Text(
-                    text = "BEETLE",
-                    fontFamily = KarmaticFont,
-                    color = Color.White,
-                    fontSize = 45.sp,
-                    style = TextStyle(
-                        shadow = Shadow(
-                            color = Color(0xFFFFFFFF),
-                            offset = Offset(0f, 0f),
-                            blurRadius = 15f
-                        )
-                    )
+                        text = "cuoh",
+                        fontFamily = KarmaticFont,
+                        color = Color.White,
+                        fontSize = 45.sp,
+                        style =
+                                TextStyle(
+                                        shadow =
+                                                Shadow(
+                                                        color = Color(0xFFFFFFFF),
+                                                        offset = Offset(0f, 0f),
+                                                        blurRadius = 15f
+                                                )
+                                )
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                Box(
-                   modifier = Modifier
-                       .fillMaxSize()
-                ) {
+                Box(modifier = Modifier.fillMaxSize()) {
                     Text(
-                        text = "v1.0.0",
-                        color = Color(0xFF666666),
-                        fontSize = 18.sp,
-                        fontFamily = born2bsporty,
-                        modifier = Modifier
-                            .padding(top = 8.dp)
-                            .align(Alignment.BottomEnd)
+                            text = "v1.0.0",
+                            color = Color(0xFF666666),
+                            fontSize = 18.sp,
+                            fontFamily = born2bsporty,
+                            modifier = Modifier.padding(top = 8.dp).align(Alignment.BottomEnd)
                     )
                 }
             }
@@ -385,107 +380,121 @@ fun MainMenu(
             }
 
             Row(
-                modifier = Modifier.width(400.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier.width(400.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(50.dp)
-                        .clickable(
-                            onClick = {
-                                val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                                    addCategory(Intent.CATEGORY_OPENABLE)
-                                    type = "*/*"
-                                }
-                                launcher.launch(intent)
-                            })
+                        modifier =
+                                Modifier.weight(1f)
+                                        .height(50.dp)
+                                        .clickable(
+                                                onClick = {
+                                                    val intent =
+                                                            Intent(Intent.ACTION_CREATE_DOCUMENT)
+                                                                    .apply {
+                                                                        addCategory(
+                                                                                Intent.CATEGORY_OPENABLE
+                                                                        )
+                                                                        type = "*/*"
+                                                                    }
+                                                    launcher.launch(intent)
+                                                }
+                                        )
                 ) {
                     Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .drawBackdrop(
-                                backdrop = backdrop,
-                                shape = { RoundedCornerShape(8.dp) },
-                                effects = {
-                                    vibrancy()
-                                    blur(15f.dp.toPx())
-                                    lens(25f.dp.toPx(), 50f.dp.toPx())
-                                },
-                                onDrawSurface = {
-                                    drawRect(Color.White.copy(alpha = 0.01f))
-                                }
-                            )
+                            modifier =
+                                    Modifier.matchParentSize()
+                                            .drawBackdrop(
+                                                    backdrop = backdrop,
+                                                    shape = { RoundedCornerShape(8.dp) },
+                                                    effects = {
+                                                        vibrancy()
+                                                        blur(15f.dp.toPx())
+                                                        lens(25f.dp.toPx(), 50f.dp.toPx())
+                                                    },
+                                                    onDrawSurface = {
+                                                        drawRect(Color.White.copy(alpha = 0.01f))
+                                                    }
+                                            )
                     )
 
                     Box(
-                        modifier = Modifier.matchParentSize(),
-                        contentAlignment = Alignment.Center
+                            modifier = Modifier.matchParentSize(),
+                            contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "New file",
-                            fontSize = buttonFontSize,
-                            fontFamily = born2bsporty,
-                            color = Color(0xFF989898),
-                            style = TextStyle(
-                                shadow = Shadow(
-                                    color = Color(0xFF989898),
-                                    offset = Offset(0f, 0f),
-                                    blurRadius = 15f
-                                )
-                            ),
-                            modifier = Modifier.padding(3.dp)
+                                text = "New file",
+                                fontSize = buttonFontSize,
+                                fontFamily = born2bsporty,
+                                color = Color(0xFF989898),
+                                style =
+                                        TextStyle(
+                                                shadow =
+                                                        Shadow(
+                                                                color = Color(0xFF989898),
+                                                                offset = Offset(0f, 0f),
+                                                                blurRadius = 15f
+                                                        )
+                                        ),
+                                modifier = Modifier.padding(3.dp)
                         )
                     }
                 }
 
                 Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(50.dp)
-                        .clickable(
-                            onClick = {
-                                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                                    addCategory(Intent.CATEGORY_OPENABLE)
-                                    type = "*/*"
-                                }
-                                launcher.launch(intent)
-                            })
+                        modifier =
+                                Modifier.weight(1f)
+                                        .height(50.dp)
+                                        .clickable(
+                                                onClick = {
+                                                    val intent =
+                                                            Intent(Intent.ACTION_OPEN_DOCUMENT)
+                                                                    .apply {
+                                                                        addCategory(
+                                                                                Intent.CATEGORY_OPENABLE
+                                                                        )
+                                                                        type = "*/*"
+                                                                    }
+                                                    launcher.launch(intent)
+                                                }
+                                        )
                 ) {
                     Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .drawBackdrop(
-                                backdrop = backdrop,
-                                shape = { RoundedCornerShape(8.dp) },
-                                effects = {
-                                    vibrancy()
-                                    blur(15f.dp.toPx())
-                                    lens(25f.dp.toPx(), 50f.dp.toPx())
-                                },
-                                onDrawSurface = {
-                                    drawRect(Color.White.copy(alpha = 0.01f))
-                                }
-                            )
+                            modifier =
+                                    Modifier.matchParentSize()
+                                            .drawBackdrop(
+                                                    backdrop = backdrop,
+                                                    shape = { RoundedCornerShape(8.dp) },
+                                                    effects = {
+                                                        vibrancy()
+                                                        blur(15f.dp.toPx())
+                                                        lens(25f.dp.toPx(), 50f.dp.toPx())
+                                                    },
+                                                    onDrawSurface = {
+                                                        drawRect(Color.White.copy(alpha = 0.01f))
+                                                    }
+                                            )
                     )
 
                     Box(
-                        modifier = Modifier.matchParentSize(),
-                        contentAlignment = Alignment.Center
+                            modifier = Modifier.matchParentSize(),
+                            contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Open file",
-                            fontSize = buttonFontSize,
-                            fontFamily = born2bsporty,
-                            color = Color(0xFF989898),
-                            style = TextStyle(
-                                shadow = Shadow(
-                                    color = Color(0xFF989898),
-                                    offset = Offset(0f, 0f),
-                                    blurRadius = 15f
-                                )
-                            ),
-                            modifier = Modifier.padding(3.dp)
+                                text = "Open file",
+                                fontSize = buttonFontSize,
+                                fontFamily = born2bsporty,
+                                color = Color(0xFF989898),
+                                style =
+                                        TextStyle(
+                                                shadow =
+                                                        Shadow(
+                                                                color = Color(0xFF989898),
+                                                                offset = Offset(0f, 0f),
+                                                                blurRadius = 15f
+                                                        )
+                                        ),
+                                modifier = Modifier.padding(3.dp)
                         )
                     }
                 }
@@ -494,46 +503,50 @@ fun MainMenu(
             Spacer(modifier = Modifier.height(10.dp))
 
             Box(
-                modifier = Modifier
-                    .width(400.dp)
-                    .height(50.dp)
-                    .clickable(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
-                            launcher.launch(intent)
-                        })
+                    modifier =
+                            Modifier.width(400.dp)
+                                    .height(50.dp)
+                                    .clickable(
+                                            onClick = {
+                                                val intent =
+                                                        Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+                                                launcher.launch(intent)
+                                            }
+                                    )
             ) {
                 Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .drawBackdrop(
-                            backdrop = backdrop,
-                            shape = { RoundedCornerShape(8.dp) },
-                            effects = {
-                                vibrancy()
-                                blur(15f.dp.toPx())
-                                lens(25f.dp.toPx(), 50f.dp.toPx())
-                            },
-                            onDrawSurface = {
-                                drawRect(Color.White.copy(alpha = 0.01f))
-                            }
-                        )
+                        modifier =
+                                Modifier.matchParentSize()
+                                        .drawBackdrop(
+                                                backdrop = backdrop,
+                                                shape = { RoundedCornerShape(8.dp) },
+                                                effects = {
+                                                    vibrancy()
+                                                    blur(15f.dp.toPx())
+                                                    lens(25f.dp.toPx(), 50f.dp.toPx())
+                                                },
+                                                onDrawSurface = {
+                                                    drawRect(Color.White.copy(alpha = 0.01f))
+                                                }
+                                        )
                 )
 
                 Box(modifier = Modifier.matchParentSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "Open folder",
-                        fontSize = buttonFontSize,
-                        fontFamily = born2bsporty,
-                        color = Color(0xFF989898),
-                        style = TextStyle(
-                            shadow = Shadow(
-                                color = Color(0xFF989898),
-                                offset = Offset(0f, 0f),
-                                blurRadius = 15f
-                            )
-                        ),
-                        modifier = Modifier.padding(3.dp)
+                            text = "Open folder",
+                            fontSize = buttonFontSize,
+                            fontFamily = born2bsporty,
+                            color = Color(0xFF989898),
+                            style =
+                                    TextStyle(
+                                            shadow =
+                                                    Shadow(
+                                                            color = Color(0xFF989898),
+                                                            offset = Offset(0f, 0f),
+                                                            blurRadius = 15f
+                                                    )
+                                    ),
+                            modifier = Modifier.padding(3.dp)
                     )
                 }
             }
@@ -541,48 +554,58 @@ fun MainMenu(
             Spacer(modifier = Modifier.height(10.dp))
 
             Box(
-                modifier = Modifier
-                    .width(400.dp)
-                    .height(50.dp)
-                    .clickable(
-                        onClick = {
-                            // Terminal Session handler (Will make a function for this later im to lazy to do that currently and this is also in the testing)
-                            TerminalSession(context.applicationContext)
-                            terminalViewModel.setTerminalWebView(SessionList.sessions[SessionList.activeSessionIndex!!].view!!)
-                            navController.navigate(Screen.Terminal.route)
-                        })
+                    modifier =
+                            Modifier.width(400.dp)
+                                    .height(50.dp)
+                                    .clickable(
+                                            onClick = {
+                                                // Terminal Session handler (Will make a function
+                                                // for this later im to lazy to do that currently
+                                                // and this is also in the testing)
+                                                TerminalSession(context.applicationContext)
+                                                terminalViewModel.setTerminalWebView(
+                                                        SessionList.sessions[
+                                                                        SessionList
+                                                                                .activeSessionIndex!!]
+                                                                .view!!
+                                                )
+                                                navController.navigate(Screen.Terminal.route)
+                                            }
+                                    )
             ) {
                 Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .drawBackdrop(
-                            backdrop = backdrop,
-                            shape = { RoundedCornerShape(8.dp) },
-                            effects = {
-                                vibrancy()
-                                blur(15f.dp.toPx())
-                                lens(25f.dp.toPx(), 50f.dp.toPx())
-                            },
-                            onDrawSurface = {
-                                drawRect(Color.White.copy(alpha = 0.01f))
-                            }
-                        )
+                        modifier =
+                                Modifier.matchParentSize()
+                                        .drawBackdrop(
+                                                backdrop = backdrop,
+                                                shape = { RoundedCornerShape(8.dp) },
+                                                effects = {
+                                                    vibrancy()
+                                                    blur(15f.dp.toPx())
+                                                    lens(25f.dp.toPx(), 50f.dp.toPx())
+                                                },
+                                                onDrawSurface = {
+                                                    drawRect(Color.White.copy(alpha = 0.01f))
+                                                }
+                                        )
                 )
 
                 Box(modifier = Modifier.matchParentSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "Terminal",
-                        fontSize = buttonFontSize,
-                        fontFamily = born2bsporty,
-                        color = Color(0xFF989898),
-                        style = TextStyle(
-                            shadow = Shadow(
-                                color = Color(0xFF989898),
-                                offset = Offset(0f, 0f),
-                                blurRadius = 15f
-                            )
-                        ),
-                        modifier = Modifier.padding(3.dp)
+                            text = "Terminal",
+                            fontSize = buttonFontSize,
+                            fontFamily = born2bsporty,
+                            color = Color(0xFF989898),
+                            style =
+                                    TextStyle(
+                                            shadow =
+                                                    Shadow(
+                                                            color = Color(0xFF989898),
+                                                            offset = Offset(0f, 0f),
+                                                            blurRadius = 15f
+                                                    )
+                                    ),
+                            modifier = Modifier.padding(3.dp)
                     )
                 }
             }
