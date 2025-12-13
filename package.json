@@ -23,6 +23,7 @@
     "@codemirror/autocomplete": "^6.19.1",
     "@codemirror/commands": "^6.10.0",
     "@codemirror/lang-cpp": "^6.0.3",
+<<<<<<< HEAD
     "@codemirror/lang-css": "^6.3.1",
     "@codemirror/lang-html": "^6.4.11",
     "@codemirror/lang-java": "^6.0.2",
@@ -31,6 +32,9 @@
     "@codemirror/lang-markdown": "^6.5.0",
     "@codemirror/lang-python": "^6.2.1",
     "@codemirror/lang-rust": "^6.0.2",
+=======
+    "@codemirror/lang-python": "^6.2.1",
+>>>>>>> bce1bd3c88405ca2ba91e3f0dba45b8bbaf33cf5
     "@codemirror/lint": "^6.9.1",
     "@codemirror/state": "^6.5.2",
     "@codemirror/theme-one-dark": "^6.1.3",

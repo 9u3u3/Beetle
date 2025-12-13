@@ -55,7 +55,9 @@ fun fileLauncher(context: Context, navController: NavController): ActivityResult
                         fileViewModel.selectedFolderUri = uri
 
                         // Adding to the newly created session here
-                        EditorSession(context.applicationContext)
+                        val folderDoc = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, uri)
+                        val session = EditorSession(context.applicationContext, folderDoc?.name ?: "Project")
+                        session.projectRoot = folderDoc
                         editorViewModel.setEditorWebView(SessionList.sessions[SessionList.activeSessionIndex!!].view!!)
 
                         navController.navigate(Screen.OpenFolder.route)

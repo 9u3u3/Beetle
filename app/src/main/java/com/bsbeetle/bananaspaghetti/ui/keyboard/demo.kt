@@ -1,5 +1,6 @@
 package com.bsbeetle.bananaspaghetti.ui.keyboard
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -20,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
+import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
@@ -33,13 +35,17 @@ import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 
 @Composable
-fun DemoEditorUi () {
+fun DemoEditorUi(navController: NavController) {
 
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
     val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
     val demoSession: Session = SessionList.sessions[SessionList.activeSessionIndex!!]
+
+    BackHandler {
+        navController.popBackStack()
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -48,7 +54,15 @@ fun DemoEditorUi () {
     }
 
     // for selecting the layout.
+<<<<<<< HEAD
     val layout = if (uiState.keyboardMode == 1) KeyboardLayout.editorLayout else KeyboardLayout.qwertyLayout
+=======
+    val layout = when (uiState.keyboardPage) {
+        0 -> KeyboardLayout.qwertyLayout    // Alphabets
+        1 -> KeyboardLayout.editorLayout    // Symbols
+        else -> KeyboardLayout.terminalLayout // Navigation
+    }
+>>>>>>> bce1bd3c88405ca2ba91e3f0dba45b8bbaf33cf5
 
     Box {
         ConstraintLayout(modifier = Modifier.fillMaxSize()) {
@@ -63,6 +77,7 @@ fun DemoEditorUi () {
                         side = KeyboardSide.LEFT,
                         isCapsLockOn = uiState.isCapsLockOn,
                         isShiftOn = uiState.isShiftOn,
+                        isCtrlOn = uiState.isCtrlOn,
                         onKeyEvent = keyboardViewModel::onKeyEvent,
                         modifier = Modifier.constrainAs(leftKeyboardRef) {
                             start.linkTo(parent.start)
@@ -109,6 +124,7 @@ fun DemoEditorUi () {
                         side = KeyboardSide.RIGHT,
                         isCapsLockOn = uiState.isCapsLockOn,
                         isShiftOn = uiState.isShiftOn,
+                        isCtrlOn = uiState.isCtrlOn,
                         onKeyEvent = keyboardViewModel::onKeyEvent,
                         modifier = Modifier.constrainAs(rightKeyboardRef) {
                             end.linkTo(parent.end)

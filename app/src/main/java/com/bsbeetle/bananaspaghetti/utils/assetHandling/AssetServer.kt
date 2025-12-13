@@ -10,6 +10,17 @@ class AssetServer(private val context: Context, port: Int = 8080) : NanoHTTPD(po
 
     override fun serve(session: IHTTPSession?): Response {
         val uri = session?.uri ?: "/index.html"
+        
+        // Serve plugins from filesDir to allow dynamic loading via HTTP
+        if (uri.startsWith("/plugins/")) {
+            val relativePath = uri.removePrefix("/")
+            val file = java.io.File(context.filesDir, relativePath)
+            if (file.exists()) {
+                val mime = "application/javascript"
+                return newFixedLengthResponse(Response.Status.OK, mime, java.io.FileInputStream(file), file.length())
+            }
+        }
+
         val assetPath = "editor$uri" // maps /index.html -> assets/editor/index.html
 
         return try {

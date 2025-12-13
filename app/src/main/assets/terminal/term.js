@@ -1,6 +1,6 @@
 const term = new window.Terminal({
   cursorBlink: true,
-  fontSize: 14,
+  fontSize: 11,
   fontFamily: "monospace",
 });
 

@@ -51,9 +51,7 @@ fun BrowserScreen(navController: NavController) {
     Log.d("BrowserScreen", "Loading the Browser screen, Session type: ${SessionList.sessions[SessionList.activeSessionIndex!!].type}")
 
     BackHandler {
-        navController.navigate(Screen.Home.route) {
-            popUpTo(Screen.Browser.route) { inclusive = true }
-        }
+        navController.popBackStack()
     }
 
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
@@ -70,7 +68,15 @@ fun BrowserScreen(navController: NavController) {
 
     var showSidebar by rememberSaveable { mutableStateOf(false) }
 
+<<<<<<< HEAD
     val layout = if (uiState.keyboardMode == 1) KeyboardLayout.editorLayout else KeyboardLayout.qwertyLayout
+=======
+    val layout = when (uiState.keyboardPage) {
+        0 -> KeyboardLayout.qwertyLayout    // Alphabets
+        1 -> KeyboardLayout.editorLayout    // Symbols
+        else -> KeyboardLayout.terminalLayout // Navigation
+    }
+>>>>>>> bce1bd3c88405ca2ba91e3f0dba45b8bbaf33cf5
 
     Box {
         ConstraintLayout(modifier = Modifier.fillMaxSize()) {
@@ -139,7 +145,7 @@ fun BrowserScreen(navController: NavController) {
                 if (uiState.isLeftKeyboardVisible) {
                     SplitKeyboardHalf(
                         layout, KeyboardSide.LEFT, uiState.isCapsLockOn,
-                        uiState.isShiftOn, keyboardViewModel::onKeyEvent,
+                        uiState.isShiftOn, uiState.isCtrlOn, keyboardViewModel::onKeyEvent,
                         Modifier.constrainAs(leftKb) {
                             start.linkTo(parent.start)
                             bottom.linkTo(parent.bottom)
@@ -152,7 +158,7 @@ fun BrowserScreen(navController: NavController) {
                 if (uiState.isRightKeyboardVisible) {
                     SplitKeyboardHalf(
                         layout, KeyboardSide.RIGHT, uiState.isCapsLockOn,
-                        uiState.isShiftOn, keyboardViewModel::onKeyEvent,
+                        uiState.isShiftOn, uiState.isCtrlOn, keyboardViewModel::onKeyEvent,
                         Modifier.constrainAs(rightKb) {
                             end.linkTo(parent.end)
                             bottom.linkTo(parent.bottom)

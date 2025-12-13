@@ -54,16 +54,21 @@ fun InitialTerminalUI(navController: NavController) {
 
     var showSidebar by rememberSaveable { mutableStateOf(false) }
 
+<<<<<<< HEAD
     val layout = when (uiState.keyboardMode) {
         1 -> KeyboardLayout.terminalLayout
         2 -> KeyboardLayout.terminalSymbolsLayout
         else -> KeyboardLayout.qwertyLayout
+=======
+    val layout = when (uiState.keyboardPage) {
+        0 -> KeyboardLayout.qwertyLayout    // Alphabets
+        1 -> KeyboardLayout.editorLayout    // Symbols
+        else -> KeyboardLayout.terminalLayout // Navigation
+>>>>>>> bce1bd3c88405ca2ba91e3f0dba45b8bbaf33cf5
     }
 
     BackHandler {
-        navController.navigate(Screen.Home.route) {
-            popUpTo(Screen.Terminal.route) { inclusive = true }
-        }
+        navController.popBackStack()
     }
 
     Box {
@@ -134,7 +139,7 @@ fun InitialTerminalUI(navController: NavController) {
                 if (uiState.isLeftKeyboardVisible) {
                     SplitKeyboardHalf(
                         layout, KeyboardSide.LEFT, uiState.isCapsLockOn,
-                        uiState.isShiftOn, keyboardViewModel::onKeyEvent,
+                        uiState.isShiftOn, uiState.isCtrlOn, keyboardViewModel::onKeyEvent,
                         Modifier.constrainAs(leftKb) {
                             start.linkTo(parent.start)
                             bottom.linkTo(parent.bottom)
@@ -147,7 +152,7 @@ fun InitialTerminalUI(navController: NavController) {
                 if (uiState.isRightKeyboardVisible) {
                     SplitKeyboardHalf(
                         layout, KeyboardSide.RIGHT, uiState.isCapsLockOn,
-                        uiState.isShiftOn, keyboardViewModel::onKeyEvent,
+                        uiState.isShiftOn, uiState.isCtrlOn, keyboardViewModel::onKeyEvent,
                         Modifier.constrainAs(rightKb) {
                             end.linkTo(parent.end)
                             bottom.linkTo(parent.bottom)

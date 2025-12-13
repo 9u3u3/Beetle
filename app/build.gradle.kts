@@ -142,8 +142,17 @@ dependencies {
 
     implementation("io.coil-kt:coil-compose:2.5.0")
     implementation("io.coil-kt:coil-svg:2.5.0")
+<<<<<<< HEAD
     implementation(libs.jgit)
     implementation(libs.jgit.ssh.jsch)
     implementation(libs.jsch)
     implementation(libs.androidx.security.crypto)
+=======
+
+    // Ktor Client
+    implementation("io.ktor:ktor-client-core:$ktorVersion")
+    implementation("io.ktor:ktor-client-cio:$ktorVersion")
+    implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+>>>>>>> bce1bd3c88405ca2ba91e3f0dba45b8bbaf33cf5
 }

@@ -1,4 +1,4 @@
-set -e  # Exit immediately on failure
+set -ex  # Exit immediately on failure and print commands
 
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/share/bin:/usr/share/sbin:/usr/local/bin:/usr/local/sbin:/system/bin:/system/xbin:$PREFIX/local/bin
 export HOME=/home
@@ -30,7 +30,7 @@ export SHELL=\$(command -v bash)
 
 EOF
     fi
-    exec "clangd --log=error --background-index --completion-style=detailed --header-insertion=never --clang-tidy=false"
+    exec clangd --log=error --background-index --limit-results=10 --header-insertion=never --clang-tidy=false
 else
     exec "$@"
 fi
