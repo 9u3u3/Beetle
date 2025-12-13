@@ -281,9 +281,11 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
 
     if (showNewBranchDialog) {
         NewBranchDialog(
+                branches = uiState.branches,
+                currentBranch = uiState.currentBranch,
                 onDismiss = { showNewBranchDialog = false },
-                onCreate = { name ->
-                    viewModel.createBranch(name)
+                onCreate = { name, sourceBranch ->
+                    viewModel.createBranchFrom(name, sourceBranch)
                     showNewBranchDialog = false
                 }
         )
@@ -308,8 +310,9 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                 onFetch = { viewModel.fetch() },
                 onPull = { viewModel.pull() },
                 onPush = { viewModel.push() },
+                onStash = { viewModel.stash() },
+                onStashPop = { viewModel.stashPop() },
                 onHistory = { showHistoryDialog = true },
-                onSettings = { showRemoteDialog = true },
                 onRefresh = { viewModel.refreshStatus() },
                 onSshSetupClick = { showSshSetupDialog = true },
                 sshKeysConfigured = uiState.sshKeysConfigured
@@ -581,8 +584,9 @@ private fun GitHeader(
         onFetch: () -> Unit,
         onPull: () -> Unit,
         onPush: () -> Unit,
+        onStash: () -> Unit,
+        onStashPop: () -> Unit,
         onHistory: () -> Unit,
-        onSettings: () -> Unit,
         onRefresh: () -> Unit,
         onSshSetupClick: () -> Unit,
         sshKeysConfigured: Boolean
@@ -669,11 +673,60 @@ private fun GitHeader(
                 modifier = Modifier.fillMaxWidth().padding(4.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            ActionButton(Icons.Rounded.CloudDownload, "Fetch", onFetch)
             ActionButton(Icons.Rounded.ArrowDownward, "Pull", onPull)
             ActionButton(Icons.Rounded.ArrowUpward, "Push", onPush)
+            ActionButton(Icons.Rounded.Sync, "Fetch", onFetch)
+
+            // Stash Dropdown
+            var showStashMenu by remember { mutableStateOf(false) }
+            Box {
+                IconButton(onClick = { showStashMenu = true }, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                            Icons.Rounded.Archive,
+                            "Stash",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(18.dp)
+                    )
+                }
+                DropdownMenu(
+                        expanded = showStashMenu,
+                        onDismissRequest = { showStashMenu = false },
+                        modifier = Modifier.background(BgCard)
+                ) {
+                    DropdownMenuItem(
+                            text = { Text("Stash Changes", color = TextPrimary) },
+                            onClick = {
+                                onStash()
+                                showStashMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(
+                                        Icons.Rounded.Archive,
+                                        null,
+                                        tint = AccentBlue,
+                                        modifier = Modifier.size(18.dp)
+                                )
+                            }
+                    )
+                    DropdownMenuItem(
+                            text = { Text("Pop Stash", color = TextPrimary) },
+                            onClick = {
+                                onStashPop()
+                                showStashMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(
+                                        Icons.Rounded.Unarchive,
+                                        null,
+                                        tint = AccentGreen,
+                                        modifier = Modifier.size(18.dp)
+                                )
+                            }
+                    )
+                }
+            }
+
             ActionButton(Icons.Rounded.History, "History", onHistory)
-            ActionButton(Icons.Rounded.Settings, "Settings", onSettings)
 
             // SSH Setup Button with visual indicator
             Box(
@@ -1185,10 +1238,20 @@ private fun BranchItem(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NewBranchDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
+private fun NewBranchDialog(
+        branches: List<BranchInfo>,
+        currentBranch: String,
+        onDismiss: () -> Unit,
+        onCreate: (name: String, sourceBranch: String) -> Unit
+) {
     var name by remember { mutableStateOf("") }
+    var sourceBranch by remember { mutableStateOf(currentBranch) }
+    var expanded by remember { mutableStateOf(false) }
+
     StyledDialog(title = "Create Branch", onDismiss = onDismiss) {
+        // Branch Name
         OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
@@ -1204,9 +1267,64 @@ private fun NewBranchDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
                                 cursorColor = AccentBlue
                         )
         )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Source Branch Dropdown
+        Text("Create from:", color = TextSecondary, fontSize = 12.sp)
+        Spacer(modifier = Modifier.height(4.dp))
+
+        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+            OutlinedTextField(
+                    value = sourceBranch,
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                    },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(),
+                    colors =
+                            OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = AccentBlue,
+                                    unfocusedBorderColor = BorderColor,
+                                    cursorColor = AccentBlue
+                            )
+            )
+
+            ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.background(BgCard)
+            ) {
+                branches.forEach { branch ->
+                    DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (branch.isCurrent) {
+                                        Icon(
+                                                Icons.Rounded.Check,
+                                                null,
+                                                tint = AccentGreen,
+                                                modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                    }
+                                    Text(branch.name, color = TextPrimary)
+                                }
+                            },
+                            onClick = {
+                                sourceBranch = branch.name
+                                expanded = false
+                            }
+                    )
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
+
         Button(
-                onClick = { onCreate(name) },
+                onClick = { onCreate(name, sourceBranch) },
                 enabled = name.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),

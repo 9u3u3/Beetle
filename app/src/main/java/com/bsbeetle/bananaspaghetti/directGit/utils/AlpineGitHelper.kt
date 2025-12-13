@@ -133,12 +133,173 @@ class AlpineGitHelper(private val context: Context) {
 
     /** Test SSH connection to a host (useful for debugging) */
     suspend fun testSshConnection(host: String = "github.com"): Result<String> {
-        // Run a simple SSH test that should fail fast if there's an issue
         return terminalManager.executeGitCommand(
                 "/home",
                 "ssh -T -i /home/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes -o ConnectTimeout=10 git@$host",
                 showInTerminal = true
         )
+    }
+
+    // ============== Branch Management ==============
+
+    /** Create a new branch from a source branch */
+    suspend fun createBranchFrom(
+            repoPath: String,
+            newBranch: String,
+            sourceBranch: String
+    ): Result<String> {
+        return terminalManager.executeGitCommand(
+                repoPath,
+                "git checkout -b '$newBranch' '$sourceBranch'",
+                showInTerminal = true
+        )
+    }
+
+    /** Delete a local branch */
+    suspend fun deleteBranchLocal(
+            repoPath: String,
+            branchName: String,
+            force: Boolean = false
+    ): Result<String> {
+        val flag = if (force) "-D" else "-d"
+        return terminalManager.executeGitCommand(
+                repoPath,
+                "git branch $flag '$branchName'",
+                showInTerminal = true
+        )
+    }
+
+    /** Delete a remote branch */
+    suspend fun deleteBranchRemote(repoPath: String, branchName: String): Result<String> {
+        ensureSshRemote(repoPath)
+        return terminalManager.executeGitCommand(
+                repoPath,
+                "git push origin --delete '$branchName'",
+                showInTerminal = true
+        )
+    }
+
+    /** Rename a branch */
+    suspend fun renameBranch(repoPath: String, oldName: String, newName: String): Result<String> {
+        return terminalManager.executeGitCommand(
+                repoPath,
+                "git branch -m '$oldName' '$newName'",
+                showInTerminal = true
+        )
+    }
+
+    /** Merge a branch into current branch */
+    suspend fun merge(repoPath: String, branchToMerge: String): Result<String> {
+        return terminalManager.executeGitCommand(
+                repoPath,
+                "git merge '$branchToMerge'",
+                showInTerminal = true
+        )
+    }
+
+    /** Rebase current branch onto another branch */
+    suspend fun rebase(repoPath: String, ontoBranch: String): Result<String> {
+        return terminalManager.executeGitCommand(
+                repoPath,
+                "git rebase '$ontoBranch'",
+                showInTerminal = true
+        )
+    }
+
+    /** Abort a merge in progress */
+    suspend fun mergeAbort(repoPath: String): Result<String> {
+        return terminalManager.executeGitCommand(
+                repoPath,
+                "git merge --abort",
+                showInTerminal = true
+        )
+    }
+
+    /** Abort a rebase in progress */
+    suspend fun rebaseAbort(repoPath: String): Result<String> {
+        return terminalManager.executeGitCommand(
+                repoPath,
+                "git rebase --abort",
+                showInTerminal = true
+        )
+    }
+
+    // ============== Stash Operations ==============
+
+    /** Stash current changes */
+    suspend fun stash(repoPath: String, message: String? = null): Result<String> {
+        val cmd = if (message != null) "git stash push -m '$message'" else "git stash"
+        return terminalManager.executeGitCommand(repoPath, cmd, showInTerminal = true)
+    }
+
+    /** Pop the latest stash */
+    suspend fun stashPop(repoPath: String): Result<String> {
+        return terminalManager.executeGitCommand(repoPath, "git stash pop", showInTerminal = true)
+    }
+
+    /** Apply the latest stash (keep in stash list) */
+    suspend fun stashApply(repoPath: String, stashIndex: Int = 0): Result<String> {
+        return terminalManager.executeGitCommand(
+                repoPath,
+                "git stash apply stash@{$stashIndex}",
+                showInTerminal = true
+        )
+    }
+
+    /** Drop a stash */
+    suspend fun stashDrop(repoPath: String, stashIndex: Int = 0): Result<String> {
+        return terminalManager.executeGitCommand(
+                repoPath,
+                "git stash drop stash@{$stashIndex}",
+                showInTerminal = true
+        )
+    }
+
+    /** List all stashes */
+    suspend fun stashList(repoPath: String): Result<String> {
+        return terminalManager.executeGitCommand(repoPath, "git stash list", showInTerminal = false)
+    }
+
+    /** Get stash count */
+    suspend fun getStashCount(repoPath: String): Int {
+        val result =
+                terminalManager.executeGitCommand(
+                        repoPath,
+                        "git stash list",
+                        showInTerminal = false
+                )
+        return result.getOrNull()?.lines()?.filter { it.isNotBlank() }?.size ?: 0
+    }
+
+    // ============== Other Useful Commands ==============
+
+    /** Discard changes in a file */
+    suspend fun discardChanges(repoPath: String, filePath: String): Result<String> {
+        return terminalManager.executeGitCommand(
+                repoPath,
+                "git checkout -- '$filePath'",
+                showInTerminal = true
+        )
+    }
+
+    /** Reset file to HEAD (unstage) */
+    suspend fun unstageFile(repoPath: String, filePath: String): Result<String> {
+        return terminalManager.executeGitCommand(
+                repoPath,
+                "git reset HEAD '$filePath'",
+                showInTerminal = true
+        )
+    }
+
+    /** Get list of remote branches */
+    suspend fun getRemoteBranches(repoPath: String): List<String> {
+        val result =
+                terminalManager.executeGitCommand(repoPath, "git branch -r", showInTerminal = false)
+        return result.getOrNull()
+                ?.lines()
+                ?.filter { it.isNotBlank() && !it.contains("HEAD") }
+                ?.map { it.trim().removePrefix("origin/") }
+                ?: emptyList()
     }
 
     /** Clean up the Git session */

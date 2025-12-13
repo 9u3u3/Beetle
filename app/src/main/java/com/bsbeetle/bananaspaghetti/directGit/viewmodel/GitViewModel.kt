@@ -582,6 +582,175 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // === Advanced Branch Operations (via Alpine) ===
+
+    /** Create a new branch from a specific source branch */
+    fun createBranchFrom(newName: String, sourceBranch: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val repoPath = currentRoot?.absolutePath ?: return@launch showError("No repository")
+            _uiState.value =
+                    _uiState.value.copy(
+                            operationInProgress =
+                                    "Creating branch '$newName' from '$sourceBranch'..."
+                    )
+            GitLogger.log("git checkout -b $newName $sourceBranch", LogType.COMMAND)
+
+            val result = alpineGitHelper.createBranchFrom(repoPath, newName, sourceBranch)
+            result.fold(
+                    onSuccess = { showSuccess("Created branch '$newName' from '$sourceBranch'") },
+                    onFailure = { e -> showError("Failed to create branch", e.message) }
+            )
+            refreshStatus()
+        }
+    }
+
+    /** Delete a branch (optionally from remote) */
+    fun deleteBranchWithRemote(branchName: String, deleteRemote: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val repoPath = currentRoot?.absolutePath ?: return@launch showError("No repository")
+
+            // Delete local first
+            _uiState.value =
+                    _uiState.value.copy(
+                            operationInProgress = "Deleting local branch '$branchName'..."
+                    )
+            GitLogger.log("git branch -d $branchName", LogType.COMMAND)
+
+            val localResult = alpineGitHelper.deleteBranchLocal(repoPath, branchName)
+            localResult.fold(
+                    onSuccess = {
+                        if (deleteRemote) {
+                            _uiState.value =
+                                    _uiState.value.copy(
+                                            operationInProgress =
+                                                    "Deleting remote branch '$branchName'..."
+                                    )
+                            GitLogger.log("git push origin --delete $branchName", LogType.COMMAND)
+                            val remoteResult =
+                                    alpineGitHelper.deleteBranchRemote(repoPath, branchName)
+                            remoteResult.fold(
+                                    onSuccess = {
+                                        showSuccess("Deleted branch '$branchName' (local + remote)")
+                                    },
+                                    onFailure = { e ->
+                                        showError(
+                                                "Deleted local but failed to delete remote",
+                                                e.message
+                                        )
+                                    }
+                            )
+                        } else {
+                            showSuccess("Deleted local branch '$branchName'")
+                        }
+                    },
+                    onFailure = { e -> showError("Failed to delete branch", e.message) }
+            )
+            refreshStatus()
+        }
+    }
+
+    /** Rename a branch */
+    fun renameBranch(oldName: String, newName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val repoPath = currentRoot?.absolutePath ?: return@launch showError("No repository")
+            _uiState.value =
+                    _uiState.value.copy(
+                            operationInProgress = "Renaming branch '$oldName' to '$newName'..."
+                    )
+            GitLogger.log("git branch -m $oldName $newName", LogType.COMMAND)
+
+            val result = alpineGitHelper.renameBranch(repoPath, oldName, newName)
+            result.fold(
+                    onSuccess = { showSuccess("Renamed branch to '$newName'") },
+                    onFailure = { e -> showError("Failed to rename branch", e.message) }
+            )
+            refreshStatus()
+        }
+    }
+
+    /** Merge a branch into current branch */
+    fun mergeBranch(branchName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val repoPath = currentRoot?.absolutePath ?: return@launch showError("No repository")
+            _uiState.value =
+                    _uiState.value.copy(
+                            operationInProgress = "Merging '$branchName' into current branch..."
+                    )
+            GitLogger.log("git merge $branchName", LogType.COMMAND)
+
+            val result = alpineGitHelper.merge(repoPath, branchName)
+            result.fold(
+                    onSuccess = { output ->
+                        if (output.contains("CONFLICT")) {
+                            showError("Merge has conflicts", "Resolve conflicts manually")
+                        } else {
+                            showSuccess("Merged '$branchName' successfully")
+                        }
+                    },
+                    onFailure = { e -> showError("Merge failed", e.message) }
+            )
+            refreshStatus()
+        }
+    }
+
+    /** Rebase current branch onto another branch */
+    fun rebaseBranch(ontoBranch: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val repoPath = currentRoot?.absolutePath ?: return@launch showError("No repository")
+            _uiState.value =
+                    _uiState.value.copy(operationInProgress = "Rebasing onto '$ontoBranch'...")
+            GitLogger.log("git rebase $ontoBranch", LogType.COMMAND)
+
+            val result = alpineGitHelper.rebase(repoPath, ontoBranch)
+            result.fold(
+                    onSuccess = { output ->
+                        if (output.contains("CONFLICT")) {
+                            showError(
+                                    "Rebase has conflicts",
+                                    "Resolve conflicts and run 'git rebase --continue'"
+                            )
+                        } else {
+                            showSuccess("Rebased onto '$ontoBranch' successfully")
+                        }
+                    },
+                    onFailure = { e -> showError("Rebase failed", e.message) }
+            )
+            refreshStatus()
+        }
+    }
+
+    /** Abort a merge in progress */
+    fun abortMerge() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val repoPath = currentRoot?.absolutePath ?: return@launch showError("No repository")
+            _uiState.value = _uiState.value.copy(operationInProgress = "Aborting merge...")
+            GitLogger.log("git merge --abort", LogType.COMMAND)
+
+            val result = alpineGitHelper.mergeAbort(repoPath)
+            result.fold(
+                    onSuccess = { showSuccess("Merge aborted") },
+                    onFailure = { e -> showError("Failed to abort merge", e.message) }
+            )
+            refreshStatus()
+        }
+    }
+
+    /** Abort a rebase in progress */
+    fun abortRebase() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val repoPath = currentRoot?.absolutePath ?: return@launch showError("No repository")
+            _uiState.value = _uiState.value.copy(operationInProgress = "Aborting rebase...")
+            GitLogger.log("git rebase --abort", LogType.COMMAND)
+
+            val result = alpineGitHelper.rebaseAbort(repoPath)
+            result.fold(
+                    onSuccess = { showSuccess("Rebase aborted") },
+                    onFailure = { e -> showError("Failed to abort rebase", e.message) }
+            )
+            refreshStatus()
+        }
+    }
+
     // === Helpers ===
 
     fun showSuccess(message: String) {
