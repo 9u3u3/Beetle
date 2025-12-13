@@ -1,14 +1,18 @@
 package com.bsbeetle.bananaspaghetti.directGit.viewmodel
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.bsbeetle.bananaspaghetti.directGit.utils.AlpineGitHelper
+import com.bsbeetle.bananaspaghetti.directGit.utils.AlpineSshKeyManager
 import com.bsbeetle.bananaspaghetti.directGit.utils.GitSshKeyManager
 import com.bsbeetle.bananaspaghetti.directGit.utils.GitSshSessionFactory
 import com.bsbeetle.bananaspaghetti.directGit.utils.GitUrlConverter
 import com.bsbeetle.bananaspaghetti.utils.git.*
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,7 +46,9 @@ data class GitUiState(
         // Logs
         val logs: List<LogEntry> = emptyList(),
         // SSH status
-        val sshKeysConfigured: Boolean = false
+        val sshKeysConfigured: Boolean = false,
+        // Terminal history
+        val terminalHistory: List<String> = emptyList()
 )
 
 class GitViewModel(application: Application) : AndroidViewModel(application) {
@@ -53,21 +59,68 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     private var repository: GitRepository? = null
     private var currentRoot: File? = null
 
-    // SSH key manager (replaces PAT credential manager)
+    // SSH key manager for JGit (RSA 4096 - JSch limitation)
     private val sshKeyManager = GitSshKeyManager(application)
     private val sshSessionFactory = GitSshSessionFactory(sshKeyManager)
 
+    // Alpine SSH key manager for ED25519 keys (used for push/pull via terminal)
+    private val alpineSshKeyManager = AlpineSshKeyManager(application)
+
+    // Alpine Git Helper for terminal-based Git operations
+    private val alpineGitHelper = AlpineGitHelper(application)
+
     init {
-        // Configure SSH for all Git operations
+        Log.d("GitViewModel", "🚀 Initializing GitViewModel...")
+
+        // Configure SSH for JGit operations (local commits, etc.)
         SshSessionFactory.setInstance(sshSessionFactory)
 
-        // Check if SSH is configured
-        _uiState.value = _uiState.value.copy(sshKeysConfigured = sshKeyManager.hasKeys())
+        // Check if Alpine SSH keys are configured (ED25519)
+        val hasAlpineKeys = alpineSshKeyManager.hasKeys()
+        Log.d("GitViewModel", "Alpine ED25519 keys exist: $hasAlpineKeys")
+        _uiState.value = _uiState.value.copy(sshKeysConfigured = hasAlpineKeys)
+
+        // Auto-setup Alpine SSH keys if they exist
+        if (hasAlpineKeys) {
+            Log.d("GitViewModel", "🔑 Auto-setting up ED25519 SSH keys in Alpine...")
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    val privateKey = alpineSshKeyManager.getPrivateKeyPEM()
+                    val publicKey = alpineSshKeyManager.getPublicKey()
+
+                    Log.d("GitViewModel", "Private key null: ${privateKey == null}")
+                    Log.d("GitViewModel", "Public key null: ${publicKey == null}")
+
+                    if (privateKey != null && publicKey != null) {
+                        Log.d("GitViewModel", "📤 Calling alpineGitHelper.setupSshKeys()...")
+                        alpineGitHelper.setupSshKeys(privateKey, publicKey)
+                        Log.d("GitViewModel", "✅ ED25519 SSH keys auto-configured in Alpine")
+                    } else {
+                        Log.w("GitViewModel", "⚠️ Keys exist but are null - this shouldn't happen")
+                    }
+                } catch (e: Exception) {
+                    Log.e("GitViewModel", "❌ Failed to auto-setup SSH keys", e)
+                }
+            }
+        } else {
+            Log.d("GitViewModel", "ℹ️ No ED25519 SSH keys found - user needs to set up")
+        }
 
         // Observe logs
         viewModelScope.launch {
             GitLogger.logs.collect { logs ->
                 _uiState.value = _uiState.value.copy(logs = logs.reversed()) // Show newest first
+            }
+        }
+
+        // Periodically update terminal history
+        viewModelScope.launch {
+            while (true) {
+                delay(500) // Update every 500ms
+                val history = alpineGitHelper.getCommandHistory()
+                if (history != _uiState.value.terminalHistory) {
+                    _uiState.value = _uiState.value.copy(terminalHistory = history)
+                }
             }
         }
     }
@@ -142,6 +195,10 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun getSshKeyManager(): GitSshKeyManager = sshKeyManager
+
+    fun getAlpineSshKeyManager(): AlpineSshKeyManager = alpineSshKeyManager
+
+    fun getAlpineGitHelper(): AlpineGitHelper = alpineGitHelper
 
     fun initRepo() {
         viewModelScope.launch(Dispatchers.IO) {

@@ -483,6 +483,13 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
             }
         }
 
+        // --- Git Terminal View ---
+        GitTerminalView(
+                commandHistory = uiState.terminalHistory,
+                modifier = Modifier.fillMaxWidth(),
+                initiallyExpanded = false
+        )
+
         // --- Console / Status Bar ---
         ConsoleStatusBar(
                 lastError = uiState.lastError,

@@ -1,5 +1,6 @@
 package com.bsbeetle.bananaspaghetti.directGit.ui
 
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -41,12 +42,40 @@ private val BorderColor = Color(0xFF333333)
 
 @Composable
 fun SshSetupDialog(viewModel: GitViewModel, onDismiss: () -> Unit, onComplete: () -> Unit) {
-    val sshKeyManager = viewModel.getSshKeyManager()
+    // Use Alpine SSH Key Manager for ED25519 keys
+    val alpineSshKeyManager = viewModel.getAlpineSshKeyManager()
+    val alpineGitHelper = viewModel.getAlpineGitHelper()
+    val oldSshKeyManager = viewModel.getSshKeyManager() // Old RSA manager
+
     var username by remember { mutableStateOf("") }
     var publicKey by remember { mutableStateOf("") }
     var isGenerating by remember { mutableStateOf(false) }
+    var isDeleting by remember { mutableStateOf(false) }
     var errorMessage: String? by remember { mutableStateOf(null) }
+    var hasOldKeys by remember { mutableStateOf(false) }
+    var hasNewKeys by remember { mutableStateOf(false) }
     val clipboardManager = LocalClipboardManager.current
+    val uiState by viewModel.uiState.collectAsState()
+
+    // Check for existing keys when dialog opens
+    LaunchedEffect(Unit) {
+        hasOldKeys = oldSshKeyManager.hasKeys()
+        hasNewKeys = alpineSshKeyManager.hasKeys()
+
+        Log.d("SshSetupDialog", "🔍 Checking existing keys:")
+        Log.d("SshSetupDialog", "  - Old RSA keys exist: $hasOldKeys")
+        Log.d("SshSetupDialog", "  - New ED25519 keys exist: $hasNewKeys")
+
+        if (hasNewKeys) {
+            val key = alpineSshKeyManager.getPublicKey()
+            Log.d("SshSetupDialog", "  - ED25519 public key: ${key?.take(50)}...")
+            publicKey = key ?: ""
+        } else if (hasOldKeys) {
+            val key = oldSshKeyManager.getPublicKey()
+            Log.d("SshSetupDialog", "  - RSA public key: ${key?.take(50)}...")
+            Log.w("SshSetupDialog", "⚠️ WARNING: Old RSA keys found! User should delete these.")
+        }
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -63,7 +92,7 @@ fun SshSetupDialog(viewModel: GitViewModel, onDismiss: () -> Unit, onComplete: (
                         verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                            "SSH Key Setup",
+                            "SSH Key Setup (ED25519)",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
@@ -77,89 +106,149 @@ fun SshSetupDialog(viewModel: GitViewModel, onDismiss: () -> Unit, onComplete: (
 
                 // Instructions
                 Text(
-                        "Set up SSH authentication for Git operations",
+                        "Set up ED25519 SSH authentication for Git operations",
                         fontSize = 14.sp,
                         color = TextSecondary
                 )
 
+                // Warning if old keys exist
+                if (hasOldKeys) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = Color(0x33F48771),
+                            shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                    Icons.Rounded.Warning,
+                                    null,
+                                    tint = Color(0xFFF48771),
+                                    modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                    "Old RSA keys detected! Delete them to generate new ED25519 keys.",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFFF48771)
+                            )
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Step 1: GitHub Username
-                Text(
-                        "Step 1: Enter your GitHub username",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+                // Delete old keys button (if they exist)
+                if (hasOldKeys || hasNewKeys) {
+                    Button(
+                            onClick = {
+                                isDeleting = true
+                                errorMessage = null
 
-                OutlinedTextField(
-                        value = username,
-                        onValueChange = { username = it },
-                        label = { Text("GitHub Username") },
-                        placeholder = { Text("your-username") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors =
-                                OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = AccentBlue,
-                                        unfocusedBorderColor = BorderColor,
-                                        focusedLabelColor = AccentBlue,
-                                        unfocusedLabelColor = TextTertiary,
-                                        focusedTextColor = TextPrimary,
-                                        unfocusedTextColor = TextPrimary
-                                )
-                )
+                                CoroutineScope(Dispatchers.IO).launch {
+                                    try {
+                                        Log.d("SshSetupDialog", "🗑️ Deleting all keys...")
+                                        oldSshKeyManager.deleteKeys()
+                                        alpineSshKeyManager.deleteKeys()
 
-                Spacer(modifier = Modifier.height(24.dp))
+                                        withContext(Dispatchers.Main) {
+                                            hasOldKeys = false
+                                            hasNewKeys = false
+                                            publicKey = ""
+                                            isDeleting = false
+                                            Log.d("SshSetupDialog", "✅ All keys deleted")
+                                        }
+                                    } catch (e: Exception) {
+                                        withContext(Dispatchers.Main) {
+                                            errorMessage = "Failed to delete keys: ${e.message}"
+                                            isDeleting = false
+                                        }
+                                    }
+                                }
+                            },
+                            enabled = !isDeleting && !isGenerating,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors =
+                                    ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFFF48771),
+                                            contentColor = Color.White
+                                    )
+                    ) {
+                        if (isDeleting) {
+                            CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Deleting...")
+                        } else {
+                            Icon(Icons.Rounded.Delete, null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Delete All Keys")
+                        }
+                    }
 
-                // Step 2: Generate Keys
-                Text(
-                        "Step 2: Generate SSH keys",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
 
+                // Generate Keys Button
                 Button(
                         onClick = {
-                            if (username.isBlank()) {
-                                errorMessage = "Please enter your GitHub username first"
-                                return@Button
-                            }
                             isGenerating = true
                             errorMessage = null
 
-                            // Run key generation on background thread to avoid ANR
-                            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)
-                                    .launch {
-                                        try {
-                                            sshKeyManager.saveUsername(username)
-                                            val success = sshKeyManager.generateKeyPair()
+                            Log.d("SshSetupDialog", "🔑 Generating ED25519 keys...")
 
-                                            kotlinx.coroutines.withContext(
-                                                    kotlinx.coroutines.Dispatchers.Main
-                                            ) {
-                                                if (success) {
-                                                    publicKey = sshKeyManager.getPublicKey() ?: ""
-                                                    errorMessage = null
-                                                } else {
-                                                    errorMessage = "Failed to generate SSH keys"
+                            // Run key generation on background thread
+                            CoroutineScope(Dispatchers.IO).launch {
+                                try {
+                                    // Generate ED25519 keys using Alpine
+                                    val success = alpineSshKeyManager.generateKeyPair()
+
+                                    withContext(Dispatchers.Main) {
+                                        if (success) {
+                                            publicKey = alpineSshKeyManager.getPublicKey() ?: ""
+                                            hasNewKeys = true
+
+                                            Log.d("SshSetupDialog", "✅ ED25519 keys generated!")
+                                            Log.d(
+                                                    "SshSetupDialog",
+                                                    "Public key: ${publicKey.take(50)}..."
+                                            )
+
+                                            // Auto-setup keys in Alpine
+                                            CoroutineScope(Dispatchers.IO).launch {
+                                                val privateKey =
+                                                        alpineSshKeyManager.getPrivateKeyPEM()
+                                                if (privateKey != null && publicKey.isNotEmpty()) {
+                                                    alpineGitHelper.setupSshKeys(
+                                                            privateKey,
+                                                            publicKey
+                                                    )
                                                 }
-                                                isGenerating = false
                                             }
-                                        } catch (e: Exception) {
-                                            kotlinx.coroutines.withContext(
-                                                    kotlinx.coroutines.Dispatchers.Main
-                                            ) {
-                                                errorMessage = "Error: ${e.message}"
-                                                isGenerating = false
-                                            }
+
+                                            errorMessage = null
+                                        } else {
+                                            errorMessage = "Failed to generate ED25519 SSH keys"
+                                            Log.e("SshSetupDialog", "❌ Failed to generate keys")
                                         }
+                                        isGenerating = false
                                     }
+                                } catch (e: Exception) {
+                                    withContext(Dispatchers.Main) {
+                                        errorMessage = "Error: ${e.message}"
+                                        isGenerating = false
+                                        Log.e("SshSetupDialog", "❌ Error generating keys", e)
+                                    }
+                                }
+                            }
                         },
-                        enabled = !isGenerating && username.isNotBlank(),
+                        enabled = !isGenerating && !isDeleting,
                         modifier = Modifier.fillMaxWidth(),
                         colors =
                                 ButtonDefaults.buttonColors(
@@ -178,7 +267,7 @@ fun SshSetupDialog(viewModel: GitViewModel, onDismiss: () -> Unit, onComplete: (
                     } else {
                         Icon(Icons.Rounded.Key, null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Generate SSH Keys")
+                        Text("Generate ED25519 SSH Keys")
                     }
                 }
 
