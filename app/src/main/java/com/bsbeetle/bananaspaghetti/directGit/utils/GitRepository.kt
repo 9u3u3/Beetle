@@ -12,23 +12,71 @@ class GitRepository(private val rootDir: File) {
     private var git: Git? = null
 
     init {
+        Log.d("GitRepository", "🔧 Initializing GitRepository for: ${rootDir.absolutePath}")
         try {
             val gitDir = File(rootDir, ".git")
-            if (gitDir.exists()) {
-                git = Git.open(rootDir)
-                GitLogger.log("Opened repository at ${rootDir.absolutePath}", LogType.INFO)
+            Log.d("GitRepository", "📁 .git path: ${gitDir.absolutePath}")
+            Log.d("GitRepository", "📁 .git exists: ${gitDir.exists()}")
+            Log.d("GitRepository", "📁 .git isDirectory: ${gitDir.isDirectory}")
+
+            if (gitDir.exists() && gitDir.isDirectory) {
+                // Check for essential git files
+                val headFile = File(gitDir, "HEAD")
+                val configFile = File(gitDir, "config")
+                val objectsDir = File(gitDir, "objects")
+                val refsDir = File(gitDir, "refs")
+
+                Log.d("GitRepository", "📄 HEAD exists: ${headFile.exists()}")
+                Log.d("GitRepository", "📄 config exists: ${configFile.exists()}")
+                Log.d("GitRepository", "📁 objects exists: ${objectsDir.exists()}")
+                Log.d("GitRepository", "📁 refs exists: ${refsDir.exists()}")
+
+                if (headFile.exists()) {
+                    // Use FileRepositoryBuilder for more robust opening
+                    val builder = org.eclipse.jgit.storage.file.FileRepositoryBuilder()
+                    builder.setGitDir(gitDir)
+                    builder.setWorkTree(rootDir)
+                    builder.setMustExist(false) // Don't throw if structure is incomplete
+                    builder.readEnvironment()
+
+                    val repository = builder.build()
+                    git = Git(repository)
+
+                    Log.d(
+                            "GitRepository",
+                            "✅ Successfully opened repository at ${rootDir.absolutePath}"
+                    )
+                    GitLogger.log("Opened repository at ${rootDir.absolutePath}", LogType.INFO)
+                } else {
+                    Log.w(
+                            "GitRepository",
+                            "⚠️ .git exists but HEAD file is missing - incomplete repository"
+                    )
+                    GitLogger.log(
+                            "Incomplete git repository at ${rootDir.absolutePath}",
+                            LogType.INFO
+                    )
+                }
             } else {
+                Log.w("GitRepository", "⚠️ No .git directory found at ${rootDir.absolutePath}")
                 GitLogger.log("No git repository found at ${rootDir.absolutePath}", LogType.INFO)
             }
         } catch (e: RepositoryNotFoundException) {
-            Log.w("GitRepository", "No repository found at ${rootDir.absolutePath}")
+            Log.w(
+                    "GitRepository",
+                    "❌ RepositoryNotFoundException at ${rootDir.absolutePath}: ${e.message}"
+            )
         } catch (e: Exception) {
-            Log.e("GitRepository", "Failed to open git repo", e)
+            Log.e("GitRepository", "❌ Failed to open git repo: ${e.message}", e)
             GitLogger.log("Failed to open repository: ${e.message}", LogType.ERROR)
         }
     }
 
-    fun isInitialized(): Boolean = git != null
+    fun isInitialized(): Boolean {
+        val initialized = git != null
+        Log.d("GitRepository", "📊 isInitialized: $initialized")
+        return initialized
+    }
 
     fun init(): GitResult<Unit> {
         GitLogger.log("git init ${rootDir.absolutePath}", LogType.COMMAND)

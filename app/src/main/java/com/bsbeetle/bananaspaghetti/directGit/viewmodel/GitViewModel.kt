@@ -127,11 +127,21 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setRootDir(path: String) {
         val file = File(path)
+        Log.d("GitViewModel", "🔧 setRootDir called with: $path")
+        Log.d(
+                "GitViewModel",
+                "📁 File exists: ${file.exists()}, .git exists: ${File(file, ".git").exists()}"
+        )
+
         if (currentRoot != file) {
             currentRoot = file
             repository?.close()
+            Log.d("GitViewModel", "🔄 Creating new GitRepository for: ${file.absolutePath}")
             repository = GitRepository(file)
+            Log.d("GitViewModel", "📊 Repository initialized: ${repository?.isInitialized()}")
             refreshStatus()
+        } else {
+            Log.d("GitViewModel", "♻️ Same root, skipping re-initialization")
         }
     }
 
@@ -169,6 +179,11 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                 val staged = status.added + status.changed + status.removed
                 val untracked = status.untracked
 
+                Log.d(
+                        "GitViewModel",
+                        "📊 Status: modified=${modified.size}, staged=${staged.size}, untracked=${untracked.size}"
+                )
+
                 _uiState.value =
                         _uiState.value.copy(
                                 isInitialized = true,
@@ -189,7 +204,24 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                                 operationInProgress = null
                         )
             } else {
-                _uiState.value = _uiState.value.copy(isLoading = false, operationInProgress = null)
+                Log.w("GitViewModel", "⚠️ Status is null - repo may have issues")
+                // Still show as initialized if we got this far
+                _uiState.value =
+                        _uiState.value.copy(
+                                isInitialized = true,
+                                currentBranch = currentBranch,
+                                branches = branches,
+                                commits = commits,
+                                stashes = stashes,
+                                userName = name,
+                                userEmail = email,
+                                remoteUrl = remote,
+                                aheadCount = ahead,
+                                behindCount = behind,
+                                sshKeysConfigured = alpineSshKeyManager.hasKeys(),
+                                isLoading = false,
+                                operationInProgress = null
+                        )
             }
         }
     }
@@ -336,10 +368,22 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
      * automatically.
      */
     fun push() {
+        Log.d("GitViewModel", "🚀 push() called")
         viewModelScope.launch(Dispatchers.IO) {
+            Log.d("GitViewModel", "🔄 Inside push coroutine")
+
             // Check if SSH is configured
-            if (!alpineSshKeyManager.hasKeys()) {
+            val hasKeys = alpineSshKeyManager.hasKeys()
+            Log.d("GitViewModel", "🔑 SSH keys configured: $hasKeys")
+            if (!hasKeys) {
                 showError("SSH not configured", "Please set up SSH keys first")
+                return@launch
+            }
+
+            val repoPath = currentRoot?.absolutePath
+            Log.d("GitViewModel", "📁 Repository path: $repoPath")
+            if (repoPath == null) {
+                showError("No repository", "Open a folder with a Git repository first")
                 return@launch
             }
 
@@ -350,11 +394,27 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                             operationInProgress = "Pushing to remote..."
                     )
 
-            when (val result = repository?.push()) {
-                is GitResult.Success -> showSuccess(result.message)
-                is GitResult.Error -> showError(result.message, result.details)
-                null -> showError("No repository")
-            }
+            // Use Alpine's native git for SSH operations
+            val branch = repository?.getCurrentBranch() ?: "main"
+            Log.d("GitViewModel", "🌿 Branch: $branch")
+            GitLogger.log("git push origin $branch", LogType.COMMAND)
+
+            Log.d("GitViewModel", "⏳ Calling alpineGitHelper.push()...")
+            val result = alpineGitHelper.push(repoPath, branch)
+            Log.d("GitViewModel", "✅ alpineGitHelper.push() returned: $result")
+
+            result.fold(
+                    onSuccess = { output ->
+                        Log.d("GitViewModel", "✅ Push success: $output")
+                        GitLogger.log("Push completed successfully", LogType.SUCCESS)
+                        showSuccess("Push completed")
+                    },
+                    onFailure = { e ->
+                        Log.e("GitViewModel", "❌ Push failed: ${e.message}", e)
+                        GitLogger.log("Push failed: ${e.message}", LogType.ERROR)
+                        showError("Push failed", e.message)
+                    }
+            )
             refreshStatus()
         }
     }
@@ -371,6 +431,12 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
+            val repoPath = currentRoot?.absolutePath
+            if (repoPath == null) {
+                showError("No repository", "Open a folder with a Git repository first")
+                return@launch
+            }
+
             _uiState.value =
                     _uiState.value.copy(
                             isLoading = true,
@@ -378,11 +444,17 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                             operationInProgress = "Pulling from remote..."
                     )
 
-            when (val result = repository?.pull()) {
-                is GitResult.Success -> showSuccess(result.message)
-                is GitResult.Error -> showError(result.message, result.details)
-                null -> showError("No repository")
-            }
+            // Use Alpine's native git for SSH operations
+            val branch = repository?.getCurrentBranch() ?: "main"
+            GitLogger.log("git pull origin $branch", LogType.COMMAND)
+            val result = alpineGitHelper.pull(repoPath, branch)
+            result.fold(
+                    onSuccess = { output ->
+                        showSuccess("Pull completed")
+                        Log.d("GitViewModel", "Pull output: $output")
+                    },
+                    onFailure = { e -> showError("Pull failed", e.message) }
+            )
             refreshStatus()
         }
     }
@@ -399,6 +471,12 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
+            val repoPath = currentRoot?.absolutePath
+            if (repoPath == null) {
+                showError("No repository", "Open a folder with a Git repository first")
+                return@launch
+            }
+
             _uiState.value =
                     _uiState.value.copy(
                             isLoading = true,
@@ -406,11 +484,16 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                             operationInProgress = "Fetching from remote..."
                     )
 
-            when (val result = repository?.fetch()) {
-                is GitResult.Success -> showSuccess(result.message)
-                is GitResult.Error -> showError(result.message, result.details)
-                null -> showError("No repository")
-            }
+            // Use Alpine's native git for SSH operations
+            GitLogger.log("git fetch origin", LogType.COMMAND)
+            val result = alpineGitHelper.fetch(repoPath)
+            result.fold(
+                    onSuccess = { output ->
+                        showSuccess("Fetch completed")
+                        Log.d("GitViewModel", "Fetch output: $output")
+                    },
+                    onFailure = { e -> showError("Fetch failed", e.message) }
+            )
             refreshStatus()
         }
     }
@@ -562,18 +645,21 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
-            when (val result = GitRepository.clone(sshUrl, targetDir)) {
-                is GitResult.Success -> {
-                    // Set this as the current repository
-                    repository?.close()
-                    repository = result.data
-                    currentRoot = targetDir
+            // Use Alpine's native git for SSH clone
+            val result = alpineGitHelper.clone(sshUrl, targetPath)
+            result.fold(
+                    onSuccess = { output ->
+                        // Set this as the current repository
+                        repository?.close()
+                        repository = GitRepository(targetDir)
+                        currentRoot = targetDir
 
-                    showSuccess("Cloned successfully to ${targetDir.absolutePath}")
-                    refreshStatus()
-                }
-                is GitResult.Error -> showError(result.message, result.details)
-            }
+                        showSuccess("Cloned successfully to ${targetDir.absolutePath}")
+                        Log.d("GitViewModel", "Clone output: $output")
+                        refreshStatus()
+                    },
+                    onFailure = { e -> showError("Clone failed", e.message) }
+            )
         }
     }
 

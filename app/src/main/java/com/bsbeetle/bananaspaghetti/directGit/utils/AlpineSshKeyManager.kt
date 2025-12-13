@@ -105,47 +105,12 @@ class AlpineSshKeyManager(private val context: Context) {
                                             "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
                             )
 
-                    // Create the SSH key generation script
-                    val sshGenScript =
-                            """
-                        #!/bin/sh
-                        set -e
-                        
-                        # Set PATH explicitly for Alpine
-                        export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
-                        export HOME=/home
-                        
-                        # Create .ssh directory
-                        mkdir -p /home/.ssh
-                        chmod 700 /home/.ssh
-                        
-                        # Install openssh if ssh-keygen not found
-                        if ! command -v ssh-keygen > /dev/null 2>&1; then
-                            echo "Installing openssh..."
-                            apk update
-                            apk add openssh
-                        fi
-                        
-                        # Remove existing keys if present
-                        rm -f /home/.ssh/id_ed25519 /home/.ssh/id_ed25519.pub
-                        
-                        # Generate ED25519 key pair
-                        ssh-keygen -t ed25519 -f /home/.ssh/id_ed25519 -N "" -C "bananaspaghetti@android"
-                        
-                        # Verify keys were created
-                        if [ -f /home/.ssh/id_ed25519 ] && [ -f /home/.ssh/id_ed25519.pub ]; then
-                            echo "SUCCESS: Keys generated"
-                            cat /home/.ssh/id_ed25519.pub
-                        else
-                            echo "FAILED: Keys not found"
-                            exit 1
-                        fi
-                    """.trimIndent()
-
-                    // Write script to Alpine filesystem
+                    // Copy SSH key generation script from assets to Alpine tmp
                     val scriptFile = java.io.File(alpine, "tmp/gen_ssh_key.sh")
                     scriptFile.parentFile?.mkdirs()
-                    scriptFile.writeText(sshGenScript)
+                    context.assets.open("scripts/gen_ssh_key.sh").use { input ->
+                        scriptFile.outputStream().use { output -> input.copyTo(output) }
+                    }
                     scriptFile.setExecutable(true)
 
                     Log.d(TAG, "🔐 Running SSH key generation script...")

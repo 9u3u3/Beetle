@@ -23,7 +23,7 @@ class GitTerminalManager(private val context: Context) {
 
     companion object {
         private const val TAG = "GitTerminalManager"
-        private const val COMMAND_TIMEOUT = 5000L // 5 seconds
+        private const val COMMAND_TIMEOUT = 30000L // 30 seconds for network operations
     }
 
     private var terminalSession: TerminalSession? = null
@@ -44,6 +44,29 @@ class GitTerminalManager(private val context: Context) {
 
             // CRITICAL: TerminalSession must be created on Main thread (WebView requirement)
             withContext(Dispatchers.Main) { terminalSession = TerminalSession(context) }
+
+            // Wait for terminal to be fully ready (outputFd is set)
+            Log.d(TAG, "⏳ Waiting for terminal to be ready...")
+            var waitTime = 0L
+            val maxWait = 10000L // 10 seconds max wait
+            while (waitTime < maxWait) {
+                if (terminalSession?.isReady?.value == true) {
+                    Log.d(TAG, "✅ Terminal is ready (outputFd set)")
+                    break
+                }
+                delay(100)
+                waitTime += 100
+                if (waitTime % 1000 == 0L) {
+                    Log.d(TAG, "⏳ Still waiting for terminal... ${waitTime}ms")
+                }
+            }
+
+            if (terminalSession?.isReady?.value != true) {
+                Log.w(
+                        TAG,
+                        "⚠️ Terminal may not be fully ready after ${maxWait}ms, but proceeding..."
+                )
+            }
 
             Log.d(TAG, "✅ Terminal session initialized successfully")
             return Result.success(Unit)
@@ -76,7 +99,7 @@ class GitTerminalManager(private val context: Context) {
 
                     // Write private key directly to Alpine filesystem
                     Log.d(TAG, "🔐 Writing private key...")
-                    val alpinePrivateKeyPath = File(context.filesDir, "alpine/root/.ssh/id_ed25519")
+                    val alpinePrivateKeyPath = File(context.filesDir, "alpine/home/.ssh/id_ed25519")
                     alpinePrivateKeyPath.parentFile?.mkdirs()
                     alpinePrivateKeyPath.writeText(privateKey)
                     session.insertText("chmod 600 ~/.ssh/id_ed25519\n")
@@ -86,7 +109,7 @@ class GitTerminalManager(private val context: Context) {
                     // Write public key
                     Log.d(TAG, "🔓 Writing public key...")
                     val alpinePublicKeyPath =
-                            File(context.filesDir, "alpine/root/.ssh/id_ed25519.pub")
+                            File(context.filesDir, "alpine/home/.ssh/id_ed25519.pub")
                     alpinePublicKeyPath.writeText(publicKey)
                     session.insertText("chmod 644 ~/.ssh/id_ed25519.pub\n")
                     delay(300)
@@ -102,9 +125,23 @@ class GitTerminalManager(private val context: Context) {
                     IdentityFile ~/.ssh/id_ed25519
                     StrictHostKeyChecking no
                     UserKnownHostsFile /dev/null
+                    
+                Host gitlab.com
+                    HostName gitlab.com
+                    User git
+                    IdentityFile ~/.ssh/id_ed25519
+                    StrictHostKeyChecking no
+                    UserKnownHostsFile /dev/null
+                    
+                Host bitbucket.org
+                    HostName bitbucket.org
+                    User git
+                    IdentityFile ~/.ssh/id_ed25519
+                    StrictHostKeyChecking no
+                    UserKnownHostsFile /dev/null
             """.trimIndent()
 
-                    val alpineSshConfigPath = File(context.filesDir, "alpine/root/.ssh/config")
+                    val alpineSshConfigPath = File(context.filesDir, "alpine/home/.ssh/config")
                     alpineSshConfigPath.writeText(sshConfig)
                     session.insertText("chmod 600 ~/.ssh/config\n")
                     delay(300)
@@ -143,6 +180,9 @@ class GitTerminalManager(private val context: Context) {
                                             Exception("Terminal not initialized")
                                     )
 
+                    // Ensure git is installed before running git commands
+                    ensureGitInstalled(session)
+
                     if (showInTerminal) {
                         addToHistory("$ cd $repoPath")
                         addToHistory("$ $command")
@@ -152,35 +192,88 @@ class GitTerminalManager(private val context: Context) {
 
                     // Change to repo directory
                     session.insertText("cd '$repoPath'\n")
+                    delay(300)
+
+                    // Set GIT_SSH_COMMAND to bypass host key checking and use correct identity file
+                    val sshCommand =
+                            "ssh -i /home/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes"
+                    session.insertText("export GIT_SSH_COMMAND='$sshCommand'\n")
                     delay(200)
 
-                    // Execute command with output redirection
-                    val outputFile = "/tmp/git_output_${System.currentTimeMillis()}.txt"
-                    val fullCommand = "$command > $outputFile 2>&1; echo $? >> $outputFile"
+                    // Execute command with output redirection to /home which is properly mapped
+                    val outputFileName = "git_output_${System.currentTimeMillis()}.txt"
+                    val alpineOutputFile = "/home/$outputFileName"
+                    val fullCommand =
+                            "$command > $alpineOutputFile 2>&1; echo \$? >> $alpineOutputFile"
+                    Log.d(TAG, "📝 Full command: $fullCommand")
                     session.insertText("$fullCommand\n")
 
-                    // Wait for command to complete
-                    delay(COMMAND_TIMEOUT)
+                    // Poll for command to complete (check output file has content)
+                    val alpineOutputPath = File(context.filesDir, "alpine/home/$outputFileName")
+                    Log.d(TAG, "📖 Output file path: ${alpineOutputPath.absolutePath}")
 
-                    // Read output from Alpine filesystem
-                    val alpineOutputPath = File(context.filesDir, "alpine$outputFile")
-                    val output =
-                            if (alpineOutputPath.exists()) {
-                                val content = alpineOutputPath.readText()
-                                alpineOutputPath.delete()
-                                content
-                            } else {
-                                Log.w(
+                    val startTime = System.currentTimeMillis()
+                    var output = ""
+                    var pollCount = 0
+
+                    // Poll every 500ms until timeout or we get output
+                    while (System.currentTimeMillis() - startTime < COMMAND_TIMEOUT) {
+                        delay(500)
+                        pollCount++
+
+                        if (alpineOutputPath.exists()) {
+                            val content = alpineOutputPath.readText()
+                            // Check if output contains exit code (command completed)
+                            // The exit code is appended as the last line
+                            val lines = content.lines().filter { it.isNotBlank() }
+                            val lastLine = lines.lastOrNull()?.trim()
+                            if (lastLine?.toIntOrNull() != null) {
+                                // Command completed - we have an exit code
+                                output = content
+                                Log.d(
                                         TAG,
-                                        "⚠️ Output file not found: ${alpineOutputPath.absolutePath}"
+                                        "✅ Command completed after ${pollCount * 500}ms (${lines.size} lines)"
                                 )
-                                ""
+                                break
+                            } else if (content.isNotEmpty()) {
+                                Log.d(
+                                        TAG,
+                                        "⏳ Poll $pollCount: Output has ${content.length} chars but no exit code yet"
+                                )
                             }
+                        } else {
+                            if (pollCount % 10 == 0) {
+                                Log.d(TAG, "⏳ Poll $pollCount: File not created yet")
+                            }
+                        }
+                    }
+
+                    val elapsedTime = System.currentTimeMillis() - startTime
+                    Log.d(TAG, "⏱️ Total wait time: ${elapsedTime}ms")
+
+                    // Final read if we timed out but file exists
+                    if (output.isEmpty() && alpineOutputPath.exists()) {
+                        output = alpineOutputPath.readText()
+                        Log.d(
+                                TAG,
+                                "⚠️ Timeout reached, reading whatever output we have: ${output.length} chars"
+                        )
+                    }
+
+                    // Clean up output file
+                    if (alpineOutputPath.exists()) {
+                        alpineOutputPath.delete()
+                    }
+
+                    Log.d(TAG, "📄 Final output (${output.length} chars): ${output.take(500)}")
 
                     // Parse exit code
-                    val lines = output.lines()
-                    val exitCode = lines.lastOrNull()?.toIntOrNull() ?: -1
-                    val commandOutput = lines.dropLast(1).joinToString("\n")
+                    val lines = output.lines().filter { it.isNotBlank() }
+                    val exitCode = lines.lastOrNull()?.trim()?.toIntOrNull() ?: -1
+                    val commandOutput =
+                            if (lines.size > 1) lines.dropLast(1).joinToString("\n") else ""
+
+                    Log.d(TAG, "📊 Exit code: $exitCode, Output lines: ${lines.size}")
 
                     if (showInTerminal) {
                         if (commandOutput.isNotBlank()) {
@@ -220,6 +313,49 @@ class GitTerminalManager(private val context: Context) {
 
     /** Get the terminal session for UI display */
     fun getTerminalSession(): TerminalSession? = terminalSession
+
+    private var gitInstallChecked = false
+    private var safeDirectoryConfigured = false
+
+    /** Ensure git is installed in Alpine */
+    private suspend fun ensureGitInstalled(
+            session: com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
+    ) {
+        // Install git if needed
+        if (!gitInstallChecked) {
+            Log.d(TAG, "📦 Checking if git is installed...")
+            addToHistory("📦 Checking git installation...")
+
+            // Check if git is installed
+            val gitCheckFile = File(context.filesDir, "alpine/usr/bin/git")
+            if (!gitCheckFile.exists()) {
+                Log.d(TAG, "📥 Git not found, installing...")
+                addToHistory("📥 Installing git...")
+
+                // Install git
+                session.insertText("apk update && apk add git openssh\n")
+
+                // Wait for installation to complete
+                delay(10000) // 10 seconds for package installation
+
+                addToHistory("✅ Git installed successfully")
+            } else {
+                Log.d(TAG, "✅ Git already installed")
+            }
+            gitInstallChecked = true
+        }
+
+        // Configure safe.directory (must run once per session)
+        if (!safeDirectoryConfigured) {
+            // Configure git to allow all directories (fixes "dubious ownership" error on Android)
+            // This is needed because Alpine's user differs from Android's file owner
+            session.insertText("git config --global --add safe.directory '*'\n")
+            delay(200)
+            Log.d(TAG, "🔧 Configured safe.directory for all paths")
+            addToHistory("🔧 Git safe.directory configured")
+            safeDirectoryConfigured = true
+        }
+    }
 
     /** Get command history for display */
     fun getCommandHistory(): List<String> = commandHistory.toList()

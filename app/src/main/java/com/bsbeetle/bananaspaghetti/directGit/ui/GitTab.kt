@@ -1,5 +1,10 @@
 package com.bsbeetle.bananaspaghetti.directGit.ui
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.Settings
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
@@ -30,6 +35,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -66,9 +72,28 @@ private val BorderColor = Color(0xFF333333)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GitTab(viewModel: GitViewModel = viewModel()) {
+    val context = LocalContext.current
     val fileViewModel: FileViewModel = LocalFileViewModel.current
     val uiState by viewModel.uiState.collectAsState()
     var commitMessage by remember { mutableStateOf("") }
+
+    // Check for storage permission
+    val hasStoragePermission = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
+        } else {
+            true // Older Android versions don't need this
+        }
+    }
+    var permissionCheckTrigger by remember { mutableStateOf(0) }
+    val currentHasPermission =
+            remember(permissionCheckTrigger) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    Environment.isExternalStorageManager()
+                } else {
+                    true
+                }
+            }
 
     // Dialog States
     var showAuthDialog by remember { mutableStateOf(false) }
@@ -292,7 +317,30 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
 
         // --- Main Content ---
         Box(modifier = Modifier.weight(1f)) {
-            if (!uiState.isInitialized) {
+            if (!currentHasPermission) {
+                // Show permission request
+                StoragePermissionRequest(
+                        onRequestPermission = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                val intent =
+                                        Intent(
+                                                        Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION
+                                                )
+                                                .apply {
+                                                    data =
+                                                            Uri.parse(
+                                                                    "package:${context.packageName}"
+                                                            )
+                                                }
+                                context.startActivity(intent)
+                            }
+                        },
+                        onRefresh = {
+                            permissionCheckTrigger++
+                            viewModel.refreshStatus()
+                        }
+                )
+            } else if (!uiState.isInitialized) {
                 EmptyState(onInit = { viewModel.initRepo() }, onClone = { showCloneDialog = true })
             } else {
                 Column(modifier = Modifier.fillMaxSize()) {
@@ -506,14 +554,7 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
             }
         }
 
-        // --- Git Terminal View ---
-        GitTerminalView(
-                commandHistory = uiState.terminalHistory,
-                modifier = Modifier.fillMaxWidth(),
-                initiallyExpanded = false
-        )
-
-        // --- Console / Status Bar ---
+        // --- Console / Status Bar (includes terminal commands) ---
         ConsoleStatusBar(
                 lastError = uiState.lastError,
                 lastSuccess = uiState.lastSuccess,
@@ -521,6 +562,7 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                 isLoading = uiState.isLoading,
                 showConsole = showConsole,
                 logs = uiState.logs,
+                terminalHistory = uiState.terminalHistory,
                 onToggleConsole = { showConsole = !showConsole },
                 onClearMessages = { viewModel.clearMessages() },
                 onAuthRequest = { showAuthDialog = true }
@@ -741,6 +783,7 @@ private fun ConsoleStatusBar(
         isLoading: Boolean,
         showConsole: Boolean,
         logs: List<LogEntry>,
+        terminalHistory: List<String>,
         onToggleConsole: () -> Unit,
         onClearMessages: () -> Unit,
         onAuthRequest: () -> Unit
@@ -835,34 +878,132 @@ private fun ConsoleStatusBar(
         AnimatedVisibility(visible = showConsole) {
             Column(
                     modifier =
-                            Modifier.fillMaxWidth().height(200.dp).background(BgDark).padding(8.dp)
+                            Modifier.fillMaxWidth().height(250.dp).background(BgDark).padding(8.dp)
             ) {
-                LazyColumn(reverseLayout = true) {
-                    items(logs) { log ->
-                        val color =
-                                when (log.type) {
-                                    LogType.COMMAND -> AccentBlue
-                                    LogType.ERROR -> AccentRed
-                                    LogType.SUCCESS -> AccentGreen
-                                    LogType.INFO -> TextSecondary
-                                }
-                        Row(modifier = Modifier.padding(vertical = 1.dp)) {
+                // Combined list: terminal history + git logs
+                LazyColumn(reverseLayout = false) {
+                    // Terminal commands section
+                    if (terminalHistory.isNotEmpty()) {
+                        item {
                             Text(
-                                    log.timestamp,
+                                    "─── Terminal ───",
                                     color = TextTertiary,
                                     fontSize = 10.sp,
                                     fontFamily = FontFamily.Monospace,
-                                    modifier = Modifier.width(60.dp)
+                                    modifier = Modifier.padding(vertical = 4.dp)
                             )
+                        }
+                        items(terminalHistory) { line ->
+                            val color =
+                                    when {
+                                        line.startsWith("$") -> AccentBlue // Command
+                                        line.startsWith("✅") -> AccentGreen // Success
+                                        line.startsWith("❌") -> AccentRed // Error
+                                        line.startsWith("🔑") ||
+                                                line.startsWith("🔐") ||
+                                                line.startsWith("📦") -> AccentYellow // SSH/Install
+                                        line.startsWith("📁") ||
+                                                line.startsWith("📂") ||
+                                                line.startsWith("📥") -> AccentBlue // Files
+                                        line.startsWith("⚠️") -> AccentOrange // Warning
+                                        else -> TextSecondary
+                                    }
                             Text(
-                                    "> ${log.message}",
+                                    line,
                                     color = color,
                                     fontSize = 11.sp,
-                                    fontFamily = FontFamily.Monospace
+                                    fontFamily = FontFamily.Monospace,
+                                    modifier = Modifier.padding(vertical = 1.dp)
                             )
                         }
                     }
+
+                    // Git logs section
+                    if (logs.isNotEmpty()) {
+                        item {
+                            Text(
+                                    "─── Git Logs ───",
+                                    color = TextTertiary,
+                                    fontSize = 10.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        }
+                        items(logs.reversed()) { log ->
+                            val color =
+                                    when (log.type) {
+                                        LogType.COMMAND -> AccentBlue
+                                        LogType.ERROR -> AccentRed
+                                        LogType.SUCCESS -> AccentGreen
+                                        LogType.INFO -> TextSecondary
+                                    }
+                            Row(modifier = Modifier.padding(vertical = 1.dp)) {
+                                Text(
+                                        log.timestamp,
+                                        color = TextTertiary,
+                                        fontSize = 10.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        modifier = Modifier.width(60.dp)
+                                )
+                                Text(
+                                        "> ${log.message}",
+                                        color = color,
+                                        fontSize = 11.sp,
+                                        fontFamily = FontFamily.Monospace
+                                )
+                            }
+                        }
+                    }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StoragePermissionRequest(onRequestPermission: () -> Unit, onRefresh: () -> Unit) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(32.dp)
+        ) {
+            Icon(
+                    Icons.Rounded.FolderOff,
+                    contentDescription = null,
+                    tint = AccentOrange,
+                    modifier = Modifier.size(64.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                    "Storage Access Required",
+                    color = TextPrimary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                    "Git operations need access to read and write files. " +
+                            "Please grant 'All files access' permission.",
+                    color = TextSecondary,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                    onClick = onRequestPermission,
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+                    shape = RoundedCornerShape(8.dp)
+            ) {
+                Icon(Icons.Rounded.Settings, null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Open Settings", fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            TextButton(onClick = onRefresh) {
+                Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("I've granted permission", color = AccentBlue)
             }
         }
     }
