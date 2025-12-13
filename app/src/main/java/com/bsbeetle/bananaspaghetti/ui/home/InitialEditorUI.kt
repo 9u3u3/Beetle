@@ -138,13 +138,16 @@ fun InitialEditorUI(navController: NavController) {
                 
                 try {
                     if (slug != "plaintext") {
-                        if (!LanguageRegistry.isInstalled(slug)) {
+                        // Use isInstalledForExt to check both the slug and common aliases (e.g., js/javascript)
+                        if (!LanguageRegistry.isInstalledForExt(extType)) {
                             missingLanguageExt = extType
                             showLanguagePopup = true
                         } else {
+                            // Get the actual installed slug (might be different from getSlugForExtension)
+                            val installedSlug = LanguageRegistry.getInstalledSlugForExt(extType) ?: slug
                             // Start LSP and get port
-                            lspPort = editorViewModel.startLsp(slug)
-                            android.widget.Toast.makeText(context, "Initializing $slug support on port $lspPort...", android.widget.Toast.LENGTH_SHORT).show()
+                            lspPort = editorViewModel.startLsp(installedSlug)
+                            android.widget.Toast.makeText(context, "Initializing $installedSlug support on port $lspPort...", android.widget.Toast.LENGTH_SHORT).show()
                         }
                     }
                 } catch (e: Exception) {
@@ -164,19 +167,56 @@ fun InitialEditorUI(navController: NavController) {
                 val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
                 if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
                     session.setLspViewModel(lspViewModel)
-                    // Use a clean filename for LSP to avoid content:// URI issues
-                    val cleanName = documentFile.name?.replace(" ", "_") ?: "main.cpp"
-                    session.setFilePath("/src/$cleanName")
                     
-                    if (slug != "plaintext" && LanguageRegistry.isInstalled(slug)) {
-                        session.setLanguage(slug, lspPort)
+                    // Determine project root from parent folder
+                    // For files in alpine, we use the parent directory as project root
+                    val parentFolder = documentFile.parentFile
+                    val projectRoot = if (parentFolder != null) {
+                        // Convert content:// URI to a path the LSP can understand
+                        // Typically files are in /data/.../alpine/home/... or similar
+                        val parentPath = parentFolder.uri.path ?: "/home"
+                        // Clean up the path - extract the part after "alpine" if present
+                        val alpineIndex = parentPath.indexOf("/alpine/")
+                        val cleanPath = if (alpineIndex >= 0) {
+                            parentPath.substring(alpineIndex + 7) // Skip "/alpine"
+                        } else {
+                            parentPath
+                        }
+                        "file://$cleanPath"
                     } else {
+                        "file:///home"
+                    }
+                    
+                    // Set root URI for project context
+                    session.setRootUri(projectRoot)
+                    
+                    // Set file path relative to project
+                    val cleanName = documentFile.name?.replace(" ", "_") ?: "main.cpp"
+                    val parentPath = documentFile.parentFile?.uri?.path ?: "/home"
+                    val alpineIndex = parentPath.indexOf("/alpine/")
+                    val cleanParentPath = if (alpineIndex >= 0) {
+                        parentPath.substring(alpineIndex + 7)
+                    } else {
+                        parentPath
+                    }
+                    session.setFilePath("$cleanParentPath/$cleanName")
+                    
+                    // Use isInstalledForExt to check both the slug and common aliases
+                    if (slug != "plaintext" && LanguageRegistry.isInstalledForExt(extType)) {
+                        val installedSlug = LanguageRegistry.getInstalledSlugForExt(extType) ?: slug
+                        Log.d("LSP-Debug", "Calling setLanguage for installedSlug=$installedSlug (extType=$extType) on port=$lspPort")
+                        session.setLanguage(installedSlug, lspPort)
+                    } else {
+                        Log.d("LSP-Debug", "NOT calling setLanguage: extType=$extType, slug=$slug, isInstalledForExt=${LanguageRegistry.isInstalledForExt(extType)}")
                         // Clear language support for unsupported files
                         session.clearLanguage()
                     }
                 }
 
                 Log.d("Buffer", "Opened: ${documentFile.name}, total: ${bufferViewModel.filesOpenedList.size}")
+                
+                // Save to Recent Files
+                com.bsbeetle.bananaspaghetti.utils.fileHandling.RecentFilesManager.addFile(context, uri, documentFile.name ?: "Unknown")
             }
         }
     }

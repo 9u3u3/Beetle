@@ -3,9 +3,9 @@ package com.bsbeetle.bananaspaghetti.ui.cmeditor
 // Used for both terminal and the code editor
 
 import android.annotation.SuppressLint
-import android.view.MotionEvent
 import android.view.ViewGroup
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
@@ -15,30 +15,35 @@ import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 @Composable
 fun Editor(modifier: Modifier = Modifier, webView: CustomWebView) {
 
+    // Set active session when this editor view is displayed
+    DisposableEffect(webView) {
+        webView.session?.let { sess ->
+            val index = SessionList.sessions.indexOf(sess)
+            if (index >= 0) {
+                SessionList.activeSessionIndex = index
+            }
+        }
+        onDispose { }
+    }
+
     AndroidView(
         factory = { ctx ->
             // Remove from existing parent if any (prevents crash)
             (webView.parent as? ViewGroup)?.removeView(webView)
             
-            webView.apply {
-                // Set touch listener to handle focus
-                setOnTouchListener { view, event ->
-                    if (event.action == MotionEvent.ACTION_DOWN) {
-                        // Set this session as active for keyboard input
-                        session?.let { sess ->
-                            val index = SessionList.sessions.indexOf(sess)
-                            if (index >= 0) {
-                                SessionList.activeSessionIndex = index
-                            }
-                        }
-                        // Request focus and ensure input connection
-                        view.requestFocus()
-                        // Focus the editor in JS
-                        evaluateJavascript("if (window.editor) { window.editor.focus(); }", null)
+            // Request initial focus
+            webView.post {
+                webView.requestFocus()
+                webView.evaluateJavascript("""
+                    if (window.editor) { 
+                        window.editor.focus(); 
+                    } else if (window.term) {
+                        window.term.focus();
                     }
-                    false // Let the WebView handle the touch event normally
-                }
+                """.trimIndent(), null)
             }
+            
+            webView
         },
         modifier = modifier,
         onReset = { view ->

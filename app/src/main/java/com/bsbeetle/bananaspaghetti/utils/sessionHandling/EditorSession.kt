@@ -230,6 +230,10 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
         view?.evaluateJavascript("if(window.setLanguage) window.setLanguage('$slug', $port);", null)
     }
     
+    fun setRootUri(rootUri: String) {
+        view?.evaluateJavascript("if(window.setRootUri) window.setRootUri('$rootUri');", null)
+    }
+    
     fun clearLanguage() {
         view?.evaluateJavascript("if(window.clearLanguage) window.clearLanguage();", null)
     }
@@ -295,6 +299,7 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                                 
                                 viewModel.updateCursorPosition(line, col)
                                 viewModel.updateDiagnostics(err, warn)
+                                android.util.Log.d("LspStatus", "Updated: line=$line col=$col err=$err warn=$warn")
                             } catch (e: Exception) {
                                 Log.e("WEBVERR", "Failed to parse LSP status: $msg", e)
                             }

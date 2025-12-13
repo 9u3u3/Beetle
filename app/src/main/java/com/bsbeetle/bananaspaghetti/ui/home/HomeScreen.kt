@@ -4,7 +4,12 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.net.Uri
 import android.util.Log
+import coil.compose.AsyncImage
+import coil.decode.SvgDecoder
+import coil.request.ImageRequest
+import coil.ImageLoader
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -182,17 +187,56 @@ fun HomeScreen(navController: NavController) {
                             .fillMaxSize()
                             .padding(16.dp)
                     ) {
-                        Box(
+                        Column(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(50.dp)
+                                .fillMaxSize()
+                                .padding(16.dp)
                         ) {
-                            Text(
-                                text = "Recent",
-                                fontFamily = codaRegular,
-                                color = Color(0xFFFFFFFF),
-                                fontSize = 35.sp
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Recent",
+                                    fontFamily = codaRegular,
+                                    color = Color(0xFFFFFFFF),
+                                    fontSize = 35.sp
+                                )
+                                
+                                Text(
+                                    text = "Clear",
+                                    fontFamily = born2bsporty,
+                                    color = Color(0xFFAAAAAA),
+                                    fontSize = 16.sp,
+                                    modifier = Modifier.clickable {
+                                        com.bsbeetle.bananaspaghetti.utils.fileHandling.RecentFilesManager.clear(context)
+                                        // Force recomposition hack or use state
+                                        isRecentsOpen = false 
+                                        isRecentsOpen = true
+                                    }
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            val recentFiles = remember(isRecentsOpen) {
+                                com.bsbeetle.bananaspaghetti.utils.fileHandling.RecentFilesManager.getRecentFiles(context)
+                            }
+                            
+                            val fileViewModel = com.bsbeetle.bananaspaghetti.LocalFileViewModel.current
+                            
+                            androidx.compose.foundation.lazy.LazyColumn(
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(recentFiles.size) { index ->
+                                    RecentFileItem(
+                                        file = recentFiles[index],
+                                        navController = navController,
+                                        fileViewModel = fileViewModel
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -201,7 +245,7 @@ fun HomeScreen(navController: NavController) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(250.dp)
+                        .height(350.dp) // Increased height for mobile
                         .offset(y = recentsPanelOffset)
                         .constrainAs(recentsPanel) {
                             bottom.linkTo(parent.bottom)
@@ -214,22 +258,64 @@ fun HomeScreen(navController: NavController) {
                             .fillMaxSize()
                             .padding(16.dp)
                     ) {
-                        Box(
+                        Column(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(50.dp),
-                            contentAlignment = Alignment.Center
+                                .fillMaxSize()
+                                .padding(16.dp)
                         ) {
-                            Text(
-                                text = "Recent",
-                                fontFamily = codaRegular,
-                                color = Color(0xFFFFFFFF),
-                                fontSize = 30.sp
-                            )
+                            // Use mutableStateListOf for better collection observation
+                            val recentFiles = remember { androidx.compose.runtime.mutableStateListOf<com.bsbeetle.bananaspaghetti.utils.fileHandling.RecentFile>() }
+                            
+                            androidx.compose.runtime.LaunchedEffect(isRecentsOpen) {
+                                if (isRecentsOpen) {
+                                    recentFiles.clear()
+                                    recentFiles.addAll(com.bsbeetle.bananaspaghetti.utils.fileHandling.RecentFilesManager.getRecentFiles(context))
+                                }
+                            }
+                            
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(50.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Recent",
+                                    fontFamily = codaRegular,
+                                    color = Color(0xFFFFFFFF),
+                                    fontSize = 30.sp
+                                )
+                                
+                                Text(
+                                    text = "Clear",
+                                    fontFamily = born2bsporty,
+                                    color = Color(0xFFAAAAAA),
+                                    fontSize = 14.sp,
+                                    modifier = Modifier
+                                        .align(Alignment.CenterEnd)
+                                        .clickable {
+                                            com.bsbeetle.bananaspaghetti.utils.fileHandling.RecentFilesManager.clear(context)
+                                            recentFiles.clear() // Update state immediately
+                                        }
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            androidx.compose.foundation.lazy.LazyColumn(
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(recentFiles.size) { index ->
+                                    RecentFileItem(
+                                        file = recentFiles[index],
+                                        navController = navController,
+                                        fileViewModel = com.bsbeetle.bananaspaghetti.LocalFileViewModel.current
+                                    )
+                                }
+                            }
                         }
                     }
                 }
-
             }
             Image(
                 painter = painterResource(R.drawable.settings_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
@@ -318,6 +404,7 @@ fun MainMenu(
     val launcher = fileLauncher(context, navController)
     val buttonFontSize = 30.sp
     val terminalViewModel: TerminalViewModel = LocalTerminalViewModel.current
+    val fileViewModel = com.bsbeetle.bananaspaghetti.LocalFileViewModel.current
 
     Box(
         modifier = modifier
@@ -546,9 +633,12 @@ fun MainMenu(
                     .height(50.dp)
                     .clickable(
                         onClick = {
-                            // Terminal Session handler (Will make a function for this later im to lazy to do that currently and this is also in the testing)
-                            TerminalSession(context.applicationContext)
-                            terminalViewModel.setTerminalWebView(SessionList.sessions[SessionList.activeSessionIndex!!].view!!)
+                            // Terminal Session handler
+                            val currentPath = fileViewModel.currentFilePath ?: 
+                                              (SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession)?.projectRoot?.uri?.toString()
+                            
+                            TerminalSession(context.applicationContext, initialDir = currentPath)
+                            terminalViewModel.setTerminalWebView(SessionList.sessions[SessionList.activeSessionIndex!!].getOrInitView())
                             navController.navigate(Screen.Terminal.route)
                         })
             ) {

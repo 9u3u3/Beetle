@@ -22,7 +22,12 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream
+
 import com.bsbeetle.bananaspaghetti.utils.languageHandling.LanguageRegistry
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeout
 
 class ExtensionsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -92,7 +97,51 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                 downloadFile(extension.jsModule, File(pluginDir, "${extension.slug}.js"))
 
                 // Download LSP Script
-                downloadFile(extension.lspScript, File(pluginDir, "${extension.slug}.sh"))
+                val scriptFile = File(pluginDir, "${extension.slug}.sh")
+                downloadFile(extension.lspScript, scriptFile)
+                scriptFile.setExecutable(true)
+
+                // --- Installation Logic ---
+                val publicDir = File(context.filesDir, "public")
+                if (!publicDir.exists()) publicDir.mkdirs()
+
+                val tempScript = File(publicDir, "install_${extension.slug}.sh")
+                scriptFile.copyTo(tempScript, overwrite = true)
+                tempScript.setExecutable(true)
+
+                val wrapperFile = File(publicDir, "wrapper_${extension.slug}.sh")
+                wrapperFile.writeText("""
+                    #!/bin/sh
+                    exec() {
+                        echo "INSTALLATION_COMPLETE"
+                        exit 0
+                    }
+                    . /public/${tempScript.name}
+                """.trimIndent())
+                wrapperFile.setExecutable(true)
+
+                val installComplete = CompletableDeferred<Boolean>()
+                val session = TerminalSession(context, "Install-${extension.slug}")
+                
+                session.onOutput = { output ->
+                    if (output.contains("INSTALLATION_COMPLETE")) {
+                        installComplete.complete(true)
+                    }
+                }
+
+                // Wait for shell init
+                delay(1000)
+                
+                session.insertText("/public/${wrapperFile.name}\n")
+
+                withTimeout(180000) { // 3 minutes timeout
+                    installComplete.await()
+                }
+
+                // Cleanup
+                tempScript.delete()
+                wrapperFile.delete()
+                // --------------------------
 
                 // Update LanguageRegistry
                 LanguageRegistry.setInstalled(extension.slug, extension.version, extension.id)

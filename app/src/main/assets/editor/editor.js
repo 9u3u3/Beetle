@@ -3,7 +3,7 @@ import { EditorState, StateEffect, StateField, Compartment } from "@codemirror/s
 import { oneDark } from "@codemirror/theme-one-dark"
 import { autocompletion, completionKeymap, closeCompletion, startCompletion, completionStatus } from "@codemirror/autocomplete"
 import { keymap, drawSelection } from "@codemirror/view"
-import { linter, lintGutter, forceLinting } from "@codemirror/lint"
+import { linter, lintGutter, forceLinting, setDiagnostics } from "@codemirror/lint"
 import { cpp } from "@codemirror/lang-cpp"
 import { python } from "@codemirror/lang-python"
 import { insertNewlineAndIndent, deleteCharBackward, undo, redo } from "@codemirror/commands"
@@ -210,6 +210,7 @@ function setupEditor() {
   let isInitialized = false;
   let initializationPromise = null;
   let pendingCompletionId = null; // Track in-flight completion request
+  let openedDocumentUri = null; // Track which URI the server thinks is open
 
   // Function to send cancel request
   function sendCancelRequest(id) {
@@ -224,59 +225,46 @@ function setupEditor() {
     }
   }
 
-  // StateEffect for updating diagnostics
-  const setDiagnosticsEffect = StateEffect.define()
-
-  // StateField to store diagnostics
-  const diagnosticsField = StateField.define({
-    create() {
-      return []
-    },
-    update(diagnostics, tr) {
-      // Handle explicit diagnostic updates via effect
-      for (let effect of tr.effects) {
-        if (effect.is(setDiagnosticsEffect)) {
-          return effect.value
-        }
-      }
-      // CRITICAL FIX: Filter out-of-bounds diagnostics when document changes
-      // This prevents position mapping errors while keeping valid diagnostics visible
-      if (tr.docChanged) {
-        const docLen = tr.newDoc.length;
-        return diagnostics.filter(d =>
-          d.from >= 0 && d.from <= docLen && d.to >= 0 && d.to <= docLen
-        );
-      }
-      return diagnostics
-    }
-  })
+  // Note: Diagnostics are handled via setDiagnostics() from @codemirror/lint
+  // No custom StateEffect/StateField needed
 
   window.setFilePath = (path) => {
-    // console.log(`[LSP - JS] Setting file path to: ${ path } `);
     const oldURI = URI;
     URI = `file://${path}`;
+    console.log(`[LSP-JS] setFilePath: ${path}, oldURI=${oldURI}, newURI=${URI}`);
 
     // If we haven't initialized yet, just updating URI is enough.
     // The onopen handler will use the new URI.
-    if (isInitialized && oldURI !== URI && ws.readyState === WebSocket.OPEN) {
-      // Close old file
-      sendNotification(ws, 'textDocument/didClose', {
-        textDocument: { uri: oldURI }
-      });
+    if (isInitialized && oldURI !== URI && ws && ws.readyState === WebSocket.OPEN) {
+      // Close old file if it was opened
+      if (openedDocumentUri && openedDocumentUri === oldURI) {
+        sendNotification(ws, 'textDocument/didClose', {
+          textDocument: { uri: oldURI }
+        });
+        openedDocumentUri = null;
+      }
+
+      // Reset version counter when opening a new document
+      window.lspVersion = 1;
 
       // Open new file
       sendNotification(ws, 'textDocument/didOpen', {
         textDocument: {
           uri: URI,
-          languageId: 'cpp',
-          version: 1,
+          languageId: currentLanguageId || 'cpp',
+          version: window.lspVersion,
           text: view?.state.doc.toString() || ''
         }
       });
+      openedDocumentUri = URI;
+      console.log(`[LSP-JS] Sent didOpen for ${URI} with version ${window.lspVersion}`);
     }
   };
 
-  const setRootUri = (uri) => { rootURI = uri }
+  window.setRootUri = (uri) => {
+    rootURI = uri;
+    console.log(`[LSP-JS] rootUri set to: ${rootURI}`);
+  }
 
   // Debounced diagnostics handling
   let pendingDiagnostics = null;
@@ -328,19 +316,36 @@ function setupEditor() {
         requestAnimationFrame(() => {
           if (!view) return;
 
-          // CRITICAL: Filter diagnostics that are now out of bounds
+          // CRITICAL: Clamp diagnostics to valid document bounds
           // Document may have changed since diagnostics were calculated
           const docLen = view.state.doc.length;
-          const validDiagnostics = diagnostics.filter(d =>
-            d.from >= 0 && d.from <= docLen && d.to >= 0 && d.to <= docLen
-          );
+          const validDiagnostics = diagnostics.map(d => ({
+            ...d,
+            from: Math.max(0, Math.min(d.from, docLen)),
+            to: Math.max(0, Math.min(d.to, docLen))
+          })).filter(d => d.from < docLen); // Only filter if completely out of bounds
 
-          // Only dispatch if we have valid diagnostics
-          if (validDiagnostics.length > 0 || diagnostics.length === 0) {
-            view.dispatch({
-              effects: setDiagnosticsEffect.of(validDiagnostics)
-            });
-          }
+          // Count errors and warnings for status bar
+          let errorCount = 0;
+          let warningCount = 0;
+          validDiagnostics.forEach(d => {
+            if (d.severity === 'error') errorCount++;
+            else if (d.severity === 'warning') warningCount++;
+          });
+          window.currentErrorCount = errorCount;
+          window.currentWarningCount = warningCount;
+          window.cachedErrors = errorCount;
+          window.cachedWarnings = warningCount;
+
+          // Use CodeMirror's built-in setDiagnostics for proper linting display
+          console.log(`[LSP-JS] Applying ${validDiagnostics.length} diagnostics (${errorCount} errors, ${warningCount} warnings)`);
+          view.dispatch(setDiagnostics(view.state, validDiagnostics));
+
+          // IMMEDIATELY send status update when diagnostics change (for bottom bar)
+          const pos = view.state.selection.main.head;
+          const line = view.state.doc.lineAt(pos);
+          const col = pos - line.from;
+          console.log(`[LSP-STATUS] line:${line.number} col:${col + 1} err:${errorCount} warn:${warningCount}`);
 
           // Send diagnostics to Kotlin bridge (throttled - only if 2+ seconds since last send)
           const now = Date.now();
@@ -360,7 +365,7 @@ function setupEditor() {
       } catch (e) {
         console.error('Error in handleDiagnostics:', e)
       }
-    }, 250); // 250ms debounce - faster diagnostics updates
+    }, 100); // 100ms debounce - faster diagnostics updates
   }
 
   function updateCompletionListUI() {
@@ -465,8 +470,8 @@ function setupEditor() {
 
     // Always allow explicit completions
     if (!context.explicit) {
-      // For automatic completions, check timing (debounce 500ms - increased)
-      if (now - lastCompletionTime < 500) {
+      // For automatic completions, check timing (debounce 300ms - faster)
+      if (now - lastCompletionTime < 300) {
         return null
       }
     }
@@ -482,6 +487,17 @@ function setupEditor() {
       sendCancelRequest(pendingCompletionId);
       pendingRequests.delete(pendingCompletionId); // Remove from pending
       pendingCompletionId = null;
+    }
+
+    // Determine trigger kind and character
+    let triggerKind = 1; // Invoked
+    let triggerCharacter = undefined;
+
+    // Check if triggered by a character (basic check)
+    const charBefore = context.state.sliceDoc(context.pos - 1, context.pos);
+    if (['.', ':', '<', '"', '/', '@'].includes(charBefore)) {
+      triggerKind = 2; // TriggerCharacter
+      triggerCharacter = charBefore;
     }
 
     // Force flush pending didChange before requesting completion
@@ -505,13 +521,17 @@ function setupEditor() {
       const currentRequestId = messageId + 1; // sendRequest will use this ID
       pendingCompletionId = currentRequestId;
 
+      // Log the completion request details
+      console.log(`[LSP-JS] Completion request: uri=${URI}, line=${lineNumber}, char=${character}, triggerKind=${triggerKind}, triggerChar=${triggerCharacter || 'none'}, langId=${currentLanguageId}`);
+
       const result = await sendRequest(ws, 'textDocument/completion', {
         textDocument: { uri: URI },
         position: { line: lineNumber, character },
         context: {
-          triggerKind: context.explicit ? 1 : 2,
+          triggerKind: triggerKind,
+          triggerCharacter: triggerCharacter
         }
-      }, 5000) // Reduced timeout to 5 seconds
+      }, 30000) // 30 second timeout for slow LSPs like typescript-language-server
 
       pendingCompletionId = null; // Clear on success
 
@@ -525,15 +545,42 @@ function setupEditor() {
 
       // console.log(`✨ Got ${items.length} completion items`);
       if (items.length > 0) {
-        const firstFew = items.slice(0, 5).map(i => i.label).join(', ');
-        // console.log(`[LSP-JS] Suggestions: ${firstFew}...`);
+        const firstFew = items.slice(0, 5).map(i => `${i.label}(${i.kind || '?'})`).join(', ');
+        console.log(`[LSP-JS] First 5 items: ${firstFew}`);
       }
 
-      const wordBefore = context.matchBefore(/\w*/)
+      const wordBefore = context.matchBefore(/[\w\-]*/) // Match words and hyphens (for CSS/HTML)
       const from = wordBefore ? wordBefore.from : context.pos;
+      const prefix = wordBefore ? wordBefore.text.toLowerCase() : "";
+
+      // Filter and sort items
+      let filteredItems = items;
+
+      if (prefix) {
+        filteredItems = items.filter(item => {
+          const label = item.label.toLowerCase();
+          // Also check filterText if available
+          const filterText = (item.filterText || item.label).toLowerCase();
+          return label.includes(prefix) || filterText.includes(prefix);
+        });
+
+        // Sort by relevance: exact match > starts with > contains
+        filteredItems.sort((a, b) => {
+          const aLabel = (a.filterText || a.label).toLowerCase();
+          const bLabel = (b.filterText || b.label).toLowerCase();
+
+          const aStarts = aLabel.startsWith(prefix);
+          const bStarts = bLabel.startsWith(prefix);
+
+          if (aStarts && !bStarts) return -1;
+          if (!aStarts && bStarts) return 1;
+
+          return aLabel.localeCompare(bLabel);
+        });
+      }
 
       // Limit to 20 items to save memory
-      window.completionItems = items.slice(0, 20).map(item => {
+      window.completionItems = filteredItems.slice(0, 20).map(item => {
         const cleanLabel = item.label.replace(/^[•\s]+/, '').trim()
         let textToInsert = cleanLabel
 
@@ -570,10 +617,7 @@ function setupEditor() {
     }
   }
 
-  // Linter function that reads from StateField
-  const lspLinter = linter((view) => {
-    return view.state.field(diagnosticsField)
-  })
+  // Note: No custom linter needed - we use setDiagnostics() directly from handleDiagnostics
 
   const startState = EditorState.create({
     doc: "",
@@ -582,9 +626,7 @@ function setupEditor() {
       oneDark,
       drawSelection(), // Ensure custom cursor drawing
       languageCompartment.of(cpp()), // Default
-      diagnosticsField, // Add StateField
-      lspLinter,
-      lintGutter(),
+      lintGutter(), // Gutter for diagnostic markers
       // EditorState.readOnly.of(true), // Makes the editor readOnly for the user (to block the default from popping up)
       EditorView.contentAttributes.of({
         inputmode: "none"
@@ -632,15 +674,15 @@ function setupEditor() {
         const col = pos - line.from;
 
         // Count diagnostics (throttled to avoid performance hit)
+        // Use forEachDiagnostic from @codemirror/lint to access diagnostics
         const now = Date.now();
         if (!window.lastDiagTime || now - window.lastDiagTime > 500) {
           let errors = 0;
           let warnings = 0;
-          const diags = state.field(diagnosticsField);
-          diags.forEach(d => {
-            if (d.severity === 'error') errors++;
-            if (d.severity === 'warning') warnings++;
-          });
+          // Get diagnostics from the lint state - they're stored internally by setDiagnostics
+          // We track our own counts from handleDiagnostics instead
+          errors = window.currentErrorCount || 0;
+          warnings = window.currentWarningCount || 0;
           window.cachedErrors = errors;
           window.cachedWarnings = warnings;
           window.lastDiagTime = now;
@@ -656,10 +698,17 @@ function setupEditor() {
         }
 
         // Full Text Sync - Re-enabled with longer debounce
-        if (update.docChanged && ws && ws.readyState === WebSocket.OPEN && view && isInitialized) {
+        // IMPORTANT: Only send didChange if document is properly opened with server
+        if (update.docChanged && ws && ws.readyState === WebSocket.OPEN && view && isInitialized && openedDocumentUri === URI) {
           if (window.didChangeTimeout) clearTimeout(window.didChangeTimeout);
 
           window.didChangeTimeout = setTimeout(() => {
+            // Double-check document is still open (might have changed during debounce)
+            if (openedDocumentUri !== URI) {
+              console.log(`[LSP-JS] Skipping didChange: document ${URI} not opened (opened: ${openedDocumentUri})`);
+              return;
+            }
+
             window.lspVersion++;
             const payload = {
               textDocument: {
@@ -670,7 +719,8 @@ function setupEditor() {
             };
 
             sendNotification(ws, 'textDocument/didChange', payload);
-          }, 150); // 150ms debounce - fastest LSP updates
+            console.log(`[LSP-JS] Sent didChange for ${URI} version ${window.lspVersion}`);
+          }, 100); // 100ms debounce - fastest LSP updates
         }
       })
     ]
@@ -696,27 +746,19 @@ function setupEditor() {
 
   editorEl.addEventListener('touchstart', (e) => {
     if (e.touches.length !== 1) return;
-    e.preventDefault(); // STOP NATIVE HANDLES
+    // DON'T prevent default on touchstart - it might block subsequent touch events
     lastTouchY = e.touches[0].clientY;
     lastTouchX = e.touches[0].clientX;
     isScrolling = false;
-  }, { passive: false });
+  }, { passive: true }); // Use passive for touchstart
 
   editorEl.addEventListener('touchmove', (e) => {
     if (e.touches.length !== 1) return;
-    e.preventDefault(); // STOP NATIVE SCROLLING (we do it manually)
 
     const clientY = e.touches[0].clientY;
     const clientX = e.touches[0].clientX;
     const deltaY = lastTouchY - clientY;
     const deltaX = lastTouchX - clientX;
-
-    // Manual Scroll
-    const scroller = document.querySelector('.cm-scroller');
-    if (scroller) {
-      scroller.scrollTop += deltaY;
-      scroller.scrollLeft += deltaX;
-    }
 
     lastTouchY = clientY;
     lastTouchX = clientX;
@@ -724,11 +766,11 @@ function setupEditor() {
     if (Math.abs(deltaY) > 2 || Math.abs(deltaX) > 2) {
       isScrolling = true;
     }
-  }, { passive: false });
+  }, { passive: true }); // Use passive for touchmove
 
   editorEl.addEventListener('touchend', (e) => {
     if (isScrolling) return;
-    e.preventDefault(); // STOP NATIVE CLICK/FOCUS
+    e.preventDefault(); // Only prevent default on touchend to stop native click
 
     // Manual Cursor Placement
     const touch = e.changedTouches[0];
@@ -923,54 +965,101 @@ function setupEditor() {
 
         // Just send didOpen for the current file
         if (URI) {
+          window.lspVersion = 1; // Reset version
           sendNotification(ws, 'textDocument/didOpen', {
             textDocument: {
               uri: URI,
               languageId: currentLanguageId || 'cpp',
-              version: 1,
+              version: window.lspVersion,
               text: view?.state.doc.toString() || ''
             }
           });
+          openedDocumentUri = URI;
+          console.log(`[LSP-JS] Reconnect didOpen for ${URI}`);
         }
         return;
       }
 
       // First time connecting to this server - do full initialize
       isInitialized = false;
+
+      // Log the initialize request for debugging
+      console.log(`[LSP-JS] Sending initialize with rootUri: ${rootURI}, languageId: ${currentLanguageId}`);
+
       initializationPromise = sendRequest(ws, 'initialize', {
         processId: null,
         rootUri: rootURI,
+        // Workspace folders help tsserver understand project structure
+        workspaceFolders: rootURI ? [{ uri: rootURI, name: 'project' }] : null,
         capabilities: {
+          workspace: {
+            workspaceFolders: true,
+            configuration: true
+          },
           textDocument: {
             completion: {
               completionItem: {
                 snippetSupport: false,
-                documentationFormat: ['plaintext', 'markdown']
+                documentationFormat: ['plaintext', 'markdown'],
+                labelDetailsSupport: true
               },
-              contextSupport: true
+              contextSupport: true,
+              completionItemKind: {
+                valueSet: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+              }
             },
-            publishDiagnostics: {},
+            publishDiagnostics: {
+              relatedInformation: true
+            },
             hover: {
-              contentFormat: ['plaintext']
+              contentFormat: ['plaintext', 'markdown']
+            },
+            synchronization: {
+              willSave: false,
+              didSave: true,
+              willSaveWaitUntil: false
             }
+          }
+        },
+        // Initialization options for typescript-language-server
+        // These help tsserver create a proper inferred project
+        initializationOptions: {
+          hostInfo: 'bananaspaghetti-editor',
+          preferences: {
+            includeCompletionsForModuleExports: true,
+            includeCompletionsWithInsertText: true,
+            includeCompletionsWithSnippetText: false,
+            includeAutomaticOptionalChainCompletions: true,
+            includeCompletionsForImportStatements: true,
+            allowIncompleteCompletions: true,
+            useLabelDetailsInCompletionEntries: true
+          },
+          // Tell tsserver to use modern JavaScript defaults
+          tsserver: {
+            logDirectory: '/tmp',
+            logVerbosity: 'off'
           }
         }
       }, 15000).then((result) => {
-        console.log('✅ Server initialized:', result.serverInfo?.name);
+        console.log(`[LSP-JS] ✅ Server initialized: ${result.serverInfo?.name || 'unknown'}, rootUri was: ${rootURI}`);
+        console.log(`[LSP-JS] Server capabilities: ${JSON.stringify(result.capabilities?.completionProvider || {})}`);
         isInitialized = true;
         initializedPorts.add(port); // Mark as initialized
         sendNotification(ws, 'initialized', {});
 
         // Send didOpen if we have a file
         if (URI) {
+          window.lspVersion = 1; // Reset version for new document
           sendNotification(ws, 'textDocument/didOpen', {
             textDocument: {
               uri: URI,
               languageId: currentLanguageId || 'cpp',
-              version: 1,
+              version: window.lspVersion,
               text: view?.state.doc.toString() || ''
             }
           });
+          openedDocumentUri = URI;
+          console.log(`[LSP-JS] Initial didOpen for ${URI}`);
         }
       }).catch(e => {
         console.error("LSP Init failed:", JSON.stringify(e));
@@ -998,17 +1087,61 @@ function setupEditor() {
       try {
         const msg = JSON.parse(event.data);
 
-        // Handle Responses
-        if (msg.id !== undefined && pendingRequests.has(msg.id)) {
-          const { resolve, reject, timer } = pendingRequests.get(msg.id);
-          clearTimeout(timer);
-          pendingRequests.delete(msg.id);
-          if (msg.error) reject(msg.error);
-          else resolve(msg.result);
+        // Log all incoming messages for debugging
+        const msgPreview = event.data.length > 200 ? event.data.substring(0, 200) + '...' : event.data;
+        console.log(`[LSP-JS] Received message (len=${event.data.length}): ${msgPreview}`);
+
+        // IMPORTANT: Distinguish between:
+        // 1. Response to OUR request: has id, has result OR error, NO method
+        // 2. Request FROM server: has id, has method, no result
+        // 3. Notification from server: has method, NO id
+
+        // Handle Responses to our requests (must have result or error, and no method)
+        if (msg.id !== undefined && (msg.result !== undefined || msg.error !== undefined) && msg.method === undefined) {
+          if (pendingRequests.has(msg.id)) {
+            const { resolve, reject, timer } = pendingRequests.get(msg.id);
+            clearTimeout(timer);
+            pendingRequests.delete(msg.id);
+            if (msg.error) {
+              console.log(`[LSP-JS] Request ${msg.id} failed:`, msg.error);
+              reject(msg.error);
+            } else {
+              console.log(`[LSP-JS] Request ${msg.id} succeeded`);
+              resolve(msg.result);
+            }
+          } else {
+            console.log(`[LSP-JS] Received response for unknown request ${msg.id}`);
+          }
           return;
         }
 
-        // Handle Notifications
+        // Handle Server Requests (has both id and method - server is asking US something)
+        if (msg.id !== undefined && msg.method !== undefined) {
+          console.log(`[LSP-JS] Server request: ${msg.method} (id=${msg.id})`);
+
+          // Respond to workspace/configuration requests
+          if (msg.method === 'workspace/configuration') {
+            // Send empty configuration response
+            const response = {
+              jsonrpc: '2.0',
+              id: msg.id,
+              result: msg.params.items.map(() => ({})) // Empty config for each item
+            };
+            ws.send(JSON.stringify(response));
+            console.log(`[LSP-JS] Sent configuration response for id=${msg.id}`);
+          } else {
+            // For other server requests, send an error (not supported)
+            const response = {
+              jsonrpc: '2.0',
+              id: msg.id,
+              error: { code: -32601, message: 'Method not supported' }
+            };
+            ws.send(JSON.stringify(response));
+          }
+          return;
+        }
+
+        // Handle Notifications (has method but no id)
         if (msg.method === "textDocument/publishDiagnostics") {
           handleDiagnostics(msg.params);
         }
