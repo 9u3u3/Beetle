@@ -9,6 +9,7 @@ enum class KeyType {
     ACTION_SPACE,
     ACTION_ENTER,
     ACTION_TOGGLE,
+    ACTION_TOGGLE_BACK,
 
     ACTION_TAB,
     ACTION_CTRL,

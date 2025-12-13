@@ -13,6 +13,7 @@ object KeyboardLayout {
     private const val ENTER_KEY = NORMAL_KEY * 1.5f
     private const val CTRL_KEY = NORMAL_KEY * 1.2f
 
+    // Page 0: Alphabet layout (ABC)
     val qwertyLayout = StableKeyboardLayout(
         listOf(
             // Row 1
@@ -43,10 +44,10 @@ object KeyboardLayout {
                 Key("v", "V", NORMAL_KEY), Key("b", "B", NORMAL_KEY), Key("n", "N", NORMAL_KEY),
                 Key("m", "M", NORMAL_KEY), Key(text = ",", shiftText = ",", weight = NORMAL_KEY), Key(text = ".", shiftText = ".", weight = NORMAL_KEY)
             ),
-            // Row 5
+            // Row 5: Removed CTRL, added two toggle keys
             listOf(
-                Key("123?", type = KeyType.ACTION_TOGGLE, weight = NORMAL_KEY),
-                Key("Ctrl", type = KeyType.ACTION_CTRL, weight = CTRL_KEY),
+                Key("!#1", type = KeyType.ACTION_TOGGLE, weight = NORMAL_KEY),      // Next: symbols
+                Key("⌨", type = KeyType.ACTION_TOGGLE_BACK, weight = NORMAL_KEY),   // Prev: navigation
                 Key("Space", type = KeyType.ACTION_SPACE, weight = SPACE_KEY),
                 Key("tab", "\t", type = KeyType.ACTION_TAB),
 
@@ -58,6 +59,7 @@ object KeyboardLayout {
         )
     )
 
+    // Page 1: Special characters layout (!#1)
     val editorLayout = StableKeyboardLayout(
         listOf(
             // Row 1: PC Standard Shift-Row (Muscle Memory: 1=!, 2=@, etc.)
@@ -68,8 +70,7 @@ object KeyboardLayout {
                 Key(")", ")", NORMAL_KEY),
             ),
 
-            // Row 2: High Frequency Coding (Underscore, Assignment, Quotes, Scope)
-            // Organized for split reach: Left hand does logic/assign, Right hand does syntax/scope
+            // Row 2: High Frequency Coding
             listOf(
                 Key("_", "_", NORMAL_KEY), Key("-", "-", NORMAL_KEY), Key("+", "+", NORMAL_KEY),
                 Key("=", "=", NORMAL_KEY), Key("\"", "\"", NORMAL_KEY), Key("'", "'", NORMAL_KEY),
@@ -85,33 +86,33 @@ object KeyboardLayout {
                 Key("?", "?", NORMAL_KEY),
             ),
 
-            // Row 4: Navigation & Macros (Aligns with Shift row)
-            // Left side: Indentation and Macros. Right side: Arrows/Precision
+            // Row 4: Replaced && with Ctrl
             listOf(
-                Key("Alt", type = KeyType.ACTION_ALT, weight = SHIFT_KEY), // Alt replaces Tab
-                Key("&&", "&&", NORMAL_KEY), Key("||", "||", NORMAL_KEY),
+                Key("tab", "\t", type = KeyType.ACTION_TAB, weight = SHIFT_KEY),
+                Key("Ctrl", type = KeyType.ACTION_CTRL, weight = NORMAL_KEY), // Moved Ctrl here
+                Key("||", "||", NORMAL_KEY),
                 Key("==", "==", NORMAL_KEY), Key("!=", "!=", NORMAL_KEY),
                 Key("->", "->", NORMAL_KEY), Key("=>", "=>", NORMAL_KEY),
-                Key("£", "£", NORMAL_KEY), Key("€", "€", NORMAL_KEY), // Currency/Misc
+                Key("£", "£", NORMAL_KEY), Key("€", "€", NORMAL_KEY),
                 Key(".", ".", NORMAL_KEY)
             ),
 
-            // Row 5: UTILITY (Kept consistent with QWERTY for thumb muscle memory)
+            // Row 5: Two toggle keys, no CTRL (moved to row 4)
             listOf(
-                Key("abc", type = KeyType.ACTION_TOGGLE, weight = NORMAL_KEY), // Back to ABC
-                Key("Ctrl", type = KeyType.ACTION_CTRL, weight = CTRL_KEY),
+                Key("⌨", type = KeyType.ACTION_TOGGLE, weight = NORMAL_KEY),       // Next: navigation
+                Key("ABC", type = KeyType.ACTION_TOGGLE_BACK, weight = NORMAL_KEY), // Prev: alphabet
                 Key("Space", type = KeyType.ACTION_SPACE, weight = SPACE_KEY),
-                Key("Esc", "Esc", type = KeyType.ACTION_ESCAPE), // Moved Esc here for easy reach
+                Key("Esc", "Esc", type = KeyType.ACTION_ESCAPE),
 
-                // Utility grouping
-                Key("←", "←", type = KeyType.ACTION_LEFT, weight = NORMAL_KEY), // Arrow Left
-                Key("→", "→", type = KeyType.ACTION_RIGHT, weight = NORMAL_KEY), // Arrow Right
+                Key("←", "←", type = KeyType.ACTION_LEFT, weight = NORMAL_KEY),
+                Key("→", "→", type = KeyType.ACTION_RIGHT, weight = NORMAL_KEY),
                 Key("↵", type = KeyType.ACTION_ENTER, weight = ENTER_KEY),
                 Key("⌫", type = KeyType.ACTION_BACKSPACE, weight = NORMAL_KEY),
             )
         )
     )
 
+    // Page 2: Navigation/Terminal layout (⌨)
     val terminalLayout = StableKeyboardLayout(
         listOf(
             // Row 1: Numbers and Symbols
@@ -124,77 +125,39 @@ object KeyboardLayout {
 
             // Row 2: Navigation and Control
             listOf(
-//                Key("Esc", "Esc", type = KeyType.ACTION_ESCAPE, weight = NORMAL_KEY),
+                Key("Esc", "Esc", type = KeyType.ACTION_ESCAPE, weight = NORMAL_KEY),
                 Key("/", "/", NORMAL_KEY), Key("-", "-", NORMAL_KEY),
                 Key("Home", type = KeyType.ACTION_HOME, weight = NORMAL_KEY),
-                Key("\\", "\\", NORMAL_KEY),
-                Key("End", type = KeyType.ACTION_END, weight = NORMAL_KEY),
-//                Key("PgUp", type = KeyType.ACTION_PGUP, weight = NORMAL_KEY),
-                Key("`", "`", NORMAL_KEY), Key("~", "~", NORMAL_KEY),
                 Key("Up", type = KeyType.ACTION_UP, weight = NORMAL_KEY),
+                Key("End", type = KeyType.ACTION_END, weight = NORMAL_KEY),
+                Key("PgUp", type = KeyType.ACTION_PGUP, weight = NORMAL_KEY),
+                Key("`", "`", NORMAL_KEY), Key("~", "~", NORMAL_KEY),
+                Key("|", "|", NORMAL_KEY)
+            ),
 
-                ),
-
-            // Row 3: More Control
+            // Row 3: Ctrl, Alt, Arrows
             listOf(
-                Key("TAB", "TAB", type = KeyType.ACTION_TAB, weight = NORMAL_KEY),
+                Key("Tab", "\t", type = KeyType.ACTION_TAB, weight = NORMAL_KEY),
                 Key("Ctrl", type = KeyType.ACTION_CTRL, weight = NORMAL_KEY),
                 Key("Alt", type = KeyType.ACTION_ALT, weight = NORMAL_KEY),
-//                Key("Left", type = KeyType.ACTION_LEFT, weight = NORMAL_KEY),
-                Key("|", "|", NORMAL_KEY),
-//                Key("Right", type = KeyType.ACTION_RIGHT, weight = NORMAL_KEY),
-//                Key("PgDn", type = KeyType.ACTION_PGDN, weight = NORMAL_KEY),
-                Key("[", "[", NORMAL_KEY), Key("]", "]", NORMAL_KEY),
+                Key("Left", type = KeyType.ACTION_LEFT, weight = NORMAL_KEY),
                 Key("Down", type = KeyType.ACTION_DOWN, weight = NORMAL_KEY),
+                Key("Right", type = KeyType.ACTION_RIGHT, weight = NORMAL_KEY),
+                Key("PgDn", type = KeyType.ACTION_PGDN, weight = NORMAL_KEY),
+                Key("[", "[", NORMAL_KEY), Key("]", "]", NORMAL_KEY),
+                Key("\\", "\\", NORMAL_KEY)
+            ),
 
-                ),
-
-            // Row 4: Standard QWERTY bottom (simplified)
-             listOf(
-                Key("abc", type = KeyType.ACTION_TOGGLE, weight = NORMAL_KEY), // Back to ABC
-                Key("Ctrl", type = KeyType.ACTION_CTRL, weight = CTRL_KEY),
+            // Row 4: Two toggle keys, removed redundant Ctrl
+            listOf(
+                Key("ABC", type = KeyType.ACTION_TOGGLE, weight = NORMAL_KEY),      // Next: alphabet
+                Key("!#1", type = KeyType.ACTION_TOGGLE_BACK, weight = NORMAL_KEY), // Prev: symbols
                 Key("Space", type = KeyType.ACTION_SPACE, weight = SPACE_KEY),
                 Key("Esc", "Esc", type = KeyType.ACTION_ESCAPE),
 
                 Key("←", "←", type = KeyType.ACTION_LEFT, weight = NORMAL_KEY),
                 Key("→", "→", type = KeyType.ACTION_RIGHT, weight = NORMAL_KEY),
                 Key("↵", type = KeyType.ACTION_ENTER, weight = ENTER_KEY),
-                Key("⌫", type = KeyType.ACTION_BACKSPACE, weight = NORMAL_KEY),
-            )
-        )
-    )
-
-    val terminalSymbolsLayout = StableKeyboardLayout(
-        listOf(
-            // Row 1: Numbers
-            listOf(
-                Key("1", "!", NORMAL_KEY), Key("2", "@", NORMAL_KEY), Key("3", "#", NORMAL_KEY),
-                Key("4", "$", NORMAL_KEY), Key("5", "%", NORMAL_KEY), Key("6", "^", NORMAL_KEY),
-                Key("7", "&", NORMAL_KEY), Key("8", "*", NORMAL_KEY), Key("9", "(", NORMAL_KEY),
-                Key("0", ")", NORMAL_KEY),
-            ),
-            // Row 2: Symbols 1
-            listOf(
-                Key("!", "!", NORMAL_KEY), Key("@", "@", NORMAL_KEY), Key("#", "#", NORMAL_KEY),
-                Key("$", "$", NORMAL_KEY), Key("%", "%", NORMAL_KEY), Key("^", "^", NORMAL_KEY),
-                Key("&", "&", NORMAL_KEY), Key("*", "*", NORMAL_KEY), Key("(", "(", NORMAL_KEY),
-                Key(")", ")", NORMAL_KEY),
-            ),
-            // Row 3: Symbols 2
-            listOf(
-                Key("-", "-", NORMAL_KEY), Key("_", "_", NORMAL_KEY), Key("=", "=", NORMAL_KEY),
-                Key("+", "+", NORMAL_KEY), Key("[", "[", NORMAL_KEY), Key("]", "]", NORMAL_KEY),
-                Key("{", "{", NORMAL_KEY), Key("}", "}", NORMAL_KEY), Key("\\", "\\", NORMAL_KEY),
-                Key("|", "|", NORMAL_KEY),
-            ),
-            // Row 4: Symbols 3 + Controls
-            listOf(
-                Key("abc", type = KeyType.ACTION_TOGGLE, weight = NORMAL_KEY),
-                Key(";", ";", NORMAL_KEY), Key(":", ":", NORMAL_KEY),
-                Key("'", "'", NORMAL_KEY), Key("\"", "\"", NORMAL_KEY),
-                Key(",", ",", NORMAL_KEY), Key(".", ".", NORMAL_KEY),
-                Key("<", "<", NORMAL_KEY), Key(">", ">", NORMAL_KEY),
-                Key("/", "/", NORMAL_KEY), Key("?", "?", NORMAL_KEY),
                 Key("⌫", type = KeyType.ACTION_BACKSPACE, weight = NORMAL_KEY),
             )
         )

@@ -42,6 +42,7 @@ sealed class EditorAction {
     object CtrlZ : EditorAction()
     object CtrlD : EditorAction()
     object Escape : EditorAction()
+    data class Navigation(val type: KeyType) : EditorAction()
 }
 
 class KeyboardViewModel : ViewModel() {
@@ -51,6 +52,9 @@ class KeyboardViewModel : ViewModel() {
 
     private val _editorAction = MutableSharedFlow<EditorAction>()
     val editorAction = _editorAction.asSharedFlow()
+
+    private val _textBuffer = StringBuilder()
+    private var _bufferJob: kotlinx.coroutines.Job? = null
 
 
     // only Entry point for the key clicked
@@ -62,7 +66,8 @@ class KeyboardViewModel : ViewModel() {
             KeyType.ACTION_ENTER -> handleEnter(gesture)
             KeyType.ACTION_SPACE -> handleSpace(gesture)
             KeyType.ACTION_TAB -> handleTab(gesture)
-            KeyType.ACTION_TOGGLE -> if (gesture == KeyGesture.Tap) toggleKeyboardVisibility()
+            KeyType.ACTION_TOGGLE -> if (gesture == KeyGesture.Tap) nextKeyboardPage()
+            KeyType.ACTION_TOGGLE_BACK -> if (gesture == KeyGesture.Tap) previousKeyboardPage()
             KeyType.ACTION_CTRL -> handleCtrl(gesture)
             KeyType.ACTION_ESCAPE -> handleEscape(gesture)
             KeyType.ACTION_ALT -> handleAlt(gesture)
@@ -109,7 +114,7 @@ class KeyboardViewModel : ViewModel() {
                         _uiState.update { state -> state.copy(isCtrlOn = false) }
                     } else {
                         // Editor / Browser shortcuts
-                        handleCtrlShortcut(key, session)
+                        handleCtrlShortcut(key)
                     }
                 } else {
                     // Single tap means single character
@@ -138,7 +143,7 @@ class KeyboardViewModel : ViewModel() {
     }
 
 
-    private fun handleCtrlShortcut(key: Key, session: com.bsbeetle.bananaspaghetti.utils.sessionHandling.Session?) {
+    private fun handleCtrlShortcut(key: Key) {
         val action = when (key.text.lowercase()) {
             "c" -> EditorAction.CtrlC  // Always interrupt
             "v" -> EditorAction.Paste
@@ -149,16 +154,12 @@ class KeyboardViewModel : ViewModel() {
             "a" -> EditorAction.SelectAll
             "f" -> EditorAction.Find
             "s" -> EditorAction.Save
-            else -> null
+            else -> return
         }
 
-        if (action != null) {
-            emitAction(action)
+        action?.let {
+            emitAction(it)
             // Turn off CTRL immediately after shortcut
-            _uiState.update { state -> state.copy(isCtrlOn = false) }
-        } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
-            // Generic Ctrl+Key for Editor
-            session.sendCtrlKey(key.text)
             _uiState.update { state -> state.copy(isCtrlOn = false) }
         }
     }
@@ -181,19 +182,24 @@ class KeyboardViewModel : ViewModel() {
 
     private fun handleNavigation(type: KeyType, gesture: KeyGesture) {
         if (gesture == KeyGesture.Tap || gesture == KeyGesture.LongPress) {
-            val sequence = when (type) {
-                KeyType.ACTION_LEFT -> "\u001B[D"
-                KeyType.ACTION_RIGHT -> "\u001B[C"
-                KeyType.ACTION_UP -> "\u001B[A"
-                KeyType.ACTION_DOWN -> "\u001B[B"
-                KeyType.ACTION_HOME -> "\u001B[H"
-                KeyType.ACTION_END -> "\u001B[F"
-                KeyType.ACTION_PGUP -> "\u001B[5~"
-                KeyType.ACTION_PGDN -> "\u001B[6~"
-                else -> ""
-            }
-            if (sequence.isNotEmpty()) {
-                sendTerminalSequence(sequence)
+            val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
+            if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
+                emitAction(EditorAction.Navigation(type))
+            } else {
+                val sequence = when (type) {
+                    KeyType.ACTION_LEFT -> "\u001B[D"
+                    KeyType.ACTION_RIGHT -> "\u001B[C"
+                    KeyType.ACTION_UP -> "\u001B[A"
+                    KeyType.ACTION_DOWN -> "\u001B[B"
+                    KeyType.ACTION_HOME -> "\u001B[H"
+                    KeyType.ACTION_END -> "\u001B[F"
+                    KeyType.ACTION_PGUP -> "\u001B[5~"
+                    KeyType.ACTION_PGDN -> "\u001B[6~"
+                    else -> ""
+                }
+                if (sequence.isNotEmpty()) {
+                    sendTerminalSequence(sequence)
+                }
             }
         }
     }
@@ -279,16 +285,19 @@ class KeyboardViewModel : ViewModel() {
         }
 
     }
-    fun toggleKeyboardVisibility() {
+    fun nextKeyboardPage() {
         _uiState.update { currentState ->
-            val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
-            val maxModes = if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) 3 else 2
-            val nextMode = (currentState.keyboardMode + 1) % maxModes
-            
-            currentState.copy(
-                toggleKeyboard = nextMode != 0, // For backward compatibility
-                keyboardMode = nextMode
-            )
+            // Cycle through pages: 0 -> 1 -> 2 -> 0
+            val nextPage = (currentState.keyboardPage + 1) % 3
+            currentState.copy(keyboardPage = nextPage)
+        }
+    }
+    
+    fun previousKeyboardPage() {
+        _uiState.update { currentState ->
+            // Cycle backwards: 0 -> 2 -> 1 -> 0
+            val prevPage = (currentState.keyboardPage - 1 + 3) % 3
+            currentState.copy(keyboardPage = prevPage)
         }
     }
 
@@ -310,32 +319,56 @@ class KeyboardViewModel : ViewModel() {
         }
     }
 
-
     // Emitter functions -> Basic it helps to implements better things
 
     private fun emitText(text: String) {
-        viewModelScope.launch {
-            val session = SessionList.sessions[SessionList.activeSessionIndex!!]
-            if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
-                session.insertTextToEditor(text)
-            } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) {
-                session.insertText(text)
-            } else {
-                session._inputConnection?.commitText(text, 1)
+        // Buffer text input to prevent flooding the WebView with evaluateJavascript calls
+        // This is crucial for landscape mode where custom keyboard is used
+        _textBuffer.append(text)
+        
+        if (_bufferJob?.isActive != true) {
+            _bufferJob = viewModelScope.launch {
+                kotlinx.coroutines.delay(16) // Wait for 1 frame (approx 16ms) to batch inputs
+                
+                val textToSend = _textBuffer.toString()
+                _textBuffer.clear()
+                
+                if (textToSend.isNotEmpty()) {
+                    val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
+                    if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
+                        session.insertTextToEditor(textToSend)
+                    } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) {
+                        session.insertText(textToSend)
+                    } else {
+                        session?._inputConnection?.commitText(textToSend, 1)
+                    }
+                }
             }
         }
     }
 
+    // Simple backspace throttling - max one call per 50ms
+    private var _lastBackspaceTime = 0L
+    
     private fun onBackspace() {
+        val now = System.currentTimeMillis()
+        
+        // Throttle: only allow one backspace per 50ms (safe after position validation fix)
+        if (now - _lastBackspaceTime < 50) return
+        _lastBackspaceTime = now
+        
         viewModelScope.launch {
-            val session = SessionList.sessions[SessionList.activeSessionIndex!!]
+            val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
             if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
+                // Guard: don't send backspace if cursor is at start of file (line 1, col 1)
+                if (session.cursorLine == 1 && session.cursorColumn == 1) {
+                    return@launch
+                }
                 session.performEditorAction("performBackspace")
             } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) {
-                // Send backspace char (0x7F)
                 session.insertText("\u007F")
             } else {
-                session._inputConnection?.deleteSurroundingText(1, 0)
+                session?._inputConnection?.deleteSurroundingText(1, 0)
             }
         }
     }
@@ -366,15 +399,13 @@ class KeyboardViewModel : ViewModel() {
             if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
                 when (action) {
                     is EditorAction.Copy -> session.performEditorAction("performCopy")
-                    is EditorAction.Paste -> session.pasteFromClipboard()
+                    is EditorAction.Paste -> session.performEditorAction("performPaste")
                     is EditorAction.Cut -> session.performEditorAction("performCut")
                     is EditorAction.Undo -> session.performEditorAction("performUndo")
                     is EditorAction.Redo -> session.performEditorAction("performRedo")
                     is EditorAction.SelectAll -> session.performEditorAction("performSelectAll")
                     is EditorAction.Find -> session.performEditorAction("performFind")
-                    is EditorAction.CtrlC -> session.performEditorAction("performCopy")
-                    is EditorAction.Save -> session.performEditorAction("performSave")
-                    is EditorAction.CtrlD -> session.performEditorAction("performDuplicate")
+                    is EditorAction.Navigation -> session.performNavigation(action.type)
                     // Add other actions as needed
                     else -> _editorAction.emit(action)
                 }

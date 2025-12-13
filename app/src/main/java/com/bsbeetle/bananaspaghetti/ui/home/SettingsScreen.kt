@@ -1,11 +1,8 @@
 package com.bsbeetle.bananaspaghetti.ui.home
 
-import android.content.Context
-import androidx.compose.foundation.BorderStroke
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,33 +16,29 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.paint
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -54,314 +47,315 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
 import com.bsbeetle.bananaspaghetti.R
-import com.bsbeetle.bananaspaghetti.utils.sessionHandling.DemoSession
-import com.bsbeetle.bananaspaghetti.viewmodel.ExpandViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 
-@Composable
-fun KeyboardSettings(
-    navController: NavController
-) {
+// Windows 11 color palette
+private val BackgroundDark = Color(0xFF1A1A1A)
+private val SidebarDark = Color(0xFF252525)
+private val CardDark = Color(0xFF2D2D2D)
+private val AccentBlue = Color(0xFF0078D4)
+private val TextPrimary = Color(0xFFFFFFFF)
+private val TextSecondary = Color(0xFF9E9E9E)
+private val DividerColor = Color(0xFF404040)
 
+@Composable
+fun SettingsScreen(navController: NavController) {
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
-    val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
-    var indentValue by rememberSaveable { mutableStateOf("${uiState.indentValue}") }
-    val backgroundBoxSize = 250.dp
-    val verticalScrollState = rememberScrollState()
-    val horizontalScrollState = rememberScrollState()
-    var tapped by rememberSaveable { mutableStateOf(false) }
-    val context: Context = LocalContext.current
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .verticalScroll(verticalScrollState)
-            .fillMaxWidth()
-
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(25.dp)
-                .horizontalScroll(horizontalScrollState),
-            horizontalArrangement = Arrangement.spacedBy(80.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .height(backgroundBoxSize)
-                    .width(backgroundBoxSize)
-                    .background(Color.DarkGray, shape = RoundedCornerShape(12.dp))
-                    .border(
-                        border = if (tapped) {
-                            BorderStroke(2.dp, HighlightColor)
-                        } else {
-                            BorderStroke(0.dp, Color.Transparent)
-                        },
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .shadow(2.dp, RoundedCornerShape(12.dp))
-                    .padding(16.dp)
-                    .clickable(onClick = { tapped = !tapped })
-            ) {
-                Column(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                )
-                {
-                    Text(
-                        "Text indent value",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
-                    Spacer(modifier = Modifier.height(20.dp))
-                    OutlinedTextField(
-                        value = indentValue,
-                        onValueChange = { newText ->
-                            indentValue = newText
-                            newText.toIntOrNull()?.let { num ->
-                                keyboardViewModel.updateIndentSize(num)
-                            }
-                        },
-                        colors = TextFieldDefaults.colors(
-                            unfocusedContainerColor = Color.DarkGray,
-                        ),
-                        modifier = Modifier
-                            .background(color = Color(0xFF2E2E2E))
-                            .fillMaxWidth()
-                    )
-                }
-            }
-            Box(
-                modifier = Modifier
-                    .height(backgroundBoxSize)
-                    .width(backgroundBoxSize)
-                    .background(Color.DarkGray, shape = RoundedCornerShape(12.dp))
-                    .border(BorderStroke(2.dp, HighlightColor), shape = RoundedCornerShape(12.dp))
-                    .shadow(2.dp, RoundedCornerShape(12.dp))
-                    .padding(16.dp)
-            )
-            {
-                Column(
-                    modifier = Modifier
-                        .padding(10.dp)
-                        .height(backgroundBoxSize)
-                        .width(backgroundBoxSize)
-                        .background(color = Color.DarkGray)
-                ) {
-                    Text(
-                        "Keyboard Visibility",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(checked = uiState.isLeftKeyboardVisible, onCheckedChange = {
-                            keyboardViewModel.toggleLeftKeyboardVisibility()
-                        })
-                        Text(
-                            "Left Keyboard",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
-                        )
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(checked = uiState.isRightKeyboardVisible, onCheckedChange = {
-                            keyboardViewModel.toggleRightKeyboardVisibility()
-                        })
-                        Text(
-                            "Right Keyboard",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
-                        )
-                    }
-
-                }
-
-            }
-        }
-
-
-        Box(
-            modifier = Modifier
-                .height(backgroundBoxSize)
-                .width(backgroundBoxSize)
-                .background(Color.DarkGray, shape = RoundedCornerShape(12.dp))
-                .border(
-                    BorderStroke(2.dp, HighlightColor),
-                    shape = RoundedCornerShape(12.dp)
-                )
-                .shadow(2.dp, RoundedCornerShape(12.dp))
-                .padding(16.dp)
-                .clickable(onClick = { // Fix this demo thing later (not important for now)
-
-                    DemoSession(context.applicationContext)
-                    navController.navigate("demo")
-
-                })
-        ) {
-            Text("Keyboard Sizing", color = Color.White, fontWeight = FontWeight.Bold)
-        }
+    var selectedCategory by remember { mutableStateOf("Keyboard") }
+    
+    BackHandler {
+        navController.popBackStack()
     }
-
-}
-
-@Composable
-fun SettingsScreen(
-    navController: NavController
-) {
-    Row {ResponsiveScaffold(navController)}
-}
-
-
-@Composable
-fun ResponsiveScaffold(
-    navController: NavController
-) {
-
-    var selectedItem by remember { mutableStateOf<String?>("Keyboard") }
-
-    Row(modifier = Modifier.fillMaxSize()) {
-        val navItems = listOf(
-            "Editor" to Icons.Default.Home,
-            "Appearance" to Icons.Default.Settings,
-            "Keybindings" to Icons.Default.Create,
-            "Keyboard" to Icons.Default.Build
-        )
-
-        VerticalNavBar(
-            items = navItems,
-            onItemClick = { selected ->
-                selectedItem = selected
-            },
-            selectedItem
-        )
-
-        // Main content area
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black),
-        ) {
-            MainContent(selectedItem, navController)
-        }
-    }
-}
-
-val HighlightColor = Color(0xFF228edd)
-
-@Composable
-fun MainContent(
-    selectedItem: String?,
-    navController: NavController
-) {
-    Box(
+    
+    Row(
         modifier = Modifier
             .fillMaxSize()
-            .paint(
-                painterResource(R.drawable.mattmain),
-                contentScale = ContentScale.Crop, alpha = 0.4f
-            )
+            .background(BackgroundDark)
     ) {
-        if (selectedItem == "Editor") EditorSettings()
-        if (selectedItem == "Appearance") AppearenceSettings()
-        if (selectedItem == "Keybindings") KeybindingsSettings()
-        if (selectedItem == "Keyboard") KeyboardSettings(navController)
+        // Left sidebar
+        SettingsSidebar(
+            selectedCategory = selectedCategory,
+            onCategorySelected = { selectedCategory = it }
+        )
+        
+        // Main content area
+        SettingsContent(
+            selectedCategory = selectedCategory,
+            keyboardViewModel = keyboardViewModel
+        )
     }
 }
 
 @Composable
-fun VerticalNavBar(
-    items: List<Pair<String, ImageVector>>,
-    onItemClick: (String) -> Unit,
-    selectedItem: String?
+private fun SettingsSidebar(
+    selectedCategory: String,
+    onCategorySelected: (String) -> Unit
 ) {
-
     Column(
         modifier = Modifier
-            .width(200.dp)
+            .width(260.dp)
             .fillMaxHeight()
-            .paint(
-                painterResource(id = R.drawable.matt),
-                contentScale = ContentScale.Crop
-            )
-            .padding(vertical = 20.dp, horizontal = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .background(SidebarDark)
+            .padding(16.dp)
     ) {
-        Text(
-            "Settings",
-            style = MaterialTheme.typography.titleLarge,
-            color = Color.White,
-            modifier = Modifier.padding(start = 12.dp, bottom = 8.dp)
-        )
-
-        items.forEach { (label, icon) ->
-            val isSelected = label == selectedItem
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = if (isSelected) HighlightColor.copy(alpha = 0.15f) else Color.Transparent,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .border(
-                        width = if (isSelected) 2.dp else 0.dp,
-                        color = if (isSelected) HighlightColor else Color.Transparent,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .shadow(
-                        elevation = if (isSelected) 16.dp else 0.dp,
-                        shape = RoundedCornerShape(12.dp),
-                        ambientColor = if (isSelected) HighlightColor else Color.Transparent,
-                        spotColor = if (isSelected) HighlightColor else Color.Transparent
-                    )
-                    .clickable {
-                        onItemClick(label)
-                    }
-                    .padding(vertical = 12.dp, horizontal = 16.dp),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = label,
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        text = label,
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-            }
+        // Profile section
+        ProfileCard()
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Search bar
+        SearchBar()
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // Navigation items
+        val categories = listOf("Keyboard")
+        
+        categories.forEach { name ->
+            SidebarItem(
+                label = name,
+                isSelected = selectedCategory == name,
+                onClick = { onCategorySelected(name) }
+            )
+            Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }
 
-
 @Composable
-fun KeybindingsSettings() {
+private fun ProfileCard() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(CardDark)
+            .clickable { /* Profile action */ }
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(AccentBlue),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.AccountCircle,
+                contentDescription = "Profile",
+                tint = TextPrimary,
+                modifier = Modifier.size(40.dp)
+            )
+        }
+        
+        Spacer(modifier = Modifier.width(12.dp))
+        
+        Column {
+            Text(
+                text = "User",
+                color = TextPrimary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = "Local Account",
+                color = TextSecondary,
+                fontSize = 12.sp
+            )
+        }
+    }
 }
 
 @Composable
-fun AppearenceSettings() {
+private fun SearchBar() {
+    var searchText by remember { mutableStateOf("") }
+    
+    OutlinedTextField(
+        value = searchText,
+        onValueChange = { searchText = it },
+        placeholder = {
+            Text("Find a setting", color = TextSecondary, fontSize = 14.sp)
+        },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "Search",
+                tint = TextSecondary,
+                modifier = Modifier.size(20.dp)
+            )
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp),
+        shape = RoundedCornerShape(8.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            unfocusedContainerColor = CardDark,
+            focusedContainerColor = CardDark,
+            unfocusedBorderColor = Color.Transparent,
+            focusedBorderColor = AccentBlue,
+            cursorColor = AccentBlue
+        ),
+        singleLine = true
+    )
 }
 
 @Composable
-fun EditorSettings() {
+private fun SidebarItem(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val backgroundColor = if (isSelected) AccentBlue.copy(alpha = 0.15f) else Color.Transparent
+    
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(backgroundColor)
+            .clickable { onClick() }
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            color = if (isSelected) AccentBlue else TextPrimary,
+            fontSize = 14.sp,
+            fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
+        )
+    }
+}
 
+@Composable
+private fun SettingsContent(
+    selectedCategory: String,
+    keyboardViewModel: KeyboardViewModel
+) {
+    val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
+    val scrollState = rememberScrollState()
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackgroundDark)
+            .padding(32.dp)
+            .verticalScroll(scrollState)
+    ) {
+        Text(
+            text = selectedCategory,
+            color = TextPrimary,
+            fontSize = 32.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        when (selectedCategory) {
+            "Keyboard" -> KeyboardSettingsContent(
+                isLeftVisible = uiState.isLeftKeyboardVisible,
+                isRightVisible = uiState.isRightKeyboardVisible,
+                onLeftToggle = { keyboardViewModel.toggleLeftKeyboardVisibility() },
+                onRightToggle = { keyboardViewModel.toggleRightKeyboardVisibility() }
+            )
+        }
+    }
+}
+
+@Composable
+private fun KeyboardSettingsContent(
+    isLeftVisible: Boolean,
+    isRightVisible: Boolean,
+    onLeftToggle: () -> Unit,
+    onRightToggle: () -> Unit
+) {
+    SettingsCard(title = "Visibility") {
+        SettingRowWithCheckbox(
+            title = "Left Keyboard",
+            description = "Show the left split keyboard",
+            isChecked = isLeftVisible,
+            onCheckedChange = { onLeftToggle() }
+        )
+        
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(DividerColor)
+        )
+        
+        SettingRowWithCheckbox(
+            title = "Right Keyboard",
+            description = "Show the right split keyboard",
+            isChecked = isRightVisible,
+            onCheckedChange = { onRightToggle() }
+        )
+    }
+}
+
+@Composable
+private fun SettingsCard(
+    title: String,
+    content: @Composable () -> Unit
+) {
+    Column {
+        Text(
+            text = title,
+            color = TextSecondary,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+        )
+        
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(CardDark)
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+private fun SettingRowWithCheckbox(
+    title: String,
+    description: String,
+    isChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!isChecked) }
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = TextPrimary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Normal
+            )
+            
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            Text(
+                text = description,
+                color = TextSecondary,
+                fontSize = 13.sp
+            )
+        }
+        
+        Checkbox(
+            checked = isChecked,
+            onCheckedChange = onCheckedChange,
+            colors = CheckboxDefaults.colors(
+                checkedColor = AccentBlue,
+                uncheckedColor = TextSecondary,
+                checkmarkColor = TextPrimary
+            )
+        )
+    }
 }

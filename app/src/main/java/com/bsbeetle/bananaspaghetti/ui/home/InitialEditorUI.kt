@@ -41,6 +41,7 @@ import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.readFromFile
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.saveFile
 import com.bsbeetle.bananaspaghetti.utils.languageHandling.LanguageRegistry
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.viewmodel.*
@@ -50,32 +51,67 @@ import kotlinx.coroutines.delay
 @Composable
 fun InitialEditorUI(navController: NavController) {
 
-    Log.e("Sessions", SessionList.sessions.toString())
+    // Log.d("Sessions", "Active Session Index: ${SessionList.activeSessionIndex}")
 
-    BackHandler {
-        navController.navigate(Screen.Home.route) {
-            popUpTo(Screen.OpenFolder.route) { inclusive = true }
-        }
+    // Get current editor session for content preservation
+    val currentSession = remember {
+        SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? EditorSession
     }
-
+    
     val fileViewModel: FileViewModel = LocalFileViewModel.current
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
     val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
     val editorViewModel: EditorViewModel = LocalEditorViewModel.current
     val bufferViewModel: BufferViewModel = LocalBufferViewModel.current
+    val lspViewModel: LspViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    
+    // Sync fileViewModel with current session's projectRoot
+    // This ensures each session shows its own folder in the file tree
+    LaunchedEffect(SessionList.activeSessionIndex) {
+        val activeSession = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? EditorSession
+        activeSession?.projectRoot?.let { projectRoot ->
+            fileViewModel.selectedFolderUri = projectRoot.uri
+        }
+    }
+    
+    // Restore content when screen appears (after navigation back)
+    LaunchedEffect(Unit) {
+        delay(200) // Wait for WebView to be ready
+        currentSession?.restoreContent()
+    }
+
+    BackHandler {
+        // Save content before navigating away
+        currentSession?.saveContent()
+        navController.popBackStack()
+    }
+
+    // Pass LspViewModel to active session if it's an EditorSession
+    LaunchedEffect(Unit) {
+        val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
+        if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
+            session.setLspViewModel(lspViewModel)
+        }
+    }
 
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
+
 
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
 
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val layout = if (uiState.keyboardMode == 1) KeyboardLayout.editorLayout else KeyboardLayout.qwertyLayout
+    val layout = when (uiState.keyboardPage) {
+        0 -> KeyboardLayout.qwertyLayout    // Alphabets
+        1 -> KeyboardLayout.editorLayout    // Symbols
+        else -> KeyboardLayout.terminalLayout // Navigation
+    }
 
     // UI States
     var showSidebar by rememberSaveable { mutableStateOf(false) }
     var showLanguagePopup by remember { mutableStateOf(false) }
+    var showFileMenu by remember { mutableStateOf(false) }
     var missingLanguageExt by remember { mutableStateOf("") }
 
     // 🚀 File Load (with LSP check & Performance fix)
@@ -84,26 +120,62 @@ fun InitialEditorUI(navController: NavController) {
         fileViewModel.selectedUri?.let { uri ->
             DocumentFile.fromSingleUri(context, uri)?.let { documentFile ->
 
+                if (documentFile.isDirectory) {
+                    Log.d("Buffer", "Opened directory: ${documentFile.name}, skipping LSP setup")
+                    return@let
+                }
+
                 if (bufferViewModel.filesOpenedList.none { it.uri.toString() == uri.toString() }) {
                     bufferViewModel.filesOpenedList.add(documentFile)
                     Log.d("Buffer", "Added: ${documentFile.name}")
                 }
 
                 // Check for Language Support (LSP)
+                val extType = documentFile.name!!.substringAfterLast(".")
+                val slug = LanguageRegistry.getSlugForExtension(extType)
+                
+                var lspPort = 8081 // Default port
+                
                 try {
-                    val extType = documentFile.name!!.substringAfterLast(".")
-                    if (!LanguageRegistry.isInstalled(extType)) {
-                        missingLanguageExt = extType
-                        showLanguagePopup = true
+                    if (slug != "plaintext") {
+                        if (!LanguageRegistry.isInstalled(slug)) {
+                            missingLanguageExt = extType
+                            showLanguagePopup = true
+                        } else {
+                            // Start LSP and get port
+                            lspPort = editorViewModel.startLsp(slug)
+                            android.widget.Toast.makeText(context, "Initializing $slug support on port $lspPort...", android.widget.Toast.LENGTH_SHORT).show()
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e("Buffer", "Error in file extension handling $e")
                 }
 
+                // Save current content before loading new file
+                bufferViewModel.saveCurrentContentToBuffer()
+
                 val content = readFromFile(context, uri)
                 bufferViewModel.bufferLine[documentFile] = content
+                bufferViewModel.currentFile.value = documentFile // Track current file
                 loadContentWhenReady(editorViewModel.webView, content)
                 fileViewModel.currentFilePath = uri.toString()
+                
+                // Re-inject LspViewModel when file changes/session might change
+                val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
+                if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
+                    session.setLspViewModel(lspViewModel)
+                    // Use a clean filename for LSP to avoid content:// URI issues
+                    val cleanName = documentFile.name?.replace(" ", "_") ?: "main.cpp"
+                    session.setFilePath("/src/$cleanName")
+                    
+                    if (slug != "plaintext" && LanguageRegistry.isInstalled(slug)) {
+                        session.setLanguage(slug, lspPort)
+                    } else {
+                        // Clear language support for unsupported files
+                        session.clearLanguage()
+                    }
+                }
+
                 Log.d("Buffer", "Opened: ${documentFile.name}, total: ${bufferViewModel.filesOpenedList.size}")
             }
         }
@@ -125,7 +197,14 @@ fun InitialEditorUI(navController: NavController) {
                 },
                 onMenuClick = { showSidebar = true },
                 showMenuIcon = !isLandscape,
-                onSaveClick = { saveFile(fileViewModel, context) }
+                onSaveClick = { saveFile(fileViewModel, context) },
+                onFileClick = { showFileMenu = true },
+                onUndoClick = { 
+                    editorViewModel.webView?.evaluateJavascript("if(window.performUndo) performUndo();", null)
+                },
+                onRedoClick = {
+                    editorViewModel.webView?.evaluateJavascript("if(window.performRedo) performRedo();", null)
+                }
             )
 
             TopBar(
@@ -174,7 +253,7 @@ fun InitialEditorUI(navController: NavController) {
                 if (uiState.isLeftKeyboardVisible) {
                     SplitKeyboardHalf(
                         layout, KeyboardSide.LEFT, uiState.isCapsLockOn,
-                        uiState.isShiftOn, keyboardViewModel::onKeyEvent,
+                        uiState.isShiftOn, uiState.isCtrlOn, keyboardViewModel::onKeyEvent,
                         Modifier.constrainAs(leftKb) {
                             start.linkTo(parent.start)
                             bottom.linkTo(parent.bottom)
@@ -186,7 +265,7 @@ fun InitialEditorUI(navController: NavController) {
                 if (uiState.isRightKeyboardVisible) {
                     SplitKeyboardHalf(
                         layout, KeyboardSide.RIGHT, uiState.isCapsLockOn,
-                        uiState.isShiftOn, keyboardViewModel::onKeyEvent,
+                        uiState.isShiftOn, uiState.isCtrlOn, keyboardViewModel::onKeyEvent,
                         Modifier.constrainAs(rightKb) {
                             end.linkTo(parent.end)
                             bottom.linkTo(parent.bottom)
@@ -215,7 +294,8 @@ fun InitialEditorUI(navController: NavController) {
                     end.linkTo(editor.end)
                     width = Dimension.fillToConstraints
                 },
-                color = Color(0xFF1B1B1B)
+                color = Color(0xFF1B1B1B),
+                lspViewModel = lspViewModel
             )
 
             if (!isLandscape) {
@@ -262,6 +342,44 @@ fun InitialEditorUI(navController: NavController) {
             },
             onDismiss = {
                 showLanguagePopup = false
+            }
+        )
+        
+        // File Menu Dialog
+        FileMenuDialog(
+            show = showFileMenu,
+            onDismiss = { showFileMenu = false },
+            bufferViewModel = bufferViewModel,
+            fileViewModel = fileViewModel,
+            onFileOpened = { documentFile ->
+                // Add file to buffer and load it
+                if (bufferViewModel.filesOpenedList.none { it.uri == documentFile.uri }) {
+                    bufferViewModel.filesOpenedList.add(documentFile)
+                }
+                fileViewModel.selectedUri = documentFile.uri
+                fileViewModel.currentFilePath = documentFile.uri.toString()
+                bufferViewModel.currentFile.value = documentFile
+                
+                val content = readFromFile(context, documentFile.uri)
+                bufferViewModel.bufferLine[documentFile] = content
+                loadContentWhenReady(editorViewModel.webView, content)
+            },
+            onFolderOpened = { folder ->
+                // Create new editor session for folder
+                // Session auto-registers and sets activeSessionIndex in its init{}
+                val newSession = EditorSession(context.applicationContext, folder.name ?: "Project")
+                newSession.projectRoot = folder
+                
+                // Update FileViewModel to show new folder in file tree
+                fileViewModel.selectedFolderUri = folder.uri
+                
+                // Set up editor with new session's WebView
+                editorViewModel.setEditorWebView(newSession.getOrInitView())
+                
+                // Navigate to editor with new session
+                navController.navigate(Screen.OpenFolder.route) {
+                    popUpTo(Screen.Home.route) { inclusive = false }
+                }
             }
         )
     }

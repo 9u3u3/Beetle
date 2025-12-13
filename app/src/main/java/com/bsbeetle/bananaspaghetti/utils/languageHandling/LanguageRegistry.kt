@@ -34,11 +34,12 @@ object LanguageRegistry {
         return json.optJSONObject(language)?.optString("version", null)
     }
 
-    /** Mark installed with version */
-    fun setInstalled(language: String, version: String) {
+    /** Mark installed with version and ID */
+    fun setInstalled(language: String, version: String, id: Int) {
         val entry = JSONObject()
         entry.put("installed", true)
         entry.put("version", version)
+        entry.put("id", id)
         json.put(language, entry)
         persist()
     }
@@ -54,5 +55,13 @@ object LanguageRegistry {
     /** Save JSON to file */
     private fun persist() {
         registryFile.writeText(json.toString(4))
+    }
+
+    fun getSlugForExtension(ext: String): String {
+        return when (ext) {
+            "cpp", "c", "h", "hpp" -> "cpp"
+            "py" -> "python"
+            else -> "plaintext"
+        }
     }
 }

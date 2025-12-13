@@ -33,7 +33,7 @@ fun FilesTab(
     var searchQuery by remember { mutableStateOf("") }
 
     // Get real files from the file system
-    val files = remember(fileViewModel.selectedFolderUri, expandedFolders, searchQuery) {
+    val files = remember(fileViewModel.selectedFolderUri, expandedFolders, searchQuery, fileViewModel.fileTreeRefreshCounter) {
         val rootUri = fileViewModel.selectedFolderUri
         if (rootUri != null) {
             val rootDoc = DocumentFile.fromTreeUri(context, rootUri)
@@ -138,7 +138,41 @@ fun buildFileTree(
     doc: DocumentFile,
     level: Int,
     expandedFolders: Set<String>,
-    searchActive: Boolean = false
+    searchActive: Boolean = false,
+    includeRoot: Boolean = true
+): List<FileItem> {
+    val result = mutableListOf<FileItem>()
+    
+    // Add root folder as first item (level 0)
+    if (includeRoot && level == 0) {
+        val rootPath = doc.uri.toString()
+        val rootName = doc.name ?: "Project"
+        
+        result.add(
+            FileItem(
+                name = rootName,
+                path = rootPath,
+                isDirectory = true,
+                level = 0
+            )
+        )
+        
+        // If root is expanded or search is active, add children at level 1
+        if (searchActive || expandedFolders.contains(rootPath)) {
+            result.addAll(buildFileTreeChildren(doc, 1, expandedFolders, searchActive))
+        }
+        return result
+    }
+    
+    return buildFileTreeChildren(doc, level, expandedFolders, searchActive)
+}
+
+// Helper to build children of a folder
+private fun buildFileTreeChildren(
+    doc: DocumentFile,
+    level: Int,
+    expandedFolders: Set<String>,
+    searchActive: Boolean
 ): List<FileItem> {
     val result = mutableListOf<FileItem>()
 
@@ -160,7 +194,7 @@ fun buildFileTree(
 
         // If it's a directory and expanded, recursively add children
         if (child.isDirectory && (searchActive || expandedFolders.contains(childPath))) {
-            result.addAll(buildFileTree(child, level + 1, expandedFolders, searchActive))
+            result.addAll(buildFileTreeChildren(child, level + 1, expandedFolders, searchActive))
         }
     }
 
