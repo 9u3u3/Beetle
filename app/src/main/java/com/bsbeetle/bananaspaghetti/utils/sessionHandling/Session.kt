@@ -11,11 +11,7 @@ enum class SessionType {
     DEMO
 }
 
-abstract class Session(
-    val context: Context,
-    val type: SessionType,
-    var name: String = ""
-) {
+abstract class Session(val context: Context, val type: SessionType, var name: String = "") {
     var id: Int? = null
     var view: CustomWebView? = null
     var _inputConnection: InputConnection? = null

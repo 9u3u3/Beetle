@@ -13,12 +13,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.bsbeetle.bananaspaghetti.ui.DisableDefaultKeyboard
 import com.bsbeetle.bananaspaghetti.ui.EnterImmersiveMode
-import com.bsbeetle.bananaspaghetti.ui.browser.DevBrowserScreen
-import com.bsbeetle.bananaspaghetti.ui.home.BrowserScreen
 import com.bsbeetle.bananaspaghetti.ui.navigation.AppNavigation
 import com.bsbeetle.bananaspaghetti.ui.theme.BananaSpaghettiTheme
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
@@ -30,58 +27,63 @@ import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.TerminalViewModel
 
-val LocalFileViewModel = compositionLocalOf<FileViewModel>{error("No file view model provided")}
-val LocalKeyboardViewModel = compositionLocalOf<KeyboardViewModel>{error("No key board view model provided")}
-val LocalSliderViewModel = compositionLocalOf<SliderViewModel>{error("No slider view model provided")}
-val LocalBufferViewModel = compositionLocalOf<BufferViewModel>{error("No buffer view model provided")}
-val LocalEditorViewModel = compositionLocalOf<EditorViewModel>{error("No editor view model provided")}
-val LocalExpandViewModel = compositionLocalOf<ExpandViewModel>{error("No expand view model provided")}
-val LocalTerminalViewModel = compositionLocalOf<TerminalViewModel> {error("No terminal view model provided")}
-val LocalBrowserViewModel = compositionLocalOf<DevWebViewModel> {error("No browser view model provided")}
+val LocalFileViewModel = compositionLocalOf<FileViewModel> { error("No file view model provided") }
+val LocalKeyboardViewModel =
+        compositionLocalOf<KeyboardViewModel> { error("No key board view model provided") }
+val LocalSliderViewModel =
+        compositionLocalOf<SliderViewModel> { error("No slider view model provided") }
+val LocalBufferViewModel =
+        compositionLocalOf<BufferViewModel> { error("No buffer view model provided") }
+val LocalEditorViewModel =
+        compositionLocalOf<EditorViewModel> { error("No editor view model provided") }
+val LocalExpandViewModel =
+        compositionLocalOf<ExpandViewModel> { error("No expand view model provided") }
+val LocalTerminalViewModel =
+        compositionLocalOf<TerminalViewModel> { error("No terminal view model provided") }
+val LocalBrowserViewModel =
+        compositionLocalOf<DevWebViewModel> { error("No browser view model provided") }
 
 class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        override fun onCreate(savedInstanceState: Bundle?) {
+                super.onCreate(savedInstanceState)
+                enableEdgeToEdge()
 
-        setContent {
-            BananaSpaghettiTheme(dynamicColor = false) {
+                setContent {
+                        BananaSpaghettiTheme(dynamicColor = false) {
 
-                // System UI settings (Global settings)
-                EnterImmersiveMode()
-                DisableDefaultKeyboard()
+                                // System UI settings (Global settings)
+                                EnterImmersiveMode()
+                                DisableDefaultKeyboard()
 
-                val navController = rememberNavController()
+                                val navController = rememberNavController()
 
-                // View Models used throughout the application
-                val fileViewModel: FileViewModel = viewModel()
-                val keyboardViewModel: KeyboardViewModel = viewModel()
-                val sliderViewModel: SliderViewModel = viewModel()
-                val bufferViewModel: BufferViewModel = viewModel()
-                val editorViewModel: EditorViewModel = viewModel()
-                val expandViewModel: ExpandViewModel = viewModel()
-                val terminalViewModel: TerminalViewModel = viewModel()
-                val browserViewModel: DevWebViewModel = viewModel()
+                                // View Models used throughout the application
+                                val fileViewModel: FileViewModel = viewModel()
+                                val keyboardViewModel: KeyboardViewModel = viewModel()
+                                val sliderViewModel: SliderViewModel = viewModel()
+                                val bufferViewModel: BufferViewModel = viewModel()
+                                val editorViewModel: EditorViewModel = viewModel()
+                                val expandViewModel: ExpandViewModel = viewModel()
+                                val terminalViewModel: TerminalViewModel = viewModel()
+                                val browserViewModel: DevWebViewModel = viewModel()
 
-                CompositionLocalProvider(
-                    LocalFileViewModel provides fileViewModel,
-                    LocalKeyboardViewModel provides keyboardViewModel,
-                    LocalSliderViewModel provides sliderViewModel,
-                    LocalBufferViewModel provides bufferViewModel,
-                    LocalEditorViewModel provides editorViewModel,
-                    LocalExpandViewModel provides expandViewModel,
-                    LocalTerminalViewModel provides terminalViewModel,
-                    LocalBrowserViewModel provides browserViewModel
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                    ) {
-                        AppNavigation()
-//                        BrowserScreen(navController)
-                    }
+                                CompositionLocalProvider(
+                                        LocalFileViewModel provides fileViewModel,
+                                        LocalKeyboardViewModel provides keyboardViewModel,
+                                        LocalSliderViewModel provides sliderViewModel,
+                                        LocalBufferViewModel provides bufferViewModel,
+                                        LocalEditorViewModel provides editorViewModel,
+                                        LocalExpandViewModel provides expandViewModel,
+                                        LocalTerminalViewModel provides terminalViewModel,
+                                        LocalBrowserViewModel provides browserViewModel
+                                ) {
+                                        Box(modifier = Modifier.fillMaxSize()) {
+                                                AppNavigation()
+                                                //
+                                                // BrowserScreen(navController)
+                                        }
+                                }
+                        }
                 }
-            }
         }
-    }
 }
