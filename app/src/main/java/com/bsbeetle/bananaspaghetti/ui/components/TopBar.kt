@@ -3,6 +3,8 @@ package com.bsbeetle.bananaspaghetti.ui.components
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
@@ -40,6 +42,8 @@ import com.bsbeetle.bananaspaghetti.LocalBrowserViewModel
 import com.bsbeetle.bananaspaghetti.LocalBufferViewModel
 import com.bsbeetle.bananaspaghetti.LocalEditorViewModel
 import com.bsbeetle.bananaspaghetti.LocalFileViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.data.sidebar.FileIconUtils
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
@@ -52,6 +56,11 @@ import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.documentfile.provider.DocumentFile
 
 @Composable
 fun TopBar(
@@ -64,6 +73,11 @@ fun TopBar(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val webView = editorViewModel.webView
+    val coroutineScope = rememberCoroutineScope()
+    
+    // State for unsaved file close confirmation
+    var fileToClose by remember { mutableStateOf<DocumentFile?>(null) }
+    var showCloseConfirmation by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -84,40 +98,69 @@ fun TopBar(
                 FileTab(
                     fileName = documentFile.name ?: "Unknown",
                     isSelected = documentFile.uri.toString() == fileViewModel.currentFilePath,
+                    isDirty = bufferViewModel.dirtyFiles.contains(documentFile),
                     onClick = {
-                        // Save current content before switching
+                        android.util.Log.d("TopBar", "======== TAB CLICK: ${documentFile.name} ========")
+                        android.util.Log.d("TopBar", "Current file before switch: ${bufferViewModel.currentFile.value?.name}")
+                        
+                        // Save current content before switching (with small delay for async save)
                         bufferViewModel.saveCurrentContentToBuffer()
                         
-                        fileViewModel.selectedUri = documentFile.uri
-                        fileViewModel.currentFilePath = documentFile.uri.toString()
-                        
-                        // Update current file tracker
-                        bufferViewModel.currentFile.value = documentFile
+                        coroutineScope.launch {
+                            android.util.Log.d("TopBar", "Waiting 50ms for save to complete...")
+                            delay(50) // Small delay to ensure save completes
+                            
+                            android.util.Log.d("TopBar", "Delay complete, switching to ${documentFile.name}")
+                            android.util.Log.d("TopBar", "Buffer map size: ${bufferViewModel.bufferLine.size}")
+                            android.util.Log.d("TopBar", "URIs in buffer: ${bufferViewModel.bufferLine.keys.take(5)}")
+                            
+                            fileViewModel.selectedUri = documentFile.uri
+                            fileViewModel.currentFilePath = documentFile.uri.toString()
+                            
+                            // Update current file tracker
+                            bufferViewModel.currentFile.value = documentFile
+                            android.util.Log.d("TopBar", "Updated currentFile to: ${documentFile.name}")
 
-                        val bufferedContent = bufferViewModel.bufferLine[documentFile]
-                        if (bufferedContent != null) {
-                            loadContentWhenReady(webView!!, bufferedContent)
-                        } else {
-                            val content = readFromFile(context, documentFile.uri)
-                            loadContentWhenReady(webView!!, content)
-                            bufferViewModel.bufferLine[documentFile] = content
+                            val fileUri = documentFile.uri.toString()
+                            val bufferedContent = bufferViewModel.bufferLine[fileUri]  // Use URI as key
+                            if (bufferedContent != null) {
+                                android.util.Log.d("TopBar", "✓ Loading from buffer (URI: $fileUri): ${bufferedContent.length} chars")
+                                android.util.Log.d("TopBar", "  First 50 chars: ${bufferedContent.take(50)}")
+                                loadContentWhenReady(webView!!, bufferedContent)
+                            } else {
+                                android.util.Log.d("TopBar", "✗ No buffer found for URI: $fileUri, reading from disk")
+                                val content = readFromFile(context, documentFile.uri)
+                                android.util.Log.d("TopBar", "  Read from disk: ${content.length} chars")
+                                loadContentWhenReady(webView!!, content)
+                                bufferViewModel.bufferLine[fileUri] = content  // Use URI as key
+                            }
+                            
+                            android.util.Log.d("TopBar", "======== TAB SWITCH COMPLETE ========")
                         }
                     },
                     onClose = {
-                        bufferViewModel.filesOpenedList.remove(documentFile)
-                        bufferViewModel.bufferLine.remove(documentFile)
+                        // Check if file has unsaved changes
+                        if (bufferViewModel.dirtyFiles.contains(documentFile)) {
+                            fileToClose = documentFile
+                            showCloseConfirmation = true
+                        } else {
+                            // Close immediately if no unsaved changes
+                            bufferViewModel.filesOpenedList.remove(documentFile)
+                            bufferViewModel.bufferLine.remove(documentFile.uri.toString())
+                            bufferViewModel.dirtyFiles.remove(documentFile)
 
-                        if (documentFile.uri.toString() == fileViewModel.currentFilePath) {
-                            val nextFile = bufferViewModel.filesOpenedList.firstOrNull()
-                            if (nextFile != null) {
-                                fileViewModel.selectedUri = nextFile.uri
-                                fileViewModel.currentFilePath = nextFile.uri.toString()
-                                val content = bufferViewModel.bufferLine[nextFile] ?: ""
-                                loadContentWhenReady(webView!!, content)
-                            } else {
-                                fileViewModel.selectedUri = null
-                                fileViewModel.currentFilePath = null
-                                loadContentWhenReady(webView!!, "")
+                            if (documentFile.uri.toString() == fileViewModel.currentFilePath) {
+                                val nextFile = bufferViewModel.filesOpenedList.firstOrNull()
+                                if (nextFile != null) {
+                                    fileViewModel.selectedUri = nextFile.uri
+                                    fileViewModel.currentFilePath = nextFile.uri.toString()
+                                    val content = bufferViewModel.bufferLine[nextFile.uri.toString()] ?: ""
+                                    loadContentWhenReady(webView!!, content)
+                                } else {
+                                    fileViewModel.selectedUri = null
+                                    fileViewModel.currentFilePath = null
+                                    loadContentWhenReady(webView!!, "")
+                                }
                             }
                         }
                     },
@@ -126,12 +169,108 @@ fun TopBar(
             }
         }
     }
+    
+    // Confirmation dialog for closing unsaved files
+    if (showCloseConfirmation && fileToClose != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showCloseConfirmation = false },
+            title = {
+                Text("Unsaved Changes", color = Color.White)
+            },
+            text = {
+                Text(
+                    "${fileToClose?.name} has unsaved changes. Do you want to save them?",
+                    color = Color(0xFFB0B0B0)
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        // Save and close
+                        fileToClose?.let { file ->
+                            com.bsbeetle.bananaspaghetti.utils.fileHandling.saveFile(
+                                fileViewModel,
+                                bufferViewModel,
+                                context
+                            )
+                            // Close after saving
+                            bufferViewModel.filesOpenedList.remove(file)
+                            bufferViewModel.bufferLine.remove(file.uri.toString())
+                            bufferViewModel.dirtyFiles.remove(file)
+                            
+                            if (file.uri.toString() == fileViewModel.currentFilePath) {
+                                val nextFile = bufferViewModel.filesOpenedList.firstOrNull()
+                                if (nextFile != null) {
+                                    fileViewModel.selectedUri = nextFile.uri
+                                    fileViewModel.currentFilePath = nextFile.uri.toString()
+                                    val content = bufferViewModel.bufferLine[nextFile.uri.toString()] ?: ""
+                                    loadContentWhenReady(webView!!, content)
+                                } else {
+                                    fileViewModel.selectedUri = null
+                                    fileViewModel.currentFilePath = null
+                                    loadContentWhenReady(webView!!, "")
+                                }
+                            }
+                        }
+                        showCloseConfirmation = false
+                        fileToClose = null
+                    }
+                ) {
+                    Text("Save", color = Color(0xFF4CAF50))
+                }
+            },
+            dismissButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.material3.TextButton(
+                        onClick = {
+                            // Close without saving
+                            fileToClose?.let { file ->
+                                bufferViewModel.filesOpenedList.remove(file)
+                                bufferViewModel.bufferLine.remove(file.uri.toString())
+                                bufferViewModel.dirtyFiles.remove(file)
+                                
+                                if (file.uri.toString() == fileViewModel.currentFilePath) {
+                                    val nextFile = bufferViewModel.filesOpenedList.firstOrNull()
+                                    if (nextFile != null) {
+                                        fileViewModel.selectedUri = nextFile.uri
+                                        fileViewModel.currentFilePath = nextFile.uri.toString()
+                                        val content = bufferViewModel.bufferLine[nextFile.uri.toString()] ?: ""
+                                        loadContentWhenReady(webView!!, content)
+                                    } else {
+                                        fileViewModel.selectedUri = null
+                                        fileViewModel.currentFilePath = null
+                                        loadContentWhenReady(webView!!, "")
+                                    }
+                                }
+                            }
+                            showCloseConfirmation = false
+                            fileToClose = null
+                        }
+                    ) {
+                        Text("Close Without Saving", color = Color(0xFFF44336))
+                    }
+                    
+                    androidx.compose.material3.TextButton(
+                        onClick = { 
+                            showCloseConfirmation = false
+                            fileToClose = null
+                        }
+                    ) {
+                        Text("Cancel", color = Color(0xFFB0B0B0))
+                    }
+                }
+            },
+            containerColor = Color(0xFF2B2B2B),
+            tonalElevation = 8.dp
+        )
+    }
 }
 
 @Composable
 private fun FileTab(
     fileName: String,
     isSelected: Boolean,
+    isDirty: Boolean,
     onClick: () -> Unit,
     onClose: () -> Unit,
     context: Context
@@ -173,16 +312,27 @@ private fun FileTab(
                 )
             }
 
-            IconButton(
-                onClick = onClose,
-                modifier = Modifier.size(16.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close",
-                    tint = if (isSelected) Color(0xFFB0B0B0) else Color(0xFF6A6A6A),
-                    modifier = Modifier.size(10.dp)
+            // Show white dot for unsaved files, close button otherwise
+            if (isDirty) {
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .padding(4.dp)
+                        .background(Color.White, CircleShape)
+                        .clickable(onClick = onClose)
                 )
+            } else {
+                IconButton(
+                    onClick = onClose,
+                    modifier = Modifier.size(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = if (isSelected) Color(0xFFB0B0B0) else Color(0xFF6A6A6A),
+                        modifier = Modifier.size(10.dp)
+                    )
+                }
             }
         }
 

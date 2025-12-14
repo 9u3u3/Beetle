@@ -7,6 +7,7 @@ import com.bsbeetle.bananaspaghetti.utils.sessionHandling.Session
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
+import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import java.io.FileNotFoundException
@@ -14,6 +15,7 @@ import java.io.OutputStreamWriter
 
 fun saveFile(
     fileViewModel: FileViewModel,
+    bufferViewModel: BufferViewModel,
     context: Context,
 ) {
 
@@ -29,7 +31,7 @@ fun saveFile(
     Log.d("Save", "Save clicked for ${fileViewModel.selectedUri}")
 
     // Get the code from code mirror, override that with the opened file
-    webView.evaluateJavascript("window.code_") { result ->
+    webView.evaluateJavascript("window.editor?.state?.doc?.toString() || window.code_ || ''") { result ->
         val newCode = result.removeSurrounding("\"")
             .replace("\\n", "\n")
             .replace("\\u003C", "<")
@@ -40,12 +42,23 @@ fun saveFile(
 
         val resolver = context.contentResolver
         fileViewModel.selectedUri?.let { uri ->
-            val out = resolver.openOutputStream(uri, "wt") // truncate mode
-                ?: throw FileNotFoundException("Unable to open output stream for $uri")
+            try {
+                val out = resolver.openOutputStream(uri, "wt") // truncate mode
+                    ?: throw FileNotFoundException("Unable to open output stream for $uri")
 
-            OutputStreamWriter(out, Charsets.UTF_8).use { writer ->
-                writer.write(newCode)
-                writer.flush()
+                OutputStreamWriter(out, Charsets.UTF_8).use { writer ->
+                    writer.write(newCode)
+                    writer.flush()
+                }
+                
+                // Clear dirty state after successful save
+                bufferViewModel.currentFile.value?.let { file ->
+                    bufferViewModel.markAsClean(file)
+                }
+                
+                Log.d("Save", "File saved successfully and marked clean")
+            } catch (e: Exception) {
+                Log.e("Save", "Failed to save file", e)
             }
         }
 

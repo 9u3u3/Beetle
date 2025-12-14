@@ -86,11 +86,12 @@ fun InitialEditorUI(navController: NavController) {
         navController.popBackStack()
     }
 
-    // Pass LspViewModel to active session if it's an EditorSession
+    // Pass LspViewModel and BufferViewModel to active session if it's an EditorSession
     LaunchedEffect(Unit) {
         val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
         if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
             session.setLspViewModel(lspViewModel)
+            session.setBufferViewModel(bufferViewModel)
         }
     }
 
@@ -157,8 +158,20 @@ fun InitialEditorUI(navController: NavController) {
                 // Save current content before loading new file
                 bufferViewModel.saveCurrentContentToBuffer()
 
-                val content = readFromFile(context, uri)
-                bufferViewModel.bufferLine[documentFile] = content
+                // Check if we already have this file in buffer (from tab switching)
+                val fileUri = uri.toString()
+                val bufferedContent = bufferViewModel.bufferLine[fileUri]
+                
+                val content = if (bufferedContent != null) {
+                    Log.d("Buffer", "Using buffered content for ${documentFile.name}: ${bufferedContent.length} chars")
+                    bufferedContent
+                } else {
+                    Log.d("Buffer", "Reading from disk for ${documentFile.name}")
+                    val diskContent = readFromFile(context, uri)
+                    bufferViewModel.bufferLine[fileUri] = diskContent  // Cache it
+                    diskContent
+                }
+                
                 bufferViewModel.currentFile.value = documentFile // Track current file
                 loadContentWhenReady(editorViewModel.webView, content)
                 fileViewModel.currentFilePath = uri.toString()
@@ -237,7 +250,7 @@ fun InitialEditorUI(navController: NavController) {
                 },
                 onMenuClick = { showSidebar = true },
                 showMenuIcon = !isLandscape,
-                onSaveClick = { saveFile(fileViewModel, context) },
+                onSaveClick = { saveFile(fileViewModel, bufferViewModel, context) },
                 onFileClick = { showFileMenu = true },
                 onUndoClick = { 
                     editorViewModel.webView?.evaluateJavascript("if(window.performUndo) performUndo();", null)
@@ -401,7 +414,7 @@ fun InitialEditorUI(navController: NavController) {
                 bufferViewModel.currentFile.value = documentFile
                 
                 val content = readFromFile(context, documentFile.uri)
-                bufferViewModel.bufferLine[documentFile] = content
+                bufferViewModel.bufferLine[documentFile.uri.toString()] = content  // Use URI as key
                 loadContentWhenReady(editorViewModel.webView, content)
             },
             onFolderOpened = { folder ->

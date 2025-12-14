@@ -30,6 +30,14 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
     private var savedContent: String? = null
     private var needsRestore: Boolean = false
     
+    // Reference to BufferViewModel for dirty state tracking
+    private var bufferViewModel: com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel? = null
+    
+    fun setBufferViewModel(viewModel: com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel) {
+        this.bufferViewModel = viewModel
+        android.util.Log.d("EditorSession", "BufferViewModel set")
+    }
+    
     fun updateCursorPosition(line: Int, col: Int) {
         cursorLine = line
         cursorColumn = col
@@ -102,7 +110,60 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                 databaseEnabled = false
                 // cacheMode = WebSettings.LOAD_NO_CACHE // Already set
             }
+            
+            // Add JavaScript interface for dirty state tracking
+            addJavascriptInterface(object {
+                @android.webkit.JavascriptInterface
+                fun onContentChanged() {
+                    android.util.Log.d("EditorSession", "✓✓✓ JS: onContentChanged called ✓✓✓")
+                    android.util.Log.d("EditorSession", "BufferViewModel is null? ${bufferViewModel == null}")
+                    android.util.Log.d("EditorSession", "CurrentFile is null? ${bufferViewModel?.currentFile?.value == null}")
+                    
+                    // MUST run on main thread for Compose state updates
+                    view?.post {
+                        bufferViewModel?.currentFile?.value?.let { file ->
+                            bufferViewModel?.markAsDirty(file)
+                            android.util.Log.d("EditorSession", "✓ Marked dirty on main thread: ${file.name}")
+                        } ?: android.util.Log.e("EditorSession", "✗ Could not mark dirty - currentFile is null")
+                    }
+                }
+            }, "AndroidEditor")
+            
             loadUrl(AppConfig.EDITOR_URL)
+            
+            // Inject listener immediately after load
+            post {
+                postDelayed({
+                    android.util.Log.d("EditorSession", "Injecting MutationObserver for content changes...")
+                    evaluateJavascript("""
+                        (function() {
+                            function attachObserver() {
+                                const content = document.querySelector('.cm-content');
+                                if (content && window.AndroidEditor) {
+                                    console.log('✓ JS: Setting up MutationObserver');
+                                    
+                                    const observer = new MutationObserver(() => {
+                                        console.log('✓ JS: Content mutation detected, calling onContentChanged');
+                                        window.AndroidEditor.onContentChanged();
+                                    });
+                                    
+                                    observer.observe(content, {
+                                        characterData: true,
+                                        subtree: true,
+                                        childList: true
+                                    });
+                                    
+                                    console.log('✓ JS: MutationObserver attached successfully');
+                                } else {
+                                    console.log('✗ JS: .cm-content or AndroidEditor not ready, retrying...');
+                                    setTimeout(attachObserver, 500);
+                                }
+                            }
+                            attachObserver();
+                        })();
+                    """.trimIndent(), null)
+                }, 2000)
+            }
             post {
                 val isPortrait = resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
                 if (isPortrait) requestFocus() else clearFocus()
@@ -136,6 +197,22 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                             if (content) {
                                 const observer = new MutationObserver(() => updateInputMode());
                                 observer.observe(content, { attributes: true, attributeFilter: ['inputmode'] });
+                                
+                                // CONTENT CHANGE DETECTION - NEW CODE
+                                if (window.AndroidEditor && !window.contentChangeListenerAttached) {
+                                    console.log('✓ JS: Attaching content change observer');
+                                    const changeObserver = new MutationObserver(() => {
+                                        console.log('✓ JS: Content changed, calling onContentChanged');
+                                        window.AndroidEditor.onContentChanged();
+                                    });
+                                    changeObserver.observe(content, {
+                                        characterData: true,
+                                        subtree: true,
+                                        childList: true
+                                    });
+                                    window.contentChangeListenerAttached = true;
+                                    console.log('✓ JS: Content change observer attached');
+                                }
                             } else {
                                 // Fallback only if content not found immediately
                                 const checkExist = setInterval(function() {
@@ -145,10 +222,49 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                                       updateInputMode();
                                       const observer = new MutationObserver(() => updateInputMode());
                                       observer.observe(content, { attributes: true, attributeFilter: ['inputmode'] });
+                                      
+                                      // CONTENT CHANGE DETECTION - NEW CODE (fallback)
+                                      if (window.AndroidEditor && !window.contentChangeListenerAttached) {
+                                          console.log('✓ JS: Attaching content change observer (fallback)');
+                                          const changeObserver = new MutationObserver(() => {
+                                              console.log('✓ JS: Content changed, calling onContentChanged');
+                                              window.AndroidEditor.onContentChanged();
+                                          });
+                                          changeObserver.observe(content, {
+                                              characterData: true,
+                                              subtree: true,
+                                              childList: true
+                                          });
+                                          window.contentChangeListenerAttached = true;
+                                          console.log('✓ JS: Content change observer attached (fallback)');
+                                      }
                                    }
                                 }, 100);
                                 setTimeout(() => clearInterval(checkExist), 2000);
                             }
+                        })();
+                            let attached = false;
+                            function attachChangeListener() {
+                                const content = document.querySelector('.cm-content');
+                                if (content && !attached && window.AndroidEditor) {
+                                    console.log('Attaching content change listener');
+                                    
+                                    // Listen for input events (covers most typing)
+                                    content.addEventListener('input', function() {
+                                        window.AndroidEditor.onContentChanged();
+                                    });
+                                    
+                                    // Also listen for other changes (paste, delete, etc.)
+                                    content.addEventListener('compositionend', function() {
+                                        window.AndroidEditor.onContentChanged();
+                                    });
+                                    
+                                    attached = true;
+                                } else if (!attached) {
+                                    setTimeout(attachChangeListener, 300);
+                                }
+                            }
+                            attachChangeListener();
                         })();
                     """.trimIndent(), null)
                     
