@@ -122,7 +122,7 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                     // MUST run on main thread for Compose state updates
                     view?.post {
                         bufferViewModel?.currentFile?.value?.let { file ->
-                            bufferViewModel?.markAsDirty(file)
+                            bufferViewModel?.markAsDirty(file.uri.toString())
                             android.util.Log.d("EditorSession", "✓ Marked dirty on main thread: ${file.name}")
                         } ?: android.util.Log.e("EditorSession", "✗ Could not mark dirty - currentFile is null")
                     }
@@ -137,29 +137,9 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                     android.util.Log.d("EditorSession", "Injecting MutationObserver for content changes...")
                     evaluateJavascript("""
                         (function() {
-                            function attachObserver() {
-                                const content = document.querySelector('.cm-content');
-                                if (content && window.AndroidEditor) {
-                                    console.log('✓ JS: Setting up MutationObserver');
-                                    
-                                    const observer = new MutationObserver(() => {
-                                        console.log('✓ JS: Content mutation detected, calling onContentChanged');
-                                        window.AndroidEditor.onContentChanged();
-                                    });
-                                    
-                                    observer.observe(content, {
-                                        characterData: true,
-                                        subtree: true,
-                                        childList: true
-                                    });
-                                    
-                                    console.log('✓ JS: MutationObserver attached successfully');
-                                } else {
-                                    console.log('✗ JS: .cm-content or AndroidEditor not ready, retrying...');
-                                    setTimeout(attachObserver, 500);
-                                }
-                            }
-                            attachObserver();
+                            // Legacy MutationObserver removed.
+                            // Content change detection is now handled by event listeners in the WebViewClient.onPageFinished
+                            console.log('✓ JS: Legacy MutationObserver skipped');
                         })();
                     """.trimIndent(), null)
                 }, 2000)
@@ -192,27 +172,11 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                             // Initial check
                             updateInputMode();
                             
-                            // Use MutationObserver
+                            // Use MutationObserver ONLY for inputmode attribute
                             const content = document.querySelector('.cm-content');
                             if (content) {
                                 const observer = new MutationObserver(() => updateInputMode());
                                 observer.observe(content, { attributes: true, attributeFilter: ['inputmode'] });
-                                
-                                // CONTENT CHANGE DETECTION - NEW CODE
-                                if (window.AndroidEditor && !window.contentChangeListenerAttached) {
-                                    console.log('✓ JS: Attaching content change observer');
-                                    const changeObserver = new MutationObserver(() => {
-                                        console.log('✓ JS: Content changed, calling onContentChanged');
-                                        window.AndroidEditor.onContentChanged();
-                                    });
-                                    changeObserver.observe(content, {
-                                        characterData: true,
-                                        subtree: true,
-                                        childList: true
-                                    });
-                                    window.contentChangeListenerAttached = true;
-                                    console.log('✓ JS: Content change observer attached');
-                                }
                             } else {
                                 // Fallback only if content not found immediately
                                 const checkExist = setInterval(function() {
@@ -222,50 +186,15 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                                       updateInputMode();
                                       const observer = new MutationObserver(() => updateInputMode());
                                       observer.observe(content, { attributes: true, attributeFilter: ['inputmode'] });
-                                      
-                                      // CONTENT CHANGE DETECTION - NEW CODE (fallback)
-                                      if (window.AndroidEditor && !window.contentChangeListenerAttached) {
-                                          console.log('✓ JS: Attaching content change observer (fallback)');
-                                          const changeObserver = new MutationObserver(() => {
-                                              console.log('✓ JS: Content changed, calling onContentChanged');
-                                              window.AndroidEditor.onContentChanged();
-                                          });
-                                          changeObserver.observe(content, {
-                                              characterData: true,
-                                              subtree: true,
-                                              childList: true
-                                          });
-                                          window.contentChangeListenerAttached = true;
-                                          console.log('✓ JS: Content change observer attached (fallback)');
-                                      }
                                    }
                                 }, 100);
                                 setTimeout(() => clearInterval(checkExist), 2000);
                             }
                         })();
-                            let attached = false;
-                            function attachChangeListener() {
-                                const content = document.querySelector('.cm-content');
-                                if (content && !attached && window.AndroidEditor) {
-                                    console.log('Attaching content change listener');
-                                    
-                                    // Listen for input events (covers most typing)
-                                    content.addEventListener('input', function() {
-                                        window.AndroidEditor.onContentChanged();
-                                    });
-                                    
-                                    // Also listen for other changes (paste, delete, etc.)
-                                    content.addEventListener('compositionend', function() {
-                                        window.AndroidEditor.onContentChanged();
-                                    });
-                                    
-                                    attached = true;
-                                } else if (!attached) {
-                                    setTimeout(attachChangeListener, 300);
-                                }
-                            }
-                            attachChangeListener();
-                        })();
+                        
+                        // CONTENT CHANGE DETECTION
+                        // Now handled internally by CodeMirror's updateListener in editor.js
+                        // This ensures we only catch actual content changes and respect isProgrammaticChange
                     """.trimIndent(), null)
                     
                     // Apply pending file path if any

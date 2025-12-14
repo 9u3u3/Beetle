@@ -53,7 +53,7 @@ fun saveFile(
                 
                 // Clear dirty state after successful save
                 bufferViewModel.currentFile.value?.let { file ->
-                    bufferViewModel.markAsClean(file)
+                    bufferViewModel.markAsClean(file.uri.toString())
                 }
                 
                 Log.d("Save", "File saved successfully and marked clean")

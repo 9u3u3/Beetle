@@ -648,7 +648,15 @@ function setupEditor() {
         }
       ]),
       EditorView.updateListener.of((update) => {
-        if (update.docChanged) window.code_ = update.state.doc.toString()
+        if (update.docChanged) {
+          window.code_ = update.state.doc.toString()
+
+          // Notify Android about content change
+          if (window.AndroidEditor && !window.isProgrammaticChange) {
+            // console.log('[LSP-JS] Content changed (user), calling onContentChanged');
+            window.AndroidEditor.onContentChanged();
+          }
+        }
 
         // Handle Completion UI on selection change
         if (update.selectionSet) {

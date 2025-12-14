@@ -17,19 +17,19 @@ class BufferViewModel : ViewModel() {
     // Track currently active file
     var currentFile = mutableStateOf<DocumentFile?>(null)
     
-    // Track files with unsaved changes (dirty state)
-    val dirtyFiles = mutableStateListOf<DocumentFile>()
+    // Track files with unsaved changes (dirty state) - Store URIs as Strings
+    val dirtyFiles = mutableStateListOf<String>()
     
-    fun markAsDirty(file: DocumentFile) {
-        if (!dirtyFiles.contains(file)) {
-            dirtyFiles.add(file)
-            Log.d("Buffer", "Marked dirty: ${file.name}")
+    fun markAsDirty(fileUri: String) {
+        if (!dirtyFiles.contains(fileUri)) {
+            dirtyFiles.add(fileUri)
+            Log.d("Buffer", "Marked dirty: $fileUri")
         }
     }
     
-    fun markAsClean(file: DocumentFile) {
-        dirtyFiles.remove(file)
-        Log.d("Buffer", "Marked clean: ${file.name}")
+    fun markAsClean(fileUri: String) {
+        dirtyFiles.remove(fileUri)
+        Log.d("Buffer", "Marked clean: $fileUri")
     }
     
     /**

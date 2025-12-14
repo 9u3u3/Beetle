@@ -95,10 +95,10 @@ fun TopBar(
                 items = bufferViewModel.filesOpenedList,
                 key = { it.uri.toString() }
             ) { documentFile ->
-                FileTab(
-                    fileName = documentFile.name ?: "Unknown",
+                BufferCard(
+                    file = documentFile,
                     isSelected = documentFile.uri.toString() == fileViewModel.currentFilePath,
-                    isDirty = bufferViewModel.dirtyFiles.contains(documentFile),
+                    isDirty = bufferViewModel.dirtyFiles.contains(documentFile.uri.toString()),
                     onClick = {
                         android.util.Log.d("TopBar", "======== TAB CLICK: ${documentFile.name} ========")
                         android.util.Log.d("TopBar", "Current file before switch: ${bufferViewModel.currentFile.value?.name}")
@@ -140,14 +140,14 @@ fun TopBar(
                     },
                     onClose = {
                         // Check if file has unsaved changes
-                        if (bufferViewModel.dirtyFiles.contains(documentFile)) {
+                        if (bufferViewModel.dirtyFiles.contains(documentFile.uri.toString())) {
                             fileToClose = documentFile
                             showCloseConfirmation = true
                         } else {
                             // Close immediately if no unsaved changes
                             bufferViewModel.filesOpenedList.remove(documentFile)
                             bufferViewModel.bufferLine.remove(documentFile.uri.toString())
-                            bufferViewModel.dirtyFiles.remove(documentFile)
+                            bufferViewModel.dirtyFiles.remove(documentFile.uri.toString())
 
                             if (documentFile.uri.toString() == fileViewModel.currentFilePath) {
                                 val nextFile = bufferViewModel.filesOpenedList.firstOrNull()
@@ -164,7 +164,7 @@ fun TopBar(
                             }
                         }
                     },
-                    context
+                    context = context
                 )
             }
         }
@@ -196,7 +196,7 @@ fun TopBar(
                             // Close after saving
                             bufferViewModel.filesOpenedList.remove(file)
                             bufferViewModel.bufferLine.remove(file.uri.toString())
-                            bufferViewModel.dirtyFiles.remove(file)
+                            bufferViewModel.dirtyFiles.remove(file.uri.toString())
                             
                             if (file.uri.toString() == fileViewModel.currentFilePath) {
                                 val nextFile = bufferViewModel.filesOpenedList.firstOrNull()
@@ -227,7 +227,7 @@ fun TopBar(
                             fileToClose?.let { file ->
                                 bufferViewModel.filesOpenedList.remove(file)
                                 bufferViewModel.bufferLine.remove(file.uri.toString())
-                                bufferViewModel.dirtyFiles.remove(file)
+                                bufferViewModel.dirtyFiles.remove(file.uri.toString())
                                 
                                 if (file.uri.toString() == fileViewModel.currentFilePath) {
                                     val nextFile = bufferViewModel.filesOpenedList.firstOrNull()
@@ -266,88 +266,7 @@ fun TopBar(
     }
 }
 
-@Composable
-private fun FileTab(
-    fileName: String,
-    isSelected: Boolean,
-    isDirty: Boolean,
-    onClick: () -> Unit,
-    onClose: () -> Unit,
-    context: Context
-) {
-    Column(
-        modifier = Modifier
-            .clickable(onClick = onClick)
-            .background(Color(0xFF1B1B1B))
-    ) {
-        Row(
-            modifier = Modifier
-                .height(17.dp)
-                .padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            val iconPath = FileIconUtils.getIconPath(fileName)
-            AsyncImage(
-                model = iconPath,
-                imageLoader = ImageLoaderSingleton.get(context),
-                contentDescription = null,
-                modifier = Modifier.size(16.dp)
-            )
 
-            AnimatedContent(
-                targetState = fileName,
-                transitionSpec = {
-                    fadeIn(tween(150)) togetherWith fadeOut(tween(150))
-                },
-                label = "fileName"
-            ) { name ->
-                Text(
-                    text = name,
-                    color = if (isSelected) Color.White else Color(0xFFB0B0B0),
-                    fontSize = 10.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = 150.dp)
-                )
-            }
-
-            // Show white dot for unsaved files, close button otherwise
-            if (isDirty) {
-                Box(
-                    modifier = Modifier
-                        .size(16.dp)
-                        .padding(4.dp)
-                        .background(Color.White, CircleShape)
-                        .clickable(onClick = onClose)
-                )
-            } else {
-                IconButton(
-                    onClick = onClose,
-                    modifier = Modifier.size(16.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = if (isSelected) Color(0xFFB0B0B0) else Color(0xFF6A6A6A),
-                        modifier = Modifier.size(10.dp)
-                    )
-                }
-            }
-        }
-
-        // Not showing up
-        if (isSelected) {
-            HorizontalDivider(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(Color(0xFF4379FF))
-            )
-        }
-
-    }
-}
 
 @Composable
 fun LeftTopBar(
