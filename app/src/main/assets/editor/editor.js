@@ -710,16 +710,12 @@ function setupEditor() {
             // Debounce symbol request
             if (window.symbolTimeout) clearTimeout(window.symbolTimeout);
             window.symbolTimeout = setTimeout(() => {
-              console.log(`[LSP-JS] Requesting document symbols for ${URI}`);
               sendRequest(ws, 'textDocument/documentSymbol', {
                 textDocument: { uri: URI }
               }).then(symbols => {
                 if (!symbols || !Array.isArray(symbols)) {
-                  console.log(`[LSP-JS] No symbols returned or invalid format: ${JSON.stringify(symbols)}`);
                   return;
                 }
-
-                console.log(`[LSP-JS] Got ${symbols.length} root symbols`);
 
                 // Helper to normalize range
                 function getRange(sym) {
@@ -792,7 +788,6 @@ function setupEditor() {
                 const cursorCol = col;
 
                 const breadcrumbs = findSymbolAtPos(symbols, cursorLine, cursorCol);
-                console.log(`[LSP-JS] Found breadcrumbs: ${JSON.stringify(breadcrumbs)}`);
 
                 // Send to Android
                 // Only send if changed
