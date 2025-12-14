@@ -157,6 +157,16 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspView
                     }
 
                     Spacer(modifier = Modifier.weight(1f))
+                    
+                    // Center Swipe Up Icon
+                    Image(
+                        painter = painterResource(R.drawable.swipe_up),
+                        contentDescription = "Swipe Up",
+                        modifier = Modifier.size(12.dp),
+                        alignment = Alignment.Center
+                    )
+                    
+                    Spacer(modifier = Modifier.weight(1f))
 
                     Image(
                         painter = painterResource(R.drawable.warning_icon),

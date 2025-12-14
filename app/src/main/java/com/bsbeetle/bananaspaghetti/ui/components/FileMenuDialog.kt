@@ -57,7 +57,8 @@ enum class FileMenuAction {
     NEW_FILE,
     NEW_FOLDER,
     OPEN_FILE,
-    OPEN_FOLDER
+    OPEN_FOLDER,
+    RENAME_FILE
 }
 
 @Composable
@@ -73,6 +74,8 @@ fun FileMenuDialog(
     var currentAction by remember { mutableStateOf(FileMenuAction.NONE) }
     var newFileName by remember { mutableStateOf("") }
     var newFolderName by remember { mutableStateOf("") }
+    var renameFileName by remember { mutableStateOf("") }
+    var fileToRename by remember { mutableStateOf<DocumentFile?>(null) }
     var selectedFolder by remember { mutableStateOf<DocumentFile?>(null) }
     
     // File picker launcher
@@ -124,6 +127,34 @@ fun FileMenuDialog(
         }
         if (currentAction == FileMenuAction.OPEN_FOLDER) {
             onDismiss()
+        }
+    }
+
+    // Rename file picker launcher
+    val renameFileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    it,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+                val documentFile = DocumentFile.fromSingleUri(context, it)
+                documentFile?.let { file ->
+                    fileToRename = file
+                    renameFileName = file.name ?: ""
+                    currentAction = FileMenuAction.RENAME_FILE
+                }
+            } catch (e: Exception) {
+                Log.e("FileMenu", "Error selecting file for rename", e)
+                Toast.makeText(context, "Error selecting file", Toast.LENGTH_SHORT).show()
+                currentAction = FileMenuAction.NONE
+            }
+        }
+        if (uri == null) {
+             currentAction = FileMenuAction.NONE
         }
     }
 
@@ -204,6 +235,17 @@ fun FileMenuDialog(
                                 }
                             )
                             
+                            HorizontalDivider(color = Color(0xFF3C3C3C), modifier = Modifier.padding(vertical = 4.dp))
+                            
+                            FileMenuItem(
+                                icon = R.drawable.file_type_text, // Using generic text icon for rename
+                                title = "Rename File",
+                                onClick = { 
+                                    currentAction = FileMenuAction.RENAME_FILE
+                                    renameFileLauncher.launch(arrayOf("*/*"))
+                                }
+                            )
+                            
                             Spacer(modifier = Modifier.height(12.dp))
                             
                             // Cancel button
@@ -265,6 +307,34 @@ fun FileMenuDialog(
                     )
                 }
                 
+                FileMenuAction.RENAME_FILE -> {
+                    if (fileToRename != null) {
+                        NewItemPopup(
+                            title = "Rename File",
+                            placeholder = "new_name.ext",
+                            value = renameFileName,
+                            onValueChange = { renameFileName = it },
+                            selectedFolder = null, // Not needed for rename
+                            onSelectFolder = { }, // No-op
+                            onConfirm = {
+                                if (renameFileName.isNotBlank()) {
+                                    renameFile(context, fileToRename!!, renameFileName, fileViewModel)
+                                    renameFileName = ""
+                                    fileToRename = null
+                                    currentAction = FileMenuAction.NONE
+                                    onDismiss()
+                                }
+                            },
+                            onCancel = {
+                                renameFileName = ""
+                                fileToRename = null
+                                currentAction = FileMenuAction.NONE
+                            },
+                            isRename = true
+                        )
+                    }
+                }
+                
                 else -> {}
             }
         }
@@ -309,7 +379,8 @@ private fun NewItemPopup(
     selectedFolder: DocumentFile?,
     onSelectFolder: () -> Unit,
     onConfirm: () -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    isRename: Boolean = false
 ) {
     val currentSession = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? EditorSession
     val projectRoot = currentSession?.projectRoot
@@ -347,46 +418,50 @@ private fun NewItemPopup(
             
             Spacer(modifier = Modifier.height(12.dp))
             
-            Text(
-                text = "Location:",
-                color = Color(0xFFCCCCCC),
-                fontSize = 12.sp
-            )
+            Spacer(modifier = Modifier.height(12.dp))
             
-            Spacer(modifier = Modifier.height(6.dp))
-            
-            val displayFolder = selectedFolder?.name ?: projectRoot?.name ?: "Select folder..."
-            
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(Color(0xFF1E1E1E))
-                    .clickable(onClick = onSelectFolder)
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.folder_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
-                    contentDescription = "Folder",
-                    tint = Color(0xFFCCCCCC),
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
+            if (!isRename) {
                 Text(
-                    text = displayFolder,
-                    color = if (selectedFolder != null || projectRoot != null) Color.White else Color(0xFF666666),
-                    fontSize = 13.sp
+                    text = "Location:",
+                    color = Color(0xFFCCCCCC),
+                    fontSize = 12.sp
                 )
-            }
-            
-            if (projectRoot != null && selectedFolder == null) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Using project root",
-                    color = Color(0xFF50fa7b),
-                    fontSize = 10.sp
-                )
+                
+                Spacer(modifier = Modifier.height(6.dp))
+                
+                val displayFolder = selectedFolder?.name ?: projectRoot?.name ?: "Select folder..."
+                
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFF1E1E1E))
+                        .clickable(onClick = onSelectFolder)
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.folder_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
+                        contentDescription = "Folder",
+                        tint = Color(0xFFCCCCCC),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = displayFolder,
+                        color = if (selectedFolder != null || projectRoot != null) Color.White else Color(0xFF666666),
+                        fontSize = 13.sp
+                    )
+                }
+                
+                if (projectRoot != null && selectedFolder == null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Using project root",
+                        color = Color(0xFF50fa7b),
+                        fontSize = 10.sp
+                    )
+                }
             }
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -404,7 +479,7 @@ private fun NewItemPopup(
                     enabled = value.isNotBlank()
                 ) {
                     Text(
-                        "Create",
+                        if (isRename) "Rename" else "Create",
                         color = if (value.isNotBlank()) Color(0xFF007ACC) else Color(0xFF666666)
                     )
                 }
@@ -481,6 +556,25 @@ private fun createNewFolder(
         }
     } catch (e: Exception) {
         Log.e("FileMenu", "Error creating folder", e)
+        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+private fun renameFile(
+    context: Context,
+    file: DocumentFile,
+    newName: String,
+    fileViewModel: FileViewModel
+) {
+    try {
+        if (file.renameTo(newName)) {
+            fileViewModel.refreshFileTree()
+            Toast.makeText(context, "Renamed to: $newName", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "Failed to rename file", Toast.LENGTH_SHORT).show()
+        }
+    } catch (e: Exception) {
+        Log.e("FileMenu", "Error renaming file", e)
         Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
     }
 }
