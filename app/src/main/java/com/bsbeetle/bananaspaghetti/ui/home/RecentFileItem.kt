@@ -74,31 +74,13 @@ fun RecentFileItem(
             },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Icon based on extension
-        val ext = file.name.substringAfterLast(".", "").lowercase()
-        val iconName = when(ext) {
-            "kt" -> "kotlin.svg"
-            "py" -> "python.svg"
-            "js" -> "javascript.svg"
-            "cpp", "c", "h" -> "cpp.svg"
-            "html" -> "html.svg"
-            "css" -> "css.svg"
-            "java" -> "java.svg"
-            "xml" -> "xml.svg"
-            "json" -> "json.svg"
-            "md" -> "markdown.svg"
-            "txt" -> "text.svg"
-            else -> "default_file.svg"
-        }
+        // Use FileIconUtils for consistent icons
+        val iconPath = com.bsbeetle.bananaspaghetti.data.sidebar.FileIconUtils.getIconPath(file.name)
         
         AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data("file:///android_asset/file_icons/$iconName")
-                .decoderFactory(SvgDecoder.Factory())
-                .error(R.drawable.file_open_24dp_e3e3e3_fill0_wght400_grad0_opsz24) // Fallback to valid drawable
-                .build(),
+            model = iconPath,
+            imageLoader = com.bsbeetle.bananaspaghetti.utils.resourceHandling.ImageLoaderSingleton.get(context),
             contentDescription = null,
-            imageLoader = imageLoader,
             modifier = Modifier.size(24.dp)
         )
         

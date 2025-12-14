@@ -63,11 +63,12 @@ object LanguageRegistry {
             "py" -> "python"
             "html" -> "html"
             "css" -> "css"
-            "js" -> "js"  // Match the plugin slug from server
-            "ts" -> "ts"  // Match the plugin slug from server
+            "js", "ts" -> "js"  // Match the plugin slug from server
+            "tsx", "jsx" -> "react"  // React/JSX files
             "rs" -> "rust"  // Rust files
             "java" -> "java"  // Java files
             "go" -> "go"  // Go files
+            "sql" -> "sql"  // SQL files
             else -> "plaintext"
         }
     }

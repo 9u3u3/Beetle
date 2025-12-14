@@ -38,7 +38,13 @@ fun ExtensionsScreen(navController: NavController, viewModel: ExtensionsViewMode
     val extensions by viewModel.extensions.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
-    var selectedExtension by remember { mutableStateOf<ExtensionModel?>(null) }
+    var selectedExtensionId by remember { mutableStateOf<Int?>(null) }
+    
+    // Derive the selected extension from the live list to ensure updates are reflected
+    val selectedExtension = remember(extensions, selectedExtensionId) {
+        extensions.find { it.id == selectedExtensionId }
+    }
+    
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -124,9 +130,9 @@ fun ExtensionsScreen(navController: NavController, viewModel: ExtensionsViewMode
                             items(installed) { ext ->
                                 SidebarExtensionItem(
                                     extension = ext,
-                                    isSelected = ext.id == selectedExtension?.id,
+                                    isSelected = ext.id == selectedExtensionId,
                                     imageLoader = imageLoader,
-                                    onClick = { selectedExtension = ext }
+                                    onClick = { selectedExtensionId = ext.id }
                                 )
                             }
                         }
@@ -144,9 +150,9 @@ fun ExtensionsScreen(navController: NavController, viewModel: ExtensionsViewMode
                             items(marketplace) { ext ->
                                 SidebarExtensionItem(
                                     extension = ext,
-                                    isSelected = ext.id == selectedExtension?.id,
+                                    isSelected = ext.id == selectedExtensionId,
                                     imageLoader = imageLoader,
-                                    onClick = { selectedExtension = ext }
+                                    onClick = { selectedExtensionId = ext.id }
                                 )
                             }
                         }
@@ -172,7 +178,7 @@ fun ExtensionsScreen(navController: NavController, viewModel: ExtensionsViewMode
                     }
                 } else {
                     ExtensionDetails(
-                        extension = selectedExtension!!,
+                        extension = selectedExtension,
                         imageLoader = imageLoader,
                         onInstall = { viewModel.installExtension(it) },
                         onUninstall = { viewModel.uninstallExtension(it) }

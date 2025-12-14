@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -55,6 +56,7 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.LocalBrowserViewModel
 import com.bsbeetle.bananaspaghetti.LocalTerminalViewModel
+import androidx.compose.ui.zIndex
 import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.ui.components.GridBackground
 import com.bsbeetle.bananaspaghetti.ui.components.LiquidGlassBox
@@ -88,13 +90,20 @@ fun HomeScreen(navController: NavController) {
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     var isRecentsOpen by rememberSaveable { mutableStateOf(false) }
     val mainMenuOffset by animateDpAsState(
-        targetValue = if (isRecentsOpen) -150.dp else 0.dp,
+        targetValue = if (isRecentsOpen) {
+            if (isLandscape) 150.dp else (-150).dp
+        } else {
+            0.dp
+        },
         animationSpec = tween(durationMillis = 400),
         label = "mainMenuOffset"
     ) // Animated offset or main menu
-    val targetOffset = if (isRecentsOpen) 0.dp else 300.dp
     val recentsPanelOffset by animateDpAsState(
-        targetValue = if (isLandscape) targetOffset else targetOffset,
+        targetValue = if (isLandscape) {
+            if (isRecentsOpen) 0.dp else (-300).dp
+        } else {
+            if (isRecentsOpen) 0.dp else 350.dp
+        },
         label = "recentsPanelOffset"
     ) // Animated offset for recent panel
     val context: Context = LocalContext.current
@@ -176,10 +185,11 @@ fun HomeScreen(navController: NavController) {
                         .width(300.dp)
                         .fillMaxHeight()
                         .offset(x = recentsPanelOffset)
+                        .zIndex(10f) // Ensure panel is on top of icons
                         .constrainAs(recentsPanel) {
                             top.linkTo(parent.top)
                             bottom.linkTo(parent.bottom)
-                            end.linkTo(parent.end)
+                            start.linkTo(parent.start) // Move to left
                         }
                 ) {
                     LiquidGlassBox(
@@ -192,6 +202,18 @@ fun HomeScreen(navController: NavController) {
                                 .fillMaxSize()
                                 .padding(16.dp)
                         ) {
+                            // Use FileViewModel for recent files state
+                            val fileViewModel = com.bsbeetle.bananaspaghetti.LocalFileViewModel.current
+                            val recentFiles = fileViewModel.recentFiles
+                            
+                            android.util.Log.d("HomeScreen", "Recomposing Recent Files (Landscape). Size: ${recentFiles.size}")
+                            
+                            androidx.compose.runtime.LaunchedEffect(isRecentsOpen) {
+                                if (isRecentsOpen) {
+                                    fileViewModel.loadRecentFiles(context)
+                                }
+                            }
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -209,29 +231,26 @@ fun HomeScreen(navController: NavController) {
                                     fontFamily = born2bsporty,
                                     color = Color(0xFFAAAAAA),
                                     fontSize = 16.sp,
-                                    modifier = Modifier.clickable {
-                                        com.bsbeetle.bananaspaghetti.utils.fileHandling.RecentFilesManager.clear(context)
-                                        // Force recomposition hack or use state
-                                        isRecentsOpen = false 
-                                        isRecentsOpen = true
-                                    }
+                                    modifier = Modifier
+                                        .padding(16.dp) // Add padding to increase touch target
+                                        .clickable {
+                                            android.util.Log.d("HomeScreen", "Clear button clicked! (Landscape)")
+                                            fileViewModel.clearRecentFiles(context)
+                                        }
                                 )
                             }
                             
                             Spacer(modifier = Modifier.height(16.dp))
                             
-                            val recentFiles = remember(isRecentsOpen) {
-                                com.bsbeetle.bananaspaghetti.utils.fileHandling.RecentFilesManager.getRecentFiles(context)
-                            }
-                            
-                            val fileViewModel = com.bsbeetle.bananaspaghetti.LocalFileViewModel.current
-                            
                             androidx.compose.foundation.lazy.LazyColumn(
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(recentFiles.size) { index ->
+                                items(
+                                    items = recentFiles,
+                                    key = { it.uri }
+                                ) { file ->
                                     RecentFileItem(
-                                        file = recentFiles[index],
+                                        file = file,
                                         navController = navController,
                                         fileViewModel = fileViewModel
                                     )
@@ -247,6 +266,7 @@ fun HomeScreen(navController: NavController) {
                         .fillMaxWidth()
                         .height(350.dp) // Increased height for mobile
                         .offset(y = recentsPanelOffset)
+                        .zIndex(10f) // Ensure panel is on top of icons
                         .constrainAs(recentsPanel) {
                             bottom.linkTo(parent.bottom)
                             start.linkTo(parent.start)
@@ -263,13 +283,15 @@ fun HomeScreen(navController: NavController) {
                                 .fillMaxSize()
                                 .padding(16.dp)
                         ) {
-                            // Use mutableStateListOf for better collection observation
-                            val recentFiles = remember { androidx.compose.runtime.mutableStateListOf<com.bsbeetle.bananaspaghetti.utils.fileHandling.RecentFile>() }
+                            // Use FileViewModel for recent files state
+                            val fileViewModel = com.bsbeetle.bananaspaghetti.LocalFileViewModel.current
+                            val recentFiles = fileViewModel.recentFiles
+                            
+                            android.util.Log.d("HomeScreen", "Recomposing Recent Files. Size: ${recentFiles.size}")
                             
                             androidx.compose.runtime.LaunchedEffect(isRecentsOpen) {
                                 if (isRecentsOpen) {
-                                    recentFiles.clear()
-                                    recentFiles.addAll(com.bsbeetle.bananaspaghetti.utils.fileHandling.RecentFilesManager.getRecentFiles(context))
+                                    fileViewModel.loadRecentFiles(context)
                                 }
                             }
                             
@@ -293,9 +315,10 @@ fun HomeScreen(navController: NavController) {
                                     fontSize = 14.sp,
                                     modifier = Modifier
                                         .align(Alignment.CenterEnd)
+                                        .padding(16.dp) // Add padding to increase touch target
                                         .clickable {
-                                            com.bsbeetle.bananaspaghetti.utils.fileHandling.RecentFilesManager.clear(context)
-                                            recentFiles.clear() // Update state immediately
+                                            android.util.Log.d("HomeScreen", "Clear button clicked!")
+                                            fileViewModel.clearRecentFiles(context)
                                         }
                                 )
                             }
@@ -305,9 +328,12 @@ fun HomeScreen(navController: NavController) {
                             androidx.compose.foundation.lazy.LazyColumn(
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(recentFiles.size) { index ->
+                                items(
+                                    items = recentFiles,
+                                    key = { it.uri }
+                                ) { file ->
                                     RecentFileItem(
-                                        file = recentFiles[index],
+                                        file = file,
                                         navController = navController,
                                         fileViewModel = com.bsbeetle.bananaspaghetti.LocalFileViewModel.current
                                     )
