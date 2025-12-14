@@ -148,7 +148,7 @@ fun InitialEditorUI(navController: NavController) {
                             val installedSlug = LanguageRegistry.getInstalledSlugForExt(extType) ?: slug
                             // Start LSP and get port
                             lspPort = editorViewModel.startLsp(installedSlug)
-                            android.widget.Toast.makeText(context, "Initializing $installedSlug support on port $lspPort...", android.widget.Toast.LENGTH_SHORT).show()
+                            // Toast removed as requested
                         }
                     }
                 } catch (e: Exception) {

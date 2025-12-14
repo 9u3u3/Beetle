@@ -57,6 +57,7 @@ fun saveFile(
                 }
                 
                 Log.d("Save", "File saved successfully and marked clean")
+                android.widget.Toast.makeText(context, "File saved", android.widget.Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
                 Log.e("Save", "Failed to save file", e)
             }

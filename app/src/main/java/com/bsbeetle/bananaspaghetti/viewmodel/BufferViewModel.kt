@@ -89,4 +89,11 @@ class BufferViewModel : ViewModel() {
             }
         }
     }
+    fun clear() {
+        bufferLine.clear()
+        filesOpenedList.clear()
+        currentFile.value = null
+        dirtyFiles.clear()
+        Log.d("Buffer", "BufferViewModel cleared")
+    }
 }
