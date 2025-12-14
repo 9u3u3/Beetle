@@ -703,6 +703,110 @@ function setupEditor() {
           window.lastStatusKey = statusKey;
           window.lastStatusTime = now;
           console.log(`[LSP-STATUS] line:${line.number} col:${col + 1} err:${window.cachedErrors || 0} warn:${window.cachedWarnings || 0}`);
+
+          // --- BREADCRUMBS / SYMBOLS ---
+          // Fetch document symbols if we have a valid connection
+          if (ws && ws.readyState === WebSocket.OPEN && isInitialized && openedDocumentUri === URI) {
+            // Debounce symbol request
+            if (window.symbolTimeout) clearTimeout(window.symbolTimeout);
+            window.symbolTimeout = setTimeout(() => {
+              console.log(`[LSP-JS] Requesting document symbols for ${URI}`);
+              sendRequest(ws, 'textDocument/documentSymbol', {
+                textDocument: { uri: URI }
+              }).then(symbols => {
+                if (!symbols || !Array.isArray(symbols)) {
+                  console.log(`[LSP-JS] No symbols returned or invalid format: ${JSON.stringify(symbols)}`);
+                  return;
+                }
+
+                console.log(`[LSP-JS] Got ${symbols.length} root symbols`);
+
+                // Helper to normalize range
+                function getRange(sym) {
+                  if (sym.range) return sym.range;
+                  if (sym.location && sym.location.range) return sym.location.range;
+                  return null;
+                }
+
+                // Helper to find symbol at position
+                function findSymbolAtPos(symbols, line, col) {
+                  let found = [];
+
+                  // Check if we have a flat list (SymbolInformation) or hierarchy (DocumentSymbol)
+                  const isFlat = symbols.length > 0 && !symbols[0].children && symbols[0].location;
+
+                  if (isFlat) {
+                    // Handle flat list (SymbolInformation)
+                    // Find all symbols containing the cursor
+                    const matches = [];
+                    for (const sym of symbols) {
+                      const range = getRange(sym);
+                      if (!range) continue;
+
+                      const startLine = range.start.line;
+                      const endLine = range.end.line;
+
+                      if (line > startLine || (line === startLine && col >= range.start.character)) {
+                        if (line < endLine || (line === endLine && col <= range.end.character)) {
+                          matches.push(sym);
+                        }
+                      }
+                    }
+
+                    // Sort by range length (descending) to get hierarchy order? 
+                    // Actually, we want Outer -> Inner.
+                    // Outer starts earlier, or ends later.
+                    // Let's sort by start line/char.
+                    matches.sort((a, b) => {
+                      const ra = getRange(a);
+                      const rb = getRange(b);
+                      if (ra.start.line !== rb.start.line) return ra.start.line - rb.start.line;
+                      return ra.start.character - rb.start.character;
+                    });
+
+                    return matches.map(s => ({ name: s.name, kind: s.kind, detail: s.detail || s.containerName }));
+
+                  } else {
+                    // Handle hierarchy (DocumentSymbol)
+                    for (const sym of symbols) {
+                      const range = getRange(sym);
+                      if (!range) continue;
+
+                      const startLine = range.start.line;
+                      const endLine = range.end.line;
+
+                      if (line > startLine || (line === startLine && col >= range.start.character)) {
+                        if (line < endLine || (line === endLine && col <= range.end.character)) {
+                          found.push({ name: sym.name, kind: sym.kind, detail: sym.detail });
+                          if (sym.children) {
+                            found = found.concat(findSymbolAtPos(sym.children, line, col));
+                          }
+                          break; // Assuming non-overlapping siblings in hierarchy
+                        }
+                      }
+                    }
+                    return found;
+                  }
+                }             // Current cursor position (0-indexed)
+                const cursorLine = line.number - 1;
+                const cursorCol = col;
+
+                const breadcrumbs = findSymbolAtPos(symbols, cursorLine, cursorCol);
+                console.log(`[LSP-JS] Found breadcrumbs: ${JSON.stringify(breadcrumbs)}`);
+
+                // Send to Android
+                // Only send if changed
+                const breadcrumbStr = JSON.stringify(breadcrumbs);
+                if (window.lastBreadcrumbs !== breadcrumbStr) {
+                  window.lastBreadcrumbs = breadcrumbStr;
+                  console.log(`[LSP-SYMBOLS] ${breadcrumbStr}`);
+                }
+
+              }).catch(e => {
+                console.error("Symbol fetch failed:", e);
+              });
+            }, 500); // 500ms debounce
+          }
         }
 
         // Full Text Sync - Re-enabled with longer debounce

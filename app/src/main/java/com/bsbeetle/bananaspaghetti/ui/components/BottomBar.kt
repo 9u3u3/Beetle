@@ -106,7 +106,41 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspView
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    if (lspStatus.currentSymbol.isNotEmpty()) {
+                    if (lspStatus.breadcrumbs.isNotEmpty()) {
+                        lspStatus.breadcrumbs.forEachIndexed { index, item ->
+                            val icon = when (item.kind) {
+                                5, 23 -> R.drawable.class_cube // Class, Struct
+                                6, 12 -> R.drawable.data_object // Method, Function
+                                else -> R.drawable.data_object
+                            }
+                            
+                            Image(
+                                painter = painterResource(icon),
+                                contentDescription = "Symbol",
+                                modifier = Modifier.size(9.dp),
+                                alignment = Alignment.Center
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = item.name,
+                                fontFamily = codaRegular,
+                                fontSize = 9.sp,
+                                color = Color(0xFFFFFFFF)
+                            )
+                            
+                            if (index < lspStatus.breadcrumbs.size - 1) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Image(
+                                    painter = painterResource(R.drawable.chevron_right),
+                                    contentDescription = ">",
+                                    modifier = Modifier.size(9.dp),
+                                    alignment = Alignment.Center
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                            }
+                        }
+                    } else if (lspStatus.currentSymbol.isNotEmpty()) {
+                        // Fallback to old single symbol if no breadcrumbs (e.g. older LSP)
                         Image(
                             painter = painterResource(R.drawable.class_cube),
                             contentDescription = "Symbol",

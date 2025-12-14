@@ -378,6 +378,32 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                         }
                         return false
                     }
+                    
+                    if (msg.startsWith("[LSP-SYMBOLS]")) {
+                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
+                            try {
+                                val jsonStr = msg.removePrefix("[LSP-SYMBOLS] ")
+                                val jsonArray = org.json.JSONArray(jsonStr)
+                                val breadcrumbs = mutableListOf<com.bsbeetle.bananaspaghetti.viewmodel.BreadcrumbItem>()
+                                
+                                for (i in 0 until jsonArray.length()) {
+                                    val obj = jsonArray.getJSONObject(i)
+                                    breadcrumbs.add(
+                                        com.bsbeetle.bananaspaghetti.viewmodel.BreadcrumbItem(
+                                            name = obj.optString("name", "Unknown"),
+                                            kind = obj.optInt("kind", 0),
+                                            detail = obj.optString("detail", "")
+                                        )
+                                    )
+                                }
+                                
+                                viewModel.updateBreadcrumbs(breadcrumbs)
+                            } catch (e: Exception) {
+                                Log.e("WEBVERR", "Failed to parse LSP symbols: $msg", e)
+                            }
+                        }
+                        return false
+                    }
                 }
                 return super.onConsoleMessage(consoleMessage)
             }
