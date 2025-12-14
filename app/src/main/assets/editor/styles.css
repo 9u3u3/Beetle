@@ -4,9 +4,19 @@ body {
   padding: 0;
 }
 
+.cm-editor .cm-line {
+  /* This line was previously commented out and is now removed as per instruction. */
+}
+
 .cm-editor.cm-focused {
   outline: none !important;
   border: none !important;
+}
+
+/* Hide secondary/native cursors */
+.cm-editor .cm-cursor-secondary,
+.cm-editor .cm-secondaryCursor {
+  /* display: none !important; REMOVED */
 }
 
 /* CRITICAL: Force enable native scrolling */

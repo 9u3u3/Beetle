@@ -744,21 +744,18 @@ function setupEditor() {
   window.isEditorReady = true
 
   const editorEl = document.querySelector('.cm-editor')
-  // --- Custom Touch Handling to Prevent Native Crash ---
-  // We prevent default on touch events to stop the WebView from showing native handles/popups.
-  // We then manually implement scrolling and cursor placement.
-
+  // --- Custom Touch Handling REMOVED to allow native selection ---
+  /*
   let lastTouchY = 0;
   let lastTouchX = 0;
   let isScrolling = false;
 
   editorEl.addEventListener('touchstart', (e) => {
     if (e.touches.length !== 1) return;
-    // DON'T prevent default on touchstart - it might block subsequent touch events
     lastTouchY = e.touches[0].clientY;
     lastTouchX = e.touches[0].clientX;
     isScrolling = false;
-  }, { passive: true }); // Use passive for touchstart
+  }, { passive: true });
 
   editorEl.addEventListener('touchmove', (e) => {
     if (e.touches.length !== 1) return;
@@ -774,11 +771,11 @@ function setupEditor() {
     if (Math.abs(deltaY) > 2 || Math.abs(deltaX) > 2) {
       isScrolling = true;
     }
-  }, { passive: true }); // Use passive for touchmove
+  }, { passive: true });
 
   editorEl.addEventListener('touchend', (e) => {
     if (isScrolling) return;
-    e.preventDefault(); // Only prevent default on touchend to stop native click
+    e.preventDefault(); // This was blocking native selection!
 
     // Manual Cursor Placement
     const touch = e.changedTouches[0];
@@ -790,17 +787,15 @@ function setupEditor() {
         scrollIntoView: true
       });
       view.focus();
-
-      // Trigger completion if needed (optional)
-      // startCompletion(view);
     }
   }, { passive: false });
+  */
 
-  // Prevent context menu
-  editorEl.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    return false;
-  });
+  // Prevent context menu - REMOVED to allow native selection
+  // editorEl.addEventListener('contextmenu', (e) => {
+  //   e.preventDefault();
+  //   return false;
+  // });
   // -------------------------------------------
   const bg = window.getComputedStyle(editorEl).backgroundColor
   document.body.style.backgroundColor = bg
