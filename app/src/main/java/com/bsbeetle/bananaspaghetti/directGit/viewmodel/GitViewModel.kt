@@ -802,6 +802,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
+            Log.d("GitViewModel", "🚀 cloneRepository called for: $url -> $targetPath")
             _uiState.value =
                     _uiState.value.copy(
                             operationInProgress = "Cloning repository...",
@@ -810,6 +811,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
 
             // Convert HTTPS URL to SSH if needed
             val sshUrl = GitUrlConverter.ensureSsh(url)
+            Log.d("GitViewModel", "🔄 Converted URL: $url -> $sshUrl")
 
             // Use the full path provided by user
             val targetDir = File(targetPath)
@@ -817,6 +819,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
             // Check if parent directory exists
             val parentDir = targetDir.parentFile
             if (parentDir == null || !parentDir.exists()) {
+                Log.e("GitViewModel", "❌ Parent directory missing: ${parentDir?.absolutePath}")
                 showError(
                         "Invalid path",
                         "Parent directory does not exist: ${parentDir?.absolutePath}"
@@ -825,6 +828,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             if (targetDir.exists()) {
+                Log.e("GitViewModel", "❌ Target directory exists: ${targetDir.absolutePath}")
                 showError(
                         "Directory already exists",
                         "Choose a different path or delete the existing directory"
@@ -833,9 +837,14 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             // Use Alpine's native git for SSH clone
+            GitLogger.log("git clone $sshUrl", LogType.COMMAND)
+            Log.d("GitViewModel", "⏳ Calling alpineGitHelper.clone()...")
             val result = alpineGitHelper.clone(sshUrl, targetPath)
+            Log.d("GitViewModel", "✅ alpineGitHelper.clone() returned: $result")
+
             result.fold(
                     onSuccess = { output ->
+                        Log.d("GitViewModel", "✅ Clone success: $output")
                         // Set this as the current repository
                         repository?.close()
                         repository = GitRepository(targetDir)
@@ -845,7 +854,10 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                         Log.d("GitViewModel", "Clone output: $output")
                         refreshStatus()
                     },
-                    onFailure = { e -> showError("Clone failed", e.message) }
+                    onFailure = { e ->
+                        Log.e("GitViewModel", "❌ Clone failed: ${e.message}", e)
+                        showError("Clone failed", e.message)
+                    }
             )
         }
     }

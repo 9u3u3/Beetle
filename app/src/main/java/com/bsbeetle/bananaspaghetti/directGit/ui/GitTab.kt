@@ -11,6 +11,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import android.provider.DocumentsContract
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -181,6 +182,10 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                                             .replace("%2F", "/")
                                             .replace("%3A", ":")
                             "/storage/emulated/0/$pathPart"
+                        }
+                        // Handle Alpine internal storage URIs
+                        folderUri.authority == "${context.packageName}.documents" -> {
+                            DocumentsContract.getDocumentId(folderUri)
                         }
                         // Also handle raw file paths from fileViewModel.currentFilePath
                         else -> null
@@ -1600,8 +1605,9 @@ fun RemoteDialog(currentUrl: String, onDismiss: () -> Unit, onConfirm: (String) 
 
 @Composable
 fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String) -> Unit) {
+    val context = LocalContext.current
     var url by remember { mutableStateOf("") }
-    var targetPath by remember { mutableStateOf("/storage/emulated/0/") }
+    var targetPath by remember { mutableStateOf(File(context.filesDir, "alpine/home/").absolutePath + "/") }
 
     StyledDialog(title = "Clone Repository", onDismiss = onDismiss) {
         Text(
@@ -1613,7 +1619,16 @@ fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String) -> Unit) {
 
         OutlinedTextField(
                 value = url,
-                onValueChange = { url = it },
+                onValueChange = { newUrl ->
+                    url = newUrl
+                    // Auto-update target path if it's still the default or empty
+                    if (newUrl.isNotBlank()) {
+                        val repoName = newUrl.substringAfterLast("/").removeSuffix(".git")
+                        if (repoName.isNotBlank()) {
+                            targetPath = File(context.filesDir, "alpine/home/$repoName").absolutePath
+                        }
+                    }
+                },
                 label = { Text("Repository URL") },
                 placeholder = { Text("git@github.com:user/repo.git") },
                 singleLine = true,
@@ -1632,7 +1647,7 @@ fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String) -> Unit) {
                 value = targetPath,
                 onValueChange = { targetPath = it },
                 label = { Text("Clone To (Full Path)") },
-                placeholder = { Text("/storage/emulated/0/my-project") },
+                placeholder = { Text(File(context.filesDir, "alpine/home/my-project").absolutePath) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors =
@@ -1645,7 +1660,7 @@ fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String) -> Unit) {
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-                "Tip: Use /storage/emulated/0/YourFolder for accessible storage",
+                "Tip: Use internal storage for better compatibility with Alpine Linux",
                 color = TextTertiary,
                 fontSize = 10.sp,
                 fontStyle = FontStyle.Italic

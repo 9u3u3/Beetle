@@ -45,6 +45,29 @@ class GitTerminalManager(private val context: Context) {
             // CRITICAL: TerminalSession must be created on Main thread (WebView requirement)
             withContext(Dispatchers.Main) { terminalSession = TerminalSession(context) }
 
+            // Wait for terminal to be fully ready (isReady flow is true)
+            Log.d(TAG, "⏳ Waiting for terminal to be ready...")
+            var waitTime = 0L
+            val maxWait = 10000L // 10 seconds max wait
+            while (waitTime < maxWait) {
+                if (terminalSession?.isReady?.value == true) {
+                    Log.d(TAG, "✅ Terminal is ready")
+                    break
+                }
+                delay(100)
+                waitTime += 100
+                if (waitTime % 1000 == 0L) {
+                    Log.d(TAG, "⏳ Still waiting for terminal... ${waitTime}ms")
+                }
+            }
+
+            if (terminalSession?.isReady?.value != true) {
+                Log.w(
+                        TAG,
+                        "⚠️ Terminal may not be fully ready after ${maxWait}ms, but proceeding..."
+                )
+            }
+
             Log.d(TAG, "✅ Terminal session initialized successfully")
             return Result.success(Unit)
         } catch (e: Exception) {
@@ -204,6 +227,12 @@ class GitTerminalManager(private val context: Context) {
                             // The exit code is appended as the last line
                             val lines = content.lines().filter { it.isNotBlank() }
                             val lastLine = lines.lastOrNull()?.trim()
+                            
+                            // Log content length for debugging
+                            if (pollCount % 4 == 0) { // Log every 2 seconds
+                                Log.d(TAG, "⏳ Poll $pollCount: File exists, size=${content.length}, lastLine='$lastLine'")
+                            }
+
                             if (lastLine?.toIntOrNull() != null) {
                                 // Command completed - we have an exit code
                                 output = content
@@ -212,15 +241,10 @@ class GitTerminalManager(private val context: Context) {
                                         "✅ Command completed after ${pollCount * 500}ms (${lines.size} lines)"
                                 )
                                 break
-                            } else if (content.isNotEmpty()) {
-                                Log.d(
-                                        TAG,
-                                        "⏳ Poll $pollCount: Output has ${content.length} chars but no exit code yet"
-                                )
                             }
                         } else {
-                            if (pollCount % 10 == 0) {
-                                Log.d(TAG, "⏳ Poll $pollCount: File not created yet")
+                            if (pollCount % 4 == 0) {
+                                Log.d(TAG, "⏳ Poll $pollCount: File ${alpineOutputPath.absolutePath} NOT found yet")
                             }
                         }
                     }

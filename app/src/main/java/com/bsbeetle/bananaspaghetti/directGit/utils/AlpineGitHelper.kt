@@ -115,6 +115,7 @@ class AlpineGitHelper(private val context: Context) {
     suspend fun clone(repoUrl: String, targetPath: String): Result<String> {
         val parentDir = java.io.File(targetPath).parent ?: "/"
         val dirName = java.io.File(targetPath).name
+        android.util.Log.d("AlpineGitHelper", "🚀 Cloning $repoUrl into $targetPath (parent: $parentDir, name: $dirName)")
         return terminalManager.executeGitCommand(
                 parentDir,
                 "git clone $repoUrl $dirName",
