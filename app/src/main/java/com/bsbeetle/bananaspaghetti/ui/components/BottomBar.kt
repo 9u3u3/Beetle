@@ -52,15 +52,21 @@ import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
 import com.bsbeetle.bananaspaghetti.viewmodel.DiagnosticItem
 import com.bsbeetle.bananaspaghetti.viewmodel.LspViewModel
+import com.bsbeetle.bananaspaghetti.directGit.viewmodel.GitViewModel
+import com.bsbeetle.bananaspaghetti.directGit.ui.GitTerminalView
+import androidx.compose.runtime.collectAsState
 
 enum class BottomPanelTab {
     PROBLEMS,
-    TERMINAL
+    TERMINAL,
+    GIT_CONSOLE
 }
+
+
 
 @SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
-fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspViewModel = viewModel()) {
+fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspViewModel = viewModel(), gitViewModel: GitViewModel = viewModel()) {
 
     var targetHeight by remember { mutableStateOf(18.dp) }
     val logHeight by animateDpAsState(targetValue = targetHeight, label = "logHeightAnim")
@@ -221,6 +227,14 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspView
                     isSelected = selectedTab == BottomPanelTab.TERMINAL,
                     onClick = { selectedTab = BottomPanelTab.TERMINAL }
                 )
+
+                // Git Console tab
+                PanelTab(
+                    title = "Git Console",
+                    count = 0,
+                    isSelected = selectedTab == BottomPanelTab.GIT_CONSOLE,
+                    onClick = { selectedTab = BottomPanelTab.GIT_CONSOLE }
+                )
                 
                 Spacer(modifier = Modifier.weight(1f))
                 
@@ -277,6 +291,14 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspView
                                 }
                             },
                             context = context
+                        )
+                    }
+                    BottomPanelTab.GIT_CONSOLE -> {
+                        val gitUiState by gitViewModel.uiState.collectAsStateWithLifecycle()
+                        GitTerminalView(
+                            commandHistory = gitUiState.terminalHistory,
+                            modifier = Modifier.fillMaxSize(),
+                            initiallyExpanded = true
                         )
                     }
                 }

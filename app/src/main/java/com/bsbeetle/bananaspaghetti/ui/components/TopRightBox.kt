@@ -10,7 +10,7 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 
 @Composable
-fun TopRightBox(modifier: Modifier = Modifier) {
+fun TopRightBox(modifier: Modifier = Modifier, content: @Composable () -> Unit = {}) {
     ConstraintLayout(modifier = modifier) {
         val (leftSpace) = createRefs()
         Box(
@@ -19,10 +19,13 @@ fun TopRightBox(modifier: Modifier = Modifier) {
                     start.linkTo(parent.start)
                     end.linkTo(parent.end)
                     top.linkTo(parent.top)
+                    bottom.linkTo(parent.bottom)
                     width = Dimension.fillToConstraints
+                    height = Dimension.fillToConstraints
                 }
-                .fillMaxHeight()
                 .background(Color(0xFF050505))
-        )
+        ) {
+            content()
+        }
     }
 }

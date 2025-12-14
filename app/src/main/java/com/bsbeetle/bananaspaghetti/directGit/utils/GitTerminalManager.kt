@@ -45,29 +45,6 @@ class GitTerminalManager(private val context: Context) {
             // CRITICAL: TerminalSession must be created on Main thread (WebView requirement)
             withContext(Dispatchers.Main) { terminalSession = TerminalSession(context) }
 
-            // Wait for terminal to be fully ready (outputFd is set)
-            Log.d(TAG, "⏳ Waiting for terminal to be ready...")
-            var waitTime = 0L
-            val maxWait = 10000L // 10 seconds max wait
-            while (waitTime < maxWait) {
-                if (terminalSession?.isReady?.value == true) {
-                    Log.d(TAG, "✅ Terminal is ready (outputFd set)")
-                    break
-                }
-                delay(100)
-                waitTime += 100
-                if (waitTime % 1000 == 0L) {
-                    Log.d(TAG, "⏳ Still waiting for terminal... ${waitTime}ms")
-                }
-            }
-
-            if (terminalSession?.isReady?.value != true) {
-                Log.w(
-                        TAG,
-                        "⚠️ Terminal may not be fully ready after ${maxWait}ms, but proceeding..."
-                )
-            }
-
             Log.d(TAG, "✅ Terminal session initialized successfully")
             return Result.success(Unit)
         } catch (e: Exception) {

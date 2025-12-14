@@ -69,57 +69,68 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     // Alpine Git Helper for terminal-based Git operations
     private val alpineGitHelper = AlpineGitHelper(application)
 
+    private var isGitInitialized = false
+
     init {
-        Log.d("GitViewModel", "🚀 Initializing GitViewModel...")
+        // Empty init - initialization happens lazily via initializeGit()
+    }
 
-        // Configure SSH for JGit operations (local commits, etc.)
-        SshSessionFactory.setInstance(sshSessionFactory)
+    fun initializeGit() {
+        if (isGitInitialized) return
+        isGitInitialized = true
 
-        // Check if Alpine SSH keys are configured (ED25519)
-        val hasAlpineKeys = alpineSshKeyManager.hasKeys()
-        Log.d("GitViewModel", "Alpine ED25519 keys exist: $hasAlpineKeys")
-        _uiState.value = _uiState.value.copy(sshKeysConfigured = hasAlpineKeys)
+        viewModelScope.launch(Dispatchers.IO) {
+            Log.d("GitViewModel", "🚀 Initializing GitViewModel lazily...")
 
-        // Auto-setup Alpine SSH keys if they exist
-        if (hasAlpineKeys) {
-            Log.d("GitViewModel", "🔑 Auto-setting up ED25519 SSH keys in Alpine...")
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    val privateKey = alpineSshKeyManager.getPrivateKeyPEM()
-                    val publicKey = alpineSshKeyManager.getPublicKey()
+            // Configure SSH for JGit operations (local commits, etc.)
+            SshSessionFactory.setInstance(sshSessionFactory)
 
-                    Log.d("GitViewModel", "Private key null: ${privateKey == null}")
-                    Log.d("GitViewModel", "Public key null: ${publicKey == null}")
+            // Check if Alpine SSH keys are configured (ED25519)
+            val hasAlpineKeys = alpineSshKeyManager.hasKeys()
+            Log.d("GitViewModel", "Alpine ED25519 keys exist: $hasAlpineKeys")
+            _uiState.value = _uiState.value.copy(sshKeysConfigured = hasAlpineKeys)
 
-                    if (privateKey != null && publicKey != null) {
-                        Log.d("GitViewModel", "📤 Calling alpineGitHelper.setupSshKeys()...")
-                        alpineGitHelper.setupSshKeys(privateKey, publicKey)
-                        Log.d("GitViewModel", "✅ ED25519 SSH keys auto-configured in Alpine")
-                    } else {
-                        Log.w("GitViewModel", "⚠️ Keys exist but are null - this shouldn't happen")
+            // Auto-setup Alpine SSH keys if they exist
+            if (hasAlpineKeys) {
+                Log.d("GitViewModel", "🔑 Auto-setting up ED25519 SSH keys in Alpine...")
+                viewModelScope.launch(Dispatchers.IO) {
+                    try {
+                        val privateKey = alpineSshKeyManager.getPrivateKeyPEM()
+                        val publicKey = alpineSshKeyManager.getPublicKey()
+
+                        Log.d("GitViewModel", "Private key null: ${privateKey == null}")
+                        Log.d("GitViewModel", "Public key null: ${publicKey == null}")
+
+                        if (privateKey != null && publicKey != null) {
+                            Log.d("GitViewModel", "📤 Calling alpineGitHelper.setupSshKeys()...")
+                            alpineGitHelper.setupSshKeys(privateKey, publicKey)
+                            Log.d("GitViewModel", "✅ ED25519 SSH keys auto-configured in Alpine")
+                        } else {
+                            Log.w("GitViewModel", "⚠️ Keys exist but are null - this shouldn't happen")
+                        }
+                    } catch (e: Exception) {
+                        Log.e("GitViewModel", "❌ Failed to auto-setup SSH keys", e)
                     }
-                } catch (e: Exception) {
-                    Log.e("GitViewModel", "❌ Failed to auto-setup SSH keys", e)
+                }
+            } else {
+                Log.d("GitViewModel", "ℹ️ No ED25519 SSH keys found - user needs to set up")
+            }
+
+            // Observe logs
+            viewModelScope.launch {
+                GitLogger.logs.collect { logs ->
+                    _uiState.value = _uiState.value.copy(logs = logs.reversed()) // Show newest first
                 }
             }
-        } else {
-            Log.d("GitViewModel", "ℹ️ No ED25519 SSH keys found - user needs to set up")
-        }
 
-        // Observe logs
-        viewModelScope.launch {
-            GitLogger.logs.collect { logs ->
-                _uiState.value = _uiState.value.copy(logs = logs.reversed()) // Show newest first
-            }
-        }
-
-        // Periodically update terminal history
-        viewModelScope.launch {
-            while (true) {
-                delay(500) // Update every 500ms
-                val history = alpineGitHelper.getCommandHistory()
-                if (history != _uiState.value.terminalHistory) {
-                    _uiState.value = _uiState.value.copy(terminalHistory = history)
+            // Periodically update terminal history
+            viewModelScope.launch {
+                while (true) {
+                    delay(500) // Update every 500ms
+                    val history = alpineGitHelper.getCommandHistory()
+                    if (history != _uiState.value.terminalHistory) {
+                        _uiState.value = _uiState.value.copy(terminalHistory = history)
+                    }
                 }
             }
         }

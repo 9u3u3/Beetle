@@ -275,8 +275,7 @@ fun LeftTopBar(
     onFileClick: () -> Unit = {},
     onUndoClick: () -> Unit = {},
     onRedoClick: () -> Unit = {},
-    onRunClick: () -> Unit = {},
-    onDebugClick: () -> Unit = {},
+    onBranchClick: () -> Unit = {},
     onMenuClick: () -> Unit = {},
     showMenuIcon: Boolean = false
 ) {
@@ -367,24 +366,10 @@ fun LeftTopBar(
                 color = Color(0xFF3E3E42)
             )
 
-            // Run button
-            TopBarIconButton(
-                // title = "Run",
-                icon = R.drawable.play_arrow,
-                onClick = onRunClick
-            )
-
-            VerticalDivider(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .width(1.dp),
-                color = Color(0xFF3E3E42)
-            )
-
-            // Git (icon only)
+            // Branch button
             TopBarIconButton(
                 icon = R.drawable.graph_icon,
-                onClick = onDebugClick
+                onClick = onBranchClick
             )
 
             VerticalDivider(

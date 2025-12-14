@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -64,6 +65,7 @@ fun InitialEditorUI(navController: NavController) {
     val editorViewModel: EditorViewModel = LocalEditorViewModel.current
     val bufferViewModel: BufferViewModel = LocalBufferViewModel.current
     val lspViewModel: LspViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val gitViewModel: com.bsbeetle.bananaspaghetti.directGit.viewmodel.GitViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 
     // Sync fileViewModel with current session's projectRoot
     // This ensures each session shows its own folder in the file tree
@@ -115,11 +117,12 @@ fun InitialEditorUI(navController: NavController) {
     var showSidebar by rememberSaveable { mutableStateOf(false) }
     var showLanguagePopup by remember { mutableStateOf(false) }
     var showFileMenu by remember { mutableStateOf(false) }
+    var showGitMenu by remember { mutableStateOf(false) }
     var missingLanguageExt by remember { mutableStateOf("") }
 
     // 🚀 File Load (with LSP check & Performance fix)
     LaunchedEffect(fileViewModel.selectedUri) {
-        delay(50) // allows UI to compose first so no freeze
+        // delay(50) removed to speed up LSP startup
         fileViewModel.selectedUri?.let { uri ->
             DocumentFile.fromSingleUri(context, uri)?.let { documentFile ->
                 if (documentFile.isDirectory) {
@@ -267,6 +270,7 @@ val alpineIndex = parentPath.indexOf("/alpine/")
                     showMenuIcon = !isLandscape,
                     onSaveClick = { saveFile(fileViewModel, bufferViewModel, context) },
                     onFileClick = { showFileMenu = true },
+                    onBranchClick = { showGitMenu = !showGitMenu },
                     onUndoClick = {
                         editorViewModel.webView?.evaluateJavascript(
                                 "if(window.performUndo) performUndo();",
@@ -324,7 +328,14 @@ val alpineIndex = parentPath.indexOf("/alpine/")
                             width = Dimension.fillToConstraints
                             height = Dimension.fillToConstraints
                         }
-                )
+                ) {
+                    if (showGitMenu) {
+                        LaunchedEffect(Unit) {
+                            gitViewModel.initializeGit()
+                        }
+                        com.bsbeetle.bananaspaghetti.directGit.ui.LandscapeGitPanel(gitViewModel)
+                    }
+                }
 
                 if (uiState.isLeftKeyboardVisible) {
                     SplitKeyboardHalf(
@@ -387,7 +398,8 @@ val alpineIndex = parentPath.indexOf("/alpine/")
                         width = Dimension.fillToConstraints
                     },
                     color = Color(0xFF1B1B1B),
-                    lspViewModel = lspViewModel
+                    lspViewModel = lspViewModel,
+                    gitViewModel = gitViewModel
             )
 
             if (!isLandscape) {
@@ -406,7 +418,12 @@ val alpineIndex = parentPath.indexOf("/alpine/")
                                 SidebarTab.GIT,
                                 SidebarTab.EXTENSIONS,
                                 SidebarTab.SETTINGS
-                        )
+                        ),
+                        onTabChanged = {
+                            if (it == SidebarTab.GIT) {
+                                gitViewModel.initializeGit()
+                            }
+                        }
                 )
             }
         }

@@ -580,7 +580,7 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
 // --- Components ---
 
 @Composable
-private fun GitHeader(
+fun GitHeader(
         branch: String,
         ahead: Int,
         behind: Int,
@@ -802,7 +802,7 @@ private fun GitHeader(
 }
 
 @Composable
-private fun ActionButton(icon: ImageVector, tooltip: String, onClick: () -> Unit) {
+fun ActionButton(icon: ImageVector, tooltip: String, onClick: () -> Unit) {
     Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier =
@@ -818,7 +818,7 @@ private fun ActionButton(icon: ImageVector, tooltip: String, onClick: () -> Unit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FileChangeItem(
+fun FileChangeItem(
         path: String,
         status: String,
         isStaged: Boolean,
@@ -1146,7 +1146,7 @@ private fun ConsoleTab(title: String, isSelected: Boolean, onClick: () -> Unit) 
 }
 
 @Composable
-private fun StoragePermissionRequest(onRequestPermission: () -> Unit, onRefresh: () -> Unit) {
+fun StoragePermissionRequest(onRequestPermission: () -> Unit, onRefresh: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -1195,7 +1195,7 @@ private fun StoragePermissionRequest(onRequestPermission: () -> Unit, onRefresh:
 }
 
 @Composable
-private fun EmptyState(onInit: () -> Unit, onClone: () -> Unit) {
+fun EmptyState(onInit: () -> Unit, onClone: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Rounded.Source, null, tint = TextTertiary, modifier = Modifier.size(64.dp))
@@ -1282,7 +1282,7 @@ private fun StyledDialog(
 }
 
 @Composable
-private fun BranchDialog(
+fun BranchDialog(
         branches: List<BranchInfo>,
         onDismiss: () -> Unit,
         onCheckout: (String) -> Unit,
@@ -1419,7 +1419,7 @@ private fun BranchItem(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NewBranchDialog(
+fun NewBranchDialog(
         branches: List<BranchInfo>,
         currentBranch: String,
         onDismiss: () -> Unit,
@@ -1513,7 +1513,7 @@ private fun NewBranchDialog(
 }
 
 @Composable
-private fun AuthDialog(onDismiss: () -> Unit, onConfirm: (String, String, Boolean) -> Unit) {
+fun AuthDialog(onDismiss: () -> Unit, onConfirm: (String, String, Boolean) -> Unit) {
     var username by remember { mutableStateOf("") }
     var token by remember { mutableStateOf("") }
     var save by remember { mutableStateOf(true) }
@@ -1571,7 +1571,7 @@ private fun AuthDialog(onDismiss: () -> Unit, onConfirm: (String, String, Boolea
 }
 
 @Composable
-private fun RemoteDialog(currentUrl: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+fun RemoteDialog(currentUrl: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var url by remember { mutableStateOf(currentUrl) }
     StyledDialog(title = "Remote Settings", onDismiss = onDismiss) {
         OutlinedTextField(
@@ -1599,7 +1599,7 @@ private fun RemoteDialog(currentUrl: String, onDismiss: () -> Unit, onConfirm: (
 }
 
 @Composable
-private fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String) -> Unit) {
+fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String) -> Unit) {
     var url by remember { mutableStateOf("") }
     var targetPath by remember { mutableStateOf("/storage/emulated/0/") }
 
@@ -1687,7 +1687,7 @@ private fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String) -> Unit
 }
 
 @Composable
-private fun CommitHistoryDialog(commits: List<CommitInfo>, onDismiss: () -> Unit) {
+fun CommitHistoryDialog(commits: List<CommitInfo>, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
                 colors = CardDefaults.cardColors(containerColor = BgDark),
@@ -1749,7 +1749,7 @@ private fun CommitHistoryDialog(commits: List<CommitInfo>, onDismiss: () -> Unit
 }
 
 @Composable
-private fun DiffDialog(diffText: String, onDismiss: () -> Unit) {
+fun DiffDialog(diffText: String, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
                 colors = CardDefaults.cardColors(containerColor = BgDark),
