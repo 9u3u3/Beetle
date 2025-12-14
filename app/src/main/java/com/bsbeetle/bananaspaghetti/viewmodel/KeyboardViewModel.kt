@@ -278,12 +278,19 @@ class KeyboardViewModel : ViewModel() {
     private fun handleTab(gesture: KeyGesture) {
         when (gesture) {
             KeyGesture.Tap , KeyGesture.LongPress -> {
-                val spaces = " ".repeat(uiState.value.indentValue) // prints x spaces
-                emitText(spaces)
+                // Check if we're in terminal mode - send actual tab for autocomplete
+                val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
+                if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) {
+                    // Send actual tab character for terminal autocomplete
+                    emitText("\t")
+                } else {
+                    // For editor, use configurable indent spaces
+                    val spaces = " ".repeat(uiState.value.indentValue)
+                    emitText(spaces)
+                }
             }
             else -> {}
         }
-
     }
     fun nextKeyboardPage() {
         _uiState.update { currentState ->

@@ -30,6 +30,14 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
     private var savedContent: String? = null
     private var needsRestore: Boolean = false
     
+    // Reference to BufferViewModel for dirty state tracking
+    private var bufferViewModel: com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel? = null
+    
+    fun setBufferViewModel(viewModel: com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel) {
+        this.bufferViewModel = viewModel
+        android.util.Log.d("EditorSession", "BufferViewModel set")
+    }
+    
     fun updateCursorPosition(line: Int, col: Int) {
         cursorLine = line
         cursorColumn = col
@@ -102,7 +110,40 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                 databaseEnabled = false
                 // cacheMode = WebSettings.LOAD_NO_CACHE // Already set
             }
+            
+            // Add JavaScript interface for dirty state tracking
+            addJavascriptInterface(object {
+                @android.webkit.JavascriptInterface
+                fun onContentChanged() {
+                    android.util.Log.d("EditorSession", "✓✓✓ JS: onContentChanged called ✓✓✓")
+                    android.util.Log.d("EditorSession", "BufferViewModel is null? ${bufferViewModel == null}")
+                    android.util.Log.d("EditorSession", "CurrentFile is null? ${bufferViewModel?.currentFile?.value == null}")
+                    
+                    // MUST run on main thread for Compose state updates
+                    view?.post {
+                        bufferViewModel?.currentFile?.value?.let { file ->
+                            bufferViewModel?.markAsDirty(file.uri.toString())
+                            android.util.Log.d("EditorSession", "✓ Marked dirty on main thread: ${file.name}")
+                        } ?: android.util.Log.e("EditorSession", "✗ Could not mark dirty - currentFile is null")
+                    }
+                }
+            }, "AndroidEditor")
+            
             loadUrl(AppConfig.EDITOR_URL)
+            
+            // Inject listener immediately after load
+            post {
+                postDelayed({
+                    android.util.Log.d("EditorSession", "Injecting MutationObserver for content changes...")
+                    evaluateJavascript("""
+                        (function() {
+                            // Legacy MutationObserver removed.
+                            // Content change detection is now handled by event listeners in the WebViewClient.onPageFinished
+                            console.log('✓ JS: Legacy MutationObserver skipped');
+                        })();
+                    """.trimIndent(), null)
+                }, 2000)
+            }
             post {
                 val isPortrait = resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
                 if (isPortrait) requestFocus() else clearFocus()
@@ -131,7 +172,7 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                             // Initial check
                             updateInputMode();
                             
-                            // Use MutationObserver
+                            // Use MutationObserver ONLY for inputmode attribute
                             const content = document.querySelector('.cm-content');
                             if (content) {
                                 const observer = new MutationObserver(() => updateInputMode());
@@ -150,6 +191,10 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                                 setTimeout(() => clearInterval(checkExist), 2000);
                             }
                         })();
+                        
+                        // CONTENT CHANGE DETECTION
+                        // Now handled internally by CodeMirror's updateListener in editor.js
+                        // This ensures we only catch actual content changes and respect isProgrammaticChange
                     """.trimIndent(), null)
                     
                     // Apply pending file path if any
@@ -230,6 +275,10 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
         view?.evaluateJavascript("if(window.setLanguage) window.setLanguage('$slug', $port);", null)
     }
     
+    fun setRootUri(rootUri: String) {
+        view?.evaluateJavascript("if(window.setRootUri) window.setRootUri('$rootUri');", null)
+    }
+    
     fun clearLanguage() {
         view?.evaluateJavascript("if(window.clearLanguage) window.clearLanguage();", null)
     }
@@ -295,6 +344,7 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                                 
                                 viewModel.updateCursorPosition(line, col)
                                 viewModel.updateDiagnostics(err, warn)
+                                android.util.Log.d("LspStatus", "Updated: line=$line col=$col err=$err warn=$warn")
                             } catch (e: Exception) {
                                 Log.e("WEBVERR", "Failed to parse LSP status: $msg", e)
                             }
@@ -324,6 +374,32 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                                 viewModel.updateDiagnosticsList(diagnostics)
                             } catch (e: Exception) {
                                 Log.e("WEBVERR", "Failed to parse LSP diagnostics: $msg", e)
+                            }
+                        }
+                        return false
+                    }
+                    
+                    if (msg.startsWith("[LSP-SYMBOLS]")) {
+                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
+                            try {
+                                val jsonStr = msg.removePrefix("[LSP-SYMBOLS] ")
+                                val jsonArray = org.json.JSONArray(jsonStr)
+                                val breadcrumbs = mutableListOf<com.bsbeetle.bananaspaghetti.viewmodel.BreadcrumbItem>()
+                                
+                                for (i in 0 until jsonArray.length()) {
+                                    val obj = jsonArray.getJSONObject(i)
+                                    breadcrumbs.add(
+                                        com.bsbeetle.bananaspaghetti.viewmodel.BreadcrumbItem(
+                                            name = obj.optString("name", "Unknown"),
+                                            kind = obj.optInt("kind", 0),
+                                            detail = obj.optString("detail", "")
+                                        )
+                                    )
+                                }
+                                
+                                viewModel.updateBreadcrumbs(breadcrumbs)
+                            } catch (e: Exception) {
+                                Log.e("WEBVERR", "Failed to parse LSP symbols: $msg", e)
                             }
                         }
                         return false

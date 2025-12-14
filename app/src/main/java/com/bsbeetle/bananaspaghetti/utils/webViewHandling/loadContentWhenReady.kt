@@ -10,9 +10,11 @@ fun loadContentWhenReady(webView: WebView?, content: String) {
     webView?.evaluateJavascript(jsCheck) { result ->
         if (result == "true") {
             val jsCommand = """
+                window.isProgrammaticChange = true;
                 window.editor.dispatch({
                     changes: { from: 0, to: window.editor.state.doc.length, insert: ${JSONObject.quote(content)} }
                 });
+                setTimeout(() => { window.isProgrammaticChange = false; }, 300);
             """.trimIndent()
             webView.evaluateJavascript(jsCommand, null) // add the content
             //... to the editor

@@ -61,7 +61,44 @@ object LanguageRegistry {
         return when (ext) {
             "cpp", "c", "h", "hpp" -> "cpp"
             "py" -> "python"
+            "html" -> "html"
+            "css" -> "css"
+            "js", "ts" -> "js"  // Match the plugin slug from server
+            "tsx", "jsx" -> "react"  // React/JSX files
+            "rs" -> "rust"  // Rust files
+            "java" -> "java"  // Java files
+            "go" -> "go"  // Go files
+            "sql" -> "sql"  // SQL files
             else -> "plaintext"
         }
+    }
+    
+    /** Check if a language is installed, trying multiple possible slugs */
+    fun isInstalledForExt(ext: String): Boolean {
+        // Try the direct slug first
+        val slug = getSlugForExtension(ext)
+        if (isInstalled(slug)) return true
+        
+        // Try common aliases
+        val aliases = when (ext) {
+            "js" -> listOf("javascript", "js")
+            "ts" -> listOf("typescript", "ts")
+            else -> emptyList()
+        }
+        return aliases.any { isInstalled(it) }
+    }
+    
+    /** Get the actual installed slug for an extension */
+    fun getInstalledSlugForExt(ext: String): String? {
+        val slug = getSlugForExtension(ext)
+        if (isInstalled(slug)) return slug
+        
+        // Try common aliases
+        val aliases = when (ext) {
+            "js" -> listOf("javascript", "js")
+            "ts" -> listOf("typescript", "ts")
+            else -> emptyList()
+        }
+        return aliases.find { isInstalled(it) }
     }
 }

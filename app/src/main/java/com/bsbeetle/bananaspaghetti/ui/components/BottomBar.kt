@@ -106,7 +106,41 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspView
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    if (lspStatus.currentSymbol.isNotEmpty()) {
+                    if (lspStatus.breadcrumbs.isNotEmpty()) {
+                        lspStatus.breadcrumbs.forEachIndexed { index, item ->
+                            val icon = when (item.kind) {
+                                5, 23 -> R.drawable.class_cube // Class, Struct
+                                6, 12 -> R.drawable.data_object // Method, Function
+                                else -> R.drawable.data_object
+                            }
+
+                            Image(
+                                painter = painterResource(icon),
+                                contentDescription = "Symbol",
+                                modifier = Modifier.size(9.dp),
+                                alignment = Alignment.Center
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = item.name,
+                                fontFamily = codaRegular,
+                                fontSize = 9.sp,
+                                color = Color(0xFFFFFFFF)
+                            )
+
+                            if (index < lspStatus.breadcrumbs.size - 1) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Image(
+                                    painter = painterResource(R.drawable.chevron_right),
+                                    contentDescription = ">",
+                                    modifier = Modifier.size(9.dp),
+                                    alignment = Alignment.Center
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                            }
+                        }
+                    } else if (lspStatus.currentSymbol.isNotEmpty()) {
+                        // Fallback to old single symbol if no breadcrumbs (e.g. older LSP)
                         Image(
                             painter = painterResource(R.drawable.class_cube),
                             contentDescription = "Symbol",
@@ -121,6 +155,16 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspView
                             color = Color(0xFFFFFFFF)
                         )
                     }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // Center Swipe Up Icon
+                    Image(
+                        painter = painterResource(R.drawable.swipe_up),
+                        contentDescription = "Swipe Up",
+                        modifier = Modifier.size(12.dp),
+                        alignment = Alignment.Center
+                    )
 
                     Spacer(modifier = Modifier.weight(1f))
 
@@ -182,6 +226,7 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspView
                 
                 // Add terminal button (only show when on Terminal tab)
                 if (selectedTab == BottomPanelTab.TERMINAL) {
+                    val fileViewModel = com.bsbeetle.bananaspaghetti.LocalFileViewModel.current
                     Text(
                         text = "+",
                         color = Color(0xFFCCCCCC),
@@ -189,7 +234,10 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspView
                         modifier = Modifier
                             .padding(horizontal = 8.dp)
                             .clickable {
-                                val newTerminal = TerminalSession(context.applicationContext, "bash ${panelTerminals.size + 1}")
+                                val currentPath = fileViewModel.currentFilePath ?:
+                                                  (SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession)?.projectRoot?.uri?.toString()
+
+                                val newTerminal = TerminalSession(context.applicationContext, "bash ${panelTerminals.size + 1}", initialDir = currentPath)
                                 panelTerminals.add(newTerminal)
                                 activeTerminalIndex = panelTerminals.size - 1
                             }
@@ -410,34 +458,57 @@ private fun TerminalContent(
         // Terminal WebView - use key() to force recreation for each terminal
         if (terminals.isNotEmpty() && activeIndex < terminals.size) {
             val activeTerminal = terminals[activeIndex]
-            
+            val isTerminalReady by activeTerminal.isReady.collectAsStateWithLifecycle()
+
             // Key by terminal ID to ensure proper recreation
             key(activeTerminal.id) {
-                AndroidView(
-                    factory = { ctx ->
-                        activeTerminal.getOrInitView()
-                    },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clickable { 
-                            // Set as active session when clicked
-                            SessionList.activeSessionIndex = SessionList.sessions.indexOf(activeTerminal)
-                        },
-                    update = { webView ->
-                        // Don't auto-focus - let user tap to focus
+                Box(modifier = Modifier.fillMaxSize()) {
+                    AndroidView(
+                            factory = { ctx -> activeTerminal.getOrInitView() },
+                            modifier =
+                                    Modifier.fillMaxSize().clickable {
+                                        // Set as active session when clicked
+                                        SessionList.activeSessionIndex =
+                                                SessionList.sessions.indexOf(activeTerminal)
+                                    },
+                            update = { webView ->
+                                // Don't auto-focus - let user tap to focus
+                            }
+                    )
+
+                    // Loading overlay - shown until terminal is fully initialized
+                    if (!isTerminalReady) {
+                        Box(
+                                modifier = Modifier.fillMaxSize().background(Color(0xFF1E1E1E)),
+                                contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                            ) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                        modifier = Modifier.size(32.dp),
+                                        color = Color(0xFF007ACC),
+                                        strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                        text = "Initializing terminal...",
+                                        color = Color(0xFFAAAAAA),
+                                        fontSize = 12.sp
+                                )
+                            }
+                        }
                     }
-                )
+                }
             }
         } else {
             // Empty state - prompt to create terminal
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "Click + to open a terminal",
-                    color = Color(0xFF888888),
-                    fontSize = 12.sp
+                        text = "Click + to open a terminal",
+                        color = Color(0xFF888888),
+                        fontSize = 12.sp
                 )
             }
         }

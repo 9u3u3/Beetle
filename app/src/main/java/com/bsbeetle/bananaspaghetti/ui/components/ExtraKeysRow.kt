@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsbeetle.bananaspaghetti.model.Key
 import com.bsbeetle.bananaspaghetti.model.KeyType
@@ -55,7 +56,7 @@ fun ExtraKeysRow(
     val editorRow2 = listOf(
         "TAB" to KeyType.ACTION_TAB,
         "CTRL" to KeyType.ACTION_CTRL,
-        "ALT" to KeyType.ACTION_CTRL,
+        "ALT" to KeyType.ACTION_ALT,
         "[" to KeyType.CHARACTER,
         "]" to KeyType.CHARACTER,
         "<" to KeyType.CHARACTER,
@@ -92,6 +93,7 @@ fun ExtraKeysRow(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .zIndex(1f)
             .background(Color(0xFF2E2E2E))
             .padding(vertical = 4.dp)
     ) {
