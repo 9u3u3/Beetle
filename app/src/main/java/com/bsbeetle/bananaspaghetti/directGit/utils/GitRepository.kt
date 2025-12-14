@@ -1,0 +1,686 @@
+package com.bsbeetle.bananaspaghetti.utils.git
+
+import android.util.Log
+import java.io.File
+import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.api.Status
+import org.eclipse.jgit.api.errors.*
+import org.eclipse.jgit.errors.RepositoryNotFoundException
+
+class GitRepository(private val rootDir: File) {
+
+    private var git: Git? = null
+
+    init {
+        Log.d("GitRepository", "🔧 Initializing GitRepository for: ${rootDir.absolutePath}")
+        try {
+            val gitDir = File(rootDir, ".git")
+            Log.d("GitRepository", "📁 .git path: ${gitDir.absolutePath}")
+            Log.d("GitRepository", "📁 .git exists: ${gitDir.exists()}")
+            Log.d("GitRepository", "📁 .git isDirectory: ${gitDir.isDirectory}")
+
+            if (gitDir.exists() && gitDir.isDirectory) {
+                // Check for essential git files
+                val headFile = File(gitDir, "HEAD")
+                val configFile = File(gitDir, "config")
+                val objectsDir = File(gitDir, "objects")
+                val refsDir = File(gitDir, "refs")
+
+                Log.d("GitRepository", "📄 HEAD exists: ${headFile.exists()}")
+                Log.d("GitRepository", "📄 config exists: ${configFile.exists()}")
+                Log.d("GitRepository", "📁 objects exists: ${objectsDir.exists()}")
+                Log.d("GitRepository", "📁 refs exists: ${refsDir.exists()}")
+
+                if (headFile.exists()) {
+                    // Use FileRepositoryBuilder for more robust opening
+                    val builder = org.eclipse.jgit.storage.file.FileRepositoryBuilder()
+                    builder.setGitDir(gitDir)
+                    builder.setWorkTree(rootDir)
+                    builder.setMustExist(false) // Don't throw if structure is incomplete
+                    builder.readEnvironment()
+
+                    val repository = builder.build()
+                    git = Git(repository)
+
+                    Log.d(
+                            "GitRepository",
+                            "✅ Successfully opened repository at ${rootDir.absolutePath}"
+                    )
+                    GitLogger.log("Opened repository at ${rootDir.absolutePath}", LogType.INFO)
+                } else {
+                    Log.w(
+                            "GitRepository",
+                            "⚠️ .git exists but HEAD file is missing - incomplete repository"
+                    )
+                    GitLogger.log(
+                            "Incomplete git repository at ${rootDir.absolutePath}",
+                            LogType.INFO
+                    )
+                }
+            } else {
+                Log.w("GitRepository", "⚠️ No .git directory found at ${rootDir.absolutePath}")
+                GitLogger.log("No git repository found at ${rootDir.absolutePath}", LogType.INFO)
+            }
+        } catch (e: RepositoryNotFoundException) {
+            Log.w(
+                    "GitRepository",
+                    "❌ RepositoryNotFoundException at ${rootDir.absolutePath}: ${e.message}"
+            )
+        } catch (e: Exception) {
+            Log.e("GitRepository", "❌ Failed to open git repo: ${e.message}", e)
+            GitLogger.log("Failed to open repository: ${e.message}", LogType.ERROR)
+        }
+    }
+
+    fun isInitialized(): Boolean {
+        val initialized = git != null
+        Log.d("GitRepository", "📊 isInitialized: $initialized")
+        return initialized
+    }
+
+    fun init(): GitResult<Unit> {
+        GitLogger.log("git init ${rootDir.absolutePath}", LogType.COMMAND)
+        return try {
+            git = Git.init().setDirectory(rootDir).call()
+            GitLogger.log("Repository initialized", LogType.SUCCESS)
+            GitResult.Success(Unit, "Repository initialized at ${rootDir.name}")
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to init repo", e)
+            GitLogger.log("Init failed: ${e.message}", LogType.ERROR)
+            GitResult.Error("Failed to initialize repository", e.message)
+        }
+    }
+
+    fun getStatus(): Status? {
+        return try {
+            git?.status()?.call()
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to get status", e)
+            null
+        }
+    }
+
+    fun resetMixed(): GitResult<Unit> {
+        GitLogger.log("git reset --mixed", LogType.COMMAND)
+        return try {
+            git?.reset()?.setMode(org.eclipse.jgit.api.ResetCommand.ResetType.MIXED)?.call()
+            GitLogger.log("Reset mixed (unstaged all)", LogType.SUCCESS)
+            GitResult.Success(Unit, "Unstaged all files")
+        } catch (e: Exception) {
+            GitLogger.log("Reset failed: ${e.message}", LogType.ERROR)
+            GitResult.Error("Failed to reset", e.message)
+        }
+    }
+
+    fun stageFile(filePath: String): GitResult<Unit> {
+        val relativePath = toRelativePath(filePath)
+        GitLogger.log("git add $relativePath", LogType.COMMAND)
+        return try {
+            git?.add()?.addFilepattern(relativePath)?.call()
+            GitLogger.log("Staged $relativePath", LogType.SUCCESS)
+            GitResult.Success(Unit, "Staged: $relativePath")
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to stage file: $filePath", e)
+            GitLogger.log("Stage failed: ${e.message}", LogType.ERROR)
+            GitResult.Error("Failed to stage file", e.message)
+        }
+    }
+
+    fun stageFiles(paths: List<String>): GitResult<Unit> {
+        return try {
+            GitLogger.log("git add ${paths.joinToString(", ")}", LogType.COMMAND)
+            val cmd = git?.add()
+            paths.forEach { cmd?.addFilepattern(toRelativePath(it)) }
+            cmd?.call()
+            GitLogger.log("Staged ${paths.size} files", LogType.SUCCESS)
+            GitResult.Success(Unit, "Staged ${paths.size} files")
+        } catch (e: Exception) {
+            GitLogger.log("Failed to stage files: ${e.message}", LogType.ERROR)
+            GitResult.Error("Failed to stage files", e.message)
+        }
+    }
+
+    fun stageAll(): GitResult<Unit> {
+        GitLogger.log("git add .", LogType.COMMAND)
+        return try {
+            git?.add()?.addFilepattern(".")?.call()
+            GitLogger.log("Staged all changes", LogType.SUCCESS)
+            GitResult.Success(Unit, "Staged all changes")
+        } catch (e: Exception) {
+            GitLogger.log("Stage all failed: ${e.message}", LogType.ERROR)
+            GitResult.Error("Failed to stage all files", e.message)
+        }
+    }
+
+    fun unstageFile(filePath: String): GitResult<Unit> {
+        val relativePath = toRelativePath(filePath)
+        GitLogger.log("git reset $relativePath", LogType.COMMAND)
+        return try {
+            git?.reset()?.addPath(relativePath)?.call()
+            GitLogger.log("Unstaged $relativePath", LogType.SUCCESS)
+            GitResult.Success(Unit, "Unstaged: $relativePath")
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to unstage file: $filePath", e)
+            GitLogger.log("Unstage failed: ${e.message}", LogType.ERROR)
+            GitResult.Error("Failed to unstage file", e.message)
+        }
+    }
+
+    fun commit(message: String): GitResult<String> {
+        GitLogger.log("git commit -m \"$message\"", LogType.COMMAND)
+        if (message.isBlank()) {
+            return GitResult.Error("Commit message cannot be empty")
+        }
+        return try {
+            val result = git?.commit()?.setMessage(message)?.call()
+            val shortHash = result?.abbreviate(7)?.name() ?: "unknown"
+            GitLogger.log("Committed $shortHash", LogType.SUCCESS)
+            GitResult.Success(shortHash, "Committed: $shortHash - ${message.take(30)}...")
+        } catch (e: EmptyCommitException) {
+            GitLogger.log("Commit failed: Nothing to commit", LogType.ERROR)
+            GitResult.Error("Nothing to commit", "No changes are staged")
+        } catch (e: WrongRepositoryStateException) {
+            GitLogger.log("Commit failed: Wrong state", LogType.ERROR)
+            GitResult.Error(
+                    "Repository in wrong state",
+                    "Resolve conflicts or complete previous operation first"
+            )
+        } catch (e: ConcurrentRefUpdateException) {
+            GitLogger.log("Commit failed: Concurrent update", LogType.ERROR)
+            GitResult.Error("Concurrent update detected", "Try again")
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to commit", e)
+            GitLogger.log("Commit failed: ${e.message}", LogType.ERROR)
+            GitResult.Error("Commit failed", e.message)
+        }
+    }
+
+    fun close() {
+        git?.close()
+    }
+
+    // === Configuration ===
+
+    fun getConfig(): Pair<String, String> {
+        val config = git?.repository?.config
+        val name = config?.getString("user", null, "name") ?: ""
+        val email = config?.getString("user", null, "email") ?: ""
+        return Pair(name, email)
+    }
+
+    fun setConfig(name: String, email: String): GitResult<Unit> {
+        GitLogger.log("git config user.name \"$name\"", LogType.COMMAND)
+        GitLogger.log("git config user.email \"$email\"", LogType.COMMAND)
+        return try {
+            val config = git?.repository?.config
+            config?.setString("user", null, "name", name)
+            config?.setString("user", null, "email", email)
+            config?.save()
+            GitLogger.log("Identity saved", LogType.SUCCESS)
+            GitResult.Success(Unit, "Identity saved: $name <$email>")
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to set config", e)
+            GitLogger.log("Failed to save identity: ${e.message}", LogType.ERROR)
+            GitResult.Error("Failed to save identity", e.message)
+        }
+    }
+
+    // === Remote ===
+
+    fun setRemote(url: String): GitResult<Unit> {
+        GitLogger.log("git remote set-url origin $url", LogType.COMMAND)
+        return try {
+            val config = git?.repository?.config
+            config?.setString("remote", "origin", "url", url)
+            config?.setString("remote", "origin", "fetch", "+refs/heads/*:refs/remotes/origin/*")
+            config?.save()
+            GitLogger.log("Remote set to $url", LogType.SUCCESS)
+            GitResult.Success(Unit, "Remote set: origin → $url")
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to set remote", e)
+            GitLogger.log("Failed to set remote: ${e.message}", LogType.ERROR)
+            GitResult.Error("Failed to set remote URL", e.message)
+        }
+    }
+
+    fun getRemote(): String {
+        return git?.repository?.config?.getString("remote", "origin", "url") ?: ""
+    }
+
+    // === Network Operations ===
+
+    /**
+     * Push changes to remote using SSH authentication. SSH session factory must be configured
+     * before calling.
+     */
+    fun push(): GitResult<Unit> {
+        val remote = getRemote()
+        if (remote.isEmpty()) {
+            return GitResult.Error("No remote configured", "Set a remote URL first in settings")
+        }
+        val currentBranch = getCurrentBranch()
+        GitLogger.log("git push -u origin $currentBranch", LogType.COMMAND)
+        return try {
+            // Set up tracking branch for first push
+            val config = git?.repository?.config
+            val trackingBranch = config?.getString("branch", currentBranch, "remote")
+            if (trackingBranch.isNullOrEmpty()) {
+                // Set up tracking
+                config?.setString("branch", currentBranch, "remote", "origin")
+                config?.setString("branch", currentBranch, "merge", "refs/heads/$currentBranch")
+                config?.save()
+                GitLogger.log(
+                        "Set up tracking: $currentBranch -> origin/$currentBranch",
+                        LogType.INFO
+                )
+            }
+
+            val result = git?.push()?.setRemote("origin")?.add(currentBranch)?.call()
+
+            val updates = result?.flatMap { it.remoteUpdates } ?: emptyList()
+            if (updates.isEmpty()) {
+                GitLogger.log("Everything up-to-date", LogType.SUCCESS)
+                GitResult.Success(Unit, "Everything up-to-date")
+            } else {
+                val successUpdates =
+                        updates.filter {
+                            it.status == org.eclipse.jgit.transport.RemoteRefUpdate.Status.OK ||
+                                    it.status ==
+                                            org.eclipse.jgit.transport.RemoteRefUpdate.Status
+                                                    .UP_TO_DATE
+                        }
+                if (successUpdates.isNotEmpty()) {
+                    GitLogger.log("Pushed ${successUpdates.size} refs", LogType.SUCCESS)
+                    GitResult.Success(Unit, "Pushed to origin/$currentBranch")
+                } else {
+                    val firstError =
+                            updates.firstOrNull {
+                                it.status != org.eclipse.jgit.transport.RemoteRefUpdate.Status.OK
+                            }
+                    // Log detailed error information
+                    val errorMsg = firstError?.message ?: "No error message"
+                    val errorStatus = firstError?.status?.toString() ?: "UNKNOWN"
+                    GitLogger.log(
+                            "Push failed - Status: $errorStatus, Message: $errorMsg",
+                            LogType.ERROR
+                    )
+
+                    // Provide helpful error message based on status
+                    val userMessage =
+                            when (firstError?.status) {
+                                org.eclipse.jgit.transport.RemoteRefUpdate.Status
+                                        .REJECTED_NONFASTFORWARD ->
+                                        "Push rejected: Pull changes first"
+                                org.eclipse.jgit.transport.RemoteRefUpdate.Status
+                                        .REJECTED_NODELETE ->
+                                        "Push rejected: Cannot delete remote branch"
+                                org.eclipse.jgit.transport.RemoteRefUpdate.Status
+                                        .REJECTED_REMOTE_CHANGED ->
+                                        "Push rejected: Remote has changes, pull first"
+                                org.eclipse.jgit.transport.RemoteRefUpdate.Status
+                                        .REJECTED_OTHER_REASON -> "Push rejected: ${errorMsg}"
+                                else -> "Push failed: $errorStatus"
+                            }
+                    GitResult.Error(userMessage, errorMsg)
+                }
+            }
+        } catch (e: TransportException) {
+            Log.e("GitRepository", "Push transport error", e)
+            GitLogger.log("Push failed: ${e.message}", LogType.ERROR)
+            when {
+                e.message?.contains("not authorized") == true ||
+                        e.message?.contains("Authentication") == true ->
+                        GitResult.Error("Authentication failed", "Check your username and token")
+                e.message?.contains("not found") == true ->
+                        GitResult.Error("Repository not found", "Check your remote URL")
+                e.message?.contains("rejected") == true ->
+                        GitResult.Error("Push rejected", "Pull changes first or force push")
+                else -> GitResult.Error("Push failed", e.message)
+            }
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to push", e)
+            GitLogger.log("Push failed: ${e.message}", LogType.ERROR)
+            GitResult.Error("Push failed", e.message)
+        }
+    }
+
+    /**
+     * Pull changes from remote using SSH authentication. SSH session factory must be configured
+     * before calling.
+     */
+    fun pull(): GitResult<Unit> {
+        val remote = getRemote()
+        if (remote.isEmpty()) {
+            return GitResult.Error("No remote configured", "Set a remote URL first in settings")
+        }
+        val currentBranch = getCurrentBranch()
+        GitLogger.log("git pull origin $currentBranch", LogType.COMMAND)
+        return try {
+            val result =
+                    git?.pull()?.setRemote("origin")?.setRemoteBranchName(currentBranch)?.call()
+
+            when {
+                result?.mergeResult?.mergeStatus?.isSuccessful == true -> {
+                    GitLogger.log("Pull successful", LogType.SUCCESS)
+                    GitResult.Success(
+                            Unit,
+                            "Pull complete: ${result.fetchResult?.messages ?: "Updated"}"
+                    )
+                }
+                result?.isSuccessful == true -> {
+                    GitLogger.log("Already up-to-date", LogType.SUCCESS)
+                    GitResult.Success(Unit, "Already up-to-date")
+                }
+                else -> {
+                    GitLogger.log("Pull failed: ${result?.mergeResult?.mergeStatus}", LogType.ERROR)
+                    GitResult.Error("Pull failed", result?.mergeResult?.mergeStatus?.toString())
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to pull", e)
+            GitLogger.log("Pull failed: ${e.message}", LogType.ERROR)
+            GitResult.Error("Pull failed", e.message)
+        }
+    }
+
+    /**
+     * Fetch changes from remote using SSH authentication. SSH session factory must be configured
+     * before calling.
+     */
+    fun fetch(): GitResult<Unit> {
+        val remote = getRemote()
+        if (remote.isEmpty()) {
+            return GitResult.Error("No remote configured", "Set a remote URL first in settings")
+        }
+        GitLogger.log("git fetch origin", LogType.COMMAND)
+        return try {
+            val result = git?.fetch()?.call()
+            val updates = result?.trackingRefUpdates?.size ?: 0
+            if (updates > 0) {
+                GitLogger.log("Fetched $updates updates", LogType.SUCCESS)
+                GitResult.Success(Unit, "Fetched $updates update(s)")
+            } else {
+                GitLogger.log("Already up-to-date", LogType.SUCCESS)
+                GitResult.Success(Unit, "Already up-to-date")
+            }
+        } catch (e: TransportException) {
+            GitLogger.log("Fetch failed: ${e.message}", LogType.ERROR)
+            when {
+                e.message?.contains("not authorized") == true ||
+                        e.message?.contains("Authentication") == true ->
+                        GitResult.Error("Authentication failed", "Check your username and token")
+                else -> GitResult.Error("Fetch failed", e.message)
+            }
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to fetch", e)
+            GitLogger.log("Fetch failed: ${e.message}", LogType.ERROR)
+            GitResult.Error("Fetch failed", e.message)
+        }
+    }
+
+    // === Diff ===
+
+    fun getDiff(filePath: String): String {
+        return try {
+            val out = java.io.ByteArrayOutputStream()
+            val df = org.eclipse.jgit.diff.DiffFormatter(out)
+            df.setRepository(git?.repository)
+
+            val relativePath = toRelativePath(filePath)
+            val diffs =
+                    git?.diff()
+                            ?.setPathFilter(
+                                    org.eclipse.jgit.treewalk.filter.PathFilter.create(relativePath)
+                            )
+                            ?.call()
+
+            diffs?.forEach { entry -> df.format(entry) }
+
+            val result = out.toString()
+            if (result.isBlank()) "No changes detected" else result
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to get diff", e)
+            "Error loading diff: ${e.message}"
+        }
+    }
+
+    // === Branch Operations ===
+
+    fun getCurrentBranch(): String {
+        return try {
+            git?.repository?.branch ?: "HEAD"
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to get current branch", e)
+            "unknown"
+        }
+    }
+
+    fun getBranches(): List<BranchInfo> {
+        val branches = mutableListOf<BranchInfo>()
+        try {
+            val currentBranch = getCurrentBranch()
+
+            git?.branchList()?.call()?.forEach { ref ->
+                val name = ref.name.removePrefix("refs/heads/")
+                branches.add(BranchInfo(name, isRemote = false, isCurrent = name == currentBranch))
+            }
+
+            git?.branchList()
+                    ?.setListMode(org.eclipse.jgit.api.ListBranchCommand.ListMode.REMOTE)
+                    ?.call()
+                    ?.forEach { ref ->
+                        val name = ref.name.removePrefix("refs/remotes/")
+                        branches.add(BranchInfo(name, isRemote = true, isCurrent = false))
+                    }
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to get branches", e)
+        }
+        return branches
+    }
+
+    fun createBranch(name: String): GitResult<Unit> {
+        GitLogger.log("git branch $name", LogType.COMMAND)
+        if (name.isBlank()) {
+            return GitResult.Error("Branch name cannot be empty")
+        }
+        if (name.contains(" ") || name.contains("..")) {
+            return GitResult.Error("Invalid branch name", "No spaces or '..' allowed")
+        }
+        return try {
+            git?.branchCreate()?.setName(name)?.call()
+            GitLogger.log("Branch created", LogType.SUCCESS)
+            GitResult.Success(Unit, "Branch '$name' created")
+        } catch (e: RefAlreadyExistsException) {
+            GitLogger.log("Branch already exists", LogType.ERROR)
+            GitResult.Error("Branch already exists", "Choose a different name")
+        } catch (e: InvalidRefNameException) {
+            GitLogger.log("Invalid branch name", LogType.ERROR)
+            GitResult.Error("Invalid branch name", e.message)
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to create branch: $name", e)
+            GitLogger.log("Create branch failed: ${e.message}", LogType.ERROR)
+            GitResult.Error("Failed to create branch", e.message)
+        }
+    }
+
+    fun checkoutBranch(name: String): GitResult<Unit> {
+        GitLogger.log("git checkout $name", LogType.COMMAND)
+        return try {
+            git?.checkout()?.setName(name)?.call()
+            GitLogger.log("Checked out $name", LogType.SUCCESS)
+            GitResult.Success(Unit, "Switched to '$name'")
+        } catch (e: CheckoutConflictException) {
+            GitLogger.log("Checkout conflict", LogType.ERROR)
+            GitResult.Error(
+                    "Checkout conflict",
+                    "Commit or stash changes before switching: ${e.conflictingPaths.take(3).joinToString()}"
+            )
+        } catch (e: RefNotFoundException) {
+            GitLogger.log("Branch not found", LogType.ERROR)
+            GitResult.Error("Branch not found", "Branch '$name' doesn't exist")
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to checkout branch: $name", e)
+            GitLogger.log("Checkout failed: ${e.message}", LogType.ERROR)
+            GitResult.Error("Failed to switch branch", e.message)
+        }
+    }
+
+    fun deleteBranch(name: String): GitResult<Unit> {
+        GitLogger.log("git branch -D $name", LogType.COMMAND)
+        if (name == getCurrentBranch()) {
+            return GitResult.Error(
+                    "Cannot delete current branch",
+                    "Switch to a different branch first"
+            )
+        }
+        return try {
+            git?.branchDelete()?.setBranchNames(name)?.setForce(true)?.call()
+            GitLogger.log("Branch deleted", LogType.SUCCESS)
+            GitResult.Success(Unit, "Deleted branch '$name'")
+        } catch (e: CannotDeleteCurrentBranchException) {
+            GitLogger.log("Cannot delete current branch", LogType.ERROR)
+            GitResult.Error("Cannot delete current branch", "Switch to a different branch first")
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to delete branch: $name", e)
+            GitLogger.log("Delete branch failed: ${e.message}", LogType.ERROR)
+            GitResult.Error("Failed to delete branch", e.message)
+        }
+    }
+
+    // === Commit History ===
+
+    fun getCommitLog(limit: Int = 50): List<CommitInfo> {
+        val commits = mutableListOf<CommitInfo>()
+        try {
+            git?.log()?.setMaxCount(limit)?.call()?.forEach { revCommit ->
+                commits.add(
+                        CommitInfo(
+                                hash = revCommit.name,
+                                shortHash = revCommit.abbreviate(7).name(),
+                                message = revCommit.shortMessage,
+                                fullMessage = revCommit.fullMessage,
+                                author = revCommit.authorIdent.name,
+                                email = revCommit.authorIdent.emailAddress,
+                                date = java.util.Date(revCommit.commitTime * 1000L)
+                        )
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to get commit log", e)
+        }
+        return commits
+    }
+
+    // === Stash ===
+
+    fun stash(): GitResult<Unit> {
+        GitLogger.log("git stash", LogType.COMMAND)
+        return try {
+            val result = git?.stashCreate()?.call()
+            if (result != null) {
+                GitLogger.log("Stashed changes", LogType.SUCCESS)
+                GitResult.Success(Unit, "Changes stashed")
+            } else {
+                GitLogger.log("Nothing to stash", LogType.INFO)
+                GitResult.Error("Nothing to stash", "No local changes to save")
+            }
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to stash", e)
+            GitLogger.log("Stash failed: ${e.message}", LogType.ERROR)
+            GitResult.Error("Failed to stash", e.message)
+        }
+    }
+
+    fun stashPop(): GitResult<Unit> {
+        GitLogger.log("git stash pop", LogType.COMMAND)
+        return try {
+            val stashList = git?.stashList()?.call()
+            if (stashList.isNullOrEmpty()) {
+                return GitResult.Error("No stash entries", "Nothing to pop")
+            }
+            git?.stashApply()?.call()
+            git?.stashDrop()?.call()
+            GitLogger.log("Stash popped", LogType.SUCCESS)
+            GitResult.Success(Unit, "Stash applied and removed")
+        } catch (e: StashApplyFailureException) {
+            GitLogger.log("Stash apply failed: Conflict", LogType.ERROR)
+            GitResult.Error("Stash apply failed", "Conflicts detected - resolve manually")
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to pop stash", e)
+            GitLogger.log("Stash pop failed: ${e.message}", LogType.ERROR)
+            GitResult.Error("Failed to pop stash", e.message)
+        }
+    }
+
+    fun listStashes(): List<StashInfo> {
+        val stashes = mutableListOf<StashInfo>()
+        try {
+            git?.stashList()?.call()?.forEachIndexed { index, revCommit ->
+                stashes.add(
+                        StashInfo(
+                                index = index,
+                                message = revCommit.shortMessage,
+                                date = java.util.Date(revCommit.commitTime * 1000L)
+                        )
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to list stashes", e)
+        }
+        return stashes
+    }
+
+    // === Ahead/Behind ===
+
+    fun getAheadBehind(): Pair<Int, Int> {
+        return try {
+            val repo = git?.repository ?: return Pair(0, 0)
+            val branch = repo.branch ?: return Pair(0, 0)
+
+            // Check if branch has upstream tracking
+            val config = repo.config
+            val remote = config.getString("branch", branch, "remote")
+            if (remote.isNullOrEmpty()) {
+                // No tracking branch set up yet
+                return Pair(0, 0)
+            }
+
+            val trackingStatus = org.eclipse.jgit.lib.BranchTrackingStatus.of(repo, branch)
+            Pair(trackingStatus?.aheadCount ?: 0, trackingStatus?.behindCount ?: 0)
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to get ahead/behind", e)
+            Pair(0, 0)
+        }
+    }
+
+    // === Helpers ===
+
+    private fun toRelativePath(filePath: String): String {
+        return if (filePath.startsWith(rootDir.absolutePath)) {
+            filePath.substring(rootDir.absolutePath.length + 1)
+        } else {
+            filePath
+        }
+    }
+
+    companion object {
+        /**
+         * Clone a repository using SSH authentication. SSH keys must be configured before calling
+         * this.
+         */
+        fun clone(url: String, directory: File): GitResult<GitRepository> {
+            GitLogger.log("git clone $url ${directory.absolutePath}", LogType.COMMAND)
+            return try {
+                // Clone using SSH (credentials handled by SSH session factory)
+                val git = Git.cloneRepository().setURI(url).setDirectory(directory).call()
+
+                GitLogger.log("Cloned successfully", LogType.SUCCESS)
+                GitResult.Success(GitRepository(directory), "Cloned to ${directory.name}")
+            } catch (e: Exception) {
+                Log.e("GitRepository", "Failed to clone", e)
+                GitLogger.log("Clone failed: ${e.message}", LogType.ERROR)
+                GitResult.Error("Clone failed", e.message)
+            }
+        }
+    }
+}

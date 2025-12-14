@@ -301,7 +301,7 @@ public class AlpineDocumentProvider extends DocumentsProvider {
         row.add(DocumentsContract.Document.COLUMN_MIME_TYPE, mimeType);
         row.add(DocumentsContract.Document.COLUMN_LAST_MODIFIED, file.lastModified());
         row.add(DocumentsContract.Document.COLUMN_FLAGS, flags);
-        row.add(DocumentsContract.Document.COLUMN_ICON, com.bsbeetle.bananaspaghetti.R.mipmap.ic_launcher);
+//        row.add(DocumentsContract.Document.COLUMN_ICON, com.bsbeetle.bananaspaghetti.R.mipmap.ic_launcher);
     }
 
     public static boolean isDocumentProviderEnabled(Context context) {

@@ -13,8 +13,10 @@ import com.bsbeetle.bananaspaghetti.tenebrio.pty.Tenebrio
 import com.bsbeetle.bananaspaghetti.utils.AppConfig
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 import java.io.FileOutputStream
+import kotlinx.coroutines.flow.asStateFlow
 
-class TerminalSession(context: Context, name: String = "Terminal", val initialDir: String? = null) : Session(context.applicationContext, SessionType.TERMINAL, name) {
+class TerminalSession(context: Context, name: String = "Terminal", val initialDir: String? = null) :
+        Session(context.applicationContext, SessionType.TERMINAL, name) {
 
     var outputFd: FileOutputStream? = null
     private var tenebrio: Tenebrio? = null
@@ -22,16 +24,20 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
     var cols: Int? = 80
     var onOutput: ((String) -> Unit)? = null
 
+    // Observable state for UI to show loading until terminal is ready
+    private val _isReady = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val isReady: kotlinx.coroutines.flow.StateFlow<Boolean> = _isReady.asStateFlow()
+
     init {
         Log.d("TerminalSession", "Creating tenebrio for ID: $id")
         tenebrio = Tenebrio(context.applicationContext, this)
         try {
             tenebrio!!.init()
-            
+
             // If initial directory is provided, cd into it
             initialDir?.let { dir ->
-                // We need to wait a bit or just write it? 
-                // Writing immediately might be lost if shell isn't fully ready, 
+                // We need to wait a bit or just write it?
+                // Writing immediately might be lost if shell isn't fully ready,
                 // but usually it buffers.
                 // Also need to handle internal vs external paths.
                 // For now, assume the path is valid for the shell (or mapped).
@@ -50,68 +56,87 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
     @SuppressLint("SetJavaScriptEnabled")
     override fun createView(): CustomWebView {
         if (view != null) return view!!
-        view = CustomWebView(context.applicationContext, this).apply {
-            WebView.setWebContentsDebuggingEnabled(true)
-            settings.apply {
-                javaScriptEnabled = true
-                domStorageEnabled = true
-                allowFileAccess = true
-                cacheMode = WebSettings.LOAD_NO_CACHE
-                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                useWideViewPort = true
-                loadWithOverviewMode = true
-                setSupportZoom(false)
-            }
-            loadUrl(AppConfig.TERMINAL_URL)
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-
-            addJavascriptInterface(object {
-                @JavascriptInterface
-                fun sendInput(input: String) {
-                    outputFd?.write("$input\n".toByteArray())
-                    outputFd?.flush()
-                }
-
-                @JavascriptInterface
-                fun sendRaw(input: String) {
-                    outputFd?.write(input.toByteArray())
-                    outputFd?.flush()
-                }
-            }, "AndroidTerminal")
-
-            addJavascriptInterface(object {
-                @JavascriptInterface
-                fun resizeTerminal(rows: Int, cols: Int) {
-                    tenebrio?.resizeTerminal(rows, cols)
-                }
-
-                @JavascriptInterface
-                fun getRowsCols(_rows: Int, _cols: Int) {
-                    rows = _rows
-                    cols = _cols
-                    if (tenebrio?.gMasterFd ?: -1 < 0) {
-                        try {
-                            tenebrio!!.init()
-                        } catch (e: Exception) {
-                            Log.e("TerminalSession", "Tenebrio init failed", e)
-                        }
-                    } else {
-                        tenebrio!!.resizeTerminal(this@TerminalSession.rows!!, this@TerminalSession.cols!!)
+        view =
+                CustomWebView(context.applicationContext, this).apply {
+                    WebView.setWebContentsDebuggingEnabled(true)
+                    settings.apply {
+                        javaScriptEnabled = true
+                        domStorageEnabled = true
+                        allowFileAccess = true
+                        cacheMode = WebSettings.LOAD_NO_CACHE
+                        mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        useWideViewPort = true
+                        loadWithOverviewMode = true
+                        setSupportZoom(false)
                     }
-                }
-            }, "AndroidTerminalResize")
+                    loadUrl(AppConfig.TERMINAL_URL)
+                    layoutParams =
+                            ViewGroup.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT
+                            )
 
-            webViewClient = object : WebViewClient() {
-                override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
-                    Log.d("TerminalSession", "WebView Crashed")
-                    destroy()
-                    return true
+                    addJavascriptInterface(
+                            object {
+                                @JavascriptInterface
+                                fun sendInput(input: String) {
+                                    outputFd?.write("$input\n".toByteArray())
+                                    outputFd?.flush()
+                                }
+
+                                @JavascriptInterface
+                                fun sendRaw(input: String) {
+                                    outputFd?.write(input.toByteArray())
+                                    outputFd?.flush()
+                                }
+                            },
+                            "AndroidTerminal"
+                    )
+
+                    addJavascriptInterface(
+                            object {
+                                @JavascriptInterface
+                                fun resizeTerminal(rows: Int, cols: Int) {
+                                    tenebrio?.resizeTerminal(rows, cols)
+                                }
+
+                                @JavascriptInterface
+                                fun getRowsCols(_rows: Int, _cols: Int) {
+                                    rows = _rows
+                                    cols = _cols
+                                    if (tenebrio?.gMasterFd ?: -1 < 0) {
+                                        try {
+                                            tenebrio!!.init()
+                                            // Terminal is now ready - hide loading screen
+                                            _isReady.value = true
+                                        } catch (e: Exception) {
+                                            Log.e("TerminalSession", "Tenebrio init failed", e)
+                                        }
+                                    } else {
+                                        // Already initialized, just resize
+                                        _isReady.value = true
+                                        tenebrio!!.resizeTerminal(
+                                                this@TerminalSession.rows!!,
+                                                this@TerminalSession.cols!!
+                                        )
+                                    }
+                                }
+                            },
+                            "AndroidTerminalResize"
+                    )
+
+                    webViewClient =
+                            object : WebViewClient() {
+                                override fun onRenderProcessGone(
+                                        view: WebView?,
+                                        detail: RenderProcessGoneDetail?
+                                ): Boolean {
+                                    Log.d("TerminalSession", "WebView Crashed")
+                                    destroy()
+                                    return true
+                                }
+                            }
                 }
-            }
-        }
         return view!!
     }
 
