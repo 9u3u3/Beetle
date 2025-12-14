@@ -648,7 +648,15 @@ function setupEditor() {
         }
       ]),
       EditorView.updateListener.of((update) => {
-        if (update.docChanged) window.code_ = update.state.doc.toString()
+        if (update.docChanged) {
+          window.code_ = update.state.doc.toString()
+
+          // Notify Android about content change
+          if (window.AndroidEditor && !window.isProgrammaticChange) {
+            // console.log('[LSP-JS] Content changed (user), calling onContentChanged');
+            window.AndroidEditor.onContentChanged();
+          }
+        }
 
         // Handle Completion UI on selection change
         if (update.selectionSet) {
@@ -695,6 +703,105 @@ function setupEditor() {
           window.lastStatusKey = statusKey;
           window.lastStatusTime = now;
           console.log(`[LSP-STATUS] line:${line.number} col:${col + 1} err:${window.cachedErrors || 0} warn:${window.cachedWarnings || 0}`);
+
+          // --- BREADCRUMBS / SYMBOLS ---
+          // Fetch document symbols if we have a valid connection
+          if (ws && ws.readyState === WebSocket.OPEN && isInitialized && openedDocumentUri === URI) {
+            // Debounce symbol request
+            if (window.symbolTimeout) clearTimeout(window.symbolTimeout);
+            window.symbolTimeout = setTimeout(() => {
+              sendRequest(ws, 'textDocument/documentSymbol', {
+                textDocument: { uri: URI }
+              }).then(symbols => {
+                if (!symbols || !Array.isArray(symbols)) {
+                  return;
+                }
+
+                // Helper to normalize range
+                function getRange(sym) {
+                  if (sym.range) return sym.range;
+                  if (sym.location && sym.location.range) return sym.location.range;
+                  return null;
+                }
+
+                // Helper to find symbol at position
+                function findSymbolAtPos(symbols, line, col) {
+                  let found = [];
+
+                  // Check if we have a flat list (SymbolInformation) or hierarchy (DocumentSymbol)
+                  const isFlat = symbols.length > 0 && !symbols[0].children && symbols[0].location;
+
+                  if (isFlat) {
+                    // Handle flat list (SymbolInformation)
+                    // Find all symbols containing the cursor
+                    const matches = [];
+                    for (const sym of symbols) {
+                      const range = getRange(sym);
+                      if (!range) continue;
+
+                      const startLine = range.start.line;
+                      const endLine = range.end.line;
+
+                      if (line > startLine || (line === startLine && col >= range.start.character)) {
+                        if (line < endLine || (line === endLine && col <= range.end.character)) {
+                          matches.push(sym);
+                        }
+                      }
+                    }
+
+                    // Sort by range length (descending) to get hierarchy order? 
+                    // Actually, we want Outer -> Inner.
+                    // Outer starts earlier, or ends later.
+                    // Let's sort by start line/char.
+                    matches.sort((a, b) => {
+                      const ra = getRange(a);
+                      const rb = getRange(b);
+                      if (ra.start.line !== rb.start.line) return ra.start.line - rb.start.line;
+                      return ra.start.character - rb.start.character;
+                    });
+
+                    return matches.map(s => ({ name: s.name, kind: s.kind, detail: s.detail || s.containerName }));
+
+                  } else {
+                    // Handle hierarchy (DocumentSymbol)
+                    for (const sym of symbols) {
+                      const range = getRange(sym);
+                      if (!range) continue;
+
+                      const startLine = range.start.line;
+                      const endLine = range.end.line;
+
+                      if (line > startLine || (line === startLine && col >= range.start.character)) {
+                        if (line < endLine || (line === endLine && col <= range.end.character)) {
+                          found.push({ name: sym.name, kind: sym.kind, detail: sym.detail });
+                          if (sym.children) {
+                            found = found.concat(findSymbolAtPos(sym.children, line, col));
+                          }
+                          break; // Assuming non-overlapping siblings in hierarchy
+                        }
+                      }
+                    }
+                    return found;
+                  }
+                }             // Current cursor position (0-indexed)
+                const cursorLine = line.number - 1;
+                const cursorCol = col;
+
+                const breadcrumbs = findSymbolAtPos(symbols, cursorLine, cursorCol);
+
+                // Send to Android
+                // Only send if changed
+                const breadcrumbStr = JSON.stringify(breadcrumbs);
+                if (window.lastBreadcrumbs !== breadcrumbStr) {
+                  window.lastBreadcrumbs = breadcrumbStr;
+                  console.log(`[LSP-SYMBOLS] ${breadcrumbStr}`);
+                }
+
+              }).catch(e => {
+                console.error("Symbol fetch failed:", e);
+              });
+            }, 500); // 500ms debounce
+          }
         }
 
         // Full Text Sync - Re-enabled with longer debounce
@@ -736,21 +843,18 @@ function setupEditor() {
   window.isEditorReady = true
 
   const editorEl = document.querySelector('.cm-editor')
-  // --- Custom Touch Handling to Prevent Native Crash ---
-  // We prevent default on touch events to stop the WebView from showing native handles/popups.
-  // We then manually implement scrolling and cursor placement.
-
+  // --- Custom Touch Handling REMOVED to allow native selection ---
+  /*
   let lastTouchY = 0;
   let lastTouchX = 0;
   let isScrolling = false;
 
   editorEl.addEventListener('touchstart', (e) => {
     if (e.touches.length !== 1) return;
-    // DON'T prevent default on touchstart - it might block subsequent touch events
     lastTouchY = e.touches[0].clientY;
     lastTouchX = e.touches[0].clientX;
     isScrolling = false;
-  }, { passive: true }); // Use passive for touchstart
+  }, { passive: true });
 
   editorEl.addEventListener('touchmove', (e) => {
     if (e.touches.length !== 1) return;
@@ -766,11 +870,11 @@ function setupEditor() {
     if (Math.abs(deltaY) > 2 || Math.abs(deltaX) > 2) {
       isScrolling = true;
     }
-  }, { passive: true }); // Use passive for touchmove
+  }, { passive: true });
 
   editorEl.addEventListener('touchend', (e) => {
     if (isScrolling) return;
-    e.preventDefault(); // Only prevent default on touchend to stop native click
+    e.preventDefault(); // This was blocking native selection!
 
     // Manual Cursor Placement
     const touch = e.changedTouches[0];
@@ -782,17 +886,15 @@ function setupEditor() {
         scrollIntoView: true
       });
       view.focus();
-
-      // Trigger completion if needed (optional)
-      // startCompletion(view);
     }
   }, { passive: false });
+  */
 
-  // Prevent context menu
-  editorEl.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    return false;
-  });
+  // Prevent context menu - REMOVED to allow native selection
+  // editorEl.addEventListener('contextmenu', (e) => {
+  //   e.preventDefault();
+  //   return false;
+  // });
   // -------------------------------------------
   const bg = window.getComputedStyle(editorEl).backgroundColor
   document.body.style.backgroundColor = bg

@@ -170,12 +170,14 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    private fun updateExtensionState(id: Int, update: (ExtensionModel) -> ExtensionModel) {
-        val currentList = _extensions.value.toMutableList()
-        val index = currentList.indexOfFirst { it.id == id }
-        if (index != -1) {
-            currentList[index] = update(currentList[index])
-            _extensions.value = currentList
+    private suspend fun updateExtensionState(id: Int, update: (ExtensionModel) -> ExtensionModel) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+            val currentList = _extensions.value.toMutableList()
+            val index = currentList.indexOfFirst { it.id == id }
+            if (index != -1) {
+                currentList[index] = update(currentList[index])
+                _extensions.value = currentList
+            }
         }
     }
     

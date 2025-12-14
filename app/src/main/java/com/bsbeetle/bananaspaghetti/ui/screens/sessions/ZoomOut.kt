@@ -49,6 +49,7 @@ fun ZoomOut(
     viewModel: SessionViewModel = viewModel()
 ) {
     val fileViewModel: FileViewModel = LocalFileViewModel.current
+    val bufferViewModel: com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel = com.bsbeetle.bananaspaghetti.LocalBufferViewModel.current
     var showNewSessionDialog by remember { mutableStateOf(false) }
 
     // Capture snapshots when screen is shown
@@ -62,10 +63,16 @@ fun ZoomOut(
             if (activeSession != null) {
                 navigateToSession(navController, activeSession)
             } else {
-                navController.popBackStack()
+                // No valid active session, go Home
+                navController.navigate(Screen.Home.route) {
+                    popUpTo(Screen.Home.route) { inclusive = true }
+                }
             }
         } else {
-            navController.popBackStack()
+            // No sessions left, go Home
+            navController.navigate(Screen.Home.route) {
+                popUpTo(Screen.Home.route) { inclusive = true }
+            }
         }
     }
 
@@ -133,6 +140,12 @@ fun ZoomOut(
                             navigateToSession(navController, session)
                         },
                         onClose = {
+                            // Clear buffer if closing an editor session
+                            if (session is EditorSession) {
+                                bufferViewModel.clear()
+                                fileViewModel.selectedUri = null
+                                fileViewModel.currentFilePath = ""
+                            }
                             session.destroy()
                             viewModel.removeSnapshot(session.id)
                         }
@@ -149,6 +162,14 @@ fun ZoomOut(
                     // Create new session
                     val finalName = if (sessionName.isBlank()) sessionType.name.lowercase().replaceFirstChar { it.uppercase() } else sessionName
                     val appContext = navController.context.applicationContext
+                    
+                    // Clear buffer if creating a new editor session
+                    if (sessionType == SessionType.EDITOR) {
+                        bufferViewModel.clear()
+                        fileViewModel.selectedUri = null
+                        fileViewModel.currentFilePath = ""
+                    }
+                    
                     when (sessionType) {
                         SessionType.EDITOR -> EditorSession(appContext, finalName)
                         SessionType.BROWSER -> BrowserSession(appContext, name = finalName)

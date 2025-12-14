@@ -74,6 +74,6 @@ object RecentFilesManager {
     
     fun clear(context: Context) {
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-            .edit().remove(KEY_RECENT_FILES).apply()
+            .edit().remove(KEY_RECENT_FILES).commit()
     }
 }

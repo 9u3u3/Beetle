@@ -13,6 +13,12 @@ data class DiagnosticItem(
     val severity: String // "error" or "warning"
 )
 
+data class BreadcrumbItem(
+    val name: String,
+    val kind: Int,
+    val detail: String = ""
+)
+
 data class LspStatus(
     val line: Int = 1,
     val column: Int = 1,
@@ -20,7 +26,8 @@ data class LspStatus(
     val warningCount: Int = 0,
     val currentSymbol: String = "",
     val currentSymbolType: String = "",
-    val diagnostics: List<DiagnosticItem> = emptyList()
+    val diagnostics: List<DiagnosticItem> = emptyList(),
+    val breadcrumbs: List<BreadcrumbItem> = emptyList()
 )
 
 class LspViewModel : ViewModel() {
@@ -41,5 +48,9 @@ class LspViewModel : ViewModel() {
     
     fun updateDiagnosticsList(diagnostics: List<DiagnosticItem>) {
         _lspStatus.update { it.copy(diagnostics = diagnostics) }
+    }
+    
+    fun updateBreadcrumbs(items: List<BreadcrumbItem>) {
+        _lspStatus.update { it.copy(breadcrumbs = items) }
     }
 }
