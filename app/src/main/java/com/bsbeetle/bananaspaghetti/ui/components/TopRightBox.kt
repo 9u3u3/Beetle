@@ -138,6 +138,7 @@ fun TopRightBox(
     var showBranchDialog by remember { mutableStateOf(false) }
     var showNewBranchDialog by remember { mutableStateOf(false) }
     var showHistoryDialog by remember { mutableStateOf(false) }
+    var showPullBranchDialog by remember { mutableStateOf(false) }
 
     // DEBUG: Log mode immediately when composable runs
     android.util.Log.d(
@@ -358,6 +359,18 @@ fun TopRightBox(
         CommitHistoryDialog(commits = uiState.commits, onDismiss = { showHistoryDialog = false })
     }
 
+    // Pull Branch Dialog (same as portrait mode)
+    if (showPullBranchDialog) {
+        com.bsbeetle.bananaspaghetti.directGit.ui.PullBranchDialog(
+                remoteBranches = uiState.branches.filter { it.isRemote },
+                onDismiss = { showPullBranchDialog = false },
+                onSelect = { branchName: String ->
+                    gitViewModel?.pullFromBranch(branchName)
+                    showPullBranchDialog = false
+                }
+        )
+    }
+
     ConstraintLayout(modifier = modifier.background(Color(0xFF050505))) {
         val (gridContent) = createRefs()
 
@@ -428,7 +441,8 @@ fun TopRightBox(
                                                 onCommitClick(selectedFiles.toList())
                                             },
                                             onPushClick = onPushClick,
-                                            onHistoryClick = { showHistoryDialog = true }
+                                            onHistoryClick = { showHistoryDialog = true },
+                                            onPullFromBranchClick = { showPullBranchDialog = true }
                                     )
                                 }
                                 1 -> {
@@ -910,20 +924,23 @@ private fun GitActionsGrid(
         gitViewModel: GitViewModel?,
         onCommitClick: () -> Unit,
         onPushClick: () -> Unit,
-        onHistoryClick: () -> Unit
+        onHistoryClick: () -> Unit,
+        onPullFromBranchClick: () -> Unit = {}
 ) {
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        // Single row of compact icon buttons
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        // Row 1: Pull, Push, Fetch
         Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
         ) {
+            // Pull with dropdown indicator for "Pull from branch"
             CompactActionIcon(
                     icon = Icons.Rounded.ArrowDownward,
                     label = "Pull",
                     color = AccentBlue,
-                    onClick = { gitViewModel?.pull() }
+                    onClick = { gitViewModel?.pull() },
+                    onLongClick = onPullFromBranchClick
             )
             CompactActionIcon(
                     icon = Icons.Rounded.ArrowUpward,
@@ -937,10 +954,18 @@ private fun GitActionsGrid(
                     color = TextSecondary,
                     onClick = { gitViewModel?.fetch() }
             )
+        }
+
+        // Row 2: Add All, Stash, History
+        Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+        ) {
             CompactActionIcon(
                     icon = Icons.Rounded.Add,
                     label = "Add All",
-                    color = TextSecondary,
+                    color = AccentGreen,
                     onClick = {
                         val allFiles = uiState.modifiedFiles + uiState.untrackedFiles
                         allFiles.forEach { gitViewModel?.stageFile(it) }
@@ -960,10 +985,10 @@ private fun GitActionsGrid(
             )
         }
 
-        // Single full-width Commit button
+        // Full-width Commit button
         Button(
                 onClick = onCommitClick,
-                modifier = Modifier.fillMaxWidth().height(32.dp),
+                modifier = Modifier.fillMaxWidth().height(36.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
                 shape = RoundedCornerShape(6.dp),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
@@ -977,7 +1002,13 @@ private fun GitActionsGrid(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun CompactActionIcon(icon: ImageVector, label: String, color: Color, onClick: () -> Unit) {
+private fun CompactActionIcon(
+        icon: ImageVector,
+        label: String,
+        color: Color,
+        onClick: () -> Unit,
+        onLongClick: (() -> Unit)? = null
+) {
     var showTooltip by remember { mutableStateOf(false) }
     var isPressed by remember { mutableStateOf(false) }
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
@@ -1012,7 +1043,13 @@ private fun CompactActionIcon(icon: ImageVector, label: String, color: Color, on
                                             isPressed = false
                                         }
                                     },
-                                    onLongClick = { showTooltip = true }
+                                    onLongClick = {
+                                        if (onLongClick != null) {
+                                            onLongClick()
+                                        } else {
+                                            showTooltip = true
+                                        }
+                                    }
                             )
                             .padding(4.dp),
             contentAlignment = Alignment.Center
