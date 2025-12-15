@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -64,6 +65,7 @@ fun InitialEditorUI(navController: NavController) {
     val editorViewModel: EditorViewModel = LocalEditorViewModel.current
     val bufferViewModel: BufferViewModel = LocalBufferViewModel.current
     val lspViewModel: LspViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val gitViewModel: com.bsbeetle.bananaspaghetti.directGit.viewmodel.GitViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 
     // Sync fileViewModel with current session's projectRoot
     // This ensures each session shows its own folder in the file tree
@@ -115,11 +117,16 @@ fun InitialEditorUI(navController: NavController) {
     var showSidebar by rememberSaveable { mutableStateOf(false) }
     var showLanguagePopup by remember { mutableStateOf(false) }
     var showFileMenu by remember { mutableStateOf(false) }
+    var topRightMode by remember { mutableStateOf(TopRightMode.NONE) }
+    // Commit Dialog States
+    var showCommitDialog by remember { mutableStateOf(false) }
+    var isCommitAndPush by remember { mutableStateOf(false) }
+    var pendingCommitFiles by remember { mutableStateOf(listOf<String>()) }
     var missingLanguageExt by remember { mutableStateOf("") }
 
     // 🚀 File Load (with LSP check & Performance fix)
     LaunchedEffect(fileViewModel.selectedUri) {
-        delay(50) // allows UI to compose first so no freeze
+        // delay(50) removed to speed up LSP startup
         fileViewModel.selectedUri?.let { uri ->
             DocumentFile.fromSingleUri(context, uri)?.let { documentFile ->
                 if (documentFile.isDirectory) {
@@ -207,7 +214,7 @@ fun InitialEditorUI(navController: NavController) {
                     // Set file path relative to project
                     val cleanName = documentFile.name?.replace(" ", "_") ?: "main.cpp"
                     val parentPath = documentFile.parentFile?.uri?.path ?: "/home"
-val alpineIndex = parentPath.indexOf("/alpine/")
+                    val alpineIndex = parentPath.indexOf("/alpine/")
                     val cleanParentPath = if (alpineIndex >= 0) {
                         parentPath.substring(alpineIndex + 7)
                     } else {
@@ -238,10 +245,48 @@ val alpineIndex = parentPath.indexOf("/alpine/")
         }
     }
 
+    // Shared File Opening Logic
+    val onFileOpened: (DocumentFile) -> Unit = { documentFile ->
+        // Add file to buffer and load it
+        if (bufferViewModel.filesOpenedList.none { it.uri == documentFile.uri }) {
+            bufferViewModel.filesOpenedList.add(documentFile)
+        }
+        fileViewModel.selectedUri = documentFile.uri
+        fileViewModel.currentFilePath = documentFile.uri.toString()
+        bufferViewModel.currentFile.value = documentFile
+
+        val content = readFromFile(context, documentFile.uri)
+        bufferViewModel.bufferLine[documentFile.uri.toString()] = content  // Use URI as key
+        loadContentWhenReady(editorViewModel.webView, content)
+    }
+
+    val onFolderOpened: (DocumentFile) -> Unit = { folder ->
+        // Create new editor session for folder
+        // Session auto-registers and sets activeSessionIndex in its init{}
+        val newSession =
+                EditorSession(context.applicationContext, folder.name ?: "Project")
+        newSession.projectRoot = folder
+
+        // Update FileViewModel to show new folder in file tree
+        fileViewModel.selectedFolderUri = folder.uri
+
+        // Set up editor with new session's WebView
+        editorViewModel.setEditorWebView(newSession.getOrInitView())
+
+        // Navigate to editor with new session
+        navController.navigate(Screen.OpenFolder.route) {
+            popUpTo(Screen.Home.route) { inclusive = false }
+        }
+    }
+
     Box(Modifier.fillMaxSize()) {
 
         // ---------------- MAIN UI ----------------
-        ConstraintLayout(Modifier.fillMaxSize()) {
+        ConstraintLayout(
+            Modifier
+                .fillMaxSize()
+                .then(if (!isLandscape) Modifier.statusBarsPadding() else Modifier)
+        ) {
             val (
                     topLeft,
                     topMiddle,
@@ -266,7 +311,16 @@ val alpineIndex = parentPath.indexOf("/alpine/")
                     onMenuClick = { showSidebar = true },
                     showMenuIcon = !isLandscape,
                     onSaveClick = { saveFile(fileViewModel, bufferViewModel, context) },
-                    onFileClick = { showFileMenu = true },
+                    onFileClick = {
+                        if (isLandscape) {
+                            topRightMode = if (topRightMode == TopRightMode.FILE) TopRightMode.NONE else TopRightMode.FILE
+                        } else {
+                            showFileMenu = true
+                        }
+                    },
+                    onBranchClick = {
+                         topRightMode = if (topRightMode == TopRightMode.GIT) TopRightMode.NONE else TopRightMode.GIT
+                    },
                     onUndoClick = {
                         editorViewModel.webView?.evaluateJavascript(
                                 "if(window.performUndo) performUndo();",
@@ -319,11 +373,25 @@ val alpineIndex = parentPath.indexOf("/alpine/")
                         Modifier.constrainAs(rightBox) {
                             top.linkTo(topRight.bottom)
                             bottom.linkTo(rightKb.top)
-                            start.linkTo(editor.start)
+                            start.linkTo(editor.end)
                             end.linkTo(parent.end)
                             width = Dimension.fillToConstraints
                             height = Dimension.fillToConstraints
-                        }
+                        },
+                        mode = topRightMode,
+                        gitViewModel = gitViewModel,
+                        fileViewModel = fileViewModel,
+                        bufferViewModel = bufferViewModel,
+                        currentFilePath = fileViewModel.currentFilePath,
+                        selectedFolderUri = fileViewModel.selectedFolderUri,
+                        onCommitClick = { files ->
+                            pendingCommitFiles = files
+                            isCommitAndPush = false
+                            showCommitDialog = true
+                        },
+                        onPushClick = { gitViewModel.push() },
+                        onFileOpened = onFileOpened,
+                        onFolderOpened = onFolderOpened
                 )
 
                 if (uiState.isLeftKeyboardVisible) {
@@ -387,7 +455,8 @@ val alpineIndex = parentPath.indexOf("/alpine/")
                         width = Dimension.fillToConstraints
                     },
                     color = Color(0xFF1B1B1B),
-                    lspViewModel = lspViewModel
+                    lspViewModel = lspViewModel,
+                    gitViewModel = gitViewModel
             )
 
             if (!isLandscape) {
@@ -406,7 +475,12 @@ val alpineIndex = parentPath.indexOf("/alpine/")
                                 SidebarTab.GIT,
                                 SidebarTab.EXTENSIONS,
                                 SidebarTab.SETTINGS
-                        )
+                        ),
+                        onTabChanged = {
+                            if (it == SidebarTab.GIT) {
+                                gitViewModel.initializeGit()
+                            }
+                        }
                 )
             }
         }
@@ -447,43 +521,31 @@ val alpineIndex = parentPath.indexOf("/alpine/")
                 onDismiss = { showLanguagePopup = false }
         )
 
+        // Landscape Commit Dialog
+        if (showCommitDialog) {
+            LandscapeCommitDialog(
+                isCommitAndPush = isCommitAndPush,
+                selectedFilesCount = pendingCommitFiles.size,
+                onDismiss = { showCommitDialog = false },
+                onCommit = { message ->
+                    if (isCommitAndPush) {
+                        gitViewModel.commitAndPush(message, pendingCommitFiles)
+                    } else {
+                        gitViewModel.doCommit(message, pendingCommitFiles)
+                    }
+                    showCommitDialog = false
+                }
+            )
+        }
+
         // File Menu Dialog
         FileMenuDialog(
                 show = showFileMenu,
                 onDismiss = { showFileMenu = false },
                 bufferViewModel = bufferViewModel,
                 fileViewModel = fileViewModel,
-                onFileOpened = { documentFile ->
-                    // Add file to buffer and load it
-                    if (bufferViewModel.filesOpenedList.none { it.uri == documentFile.uri }) {
-                        bufferViewModel.filesOpenedList.add(documentFile)
-                    }
-                    fileViewModel.selectedUri = documentFile.uri
-                    fileViewModel.currentFilePath = documentFile.uri.toString()
-                    bufferViewModel.currentFile.value = documentFile
-
-                    val content = readFromFile(context, documentFile.uri)
-                    bufferViewModel.bufferLine[documentFile.uri.toString()] = content  // Use URI as key
-                    loadContentWhenReady(editorViewModel.webView, content)
-                },
-                onFolderOpened = { folder ->
-                    // Create new editor session for folder
-                    // Session auto-registers and sets activeSessionIndex in its init{}
-                    val newSession =
-                            EditorSession(context.applicationContext, folder.name ?: "Project")
-                    newSession.projectRoot = folder
-
-                    // Update FileViewModel to show new folder in file tree
-                    fileViewModel.selectedFolderUri = folder.uri
-
-                    // Set up editor with new session's WebView
-                    editorViewModel.setEditorWebView(newSession.getOrInitView())
-
-                    // Navigate to editor with new session
-                    navController.navigate(Screen.OpenFolder.route) {
-                        popUpTo(Screen.Home.route) { inclusive = false }
-                    }
-                }
+                onFileOpened = onFileOpened,
+                onFolderOpened = onFolderOpened
         )
     }
 }

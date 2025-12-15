@@ -11,6 +11,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import android.provider.DocumentsContract
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -182,6 +183,10 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                                             .replace("%3A", ":")
                             "/storage/emulated/0/$pathPart"
                         }
+                        // Handle Alpine internal storage URIs
+                        folderUri.authority == "${context.packageName}.documents" -> {
+                            DocumentsContract.getDocumentId(folderUri)
+                        }
                         // Also handle raw file paths from fileViewModel.currentFilePath
                         else -> null
                     }
@@ -313,6 +318,10 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                 onFetch = { viewModel.fetch() },
                 onPull = { viewModel.pull() },
                 onPush = { viewModel.push() },
+                onAddAll = {
+                    val allFiles = uiState.modifiedFiles + uiState.untrackedFiles
+                    allFiles.forEach { viewModel.stageFile(it) }
+                },
                 onStash = { viewModel.stash() },
                 onStashPop = { viewModel.stashPop() },
                 onHistory = { showHistoryDialog = true },
@@ -560,27 +569,13 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                 }
             }
         }
-
-        // --- Console / Status Bar (includes terminal commands) ---
-        ConsoleStatusBar(
-                lastError = uiState.lastError,
-                lastSuccess = uiState.lastSuccess,
-                operation = uiState.operationInProgress,
-                isLoading = uiState.isLoading,
-                showConsole = showConsole,
-                logs = uiState.logs,
-                terminalHistory = uiState.terminalHistory,
-                onToggleConsole = { showConsole = !showConsole },
-                onClearMessages = { viewModel.clearMessages() },
-                onAuthRequest = { showAuthDialog = true }
-        )
     }
 }
 
 // --- Components ---
 
 @Composable
-private fun GitHeader(
+fun GitHeader(
         branch: String,
         ahead: Int,
         behind: Int,
@@ -588,6 +583,7 @@ private fun GitHeader(
         onFetch: () -> Unit,
         onPull: () -> Unit,
         onPush: () -> Unit,
+        onAddAll: () -> Unit,
         onStash: () -> Unit,
         onStashPop: () -> Unit,
         onHistory: () -> Unit,
@@ -722,6 +718,7 @@ private fun GitHeader(
             ActionButton(Icons.Rounded.ArrowDownward, "Pull", onPull)
             ActionButton(Icons.Rounded.ArrowUpward, "Push", onPush)
             ActionButton(Icons.Rounded.Sync, "Fetch", onFetch)
+            ActionButton(Icons.Rounded.Add, "Add All", onAddAll)
 
             // Stash Dropdown
             var showStashMenu by remember { mutableStateOf(false) }
@@ -802,7 +799,7 @@ private fun GitHeader(
 }
 
 @Composable
-private fun ActionButton(icon: ImageVector, tooltip: String, onClick: () -> Unit) {
+fun ActionButton(icon: ImageVector, tooltip: String, onClick: () -> Unit) {
     Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier =
@@ -818,7 +815,7 @@ private fun ActionButton(icon: ImageVector, tooltip: String, onClick: () -> Unit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FileChangeItem(
+fun FileChangeItem(
         path: String,
         status: String,
         isStaged: Boolean,
@@ -1146,7 +1143,7 @@ private fun ConsoleTab(title: String, isSelected: Boolean, onClick: () -> Unit) 
 }
 
 @Composable
-private fun StoragePermissionRequest(onRequestPermission: () -> Unit, onRefresh: () -> Unit) {
+fun StoragePermissionRequest(onRequestPermission: () -> Unit, onRefresh: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -1195,7 +1192,7 @@ private fun StoragePermissionRequest(onRequestPermission: () -> Unit, onRefresh:
 }
 
 @Composable
-private fun EmptyState(onInit: () -> Unit, onClone: () -> Unit) {
+fun EmptyState(onInit: () -> Unit, onClone: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Rounded.Source, null, tint = TextTertiary, modifier = Modifier.size(64.dp))
@@ -1282,7 +1279,7 @@ private fun StyledDialog(
 }
 
 @Composable
-private fun BranchDialog(
+fun BranchDialog(
         branches: List<BranchInfo>,
         onDismiss: () -> Unit,
         onCheckout: (String) -> Unit,
@@ -1419,7 +1416,7 @@ private fun BranchItem(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NewBranchDialog(
+fun NewBranchDialog(
         branches: List<BranchInfo>,
         currentBranch: String,
         onDismiss: () -> Unit,
@@ -1513,7 +1510,7 @@ private fun NewBranchDialog(
 }
 
 @Composable
-private fun AuthDialog(onDismiss: () -> Unit, onConfirm: (String, String, Boolean) -> Unit) {
+fun AuthDialog(onDismiss: () -> Unit, onConfirm: (String, String, Boolean) -> Unit) {
     var username by remember { mutableStateOf("") }
     var token by remember { mutableStateOf("") }
     var save by remember { mutableStateOf(true) }
@@ -1571,7 +1568,7 @@ private fun AuthDialog(onDismiss: () -> Unit, onConfirm: (String, String, Boolea
 }
 
 @Composable
-private fun RemoteDialog(currentUrl: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+fun RemoteDialog(currentUrl: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var url by remember { mutableStateOf(currentUrl) }
     StyledDialog(title = "Remote Settings", onDismiss = onDismiss) {
         OutlinedTextField(
@@ -1599,9 +1596,10 @@ private fun RemoteDialog(currentUrl: String, onDismiss: () -> Unit, onConfirm: (
 }
 
 @Composable
-private fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String) -> Unit) {
+fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String) -> Unit) {
+    val context = LocalContext.current
     var url by remember { mutableStateOf("") }
-    var targetPath by remember { mutableStateOf("/storage/emulated/0/") }
+    var targetPath by remember { mutableStateOf(File(context.filesDir, "alpine/home/").absolutePath + "/") }
 
     StyledDialog(title = "Clone Repository", onDismiss = onDismiss) {
         Text(
@@ -1613,7 +1611,16 @@ private fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String) -> Unit
 
         OutlinedTextField(
                 value = url,
-                onValueChange = { url = it },
+                onValueChange = { newUrl ->
+                    url = newUrl
+                    // Auto-update target path if it's still the default or empty
+                    if (newUrl.isNotBlank()) {
+                        val repoName = newUrl.substringAfterLast("/").removeSuffix(".git")
+                        if (repoName.isNotBlank()) {
+                            targetPath = File(context.filesDir, "alpine/home/$repoName").absolutePath
+                        }
+                    }
+                },
                 label = { Text("Repository URL") },
                 placeholder = { Text("git@github.com:user/repo.git") },
                 singleLine = true,
@@ -1632,7 +1639,7 @@ private fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String) -> Unit
                 value = targetPath,
                 onValueChange = { targetPath = it },
                 label = { Text("Clone To (Full Path)") },
-                placeholder = { Text("/storage/emulated/0/my-project") },
+                placeholder = { Text(File(context.filesDir, "alpine/home/my-project").absolutePath) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors =
@@ -1645,7 +1652,7 @@ private fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String) -> Unit
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-                "Tip: Use /storage/emulated/0/YourFolder for accessible storage",
+                "Tip: Use internal storage for better compatibility with Alpine Linux",
                 color = TextTertiary,
                 fontSize = 10.sp,
                 fontStyle = FontStyle.Italic
@@ -1687,7 +1694,7 @@ private fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String) -> Unit
 }
 
 @Composable
-private fun CommitHistoryDialog(commits: List<CommitInfo>, onDismiss: () -> Unit) {
+fun CommitHistoryDialog(commits: List<CommitInfo>, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
                 colors = CardDefaults.cardColors(containerColor = BgDark),
@@ -1749,7 +1756,7 @@ private fun CommitHistoryDialog(commits: List<CommitInfo>, onDismiss: () -> Unit
 }
 
 @Composable
-private fun DiffDialog(diffText: String, onDismiss: () -> Unit) {
+fun DiffDialog(diffText: String, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
                 colors = CardDefaults.cardColors(containerColor = BgDark),
