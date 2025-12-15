@@ -367,6 +367,15 @@ class AlpineGitHelper(private val context: Context) {
                 )
         }
 
+        /** Get diff for a file using native git (fallback when JGit fails) */
+        suspend fun getDiff(repoPath: String, filePath: String): Result<String> {
+                return terminalManager.executeGitCommand(
+                        repoPath,
+                        "git diff '$filePath'",
+                        showInTerminal = false
+                )
+        }
+
         /** Get list of remote branches */
         suspend fun getRemoteBranches(repoPath: String): List<String> {
                 val result =
