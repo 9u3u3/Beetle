@@ -19,7 +19,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -65,7 +64,8 @@ fun InitialEditorUI(navController: NavController) {
     val editorViewModel: EditorViewModel = LocalEditorViewModel.current
     val bufferViewModel: BufferViewModel = LocalBufferViewModel.current
     val lspViewModel: LspViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
-    val gitViewModel: com.bsbeetle.bananaspaghetti.directGit.viewmodel.GitViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val gitViewModel: com.bsbeetle.bananaspaghetti.directGit.viewmodel.GitViewModel =
+            androidx.lifecycle.viewmodel.compose.viewModel()
 
     // Sync fileViewModel with current session's projectRoot
     // This ensures each session shows its own folder in the file tree
@@ -143,13 +143,16 @@ fun InitialEditorUI(navController: NavController) {
 
                 try {
                     if (slug != "plaintext") {
-                        // Use isInstalledForExt to check both the slug and common aliases (e.g., js/javascript)
+                        // Use isInstalledForExt to check both the slug and common aliases (e.g.,
+                        // js/javascript)
                         if (!LanguageRegistry.isInstalledForExt(extType)) {
                             missingLanguageExt = extType
                             showLanguagePopup = true
                         } else {
-                            // Get the actual installed slug (might be different from getSlugForExtension)
-                            val installedSlug = LanguageRegistry.getInstalledSlugForExt(extType) ?: slug
+                            // Get the actual installed slug (might be different from
+                            // getSlugForExtension)
+                            val installedSlug =
+                                    LanguageRegistry.getInstalledSlugForExt(extType) ?: slug
                             // Start LSP and get port
                             lspPort = editorViewModel.startLsp(installedSlug)
                             // Toast removed as requested
@@ -166,15 +169,19 @@ fun InitialEditorUI(navController: NavController) {
                 val fileUri = uri.toString()
                 val bufferedContent = bufferViewModel.bufferLine[fileUri]
 
-                val content = if (bufferedContent != null) {
-                    Log.d("Buffer", "Using buffered content for ${documentFile.name}: ${bufferedContent.length} chars")
-                    bufferedContent
-                } else {
-                    Log.d("Buffer", "Reading from disk for ${documentFile.name}")
-                    val diskContent = readFromFile(context, uri)
-                    bufferViewModel.bufferLine[fileUri] = diskContent  // Cache it
-                    diskContent
-                }
+                val content =
+                        if (bufferedContent != null) {
+                            Log.d(
+                                    "Buffer",
+                                    "Using buffered content for ${documentFile.name}: ${bufferedContent.length} chars"
+                            )
+                            bufferedContent
+                        } else {
+                            Log.d("Buffer", "Reading from disk for ${documentFile.name}")
+                            val diskContent = readFromFile(context, uri)
+                            bufferViewModel.bufferLine[fileUri] = diskContent // Cache it
+                            diskContent
+                        }
 
                 bufferViewModel.currentFile.value = documentFile // Track current file
                 loadContentWhenReady(editorViewModel.webView, content)
@@ -188,21 +195,23 @@ fun InitialEditorUI(navController: NavController) {
                     // Determine project root from parent folder
                     // For files in alpine, we use the parent directory as project root
                     val parentFolder = documentFile.parentFile
-                    val projectRoot = if (parentFolder != null) {
-                        // Convert content:// URI to a path the LSP can understand
-                        // Typically files are in /data/.../alpine/home/... or similar
-                        val parentPath = parentFolder.uri.path ?: "/home"
-                        // Clean up the path - extract the part after "alpine" if present
-                        val alpineIndex = parentPath.indexOf("/alpine/")
-                        val cleanPath = if (alpineIndex >= 0) {
-                            parentPath.substring(alpineIndex + 7) // Skip "/alpine"
-                        } else {
-                            parentPath
-                        }
-                        "file://$cleanPath"
-                    } else {
-                        "file:///home"
-                    }
+                    val projectRoot =
+                            if (parentFolder != null) {
+                                // Convert content:// URI to a path the LSP can understand
+                                // Typically files are in /data/.../alpine/home/... or similar
+                                val parentPath = parentFolder.uri.path ?: "/home"
+                                // Clean up the path - extract the part after "alpine" if present
+                                val alpineIndex = parentPath.indexOf("/alpine/")
+                                val cleanPath =
+                                        if (alpineIndex >= 0) {
+                                            parentPath.substring(alpineIndex + 7) // Skip "/alpine"
+                                        } else {
+                                            parentPath
+                                        }
+                                "file://$cleanPath"
+                            } else {
+                                "file:///home"
+                            }
 
                     // Set root URI for project context
                     session.setRootUri(projectRoot)
@@ -210,21 +219,28 @@ fun InitialEditorUI(navController: NavController) {
                     // Set file path relative to project
                     val cleanName = documentFile.name?.replace(" ", "_") ?: "main.cpp"
                     val parentPath = documentFile.parentFile?.uri?.path ?: "/home"
-val alpineIndex = parentPath.indexOf("/alpine/")
-                    val cleanParentPath = if (alpineIndex >= 0) {
-                        parentPath.substring(alpineIndex + 7)
-                    } else {
-                        parentPath
-                    }
+                    val alpineIndex = parentPath.indexOf("/alpine/")
+                    val cleanParentPath =
+                            if (alpineIndex >= 0) {
+                                parentPath.substring(alpineIndex + 7)
+                            } else {
+                                parentPath
+                            }
                     session.setFilePath("$cleanParentPath/$cleanName")
 
                     // Use isInstalledForExt to check both the slug and common aliases
                     if (slug != "plaintext" && LanguageRegistry.isInstalledForExt(extType)) {
                         val installedSlug = LanguageRegistry.getInstalledSlugForExt(extType) ?: slug
-                        Log.d("LSP-Debug", "Calling setLanguage for installedSlug=$installedSlug (extType=$extType) on port=$lspPort")
+                        Log.d(
+                                "LSP-Debug",
+                                "Calling setLanguage for installedSlug=$installedSlug (extType=$extType) on port=$lspPort"
+                        )
                         session.setLanguage(installedSlug, lspPort)
                     } else {
-                        Log.d("LSP-Debug", "NOT calling setLanguage: extType=$extType, slug=$slug, isInstalledForExt=${LanguageRegistry.isInstalledForExt(extType)}")
+                        Log.d(
+                                "LSP-Debug",
+                                "NOT calling setLanguage: extType=$extType, slug=$slug, isInstalledForExt=${LanguageRegistry.isInstalledForExt(extType)}"
+                        )
                         // Clear language support for unsupported files
                         session.clearLanguage()
                     }
@@ -236,7 +252,11 @@ val alpineIndex = parentPath.indexOf("/alpine/")
                 )
 
                 // Save to Recent Files
-                com.bsbeetle.bananaspaghetti.utils.fileHandling.RecentFilesManager.addFile(context, uri, documentFile.name ?: "Unknown")
+                com.bsbeetle.bananaspaghetti.utils.fileHandling.RecentFilesManager.addFile(
+                        context,
+                        uri,
+                        documentFile.name ?: "Unknown"
+                )
             }
         }
     }
@@ -330,10 +350,8 @@ val alpineIndex = parentPath.indexOf("/alpine/")
                         }
                 ) {
                     if (showGitMenu) {
-                        LaunchedEffect(Unit) {
-                            gitViewModel.initializeGit()
-                        }
-                        com.bsbeetle.bananaspaghetti.directGit.ui.LandscapeGitPanel(gitViewModel)
+                        LaunchedEffect(Unit) { gitViewModel.initializeGit() }
+                        com.bsbeetle.bananaspaghetti.directGit.ui.GitTab(gitViewModel)
                     }
                 }
 
@@ -480,7 +498,8 @@ val alpineIndex = parentPath.indexOf("/alpine/")
                     bufferViewModel.currentFile.value = documentFile
 
                     val content = readFromFile(context, documentFile.uri)
-                    bufferViewModel.bufferLine[documentFile.uri.toString()] = content  // Use URI as key
+                    bufferViewModel.bufferLine[documentFile.uri.toString()] =
+                            content // Use URI as key
                     loadContentWhenReady(editorViewModel.webView, content)
                 },
                 onFolderOpened = { folder ->

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Merge Editor</title>
+    <link href="./merge-editor.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="merge-container">
+        <!-- Toolbar -->
+        <div class="merge-toolbar">
+            <span class="merge-title" id="merge-filename">Resolving Conflict</span>
+            <div class="merge-actions">
+                <button class="merge-btn save-btn" onclick="window.saveMerge()">
+                    💾 Save
+                </button>
+            </div>
+        </div>
+
+        <!-- Inline Editor -->
+        <div class="merge-content">
+            <div id="editor" class="merge-editor"></div>
+        </div>
+    </div>
+    <script src="./merge-editor.bundle.js"></script>
+</body>
+
+</html>
