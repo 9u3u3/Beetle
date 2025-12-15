@@ -118,6 +118,10 @@ fun InitialEditorUI(navController: NavController) {
     var showLanguagePopup by remember { mutableStateOf(false) }
     var showFileMenu by remember { mutableStateOf(false) }
     var showGitMenu by remember { mutableStateOf(false) }
+    // Commit Dialog States
+    var showCommitDialog by remember { mutableStateOf(false) }
+    var isCommitAndPush by remember { mutableStateOf(false) }
+    var pendingCommitFiles by remember { mutableStateOf(listOf<String>()) }
     var missingLanguageExt by remember { mutableStateOf("") }
 
     // 🚀 File Load (with LSP check & Performance fix)
@@ -328,7 +332,16 @@ val alpineIndex = parentPath.indexOf("/alpine/")
                             width = Dimension.fillToConstraints
                             height = Dimension.fillToConstraints
                         },
-                        isVisible = showGitMenu
+                        isVisible = showGitMenu,
+                        gitViewModel = gitViewModel,
+                        currentFilePath = fileViewModel.currentFilePath,
+                        selectedFolderUri = fileViewModel.selectedFolderUri,
+                        onCommitClick = { files ->
+                            pendingCommitFiles = files
+                            isCommitAndPush = false
+                            showCommitDialog = true
+                        },
+                        onPushClick = { gitViewModel.push() }
                 )
 
                 if (uiState.isLeftKeyboardVisible) {
@@ -457,6 +470,23 @@ val alpineIndex = parentPath.indexOf("/alpine/")
                 },
                 onDismiss = { showLanguagePopup = false }
         )
+
+        // Landscape Commit Dialog
+        if (showCommitDialog) {
+            LandscapeCommitDialog(
+                isCommitAndPush = isCommitAndPush,
+                selectedFilesCount = pendingCommitFiles.size,
+                onDismiss = { showCommitDialog = false },
+                onCommit = { message ->
+                    if (isCommitAndPush) {
+                        gitViewModel.commitAndPush(message, pendingCommitFiles)
+                    } else {
+                        gitViewModel.doCommit(message, pendingCommitFiles)
+                    }
+                    showCommitDialog = false
+                }
+            )
+        }
 
         // File Menu Dialog
         FileMenuDialog(

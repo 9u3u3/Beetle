@@ -53,7 +53,6 @@ import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
 import com.bsbeetle.bananaspaghetti.viewmodel.DiagnosticItem
 import com.bsbeetle.bananaspaghetti.viewmodel.LspViewModel
 import com.bsbeetle.bananaspaghetti.directGit.viewmodel.GitViewModel
-import com.bsbeetle.bananaspaghetti.directGit.ui.GitTerminalView
 import androidx.compose.runtime.collectAsState
 
 enum class BottomPanelTab {
@@ -228,9 +227,9 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspView
                     onClick = { selectedTab = BottomPanelTab.TERMINAL }
                 )
 
-                // Git Console tab
+                // Git Log tab
                 PanelTab(
-                    title = "Git Console",
+                    title = "Git Log",
                     count = 0,
                     isSelected = selectedTab == BottomPanelTab.GIT_CONSOLE,
                     onClick = { selectedTab = BottomPanelTab.GIT_CONSOLE }
@@ -294,12 +293,9 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspView
                         )
                     }
                     BottomPanelTab.GIT_CONSOLE -> {
+                        // Git Log - show commit history
                         val gitUiState by gitViewModel.uiState.collectAsStateWithLifecycle()
-                        GitTerminalView(
-                            commandHistory = gitUiState.terminalHistory,
-                            modifier = Modifier.fillMaxSize(),
-                            initiallyExpanded = true
-                        )
+                        GitLogContent(commits = gitUiState.commits)
                     }
                 }
             }
@@ -395,6 +391,54 @@ private fun ProblemsContent(
                         )
                         Text(
                             text = "Line ${diag.line}, Column ${diag.column}",
+                            color = Color(0xFF888888),
+                            fontSize = 9.sp
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GitLogContent(commits: List<com.bsbeetle.bananaspaghetti.utils.git.CommitInfo>) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(8.dp)
+    ) {
+        if (commits.isEmpty()) {
+            Text(
+                text = "No commits yet",
+                color = Color(0xFF888888),
+                fontSize = 12.sp
+            )
+        } else {
+            commits.forEach { commit ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Text(
+                        text = commit.hash.take(7),
+                        color = Color(0xFF007ACC),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = commit.message,
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = "${commit.author} • ${commit.date}",
                             color = Color(0xFF888888),
                             fontSize = 9.sp
                         )

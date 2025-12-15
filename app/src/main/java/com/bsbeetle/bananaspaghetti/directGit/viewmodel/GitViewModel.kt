@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import android.os.FileObserver
 import org.eclipse.jgit.transport.SshSessionFactory
 
 data class GitUiState(
@@ -70,6 +72,10 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     private val alpineGitHelper = AlpineGitHelper(application)
 
     private var isGitInitialized = false
+
+    // FileObserver to watch for Git changes made via terminal
+    private var gitFileObserver: FileObserver? = null
+    private var refreshJob: Job? = null
 
     init {
         // Empty init - initialization happens lazily via initializeGit()
@@ -136,6 +142,54 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Start watching Git directory for changes made via terminal or external tools
+     */
+    private fun startWatchingGitChanges(gitDir: File) {
+        stopWatchingGitChanges()
+        
+        try {
+            gitFileObserver = object : FileObserver(
+                gitDir.path,
+                FileObserver.MODIFY or FileObserver.CREATE or 
+                FileObserver.DELETE or FileObserver.MOVED_TO or FileObserver.MOVED_FROM
+            ) {
+                override fun onEvent(event: Int, path: String?) {
+                    // Only refresh on relevant Git file changes
+                    if (path != null && (
+                        path.startsWith("index") ||  // Staging area
+                        path.startsWith("refs/") ||   // Branch/tag changes
+                        path.startsWith("HEAD") ||    // HEAD changes
+                        path.startsWith("logs/")      // Reflog changes
+                    )) {
+                        // Debounce: cancel previous refresh and schedule new one
+                        refreshJob?.cancel()
+                        refreshJob = viewModelScope.launch {
+                            delay(500) // Wait 500ms for multiple rapid changes
+                            Log.d("GitViewModel", "🔄 Auto-refreshing due to Git file change: $path")
+                            refreshStatus()
+                        }
+                    }
+                }
+            }.apply { 
+                startWatching()
+                Log.d("GitViewModel", "👁️ Started watching Git directory: ${gitDir.path}")
+            }
+        } catch (e: Exception) {
+            Log.e("GitViewModel", "Failed to start watching Git directory", e)
+        }
+    }
+
+    /**
+     * Stop watching Git directory
+     */
+    private fun stopWatchingGitChanges() {
+        gitFileObserver?.stopWatching()
+        gitFileObserver = null
+        refreshJob?.cancel()
+        refreshJob = null
+    }
+
     fun setRootDir(path: String) {
         val file = File(path)
         Log.d("GitViewModel", "🔧 setRootDir called with: $path")
@@ -150,6 +204,13 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
             Log.d("GitViewModel", "🔄 Creating new GitRepository for: ${file.absolutePath}")
             repository = GitRepository(file)
             Log.d("GitViewModel", "📊 Repository initialized: ${repository?.isInitialized()}")
+            
+            // Start watching for Git changes made via terminal
+            val gitDir = File(file, ".git")
+            if (gitDir.exists() && gitDir.isDirectory) {
+                startWatchingGitChanges(gitDir)
+            }
+            
             refreshStatus()
         } else {
             Log.d("GitViewModel", "♻️ Same root, skipping re-initialization")
@@ -864,6 +925,8 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
+        stopWatchingGitChanges()
         repository?.close()
+        Log.d("GitViewModel", "🛑 ViewModel cleared, stopped watching Git directory")
     }
 }

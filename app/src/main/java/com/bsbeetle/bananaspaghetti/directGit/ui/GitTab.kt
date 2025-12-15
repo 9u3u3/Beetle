@@ -318,6 +318,10 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                 onFetch = { viewModel.fetch() },
                 onPull = { viewModel.pull() },
                 onPush = { viewModel.push() },
+                onAddAll = {
+                    val allFiles = uiState.modifiedFiles + uiState.untrackedFiles
+                    allFiles.forEach { viewModel.stageFile(it) }
+                },
                 onStash = { viewModel.stash() },
                 onStashPop = { viewModel.stashPop() },
                 onHistory = { showHistoryDialog = true },
@@ -565,20 +569,6 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                 }
             }
         }
-
-        // --- Console / Status Bar (includes terminal commands) ---
-        ConsoleStatusBar(
-                lastError = uiState.lastError,
-                lastSuccess = uiState.lastSuccess,
-                operation = uiState.operationInProgress,
-                isLoading = uiState.isLoading,
-                showConsole = showConsole,
-                logs = uiState.logs,
-                terminalHistory = uiState.terminalHistory,
-                onToggleConsole = { showConsole = !showConsole },
-                onClearMessages = { viewModel.clearMessages() },
-                onAuthRequest = { showAuthDialog = true }
-        )
     }
 }
 
@@ -593,6 +583,7 @@ fun GitHeader(
         onFetch: () -> Unit,
         onPull: () -> Unit,
         onPush: () -> Unit,
+        onAddAll: () -> Unit,
         onStash: () -> Unit,
         onStashPop: () -> Unit,
         onHistory: () -> Unit,
@@ -727,6 +718,7 @@ fun GitHeader(
             ActionButton(Icons.Rounded.ArrowDownward, "Pull", onPull)
             ActionButton(Icons.Rounded.ArrowUpward, "Push", onPush)
             ActionButton(Icons.Rounded.Sync, "Fetch", onFetch)
+            ActionButton(Icons.Rounded.Add, "Add All", onAddAll)
 
             // Stash Dropdown
             var showStashMenu by remember { mutableStateOf(false) }
