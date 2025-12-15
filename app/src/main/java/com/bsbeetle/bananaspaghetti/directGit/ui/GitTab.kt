@@ -1,6 +1,7 @@
 package com.bsbeetle.bananaspaghetti.directGit.ui
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -32,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -767,6 +769,8 @@ fun GitHeader(
         HorizontalDivider(color = BorderColor)
 
         // Actions Toolbar
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -846,7 +850,11 @@ fun GitHeader(
 
             ActionButton(Icons.Rounded.ArrowUpward, "Push", onPush)
             ActionButton(Icons.Rounded.Sync, "Fetch", onFetch)
-            ActionButton(Icons.Rounded.Add, "Add All", onAddAll)
+
+            // Add All button (hidden in portrait)
+            if (isLandscape) {
+                ActionButton(Icons.Rounded.Add, "Add All", onAddAll)
+            }
 
             // Stash Dropdown
             var showStashMenu by remember { mutableStateOf(false) }

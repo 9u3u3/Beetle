@@ -301,10 +301,7 @@ fun InitialEditorUI(navController: NavController) {
     Box(Modifier.fillMaxSize()) {
 
         // ---------------- MAIN UI ----------------
-        ConstraintLayout(
-                Modifier.fillMaxSize()
-                        .then(if (!isLandscape) Modifier.statusBarsPadding() else Modifier)
-        ) {
+        ConstraintLayout(Modifier.fillMaxSize()) {
             val (
                     topLeft,
                     topMiddle,
@@ -321,13 +318,18 @@ fun InitialEditorUI(navController: NavController) {
             LeftTopBar(
                     modifier =
                             Modifier.constrainAs(topLeft) {
-                                top.linkTo(parent.top)
-                                start.linkTo(parent.start)
-                                end.linkTo(topMiddle.start)
-                                width = Dimension.percent(0.2f)
-                            },
+                                        top.linkTo(parent.top)
+                                        start.linkTo(parent.start)
+                                        end.linkTo(topMiddle.start)
+                                        width = Dimension.wrapContent
+                                    }
+                                    .then(
+                                            if (!isLandscape) Modifier.statusBarsPadding()
+                                            else Modifier
+                                    ),
                     onMenuClick = { showSidebar = true },
                     showMenuIcon = !isLandscape,
+                    showBranchButton = isLandscape,
                     onSaveClick = { saveFile(fileViewModel, bufferViewModel, context) },
                     onFileClick = {
                         if (isLandscape) {
@@ -360,22 +362,30 @@ fun InitialEditorUI(navController: NavController) {
             TopBar(
                     modifier =
                             Modifier.constrainAs(topMiddle) {
-                                top.linkTo(parent.top)
-                                start.linkTo(topLeft.end)
-                                end.linkTo(topRight.start)
-                                width = Dimension.percent(0.6f)
-                            },
+                                        top.linkTo(parent.top)
+                                        start.linkTo(topLeft.end)
+                                        end.linkTo(topRight.start)
+                                        width = Dimension.fillToConstraints
+                                    }
+                                    .then(
+                                            if (!isLandscape) Modifier.statusBarsPadding()
+                                            else Modifier
+                                    ),
                     context = context
             )
 
             RightTopBar(
                     modifier =
                             Modifier.constrainAs(topRight) {
-                                top.linkTo(parent.top)
-                                start.linkTo(topMiddle.end)
-                                end.linkTo(parent.end)
-                                width = Dimension.percent(0.2f)
-                            },
+                                        top.linkTo(parent.top)
+                                        start.linkTo(topMiddle.end)
+                                        end.linkTo(parent.end)
+                                        width = Dimension.wrapContent
+                                    }
+                                    .then(
+                                            if (!isLandscape) Modifier.statusBarsPadding()
+                                            else Modifier
+                                    ),
                     navController = navController
             )
 
