@@ -1290,3 +1290,26 @@ function setupEditor() {
 } // End of setupEditor
 
 setupEditor();
+
+// Runtime font size change for CodeMirror
+// Uses CSS injection for dynamic font size updates
+window.setFontSize = function (size) {
+  const existingStyle = document.getElementById('editor-font-size-style');
+  if (existingStyle) {
+    existingStyle.remove();
+  }
+
+  const fontStyle = document.createElement('style');
+  fontStyle.id = 'editor-font-size-style';
+  fontStyle.textContent = `
+    .cm-content, .cm-line, .cm-gutterElement {
+      font-size: ${size}px !important;
+      line-height: 1.4 !important;
+    }
+    .cm-gutters {
+      font-size: ${size}px !important;
+    }
+  `;
+  document.head.appendChild(fontStyle);
+  console.log('[Editor] Font size set to:', size);
+};

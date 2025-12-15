@@ -107,6 +107,32 @@ fun HomeScreen(navController: NavController) {
     val context: Context = LocalContext.current
     val browserViewModel = LocalBrowserViewModel.current
 
+    // Terminal install check
+    var showTerminalDialog by rememberSaveable { mutableStateOf(false) }
+    var hasCheckedTerminal by rememberSaveable { mutableStateOf(false) }
+    
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (!hasCheckedTerminal) {
+            hasCheckedTerminal = true
+            val isInstalled = com.bsbeetle.bananaspaghetti.ui.components.isTerminalInstalled(context.filesDir)
+            if (!isInstalled) {
+                showTerminalDialog = true
+            }
+        }
+    }
+    
+    // Terminal install dialog
+    if (showTerminalDialog) {
+        com.bsbeetle.bananaspaghetti.ui.components.TerminalInstallDialog(
+            onInstallClick = {
+                showTerminalDialog = false
+                // Navigate to terminal - it will auto-install
+                com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession(context.applicationContext, initialDir = null)
+                navController.navigate(com.bsbeetle.bananaspaghetti.ui.navigation.Screen.Terminal.route)
+            }
+        )
+    }
+
     Box(
             modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primary),
             contentAlignment = Alignment.Center
@@ -441,291 +467,5 @@ fun HomeScreen(navController: NavController) {
     }
 }
 
-@Composable
-fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
-    val context = LocalContext.current
-    val launcher = fileLauncher(context, navController)
-    val buttonFontSize = 30.sp
-    val terminalViewModel: TerminalViewModel = LocalTerminalViewModel.current
-    val fileViewModel = com.bsbeetle.bananaspaghetti.LocalFileViewModel.current
 
-    Box(modifier = modifier.fillMaxSize().padding(10.dp), contentAlignment = Alignment.Center) {
-        Column {
-            Row(
-                    modifier = Modifier.width(400.dp).height(80.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start
-            ) {
-                Image(
-                        painter = painterResource(R.drawable.beetle_logo),
-                        contentDescription = "Beetle logo",
-                        modifier = Modifier.size(65.dp).clip(RoundedCornerShape(12.dp))
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Text(
-                        text = "Beetle",
-                        fontFamily = KarmaticFont,
-                        color = Color.White,
-                        fontSize = 45.sp,
-                        style =
-                                TextStyle(
-                                        shadow =
-                                                Shadow(
-                                                        color = Color(0xFFFFFFFF),
-                                                        offset = Offset(0f, 0f),
-                                                        blurRadius = 15f
-                                                )
-                                )
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Box(modifier = Modifier.fillMaxSize()) {
-                    Text(
-                            text = "v1.0.0",
-                            color = Color(0xFF666666),
-                            fontSize = 18.sp,
-                            fontFamily = born2bsporty,
-                            modifier = Modifier.padding(top = 8.dp).align(Alignment.BottomEnd)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-            val backgroundColor = Color(0xFFFFFFFF)
-
-            val backdrop = rememberLayerBackdrop {
-                drawRect(backgroundColor)
-                drawContent()
-            }
-
-            Row(
-                    modifier = Modifier.width(400.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Box(
-                        modifier =
-                                Modifier.weight(1f)
-                                        .height(50.dp)
-                                        .clickable(
-                                                onClick = {
-                                                    val intent =
-                                                            Intent(Intent.ACTION_CREATE_DOCUMENT)
-                                                                    .apply {
-                                                                        addCategory(
-                                                                                Intent.CATEGORY_OPENABLE
-                                                                        )
-                                                                        type = "*/*"
-                                                                    }
-                                                    launcher.launch(intent)
-                                                }
-                                        )
-                ) {
-                    Box(
-                            modifier =
-                                    Modifier.matchParentSize()
-                                            .drawBackdrop(
-                                                    backdrop = backdrop,
-                                                    shape = { RoundedCornerShape(8.dp) },
-                                                    effects = {
-                                                        vibrancy()
-                                                        blur(15f.dp.toPx())
-                                                        lens(25f.dp.toPx(), 50f.dp.toPx())
-                                                    },
-                                                    onDrawSurface = {
-                                                        drawRect(Color.White.copy(alpha = 0.01f))
-                                                    }
-                                            )
-                    )
-
-                    Box(
-                            modifier = Modifier.matchParentSize(),
-                            contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                                text = "New file",
-                                fontSize = buttonFontSize,
-                                fontFamily = born2bsporty,
-                                color = Color(0xFF989898),
-                                style =
-                                        TextStyle(
-                                                shadow =
-                                                        Shadow(
-                                                                color = Color(0xFF989898),
-                                                                offset = Offset(0f, 0f),
-                                                                blurRadius = 15f
-                                                        )
-                                        ),
-                                modifier = Modifier.padding(3.dp)
-                        )
-                    }
-                }
-
-                Box(
-                        modifier =
-                                Modifier.weight(1f)
-                                        .height(50.dp)
-                                        .clickable(
-                                                onClick = {
-                                                    val intent =
-                                                            Intent(Intent.ACTION_OPEN_DOCUMENT)
-                                                                    .apply {
-                                                                        addCategory(
-                                                                                Intent.CATEGORY_OPENABLE
-                                                                        )
-                                                                        type = "*/*"
-                                                                    }
-                                                    launcher.launch(intent)
-                                                }
-                                        )
-                ) {
-                    Box(
-                            modifier =
-                                    Modifier.matchParentSize()
-                                            .drawBackdrop(
-                                                    backdrop = backdrop,
-                                                    shape = { RoundedCornerShape(8.dp) },
-                                                    effects = {
-                                                        vibrancy()
-                                                        blur(15f.dp.toPx())
-                                                        lens(25f.dp.toPx(), 50f.dp.toPx())
-                                                    },
-                                                    onDrawSurface = {
-                                                        drawRect(Color.White.copy(alpha = 0.01f))
-                                                    }
-                                            )
-                    )
-
-                    Box(
-                            modifier = Modifier.matchParentSize(),
-                            contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                                text = "Open file",
-                                fontSize = buttonFontSize,
-                                fontFamily = born2bsporty,
-                                color = Color(0xFF989898),
-                                style =
-                                        TextStyle(
-                                                shadow =
-                                                        Shadow(
-                                                                color = Color(0xFF989898),
-                                                                offset = Offset(0f, 0f),
-                                                                blurRadius = 15f
-                                                        )
-                                        ),
-                                modifier = Modifier.padding(3.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Box(
-                    modifier =
-                            Modifier.width(400.dp)
-                                    .height(50.dp)
-                                    .clickable(
-                                            onClick = {
-                                                val intent =
-                                                        Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
-                                                launcher.launch(intent)
-                                            }
-                                    )
-            ) {
-                Box(
-                        modifier =
-                                Modifier.matchParentSize()
-                                        .drawBackdrop(
-                                                backdrop = backdrop,
-                                                shape = { RoundedCornerShape(8.dp) },
-                                                effects = {
-                                                    vibrancy()
-                                                    blur(15f.dp.toPx())
-                                                    lens(25f.dp.toPx(), 50f.dp.toPx())
-                                                },
-                                                onDrawSurface = {
-                                                    drawRect(Color.White.copy(alpha = 0.01f))
-                                                }
-                                        )
-                )
-
-                Box(modifier = Modifier.matchParentSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                            text = "Open folder",
-                            fontSize = buttonFontSize,
-                            fontFamily = born2bsporty,
-                            color = Color(0xFF989898),
-                            style =
-                                    TextStyle(
-                                            shadow =
-                                                    Shadow(
-                                                            color = Color(0xFF989898),
-                                                            offset = Offset(0f, 0f),
-                                                            blurRadius = 15f
-                                                    )
-                                    ),
-                            modifier = Modifier.padding(3.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Box(
-                modifier = Modifier
-                    .width(400.dp)
-                    .height(50.dp)
-                    .clickable(
-                        onClick = {
-                            // Terminal Session handler
-                            val currentPath = fileViewModel.currentFilePath ?:
-                                              (SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession)?.projectRoot?.uri?.toString()
-
-                            TerminalSession(context.applicationContext, initialDir = currentPath)
-                            terminalViewModel.setTerminalWebView(SessionList.sessions[SessionList.activeSessionIndex!!].getOrInitView())
-                            navController.navigate(Screen.Terminal.route)
-                        })
-            ) {
-                Box(
-                        modifier =
-                                Modifier.matchParentSize()
-                                        .drawBackdrop(
-                                                backdrop = backdrop,
-                                                shape = { RoundedCornerShape(8.dp) },
-                                                effects = {
-                                                    vibrancy()
-                                                    blur(15f.dp.toPx())
-                                                    lens(25f.dp.toPx(), 50f.dp.toPx())
-                                                },
-                                                onDrawSurface = {
-                                                    drawRect(Color.White.copy(alpha = 0.01f))
-                                                }
-                                        )
-                )
-
-                Box(modifier = Modifier.matchParentSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                            text = "Terminal",
-                            fontSize = buttonFontSize,
-                            fontFamily = born2bsporty,
-                            color = Color(0xFF989898),
-                            style =
-                                    TextStyle(
-                                            shadow =
-                                                    Shadow(
-                                                            color = Color(0xFF989898),
-                                                            offset = Offset(0f, 0f),
-                                                            blurRadius = 15f
-                                                    )
-                                    ),
-                            modifier = Modifier.padding(3.dp)
-                    )
-                }
-            }
-        }
-    }
-}
+// MainMenu component is now in MainMenu.kt

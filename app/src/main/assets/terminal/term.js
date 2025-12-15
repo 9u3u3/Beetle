@@ -199,3 +199,13 @@ setTimeout(window.fitTerminal, 3000);
 window.addEventListener('resize', () => {
   setTimeout(window.fitTerminal, 100);
 });
+
+// Runtime font size change
+window.setFontSize = function (size) {
+  term.options.fontSize = size;
+  console.log('[Terminal] Font size set to:', size);
+  // Re-fit terminal to recalculate rows/cols with new font size
+  setTimeout(() => {
+    window.fitTerminal();
+  }, 50);
+};

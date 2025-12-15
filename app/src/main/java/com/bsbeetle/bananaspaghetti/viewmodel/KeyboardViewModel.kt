@@ -326,6 +326,54 @@ class KeyboardViewModel : ViewModel() {
         }
     }
 
+    fun updateLeftKeyboardWidth(width: Float) {
+        _uiState.update { currentState ->
+            if (currentState.linkedKeyboardSliders) {
+                // If linked, update both sliders together
+                currentState.copy(leftKeyboardWidth = width, rightKeyboardWidth = width)
+            } else {
+                currentState.copy(leftKeyboardWidth = width)
+            }
+        }
+    }
+
+    fun updateRightKeyboardWidth(width: Float) {
+        _uiState.update { currentState ->
+            if (currentState.linkedKeyboardSliders) {
+                // If linked, update both sliders together
+                currentState.copy(leftKeyboardWidth = width, rightKeyboardWidth = width)
+            } else {
+                currentState.copy(rightKeyboardWidth = width)
+            }
+        }
+    }
+
+    fun toggleLinkedKeyboardSliders() {
+        _uiState.update { currentState ->
+            val newLinked = !currentState.linkedKeyboardSliders
+            if (newLinked) {
+                // When linking, set both to the average of current values
+                val avgWidth = (currentState.leftKeyboardWidth + currentState.rightKeyboardWidth) / 2
+                currentState.copy(linkedKeyboardSliders = true, leftKeyboardWidth = avgWidth, rightKeyboardWidth = avgWidth)
+            } else {
+                currentState.copy(linkedKeyboardSliders = false)
+            }
+        }
+    }
+
+    fun updateTerminalFontSize(size: Int) {
+        _uiState.update { currentState ->
+            currentState.copy(terminalFontSize = size.coerceIn(8, 24))
+        }
+    }
+
+    fun updateEditorFontSize(size: Int) {
+        _uiState.update { currentState ->
+            currentState.copy(editorFontSize = size.coerceIn(8, 24))
+        }
+    }
+
+
     // Emitter functions -> Basic it helps to implements better things
 
     private fun emitText(text: String) {

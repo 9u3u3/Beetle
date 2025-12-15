@@ -36,7 +36,7 @@ object GitTheme {
     val BgCard = Color(0xFF252526)
 
     /** Hover state background */
-    val BgHover = Color(0xFF2A2D2E)
+    val BgHover = Color(0xFF2D2D2D)
 
     /** Selected item background */
     val BgSelected = Color(0xFF37373D)
@@ -49,13 +49,16 @@ object GitTheme {
     val AccentBlue = Color(0xFF007ACC)
 
     /** Success/addition color (green) */
-    val AccentGreen = Color(0xFF89D185)
+    val AccentGreen = Color(0xFF73C991)
 
     /** Warning/modification color (yellow) */
     val AccentYellow = Color(0xFFE2C08D)
 
     /** Error/deletion color (red) */
     val AccentRed = Color(0xFFF48771)
+
+    /** Warning accent color (orange) */
+    val AccentOrange = Color(0xFFFF8C00)
 
     // ========================================================================
     // Text Colors

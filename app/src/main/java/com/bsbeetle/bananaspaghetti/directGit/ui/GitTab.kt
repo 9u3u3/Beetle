@@ -1,9 +1,11 @@
 package com.bsbeetle.bananaspaghetti.directGit.ui
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.DocumentsContract
 import android.provider.Settings
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
@@ -11,7 +13,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import android.provider.DocumentsContract
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,7 +21,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -32,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -42,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.bsbeetle.bananaspaghetti.LocalFileViewModel
@@ -57,19 +60,19 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-// --- Theme Colors ---
-private val BgDark = Color(0xFF1E1E1E)
-private val BgCard = Color(0xFF252526)
-private val BgHover = Color(0xFF2D2D2D)
-private val AccentBlue = Color(0xFF007ACC)
-private val AccentGreen = Color(0xFF73C991)
-private val AccentOrange = Color(0xFFFF8C00)
-private val AccentRed = Color(0xFFF48771)
-private val AccentYellow = Color(0xFFE2C08D)
-private val TextPrimary = Color(0xFFE1E1E1)
-private val TextSecondary = Color(0xFFAAAAAA)
-private val TextTertiary = Color(0xFF666666)
-private val BorderColor = Color(0xFF333333)
+// Import extracted dialog components
+import com.bsbeetle.bananaspaghetti.directGit.ui.dialogs.StyledDialog
+import com.bsbeetle.bananaspaghetti.directGit.ui.dialogs.BranchDialog
+import com.bsbeetle.bananaspaghetti.directGit.ui.dialogs.NewBranchDialog
+import com.bsbeetle.bananaspaghetti.directGit.ui.dialogs.AuthDialog
+import com.bsbeetle.bananaspaghetti.directGit.ui.dialogs.RemoteDialog
+import com.bsbeetle.bananaspaghetti.directGit.ui.dialogs.CloneDialog
+import com.bsbeetle.bananaspaghetti.directGit.ui.dialogs.CommitHistoryDialog
+import com.bsbeetle.bananaspaghetti.directGit.ui.dialogs.DiffDialog
+import com.bsbeetle.bananaspaghetti.directGit.ui.dialogs.MergeEditorDialog
+import com.bsbeetle.bananaspaghetti.directGit.ui.dialogs.PullBranchDialog
+
+// Use centralized theme colors from GitTheme object
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,6 +109,7 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
     var showConsole by remember { mutableStateOf(false) }
     var showCloneDialog by remember { mutableStateOf(false) }
     var showSshSetupDialog by remember { mutableStateOf(false) }
+    var showPullBranchDialog by remember { mutableStateOf(false) }
 
     // Show SSH setup dialog if keys are not configured (only once per session)
     var hasShownSshDialog by remember { mutableStateOf(false) }
@@ -119,10 +123,18 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
     // Action to retry after auth
     var authAction by remember { mutableStateOf<((String, String, Boolean) -> Unit)?>(null) }
 
-    // Unified changes list
+    // Unified changes list (including conflicted files)
     val allChanges =
-            remember(uiState.stagedFiles, uiState.modifiedFiles, uiState.untrackedFiles) {
-                (uiState.stagedFiles + uiState.modifiedFiles + uiState.untrackedFiles)
+            remember(
+                    uiState.stagedFiles,
+                    uiState.modifiedFiles,
+                    uiState.untrackedFiles,
+                    uiState.conflictedFiles
+            ) {
+                (uiState.stagedFiles +
+                                uiState.modifiedFiles +
+                                uiState.untrackedFiles +
+                                uiState.conflictedFiles)
                         .distinct()
                         .sorted()
             }
@@ -307,16 +319,31 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
         DiffDialog(diffText = diff, onDismiss = { viewModel.clearDiff() })
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(BgDark)) {
+    // Merge Editor Dialog (for conflict resolution)
+    if (uiState.showMergeEditor &&
+                    uiState.mergeEditorFile != null &&
+                    uiState.mergeEditorContent != null
+    ) {
+        MergeEditorDialog(
+                filePath = uiState.mergeEditorFile!!,
+                content = uiState.mergeEditorContent!!,
+                onSave = { path, content -> viewModel.saveMergedContent(path, content) },
+                onDismiss = { viewModel.closeMergeEditor() }
+        )
+    }
+
+    Column(modifier = Modifier.fillMaxSize().background(GitTheme.BgDark)) {
         // --- Header ---
         // === Git Header ===
         GitHeader(
                 branch = uiState.currentBranch.ifEmpty { "master" },
                 ahead = uiState.aheadCount,
                 behind = uiState.behindCount,
+                remoteBranches = uiState.branches.filter { it.isRemote },
                 onBranchClick = { showBranchDialog = true },
                 onFetch = { viewModel.fetch() },
                 onPull = { viewModel.pull() },
+                onPullFromBranch = { showPullBranchDialog = true },
                 onPush = { viewModel.push() },
                 onAddAll = {
                     val allFiles = uiState.modifiedFiles + uiState.untrackedFiles
@@ -329,6 +356,18 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                 onSshSetupClick = { showSshSetupDialog = true },
                 sshKeysConfigured = uiState.sshKeysConfigured
         )
+
+        // Pull Branch Dialog
+        if (showPullBranchDialog) {
+            PullBranchDialog(
+                    remoteBranches = uiState.branches.filter { it.isRemote },
+                    onDismiss = { showPullBranchDialog = false },
+                    onSelect = { branchName ->
+                        viewModel.pullFromBranch(branchName)
+                        showPullBranchDialog = false
+                    }
+            )
+        }
 
         // --- Main Content ---
         Box(modifier = Modifier.weight(1f)) {
@@ -391,8 +430,8 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                                             },
                                             colors =
                                                     CheckboxDefaults.colors(
-                                                            checkedColor = AccentBlue,
-                                                            uncheckedColor = TextTertiary,
+                                                            checkedColor = GitTheme.AccentBlue,
+                                                            uncheckedColor = GitTheme.TextTertiary,
                                                             checkmarkColor = Color.White
                                                     ),
                                             modifier = Modifier.scale(0.8f)
@@ -401,7 +440,7 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                         "CHANGES (${allChanges.size})",
-                                        color = TextSecondary,
+                                        color = GitTheme.TextSecondary,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = 0.5.sp
@@ -417,7 +456,7 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                                 ) {
                                     Text(
                                             "No changes detected",
-                                            color = TextTertiary,
+                                            color = GitTheme.TextTertiary,
                                             fontSize = 13.sp
                                     )
                                 }
@@ -426,8 +465,10 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
 
                         items(allChanges) { path ->
                             val isStaged = uiState.stagedFiles.contains(path)
+                            val isConflicted = uiState.conflictedFiles.contains(path)
                             val status =
                                     when {
+                                        isConflicted -> "C" // Conflict
                                         uiState.untrackedFiles.contains(path) -> "U"
                                         uiState.modifiedFiles.contains(path) -> "M"
                                         else -> "S"
@@ -443,7 +484,14 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                                                         selectedFiles - path
                                                 else selectedFiles + path
                                     },
-                                    onClick = { viewModel.loadDiff(path) }
+                                    onClick = {
+                                        // Open merge editor for conflicted files, diff for others
+                                        if (isConflicted) {
+                                            viewModel.openMergeEditor(path)
+                                        } else {
+                                            viewModel.loadDiff(path)
+                                        }
+                                    }
                             )
                         }
                     }
@@ -452,10 +500,10 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                     Column(
                             modifier =
                                     Modifier.fillMaxWidth()
-                                            .background(BgCard)
+                                            .background(GitTheme.BgCard)
                                             .border(
                                                     1.dp,
-                                                    BorderColor,
+                                                    GitTheme.BorderColor,
                                                     RoundedCornerShape(
                                                             topStart = 12.dp,
                                                             topEnd = 12.dp
@@ -469,23 +517,23 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                                 onValueChange = { commitMessage = it },
                                 textStyle =
                                         TextStyle(
-                                                color = TextPrimary,
+                                                color = GitTheme.TextPrimary,
                                                 fontSize = 13.sp,
                                                 fontFamily = FontFamily.Monospace
                                         ),
-                                cursorBrush = SolidColor(AccentBlue),
+                                cursorBrush = SolidColor(GitTheme.AccentBlue),
                                 decorationBox = { innerTextField ->
                                     Box(
                                             modifier =
                                                     Modifier.fillMaxWidth()
                                                             .height(80.dp)
                                                             .background(
-                                                                    BgDark,
+                                                                    GitTheme.BgDark,
                                                                     RoundedCornerShape(6.dp)
                                                             )
                                                             .border(
                                                                     1.dp,
-                                                                    BorderColor,
+                                                                    GitTheme.BorderColor,
                                                                     RoundedCornerShape(6.dp)
                                                             )
                                                             .padding(8.dp)
@@ -493,7 +541,7 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                                         if (commitMessage.isEmpty()) {
                                             Text(
                                                     "Commit message...",
-                                                    color = TextTertiary,
+                                                    color = GitTheme.TextTertiary,
                                                     fontSize = 13.sp
                                             )
                                         }
@@ -519,9 +567,9 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                                     modifier = Modifier.weight(1f).height(36.dp),
                                     colors =
                                             ButtonDefaults.buttonColors(
-                                                    containerColor = AccentBlue,
+                                                    containerColor = GitTheme.AccentBlue,
                                                     disabledContainerColor =
-                                                            AccentBlue.copy(alpha = 0.5f)
+                                                            GitTheme.AccentBlue.copy(alpha = 0.5f)
                                             ),
                                     shape = RoundedCornerShape(6.dp),
                                     enabled =
@@ -546,12 +594,12 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                                     modifier = Modifier.weight(1f).height(36.dp),
                                     colors =
                                             ButtonDefaults.buttonColors(
-                                                    containerColor = BgHover,
-                                                    contentColor = TextPrimary,
+                                                    containerColor = GitTheme.BgHover,
+                                                    contentColor = GitTheme.TextPrimary,
                                                     disabledContainerColor =
-                                                            BgHover.copy(alpha = 0.5f)
+                                                            GitTheme.BgHover.copy(alpha = 0.5f)
                                             ),
-                                    border = BorderStroke(1.dp, BorderColor),
+                                    border = BorderStroke(1.dp, GitTheme.BorderColor),
                                     shape = RoundedCornerShape(6.dp),
                                     enabled =
                                             selectedFiles.isNotEmpty() && commitMessage.isNotBlank()
@@ -579,9 +627,11 @@ fun GitHeader(
         branch: String,
         ahead: Int,
         behind: Int,
+        remoteBranches: List<BranchInfo>,
         onBranchClick: () -> Unit,
         onFetch: () -> Unit,
         onPull: () -> Unit,
+        onPullFromBranch: () -> Unit,
         onPush: () -> Unit,
         onAddAll: () -> Unit,
         onStash: () -> Unit,
@@ -591,7 +641,7 @@ fun GitHeader(
         onSshSetupClick: () -> Unit,
         sshKeysConfigured: Boolean
 ) {
-    Column(modifier = Modifier.fillMaxWidth().background(BgCard).border(0.dp, Color.Transparent)) {
+    Column(modifier = Modifier.fillMaxWidth().background(GitTheme.BgCard).border(0.dp, Color.Transparent)) {
         // Top Bar
         Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
@@ -600,34 +650,42 @@ fun GitHeader(
         ) {
             // Branch Selector (Pill Shape)
             Surface(
-                    color = BgDark,
-                    shape = RoundedCornerShape(50),
-                    border = BorderStroke(1.dp, BorderColor),
+                    shape = RoundedCornerShape(6.dp),
+                    color = GitTheme.BgDark,
+                    border = BorderStroke(1.dp, GitTheme.BorderColor),
                     modifier = Modifier.clickable(onClick = onBranchClick)
             ) {
                 Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Icon(
                             Icons.Rounded.AccountTree,
                             null,
-                            tint = AccentBlue,
-                            modifier = Modifier.size(14.dp)
+                            tint = GitTheme.AccentBlue,
+                            modifier = Modifier.size(12.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                            branch,
-                            color = TextPrimary,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                            modifier =
+                                    Modifier.widthIn(max = 100.dp)
+                                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        Text(
+                                branch,
+                                color = GitTheme.TextPrimary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                softWrap = false
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                             Icons.Rounded.ExpandMore,
                             null,
-                            tint = TextTertiary,
-                            modifier = Modifier.size(14.dp)
+                            tint = GitTheme.TextTertiary,
+                            modifier = Modifier.size(12.dp)
                     )
                 }
             }
@@ -637,8 +695,8 @@ fun GitHeader(
                 if (ahead > 0 || behind > 0) {
                     Row(
                             modifier =
-                                    Modifier.background(BgDark, RoundedCornerShape(4.dp))
-                                            .border(1.dp, BorderColor, RoundedCornerShape(4.dp))
+                                    Modifier.background(GitTheme.BgDark, RoundedCornerShape(4.dp))
+                                            .border(1.dp, GitTheme.BorderColor, RoundedCornerShape(4.dp))
                                             .padding(horizontal = 8.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -646,12 +704,12 @@ fun GitHeader(
                             Icon(
                                     Icons.Rounded.ArrowDownward,
                                     null,
-                                    tint = AccentBlue,
+                                    tint = GitTheme.AccentBlue,
                                     modifier = Modifier.size(12.dp)
                             )
                             Text(
                                     "$behind",
-                                    color = AccentBlue,
+                                    color = GitTheme.AccentBlue,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(start = 2.dp, end = 6.dp)
@@ -661,12 +719,12 @@ fun GitHeader(
                             Icon(
                                     Icons.Rounded.ArrowUpward,
                                     null,
-                                    tint = AccentGreen,
+                                    tint = GitTheme.AccentGreen,
                                     modifier = Modifier.size(12.dp)
                             )
                             Text(
                                     "$ahead",
-                                    color = AccentGreen,
+                                    color = GitTheme.AccentGreen,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(start = 2.dp)
@@ -682,7 +740,7 @@ fun GitHeader(
                                 Modifier.padding(end = 4.dp)
                                         .background(
                                                 if (!sshKeysConfigured)
-                                                        AccentOrange.copy(alpha = 0.2f)
+                                                        GitTheme.AccentOrange.copy(alpha = 0.2f)
                                                 else Color.Transparent,
                                                 RoundedCornerShape(4.dp)
                                         )
@@ -691,7 +749,7 @@ fun GitHeader(
                         Icon(
                                 Icons.Rounded.Key,
                                 null,
-                                tint = if (!sshKeysConfigured) AccentOrange else TextSecondary,
+                                tint = if (!sshKeysConfigured) GitTheme.AccentOrange else GitTheme.TextSecondary,
                                 modifier = Modifier.size(18.dp)
                         )
                     }
@@ -701,24 +759,102 @@ fun GitHeader(
                     Icon(
                             Icons.Rounded.Refresh,
                             null,
-                            tint = TextSecondary,
+                            tint = GitTheme.TextSecondary,
                             modifier = Modifier.size(18.dp)
                     )
                 }
             }
         }
 
-        HorizontalDivider(color = BorderColor)
+        HorizontalDivider(color = GitTheme.BorderColor)
 
         // Actions Toolbar
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            ActionButton(Icons.Rounded.ArrowDownward, "Pull", onPull)
+            // Pull Dropdown
+            var showPullMenu by remember { mutableStateOf(false) }
+            Box {
+                Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier =
+                                Modifier.clip(RoundedCornerShape(8.dp))
+                                        .clickable { showPullMenu = true }
+                                        .padding(vertical = 8.dp, horizontal = 12.dp)
+                ) {
+                    Icon(
+                            Icons.Rounded.ArrowDownward,
+                            "Pull",
+                            tint = GitTheme.TextSecondary,
+                            modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                                "Pull",
+                                color = GitTheme.TextSecondary,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium
+                        )
+                        Icon(
+                                Icons.Rounded.ArrowDropDown,
+                                null,
+                                tint = GitTheme.TextTertiary,
+                                modifier = Modifier.size(10.dp)
+                        )
+                    }
+                }
+
+                DropdownMenu(
+                        expanded = showPullMenu,
+                        onDismissRequest = { showPullMenu = false },
+                        modifier =
+                                Modifier.background(GitTheme.BgCard)
+                                        .border(1.dp, GitTheme.BorderColor, RoundedCornerShape(4.dp))
+                ) {
+                    DropdownMenuItem(
+                            text = { Text("Pull (current branch)", color = GitTheme.TextPrimary) },
+                            onClick = {
+                                onPull()
+                                showPullMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(
+                                        Icons.Rounded.ArrowDownward,
+                                        null,
+                                        tint = GitTheme.AccentBlue,
+                                        modifier = Modifier.size(18.dp)
+                                )
+                            }
+                    )
+                    DropdownMenuItem(
+                            text = { Text("Pull from branch...", color = GitTheme.TextPrimary) },
+                            onClick = {
+                                onPullFromBranch()
+                                showPullMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(
+                                        Icons.Rounded.AccountTree,
+                                        null,
+                                        tint = GitTheme.AccentGreen,
+                                        modifier = Modifier.size(18.dp)
+                                )
+                            }
+                    )
+                }
+            }
+
             ActionButton(Icons.Rounded.ArrowUpward, "Push", onPush)
             ActionButton(Icons.Rounded.Sync, "Fetch", onFetch)
-            ActionButton(Icons.Rounded.Add, "Add All", onAddAll)
+
+            // Add All button (hidden in portrait)
+            if (isLandscape) {
+                ActionButton(Icons.Rounded.Add, "Add All", onAddAll)
+            }
 
             // Stash Dropdown
             var showStashMenu by remember { mutableStateOf(false) }
@@ -733,21 +869,21 @@ fun GitHeader(
                     Icon(
                             Icons.Rounded.Archive,
                             "Stash",
-                            tint = TextSecondary,
+                            tint = GitTheme.TextSecondary,
                             modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                                 "Stash",
-                                color = TextSecondary,
+                                color = GitTheme.TextSecondary,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Medium
                         )
                         Icon(
                                 Icons.Rounded.ArrowDropDown,
                                 null,
-                                tint = TextTertiary,
+                                tint = GitTheme.TextTertiary,
                                 modifier = Modifier.size(10.dp)
                         )
                     }
@@ -757,11 +893,11 @@ fun GitHeader(
                         expanded = showStashMenu,
                         onDismissRequest = { showStashMenu = false },
                         modifier =
-                                Modifier.background(BgCard)
-                                        .border(1.dp, BorderColor, RoundedCornerShape(4.dp))
+                                Modifier.background(GitTheme.BgCard)
+                                        .border(1.dp, GitTheme.BorderColor, RoundedCornerShape(4.dp))
                 ) {
                     DropdownMenuItem(
-                            text = { Text("Stash Changes", color = TextPrimary) },
+                            text = { Text("Stash Changes", color = GitTheme.TextPrimary) },
                             onClick = {
                                 onStash()
                                 showStashMenu = false
@@ -770,13 +906,13 @@ fun GitHeader(
                                 Icon(
                                         Icons.Rounded.Archive,
                                         null,
-                                        tint = AccentBlue,
+                                        tint = GitTheme.AccentBlue,
                                         modifier = Modifier.size(18.dp)
                                 )
                             }
                     )
                     DropdownMenuItem(
-                            text = { Text("Pop Stash", color = TextPrimary) },
+                            text = { Text("Pop Stash", color = GitTheme.TextPrimary) },
                             onClick = {
                                 onStashPop()
                                 showStashMenu = false
@@ -785,7 +921,7 @@ fun GitHeader(
                                 Icon(
                                         Icons.Rounded.Unarchive,
                                         null,
-                                        tint = AccentGreen,
+                                        tint = GitTheme.AccentGreen,
                                         modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -794,7 +930,7 @@ fun GitHeader(
             }
             ActionButton(Icons.Rounded.History, "History", onHistory)
         }
-        HorizontalDivider(color = BorderColor)
+        HorizontalDivider(color = GitTheme.BorderColor)
     }
 }
 
@@ -807,9 +943,9 @@ fun ActionButton(icon: ImageVector, tooltip: String, onClick: () -> Unit) {
                             .clickable(onClick = onClick)
                             .padding(vertical = 8.dp, horizontal = 12.dp)
     ) {
-        Icon(icon, tooltip, tint = TextSecondary, modifier = Modifier.size(20.dp))
+        Icon(icon, tooltip, tint = GitTheme.TextSecondary, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.height(4.dp))
-        Text(tooltip, color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+        Text(tooltip, color = GitTheme.TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -832,7 +968,7 @@ fun FileChangeItem(
             modifier =
                     Modifier.fillMaxWidth()
                             .clickable(onClick = onClick)
-                            .background(if (isSelected) BgHover else Color.Transparent)
+                            .background(if (isSelected) GitTheme.BgHover else Color.Transparent)
                             .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
     ) {
@@ -842,8 +978,8 @@ fun FileChangeItem(
                     onCheckedChange = { onToggle() },
                     colors =
                             CheckboxDefaults.colors(
-                                    checkedColor = AccentBlue,
-                                    uncheckedColor = TextTertiary,
+                                    checkedColor = GitTheme.AccentBlue,
+                                    uncheckedColor = GitTheme.TextTertiary,
                                     checkmarkColor = Color.White
                             ),
                     modifier = Modifier.scale(0.8f)
@@ -866,7 +1002,7 @@ fun FileChangeItem(
                     Icon(
                             Icons.Rounded.CheckCircle,
                             null,
-                            tint = AccentBlue,
+                            tint = GitTheme.AccentBlue,
                             modifier = Modifier.size(12.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -874,8 +1010,8 @@ fun FileChangeItem(
                 Text(
                         fileName,
                         color =
-                                if (status == "U") AccentGreen
-                                else if (status == "M") AccentYellow else TextPrimary,
+                                if (status == "U") GitTheme.AccentGreen
+                                else if (status == "M") GitTheme.AccentYellow else GitTheme.TextPrimary,
                         fontSize = 13.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -885,7 +1021,7 @@ fun FileChangeItem(
             if (parentPath.isNotEmpty()) {
                 Text(
                         parentPath,
-                        color = TextTertiary,
+                        color = GitTheme.TextTertiary,
                         fontSize = 11.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -899,32 +1035,32 @@ fun FileChangeItem(
         Surface(
                 color =
                         when (status) {
-                            "U" -> AccentGreen.copy(alpha = 0.1f)
-                            "M" -> AccentYellow.copy(alpha = 0.1f)
-                            else -> AccentBlue.copy(alpha = 0.1f)
+                            "U" -> GitTheme.AccentGreen.copy(alpha = 0.1f)
+                            "M" -> GitTheme.AccentYellow.copy(alpha = 0.1f)
+                            else -> GitTheme.AccentBlue.copy(alpha = 0.1f)
                         },
                 shape = RoundedCornerShape(4.dp),
                 border =
                         BorderStroke(
                                 1.dp,
                                 when (status) {
-                                    "U" -> AccentGreen.copy(alpha = 0.3f)
-                                    "M" -> AccentYellow.copy(alpha = 0.3f)
-                                    else -> AccentBlue.copy(alpha = 0.3f)
+                                    "U" -> GitTheme.AccentGreen.copy(alpha = 0.3f)
+                                    "M" -> GitTheme.AccentYellow.copy(alpha = 0.3f)
+                                    else -> GitTheme.AccentBlue.copy(alpha = 0.3f)
                                 }
                         )
         ) {
             Text(
                     when (status) {
-                        "U" -> "Added"
-                        "M" -> "Modified"
+                        "U" -> "A"
+                        "M" -> "M"
                         else -> status
                     },
                     color =
                             when (status) {
-                                "U" -> AccentGreen
-                                "M" -> AccentYellow
-                                else -> AccentBlue
+                                "U" -> GitTheme.AccentGreen
+                                "M" -> GitTheme.AccentYellow
+                                else -> GitTheme.AccentBlue
                             },
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
@@ -949,15 +1085,15 @@ private fun ConsoleStatusBar(
 ) {
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Terminal, 1: Git Logs
 
-    Column(modifier = Modifier.fillMaxWidth().background(BgCard)) {
-        HorizontalDivider(color = BorderColor)
+    Column(modifier = Modifier.fillMaxWidth().background(GitTheme.BgCard)) {
+        HorizontalDivider(color = GitTheme.BorderColor)
 
         // Status Bar
         Row(
                 modifier =
                         Modifier.fillMaxWidth()
                                 .height(32.dp)
-                                .background(BgDark)
+                                .background(GitTheme.BgDark)
                                 .clickable(onClick = onToggleConsole)
                                 .padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -966,7 +1102,7 @@ private fun ConsoleStatusBar(
             Icon(
                     Icons.Rounded.KeyboardArrowUp,
                     null,
-                    tint = TextSecondary,
+                    tint = GitTheme.TextSecondary,
                     modifier = Modifier.size(16.dp).rotate(rotation)
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -975,16 +1111,16 @@ private fun ConsoleStatusBar(
                 CircularProgressIndicator(
                         modifier = Modifier.size(10.dp),
                         strokeWidth = 1.dp,
-                        color = AccentBlue
+                        color = GitTheme.AccentBlue
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(operation ?: "Working...", color = TextSecondary, fontSize = 11.sp)
+                Text(operation ?: "Working...", color = GitTheme.TextSecondary, fontSize = 11.sp)
             } else if (lastError != null) {
-                Icon(Icons.Rounded.Error, null, tint = AccentRed, modifier = Modifier.size(12.dp))
+                Icon(Icons.Rounded.Error, null, tint = GitTheme.AccentRed, modifier = Modifier.size(12.dp))
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                         lastError,
-                        color = AccentRed,
+                        color = GitTheme.AccentRed,
                         fontSize = 11.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -993,7 +1129,7 @@ private fun ConsoleStatusBar(
                 if (lastError.contains("Authentication")) {
                     Text(
                             "Fix",
-                            color = AccentBlue,
+                            color = GitTheme.AccentBlue,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.clickable { onAuthRequest() }
@@ -1003,7 +1139,7 @@ private fun ConsoleStatusBar(
                     Icon(
                             Icons.Rounded.Close,
                             null,
-                            tint = TextTertiary,
+                            tint = GitTheme.TextTertiary,
                             modifier = Modifier.size(12.dp)
                     )
                 }
@@ -1011,13 +1147,13 @@ private fun ConsoleStatusBar(
                 Icon(
                         Icons.Rounded.CheckCircle,
                         null,
-                        tint = AccentGreen,
+                        tint = GitTheme.AccentGreen,
                         modifier = Modifier.size(12.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                         lastSuccess,
-                        color = AccentGreen,
+                        color = GitTheme.AccentGreen,
                         fontSize = 11.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -1027,12 +1163,12 @@ private fun ConsoleStatusBar(
                     Icon(
                             Icons.Rounded.Close,
                             null,
-                            tint = TextTertiary,
+                            tint = GitTheme.TextTertiary,
                             modifier = Modifier.size(12.dp)
                     )
                 }
             } else {
-                Text("Console", color = TextTertiary, fontSize = 11.sp)
+                Text("Console", color = GitTheme.TextTertiary, fontSize = 11.sp)
             }
         }
 
@@ -1043,7 +1179,7 @@ private fun ConsoleStatusBar(
             ) {
                 // Tabs
                 Row(
-                        modifier = Modifier.fillMaxWidth().background(BgDark),
+                        modifier = Modifier.fillMaxWidth().background(GitTheme.BgDark),
                         verticalAlignment = Alignment.CenterVertically
                 ) {
                     ConsoleTab("Terminal", selectedTab == 0) { selectedTab = 0 }
@@ -1053,12 +1189,12 @@ private fun ConsoleStatusBar(
                         Icon(
                                 Icons.Rounded.Delete,
                                 null,
-                                tint = TextTertiary,
+                                tint = GitTheme.TextTertiary,
                                 modifier = Modifier.size(14.dp)
                         )
                     }
                 }
-                HorizontalDivider(color = BorderColor)
+                HorizontalDivider(color = GitTheme.BorderColor)
 
                 SelectionContainer {
                     Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
@@ -1068,17 +1204,17 @@ private fun ConsoleStatusBar(
                                 items(terminalHistory.reversed()) { line ->
                                     val color =
                                             when {
-                                                line.startsWith("$") -> AccentBlue
-                                                line.startsWith("✅") -> AccentGreen
-                                                line.startsWith("❌") -> AccentRed
+                                                line.startsWith("$") -> GitTheme.AccentBlue
+                                                line.startsWith("✅") -> GitTheme.AccentGreen
+                                                line.startsWith("❌") -> GitTheme.AccentRed
                                                 line.startsWith("🔑") ||
                                                         line.startsWith("🔐") ||
-                                                        line.startsWith("📦") -> AccentYellow
+                                                        line.startsWith("📦") -> GitTheme.AccentYellow
                                                 line.startsWith("📁") ||
                                                         line.startsWith("📂") ||
-                                                        line.startsWith("📥") -> AccentBlue
-                                                line.startsWith("⚠️") -> AccentOrange
-                                                else -> TextSecondary
+                                                        line.startsWith("📥") -> GitTheme.AccentBlue
+                                                line.startsWith("⚠️") -> GitTheme.AccentOrange
+                                                else -> GitTheme.TextSecondary
                                             }
                                     Text(
                                             line,
@@ -1095,15 +1231,15 @@ private fun ConsoleStatusBar(
                                 items(logs.reversed()) { log ->
                                     val color =
                                             when (log.type) {
-                                                LogType.COMMAND -> AccentBlue
-                                                LogType.ERROR -> AccentRed
-                                                LogType.SUCCESS -> AccentGreen
-                                                LogType.INFO -> TextSecondary
+                                                LogType.COMMAND -> GitTheme.AccentBlue
+                                                LogType.ERROR -> GitTheme.AccentRed
+                                                LogType.SUCCESS -> GitTheme.AccentGreen
+                                                LogType.INFO -> GitTheme.TextSecondary
                                             }
                                     Row(modifier = Modifier.padding(vertical = 2.dp)) {
                                         Text(
                                                 log.timestamp,
-                                                color = TextTertiary,
+                                                color = GitTheme.TextTertiary,
                                                 fontSize = 11.sp,
                                                 fontFamily = FontFamily.Monospace,
                                                 modifier = Modifier.width(60.dp)
@@ -1135,7 +1271,7 @@ private fun ConsoleTab(title: String, isSelected: Boolean, onClick: () -> Unit) 
     ) {
         Text(
                 title,
-                color = if (isSelected) AccentBlue else TextSecondary,
+                color = if (isSelected) GitTheme.AccentBlue else GitTheme.TextSecondary,
                 fontSize = 12.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
         )
@@ -1152,13 +1288,13 @@ fun StoragePermissionRequest(onRequestPermission: () -> Unit, onRefresh: () -> U
             Icon(
                     Icons.Rounded.FolderOff,
                     contentDescription = null,
-                    tint = AccentOrange,
+                    tint = GitTheme.AccentOrange,
                     modifier = Modifier.size(64.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                     "Storage Access Required",
-                    color = TextPrimary,
+                    color = GitTheme.TextPrimary,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
@@ -1167,14 +1303,14 @@ fun StoragePermissionRequest(onRequestPermission: () -> Unit, onRefresh: () -> U
             Text(
                     "Git operations need access to read and write files. " +
                             "Please grant 'All files access' permission.",
-                    color = TextSecondary,
+                    color = GitTheme.TextSecondary,
                     fontSize = 13.sp,
                     textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(24.dp))
             Button(
                     onClick = onRequestPermission,
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+                    colors = ButtonDefaults.buttonColors(containerColor = GitTheme.AccentBlue),
                     shape = RoundedCornerShape(8.dp)
             ) {
                 Icon(Icons.Rounded.Settings, null, modifier = Modifier.size(18.dp))
@@ -1185,7 +1321,7 @@ fun StoragePermissionRequest(onRequestPermission: () -> Unit, onRefresh: () -> U
             TextButton(onClick = onRefresh) {
                 Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("I've granted permission", color = AccentBlue)
+                Text("I've granted permission", color = GitTheme.AccentBlue)
             }
         }
     }
@@ -1195,25 +1331,25 @@ fun StoragePermissionRequest(onRequestPermission: () -> Unit, onRefresh: () -> U
 fun EmptyState(onInit: () -> Unit, onClone: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Rounded.Source, null, tint = TextTertiary, modifier = Modifier.size(64.dp))
+            Icon(Icons.Rounded.Source, null, tint = GitTheme.TextTertiary, modifier = Modifier.size(64.dp))
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                     "No Git Repository Found",
-                    color = TextSecondary,
+                    color = GitTheme.TextSecondary,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                     "Initialize a new repository or clone an existing one.",
-                    color = TextTertiary,
+                    color = GitTheme.TextTertiary,
                     fontSize = 12.sp
             )
             Spacer(modifier = Modifier.height(24.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(
                         onClick = onInit,
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+                        colors = ButtonDefaults.buttonColors(containerColor = GitTheme.AccentBlue),
                         shape = RoundedCornerShape(6.dp)
                 ) {
                     Icon(Icons.Rounded.Add, null, modifier = Modifier.size(16.dp))
@@ -1222,8 +1358,8 @@ fun EmptyState(onInit: () -> Unit, onClone: () -> Unit) {
                 }
                 Button(
                         onClick = onClone,
-                        colors = ButtonDefaults.buttonColors(containerColor = BgHover),
-                        border = BorderStroke(1.dp, BorderColor),
+                        colors = ButtonDefaults.buttonColors(containerColor = GitTheme.BgHover),
+                        border = BorderStroke(1.dp, GitTheme.BorderColor),
                         shape = RoundedCornerShape(6.dp)
                 ) {
                     Icon(Icons.Rounded.CloudDownload, null, modifier = Modifier.size(16.dp))
@@ -1235,572 +1371,7 @@ fun EmptyState(onInit: () -> Unit, onClone: () -> Unit) {
     }
 }
 
-// --- Dialogs (Styled) ---
-
-@Composable
-private fun StyledDialog(
-        title: String,
-        onDismiss: () -> Unit,
-        content: @Composable ColumnScope.() -> Unit
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-                colors = CardDefaults.cardColors(containerColor = BgCard),
-                shape = RoundedCornerShape(12.dp),
-                modifier =
-                        Modifier.fillMaxWidth().border(1.dp, BorderColor, RoundedCornerShape(12.dp))
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                            title,
-                            color = TextPrimary,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f)
-                    )
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
-                        Icon(
-                                Icons.Rounded.Close,
-                                null,
-                                tint = TextTertiary,
-                                modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                content()
-            }
-        }
-    }
-}
-
-@Composable
-fun BranchDialog(
-        branches: List<BranchInfo>,
-        onDismiss: () -> Unit,
-        onCheckout: (String) -> Unit,
-        onDelete: (String, Boolean) -> Unit,
-        onNewBranch: () -> Unit
-) {
-    StyledDialog(title = "Branches", onDismiss = onDismiss) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onNewBranch) {
-                Icon(Icons.Rounded.Add, null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("New Branch")
-            }
-        }
-
-        LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
-            val local = branches.filter { !it.isRemote }
-            val remote = branches.filter { it.isRemote }
-
-            if (local.isNotEmpty()) {
-                item {
-                    Text(
-                            "LOCAL",
-                            color = TextTertiary,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                    )
-                }
-                items(local) { b -> BranchItem(b, onCheckout, onDelete) }
-            }
-            if (remote.isNotEmpty()) {
-                item {
-                    Text(
-                            "REMOTE",
-                            color = TextTertiary,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                    )
-                }
-                items(remote) { b -> BranchItem(b, onCheckout, onDelete) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BranchItem(
-        branch: BranchInfo,
-        onCheckout: (String) -> Unit,
-        onDelete: (String, Boolean) -> Unit
-) {
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var deleteFromRemote by remember { mutableStateOf(false) }
-
-    // Delete Confirmation Dialog
-    if (showDeleteDialog) {
-        AlertDialog(
-                onDismissRequest = { showDeleteDialog = false },
-                containerColor = BgCard,
-                titleContentColor = TextPrimary,
-                textContentColor = TextSecondary,
-                title = { Text("Delete Branch") },
-                text = {
-                    Column {
-                        Text("Delete branch '${branch.name}'?")
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(
-                                    checked = deleteFromRemote,
-                                    onCheckedChange = { deleteFromRemote = it },
-                                    colors =
-                                            CheckboxDefaults.colors(
-                                                    checkedColor = AccentRed,
-                                                    uncheckedColor = TextTertiary
-                                            )
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Also delete from remote", color = TextSecondary, fontSize = 13.sp)
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(
-                            onClick = {
-                                onDelete(branch.name, deleteFromRemote)
-                                showDeleteDialog = false
-                                deleteFromRemote = false
-                            }
-                    ) { Text("Delete", color = AccentRed) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteDialog = false }) {
-                        Text("Cancel", color = TextTertiary)
-                    }
-                }
-        )
-    }
-
-    Row(
-            modifier =
-                    Modifier.fillMaxWidth()
-                            .clickable { onCheckout(branch.name) }
-                            .padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-                if (branch.isCurrent) Icons.Rounded.CheckCircle else Icons.Rounded.Circle,
-                null,
-                tint = if (branch.isCurrent) AccentGreen else TextTertiary,
-                modifier = Modifier.size(14.dp)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-                branch.name,
-                color = if (branch.isCurrent) AccentGreen else TextPrimary,
-                fontSize = 13.sp,
-                modifier = Modifier.weight(1f)
-        )
-
-        if (!branch.isCurrent && !branch.isRemote) {
-            IconButton(onClick = { showDeleteDialog = true }, modifier = Modifier.size(24.dp)) {
-                Icon(
-                        Icons.Rounded.Delete,
-                        null,
-                        tint = AccentRed.copy(alpha = 0.7f),
-                        modifier = Modifier.size(14.dp)
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun NewBranchDialog(
-        branches: List<BranchInfo>,
-        currentBranch: String,
-        onDismiss: () -> Unit,
-        onCreate: (name: String, sourceBranch: String) -> Unit
-) {
-    var name by remember { mutableStateOf("") }
-    var sourceBranch by remember { mutableStateOf(currentBranch) }
-    var expanded by remember { mutableStateOf(false) }
-
-    StyledDialog(title = "Create Branch", onDismiss = onDismiss) {
-        // Branch Name
-        OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Branch Name") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                colors =
-                        OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = AccentBlue,
-                                unfocusedBorderColor = BorderColor,
-                                focusedLabelColor = AccentBlue,
-                                unfocusedLabelColor = TextTertiary,
-                                cursorColor = AccentBlue
-                        )
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Source Branch Dropdown
-        Text("Create from:", color = TextSecondary, fontSize = 12.sp)
-        Spacer(modifier = Modifier.height(4.dp))
-
-        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-            OutlinedTextField(
-                    value = sourceBranch,
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                    },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(),
-                    colors =
-                            OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = AccentBlue,
-                                    unfocusedBorderColor = BorderColor,
-                                    cursorColor = AccentBlue
-                            )
-            )
-
-            ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                    modifier = Modifier.background(BgCard)
-            ) {
-                branches.forEach { branch ->
-                    DropdownMenuItem(
-                            text = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    if (branch.isCurrent) {
-                                        Icon(
-                                                Icons.Rounded.Check,
-                                                null,
-                                                tint = AccentGreen,
-                                                modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                    }
-                                    Text(branch.name, color = TextPrimary)
-                                }
-                            },
-                            onClick = {
-                                sourceBranch = branch.name
-                                expanded = false
-                            }
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-                onClick = { onCreate(name, sourceBranch) },
-                enabled = name.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
-                shape = RoundedCornerShape(6.dp)
-        ) { Text("Create Branch") }
-    }
-}
-
-@Composable
-fun AuthDialog(onDismiss: () -> Unit, onConfirm: (String, String, Boolean) -> Unit) {
-    var username by remember { mutableStateOf("") }
-    var token by remember { mutableStateOf("") }
-    var save by remember { mutableStateOf(true) }
-
-    StyledDialog(title = "Authentication Required", onDismiss = onDismiss) {
-        Text("Enter your GitHub credentials to continue.", color = TextSecondary, fontSize = 12.sp)
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = { Text("Username") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                colors =
-                        OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = AccentBlue,
-                                unfocusedBorderColor = BorderColor,
-                                focusedLabelColor = AccentBlue,
-                                unfocusedLabelColor = TextTertiary
-                        )
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
-                value = token,
-                onValueChange = { token = it },
-                label = { Text("Personal Access Token") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                colors =
-                        OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = AccentBlue,
-                                unfocusedBorderColor = BorderColor,
-                                focusedLabelColor = AccentBlue,
-                                unfocusedLabelColor = TextTertiary
-                        )
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(
-                    checked = save,
-                    onCheckedChange = { save = it },
-                    colors = CheckboxDefaults.colors(checkedColor = AccentBlue)
-            )
-            Text("Save credentials securely", color = TextSecondary, fontSize = 12.sp)
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(
-                onClick = { onConfirm(username, token, save) },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
-                shape = RoundedCornerShape(6.dp)
-        ) { Text("Authenticate") }
-    }
-}
-
-@Composable
-fun RemoteDialog(currentUrl: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
-    var url by remember { mutableStateOf(currentUrl) }
-    StyledDialog(title = "Remote Settings", onDismiss = onDismiss) {
-        OutlinedTextField(
-                value = url,
-                onValueChange = { url = it },
-                label = { Text("Remote URL") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                colors =
-                        OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = AccentBlue,
-                                unfocusedBorderColor = BorderColor,
-                                focusedLabelColor = AccentBlue,
-                                unfocusedLabelColor = TextTertiary
-                        )
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(
-                onClick = { onConfirm(url) },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
-                shape = RoundedCornerShape(6.dp)
-        ) { Text("Save Remote") }
-    }
-}
-
-@Composable
-fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String) -> Unit) {
-    val context = LocalContext.current
-    var url by remember { mutableStateOf("") }
-    var targetPath by remember { mutableStateOf(File(context.filesDir, "alpine/home/").absolutePath + "/") }
-
-    StyledDialog(title = "Clone Repository", onDismiss = onDismiss) {
-        Text(
-                "Clone a Git repository using SSH authentication.",
-                color = TextSecondary,
-                fontSize = 12.sp
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-                value = url,
-                onValueChange = { newUrl ->
-                    url = newUrl
-                    // Auto-update target path if it's still the default or empty
-                    if (newUrl.isNotBlank()) {
-                        val repoName = newUrl.substringAfterLast("/").removeSuffix(".git")
-                        if (repoName.isNotBlank()) {
-                            targetPath = File(context.filesDir, "alpine/home/$repoName").absolutePath
-                        }
-                    }
-                },
-                label = { Text("Repository URL") },
-                placeholder = { Text("git@github.com:user/repo.git") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                colors =
-                        OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = AccentBlue,
-                                unfocusedBorderColor = BorderColor,
-                                focusedLabelColor = AccentBlue,
-                                unfocusedLabelColor = TextTertiary
-                        )
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-                value = targetPath,
-                onValueChange = { targetPath = it },
-                label = { Text("Clone To (Full Path)") },
-                placeholder = { Text(File(context.filesDir, "alpine/home/my-project").absolutePath) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                colors =
-                        OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = AccentBlue,
-                                unfocusedBorderColor = BorderColor,
-                                focusedLabelColor = AccentBlue,
-                                unfocusedLabelColor = TextTertiary
-                        )
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-                "Tip: Use internal storage for better compatibility with Alpine Linux",
-                color = TextTertiary,
-                fontSize = 10.sp,
-                fontStyle = FontStyle.Italic
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // SSH Info
-        Row(
-                modifier =
-                        Modifier.fillMaxWidth()
-                                .background(AccentBlue.copy(alpha = 0.1f), RoundedCornerShape(6.dp))
-                                .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Rounded.Info, null, tint = AccentBlue, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                    "Using SSH authentication - ensure your SSH keys are configured",
-                    color = TextSecondary,
-                    fontSize = 11.sp
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-                onClick = { onClone(url, targetPath) },
-                enabled = url.isNotBlank() && targetPath.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
-                shape = RoundedCornerShape(6.dp)
-        ) {
-            Icon(Icons.Rounded.CloudDownload, null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Clone Repository")
-        }
-    }
-}
-
-@Composable
-fun CommitHistoryDialog(commits: List<CommitInfo>, onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-                colors = CardDefaults.cardColors(containerColor = BgDark),
-                modifier =
-                        Modifier.fillMaxWidth()
-                                .fillMaxHeight(0.8f)
-                                .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
-        ) {
-            Column {
-                Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                            "Commit History",
-                            color = TextPrimary,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                    )
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Rounded.Close, null, tint = TextTertiary)
-                    }
-                }
-                HorizontalDivider(color = BorderColor)
-                LazyColumn(modifier = Modifier.weight(1f)) {
-                    items(commits) { commit ->
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                        commit.shortHash,
-                                        color = AccentBlue,
-                                        fontFamily = FontFamily.Monospace,
-                                        fontSize = 12.sp
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                        commit.message,
-                                        color = TextPrimary,
-                                        fontSize = 13.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                    "${commit.author} • ${SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(commit.date)}",
-                                    color = TextTertiary,
-                                    fontSize = 11.sp
-                            )
-                        }
-                        HorizontalDivider(color = BorderColor)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DiffDialog(diffText: String, onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-                colors = CardDefaults.cardColors(containerColor = BgDark),
-                modifier =
-                        Modifier.fillMaxSize()
-                                .padding(16.dp)
-                                .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
-        ) {
-            Column {
-                Row(
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                            "File Diff",
-                            color = TextPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                    )
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Rounded.Close, null, tint = TextTertiary)
-                    }
-                }
-                HorizontalDivider(color = BorderColor)
-                Box(
-                        modifier =
-                                Modifier.weight(1f)
-                                        .padding(12.dp)
-                                        .verticalScroll(rememberScrollState())
-                ) {
-                    Text(
-                            diffText,
-                            color = TextSecondary,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp
-                    )
-                }
-            }
-        }
-    }
-}
-
 // Helper for Modifier.scale
 private fun Modifier.scale(scale: Float): Modifier =
         this.graphicsLayer(scaleX = scale, scaleY = scale)
+

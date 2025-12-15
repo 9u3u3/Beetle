@@ -17,7 +17,7 @@ import androidx.navigation.compose.rememberNavController
 import com.bsbeetle.bananaspaghetti.ui.DisableDefaultKeyboard
 import com.bsbeetle.bananaspaghetti.ui.EnterImmersiveMode
 import com.bsbeetle.bananaspaghetti.ui.navigation.AppNavigation
-import com.bsbeetle.bananaspaghetti.ui.theme.BananaSpaghettiTheme
+import com.bsbeetle.bananaspaghetti.ui.theme.BeetleTheme
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.DevWebViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
@@ -49,7 +49,7 @@ class MainActivity : ComponentActivity() {
                 enableEdgeToEdge()
 
                 setContent {
-                        BananaSpaghettiTheme(dynamicColor = false) {
+                        BeetleTheme(dynamicColor = false) {
 
                                 // System UI settings (Global settings)
                                 EnterImmersiveMode()
