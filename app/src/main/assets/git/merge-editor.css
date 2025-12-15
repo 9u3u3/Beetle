@@ -1,0 +1,254 @@
+html,
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #1e1e1e;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
+}
+
+.merge-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 400px;
+    background: #1e1e1e;
+}
+
+/* Toolbar */
+.merge-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: linear-gradient(180deg, #2d2d2d 0%, #252526 100%);
+    border-bottom: 1px solid #3a3a3a;
+    flex-shrink: 0;
+}
+
+.merge-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e1e1e1;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.merge-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.merge-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.merge-btn:active {
+    transform: scale(0.97);
+}
+
+.save-btn {
+    background: linear-gradient(180deg, #0d9a63 0%, #0a7b4f 100%);
+    color: #fff;
+    border: 1px solid #0a8055;
+}
+
+.save-btn:hover {
+    background: linear-gradient(180deg, #0fb87a 0%, #0d9a63 100%);
+}
+
+.close-btn {
+    background: rgba(255, 255, 255, 0.08);
+    color: #aaa;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 8px 12px;
+    font-size: 14px;
+}
+
+.close-btn:hover {
+    background: rgba(255, 100, 100, 0.2);
+    color: #f87171;
+    border-color: rgba(248, 113, 113, 0.4);
+}
+
+/* Editor Content */
+.merge-content {
+    flex: 1;
+    overflow: hidden;
+    min-height: 200px;
+    position: relative;
+}
+
+.merge-editor {
+    height: 100%;
+    min-height: 200px;
+    overflow: auto;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.merge-editor .cm-editor {
+    height: 100%;
+    min-height: 200px;
+    background: #1e1e1e;
+}
+
+.merge-editor .cm-scroller {
+    overflow: auto;
+}
+
+/* Conflict block styling */
+.conflict-block {
+    position: relative;
+    margin: 4px 0;
+}
+
+.conflict-header {
+    background: rgba(255, 140, 0, 0.3);
+    color: #ff8c00;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-family: monospace;
+    border-left: 3px solid #ff8c00;
+}
+
+.conflict-current {
+    background: rgba(115, 201, 145, 0.15);
+    border-left: 3px solid #73c991;
+}
+
+.conflict-separator {
+    background: rgba(255, 140, 0, 0.2);
+    color: #888;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-family: monospace;
+}
+
+.conflict-incoming {
+    background: rgba(107, 179, 245, 0.15);
+    border-left: 3px solid #6bb3f5;
+}
+
+.conflict-footer {
+    background: rgba(255, 140, 0, 0.3);
+    color: #ff8c00;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-family: monospace;
+    border-left: 3px solid #ff8c00;
+}
+
+/* Inline conflict resolution buttons */
+.conflict-actions {
+    display: flex;
+    gap: 4px;
+    padding: 4px 8px;
+    background: #2d2d2d;
+    border-left: 3px solid #ff8c00;
+}
+
+.conflict-action-btn {
+    padding: 4px 8px;
+    border: none;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.conflict-action-btn.current {
+    background: rgba(115, 201, 145, 0.3);
+    color: #73c991;
+    border: 1px solid #73c991;
+}
+
+.conflict-action-btn.current:hover {
+    background: rgba(115, 201, 145, 0.5);
+}
+
+.conflict-action-btn.incoming {
+    background: rgba(107, 179, 245, 0.3);
+    color: #6bb3f5;
+    border: 1px solid #6bb3f5;
+}
+
+.conflict-action-btn.incoming:hover {
+    background: rgba(107, 179, 245, 0.5);
+}
+
+.conflict-action-btn.both {
+    background: rgba(226, 192, 141, 0.3);
+    color: #e2c08d;
+    border: 1px solid #e2c08d;
+}
+
+.conflict-action-btn.both:hover {
+    background: rgba(226, 192, 141, 0.5);
+}
+
+/* Line decorations */
+.cm-line.conflict-marker-line {
+    background: rgba(255, 140, 0, 0.2) !important;
+}
+
+.cm-line.current-change-line {
+    background: rgba(115, 201, 145, 0.1) !important;
+}
+
+.cm-line.incoming-change-line {
+    background: rgba(107, 179, 245, 0.1) !important;
+}
+
+/* Conflict widget styling */
+.conflict-widget {
+    display: flex;
+    gap: 6px;
+    padding: 4px 8px;
+    background: #252526;
+    border-radius: 4px;
+    margin: 2px 0;
+}
+
+.conflict-widget button {
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid;
+    transition: all 0.15s;
+}
+
+.conflict-widget .accept-current {
+    background: rgba(115, 201, 145, 0.2);
+    color: #73c991;
+    border-color: #73c991;
+}
+
+.conflict-widget .accept-incoming {
+    background: rgba(107, 179, 245, 0.2);
+    color: #6bb3f5;
+    border-color: #6bb3f5;
+}
+
+.conflict-widget .accept-both {
+    background: rgba(226, 192, 141, 0.2);
+    color: #e2c08d;
+    border-color: #e2c08d;
+}
+
+.conflict-widget button:hover {
+    filter: brightness(1.2);
+}

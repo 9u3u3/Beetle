@@ -97,20 +97,35 @@ class GitTerminalManager(private val context: Context) {
                     session.insertText("chmod 700 ~/.ssh\n")
                     delay(300)
 
-                    // Write private key directly to Alpine filesystem
-                    Log.d(TAG, "🔐 Writing private key...")
+                    // Write private key to BOTH /home/.ssh and /root/.ssh (terminal runs as root)
+                    Log.d(TAG, "🔐 Writing private key to /home/.ssh and /root/.ssh...")
+
+                    // /home/.ssh/ (some setups use this)
                     val alpinePrivateKeyPath = File(context.filesDir, "alpine/home/.ssh/id_ed25519")
                     alpinePrivateKeyPath.parentFile?.mkdirs()
                     alpinePrivateKeyPath.writeText(privateKey)
+
+                    // /root/.ssh/ (Alpine terminal runs as root)
+                    val rootPrivateKeyPath = File(context.filesDir, "alpine/root/.ssh/id_ed25519")
+                    rootPrivateKeyPath.parentFile?.mkdirs()
+                    rootPrivateKeyPath.writeText(privateKey)
+
                     session.insertText("chmod 600 ~/.ssh/id_ed25519\n")
                     delay(300)
                     addToHistory("✅ Private key configured")
 
-                    // Write public key
+                    // Write public key to both locations
                     Log.d(TAG, "🔓 Writing public key...")
                     val alpinePublicKeyPath =
                             File(context.filesDir, "alpine/home/.ssh/id_ed25519.pub")
                     alpinePublicKeyPath.writeText(publicKey)
+
+                    val rootPublicKeyPath =
+                            File(context.filesDir, "alpine/root/.ssh/id_ed25519.pub")
+                    rootPublicKeyPath.parentFile
+                            ?.mkdirs() // Ensure parent directory exists for root
+                    rootPublicKeyPath.writeText(publicKey)
+
                     session.insertText("chmod 644 ~/.ssh/id_ed25519.pub\n")
                     delay(300)
                     addToHistory("✅ Public key configured")
@@ -143,6 +158,11 @@ class GitTerminalManager(private val context: Context) {
 
                     val alpineSshConfigPath = File(context.filesDir, "alpine/home/.ssh/config")
                     alpineSshConfigPath.writeText(sshConfig)
+
+                    // Also write to /root/.ssh/config
+                    val rootSshConfigPath = File(context.filesDir, "alpine/root/.ssh/config")
+                    rootSshConfigPath.writeText(sshConfig)
+
                     session.insertText("chmod 600 ~/.ssh/config\n")
                     delay(300)
                     addToHistory("✅ SSH config created")
@@ -195,6 +215,7 @@ class GitTerminalManager(private val context: Context) {
                     delay(300)
 
                     // Set GIT_SSH_COMMAND to bypass host key checking and use correct identity file
+                    // Use /home/.ssh path which is symlinked to work for Git operations
                     val sshCommand =
                             "ssh -i /home/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes"
                     session.insertText("export GIT_SSH_COMMAND='$sshCommand'\n")
@@ -227,10 +248,13 @@ class GitTerminalManager(private val context: Context) {
                             // The exit code is appended as the last line
                             val lines = content.lines().filter { it.isNotBlank() }
                             val lastLine = lines.lastOrNull()?.trim()
-                            
+
                             // Log content length for debugging
                             if (pollCount % 4 == 0) { // Log every 2 seconds
-                                Log.d(TAG, "⏳ Poll $pollCount: File exists, size=${content.length}, lastLine='$lastLine'")
+                                Log.d(
+                                        TAG,
+                                        "⏳ Poll $pollCount: File exists, size=${content.length}, lastLine='$lastLine'"
+                                )
                             }
 
                             if (lastLine?.toIntOrNull() != null) {
@@ -244,7 +268,10 @@ class GitTerminalManager(private val context: Context) {
                             }
                         } else {
                             if (pollCount % 4 == 0) {
-                                Log.d(TAG, "⏳ Poll $pollCount: File ${alpineOutputPath.absolutePath} NOT found yet")
+                                Log.d(
+                                        TAG,
+                                        "⏳ Poll $pollCount: File ${alpineOutputPath.absolutePath} NOT found yet"
+                                )
                             }
                         }
                     }

@@ -1,0 +1,165 @@
+html,
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #1e1e1e;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
+}
+
+.merge-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: #1e1e1e;
+}
+
+/* Toolbar */
+.merge-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: #252526;
+    border-bottom: 1px solid #333;
+    flex-shrink: 0;
+}
+
+.merge-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e1e1e1;
+    font-family: monospace;
+}
+
+.merge-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.merge-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.merge-btn:active {
+    transform: scale(0.98);
+}
+
+.accept-current {
+    background: rgba(115, 201, 145, 0.2);
+    color: #73c991;
+    border: 1px solid #73c991;
+}
+
+.accept-current:hover {
+    background: rgba(115, 201, 145, 0.3);
+}
+
+.accept-incoming {
+    background: rgba(107, 179, 245, 0.2);
+    color: #6bb3f5;
+    border: 1px solid #6bb3f5;
+}
+
+.accept-incoming:hover {
+    background: rgba(107, 179, 245, 0.3);
+}
+
+.accept-both {
+    background: rgba(226, 192, 141, 0.2);
+    color: #e2c08d;
+    border: 1px solid #e2c08d;
+}
+
+.accept-both:hover {
+    background: rgba(226, 192, 141, 0.3);
+}
+
+.save-btn {
+    background: #007acc;
+    color: #fff;
+    border: none;
+}
+
+.save-btn:hover {
+    background: #0098ff;
+}
+
+/* Sections */
+.merge-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.merge-header {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    flex-shrink: 0;
+}
+
+.current-header {
+    background: rgba(115, 201, 145, 0.1);
+    border-bottom: 2px solid #73c991;
+}
+
+.result-header {
+    background: rgba(0, 122, 204, 0.2);
+    border-bottom: 2px solid #007acc;
+}
+
+.incoming-header {
+    background: rgba(107, 179, 245, 0.1);
+    border-bottom: 2px solid #6bb3f5;
+}
+
+.merge-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.current-header .merge-label {
+    color: #73c991;
+}
+
+.result-header .merge-label {
+    color: #007acc;
+}
+
+.incoming-header .merge-label {
+    color: #6bb3f5;
+}
+
+.merge-editor {
+    flex: 1;
+    overflow: auto;
+    min-height: 0;
+}
+
+/* CodeMirror overrides */
+.merge-editor .cm-editor {
+    height: 100%;
+    background: #1e1e1e;
+}
+
+.merge-editor .cm-scroller {
+    overflow: auto;
+}
+
+/* Conflict markers */
+.conflict-marker {
+    background: rgba(255, 140, 0, 0.2);
+    border-left: 3px solid #ff8c00;
+}

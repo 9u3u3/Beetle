@@ -399,22 +399,13 @@ fun InitialEditorUI(navController: NavController) {
                             end.linkTo(parent.end)
                             width = Dimension.fillToConstraints
                             height = Dimension.fillToConstraints
-                        },
-                        mode = topRightMode,
-                        gitViewModel = gitViewModel,
-                        fileViewModel = fileViewModel,
-                        bufferViewModel = bufferViewModel,
-                        currentFilePath = fileViewModel.currentFilePath,
-                        selectedFolderUri = fileViewModel.selectedFolderUri,
-                        onCommitClick = { files ->
-                            pendingCommitFiles = files
-                            isCommitAndPush = false
-                            showCommitDialog = true
-                        },
-                        onPushClick = { gitViewModel.push() },
-                        onFileOpened = onFileOpened,
-                        onFolderOpened = onFolderOpened
-                )
+                        }
+                ) {
+                    if (showGitMenu) {
+                        LaunchedEffect(Unit) { gitViewModel.initializeGit() }
+                        com.bsbeetle.bananaspaghetti.directGit.ui.LandscapeGitPanel(gitViewModel)
+                    }
+                }
 
                 if (uiState.isLeftKeyboardVisible) {
                     SplitKeyboardHalf(
@@ -566,8 +557,38 @@ fun InitialEditorUI(navController: NavController) {
                 onDismiss = { showFileMenu = false },
                 bufferViewModel = bufferViewModel,
                 fileViewModel = fileViewModel,
-                onFileOpened = onFileOpened,
-                onFolderOpened = onFolderOpened
+                onFileOpened = { documentFile ->
+                    // Add file to buffer and load it
+                    if (bufferViewModel.filesOpenedList.none { it.uri == documentFile.uri }) {
+                        bufferViewModel.filesOpenedList.add(documentFile)
+                    }
+                    fileViewModel.selectedUri = documentFile.uri
+                    fileViewModel.currentFilePath = documentFile.uri.toString()
+                    bufferViewModel.currentFile.value = documentFile
+
+                    val content = readFromFile(context, documentFile.uri)
+                    bufferViewModel.bufferLine[documentFile.uri.toString()] =
+                            content // Use URI as key
+                    loadContentWhenReady(editorViewModel.webView, content)
+                },
+                onFolderOpened = { folder ->
+                    // Create new editor session for folder
+                    // Session auto-registers and sets activeSessionIndex in its init{}
+                    val newSession =
+                            EditorSession(context.applicationContext, folder.name ?: "Project")
+                    newSession.projectRoot = folder
+
+                    // Update FileViewModel to show new folder in file tree
+                    fileViewModel.selectedFolderUri = folder.uri
+
+                    // Set up editor with new session's WebView
+                    editorViewModel.setEditorWebView(newSession.getOrInitView())
+
+                    // Navigate to editor with new session
+                    navController.navigate(Screen.OpenFolder.route) {
+                        popUpTo(Screen.Home.route) { inclusive = false }
+                    }
+                }
         )
     }
 }

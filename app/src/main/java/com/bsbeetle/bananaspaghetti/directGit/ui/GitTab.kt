@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.DocumentsContract
 import android.provider.Settings
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
@@ -11,7 +12,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import android.provider.DocumentsContract
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,7 +20,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.bsbeetle.bananaspaghetti.LocalFileViewModel
@@ -106,6 +107,7 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
     var showConsole by remember { mutableStateOf(false) }
     var showCloneDialog by remember { mutableStateOf(false) }
     var showSshSetupDialog by remember { mutableStateOf(false) }
+    var showPullBranchDialog by remember { mutableStateOf(false) }
 
     // Show SSH setup dialog if keys are not configured (only once per session)
     var hasShownSshDialog by remember { mutableStateOf(false) }
@@ -119,10 +121,18 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
     // Action to retry after auth
     var authAction by remember { mutableStateOf<((String, String, Boolean) -> Unit)?>(null) }
 
-    // Unified changes list
+    // Unified changes list (including conflicted files)
     val allChanges =
-            remember(uiState.stagedFiles, uiState.modifiedFiles, uiState.untrackedFiles) {
-                (uiState.stagedFiles + uiState.modifiedFiles + uiState.untrackedFiles)
+            remember(
+                    uiState.stagedFiles,
+                    uiState.modifiedFiles,
+                    uiState.untrackedFiles,
+                    uiState.conflictedFiles
+            ) {
+                (uiState.stagedFiles +
+                                uiState.modifiedFiles +
+                                uiState.untrackedFiles +
+                                uiState.conflictedFiles)
                         .distinct()
                         .sorted()
             }
@@ -307,6 +317,19 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
         DiffDialog(diffText = diff, onDismiss = { viewModel.clearDiff() })
     }
 
+    // Merge Editor Dialog (for conflict resolution)
+    if (uiState.showMergeEditor &&
+                    uiState.mergeEditorFile != null &&
+                    uiState.mergeEditorContent != null
+    ) {
+        MergeEditorDialog(
+                filePath = uiState.mergeEditorFile!!,
+                content = uiState.mergeEditorContent!!,
+                onSave = { path, content -> viewModel.saveMergedContent(path, content) },
+                onDismiss = { viewModel.closeMergeEditor() }
+        )
+    }
+
     Column(modifier = Modifier.fillMaxSize().background(BgDark)) {
         // --- Header ---
         // === Git Header ===
@@ -314,9 +337,11 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                 branch = uiState.currentBranch.ifEmpty { "master" },
                 ahead = uiState.aheadCount,
                 behind = uiState.behindCount,
+                remoteBranches = uiState.branches.filter { it.isRemote },
                 onBranchClick = { showBranchDialog = true },
                 onFetch = { viewModel.fetch() },
                 onPull = { viewModel.pull() },
+                onPullFromBranch = { showPullBranchDialog = true },
                 onPush = { viewModel.push() },
                 onAddAll = {
                     val allFiles = uiState.modifiedFiles + uiState.untrackedFiles
@@ -329,6 +354,18 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                 onSshSetupClick = { showSshSetupDialog = true },
                 sshKeysConfigured = uiState.sshKeysConfigured
         )
+
+        // Pull Branch Dialog
+        if (showPullBranchDialog) {
+            PullBranchDialog(
+                    remoteBranches = uiState.branches.filter { it.isRemote },
+                    onDismiss = { showPullBranchDialog = false },
+                    onSelect = { branchName ->
+                        viewModel.pullFromBranch(branchName)
+                        showPullBranchDialog = false
+                    }
+            )
+        }
 
         // --- Main Content ---
         Box(modifier = Modifier.weight(1f)) {
@@ -426,8 +463,10 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
 
                         items(allChanges) { path ->
                             val isStaged = uiState.stagedFiles.contains(path)
+                            val isConflicted = uiState.conflictedFiles.contains(path)
                             val status =
                                     when {
+                                        isConflicted -> "C" // Conflict
                                         uiState.untrackedFiles.contains(path) -> "U"
                                         uiState.modifiedFiles.contains(path) -> "M"
                                         else -> "S"
@@ -443,7 +482,14 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                                                         selectedFiles - path
                                                 else selectedFiles + path
                                     },
-                                    onClick = { viewModel.loadDiff(path) }
+                                    onClick = {
+                                        // Open merge editor for conflicted files, diff for others
+                                        if (isConflicted) {
+                                            viewModel.openMergeEditor(path)
+                                        } else {
+                                            viewModel.loadDiff(path)
+                                        }
+                                    }
                             )
                         }
                     }
@@ -579,9 +625,11 @@ fun GitHeader(
         branch: String,
         ahead: Int,
         behind: Int,
+        remoteBranches: List<BranchInfo>,
         onBranchClick: () -> Unit,
         onFetch: () -> Unit,
         onPull: () -> Unit,
+        onPullFromBranch: () -> Unit,
         onPush: () -> Unit,
         onAddAll: () -> Unit,
         onStash: () -> Unit,
@@ -600,34 +648,42 @@ fun GitHeader(
         ) {
             // Branch Selector (Pill Shape)
             Surface(
+                    shape = RoundedCornerShape(6.dp),
                     color = BgDark,
-                    shape = RoundedCornerShape(50),
                     border = BorderStroke(1.dp, BorderColor),
                     modifier = Modifier.clickable(onClick = onBranchClick)
             ) {
                 Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Icon(
                             Icons.Rounded.AccountTree,
                             null,
                             tint = AccentBlue,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(12.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                            branch,
-                            color = TextPrimary,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                            modifier =
+                                    Modifier.widthIn(max = 100.dp)
+                                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        Text(
+                                branch,
+                                color = TextPrimary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                softWrap = false
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                             Icons.Rounded.ExpandMore,
                             null,
                             tint = TextTertiary,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(12.dp)
                     )
                 }
             }
@@ -715,7 +771,79 @@ fun GitHeader(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            ActionButton(Icons.Rounded.ArrowDownward, "Pull", onPull)
+            // Pull Dropdown
+            var showPullMenu by remember { mutableStateOf(false) }
+            Box {
+                Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier =
+                                Modifier.clip(RoundedCornerShape(8.dp))
+                                        .clickable { showPullMenu = true }
+                                        .padding(vertical = 8.dp, horizontal = 12.dp)
+                ) {
+                    Icon(
+                            Icons.Rounded.ArrowDownward,
+                            "Pull",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                                "Pull",
+                                color = TextSecondary,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium
+                        )
+                        Icon(
+                                Icons.Rounded.ArrowDropDown,
+                                null,
+                                tint = TextTertiary,
+                                modifier = Modifier.size(10.dp)
+                        )
+                    }
+                }
+
+                DropdownMenu(
+                        expanded = showPullMenu,
+                        onDismissRequest = { showPullMenu = false },
+                        modifier =
+                                Modifier.background(BgCard)
+                                        .border(1.dp, BorderColor, RoundedCornerShape(4.dp))
+                ) {
+                    DropdownMenuItem(
+                            text = { Text("Pull (current branch)", color = TextPrimary) },
+                            onClick = {
+                                onPull()
+                                showPullMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(
+                                        Icons.Rounded.ArrowDownward,
+                                        null,
+                                        tint = AccentBlue,
+                                        modifier = Modifier.size(18.dp)
+                                )
+                            }
+                    )
+                    DropdownMenuItem(
+                            text = { Text("Pull from branch...", color = TextPrimary) },
+                            onClick = {
+                                onPullFromBranch()
+                                showPullMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(
+                                        Icons.Rounded.AccountTree,
+                                        null,
+                                        tint = AccentGreen,
+                                        modifier = Modifier.size(18.dp)
+                                )
+                            }
+                    )
+                }
+            }
+
             ActionButton(Icons.Rounded.ArrowUpward, "Push", onPush)
             ActionButton(Icons.Rounded.Sync, "Fetch", onFetch)
             ActionButton(Icons.Rounded.Add, "Add All", onAddAll)
@@ -1599,7 +1727,9 @@ fun RemoteDialog(currentUrl: String, onDismiss: () -> Unit, onConfirm: (String) 
 fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String) -> Unit) {
     val context = LocalContext.current
     var url by remember { mutableStateOf("") }
-    var targetPath by remember { mutableStateOf(File(context.filesDir, "alpine/home/").absolutePath + "/") }
+    var targetPath by remember {
+        mutableStateOf(File(context.filesDir, "alpine/home/").absolutePath + "/")
+    }
 
     StyledDialog(title = "Clone Repository", onDismiss = onDismiss) {
         Text(
@@ -1617,7 +1747,8 @@ fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String) -> Unit) {
                     if (newUrl.isNotBlank()) {
                         val repoName = newUrl.substringAfterLast("/").removeSuffix(".git")
                         if (repoName.isNotBlank()) {
-                            targetPath = File(context.filesDir, "alpine/home/$repoName").absolutePath
+                            targetPath =
+                                    File(context.filesDir, "alpine/home/$repoName").absolutePath
                         }
                     }
                 },
@@ -1639,7 +1770,9 @@ fun CloneDialog(onDismiss: () -> Unit, onClone: (String, String) -> Unit) {
                 value = targetPath,
                 onValueChange = { targetPath = it },
                 label = { Text("Clone To (Full Path)") },
-                placeholder = { Text(File(context.filesDir, "alpine/home/my-project").absolutePath) },
+                placeholder = {
+                    Text(File(context.filesDir, "alpine/home/my-project").absolutePath)
+                },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors =
@@ -1757,44 +1890,210 @@ fun CommitHistoryDialog(commits: List<CommitInfo>, onDismiss: () -> Unit) {
 
 @Composable
 fun DiffDialog(diffText: String, onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-                colors = CardDefaults.cardColors(containerColor = BgDark),
-                modifier =
-                        Modifier.fillMaxSize()
-                                .padding(16.dp)
-                                .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
-        ) {
-            Column {
+    Dialog(
+            onDismissRequest = onDismiss,
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(modifier = Modifier.fillMaxSize().background(BgDark)) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Header
                 Row(
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        modifier = Modifier.fillMaxWidth().background(BgCard).padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                            "File Diff",
-                            color = TextPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                                Icons.Rounded.Difference,
+                                null,
+                                tint = AccentBlue,
+                                modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                                "File Diff",
+                                color = TextPrimary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                        )
+                    }
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Rounded.Close, null, tint = TextTertiary)
                     }
                 }
                 HorizontalDivider(color = BorderColor)
-                Box(
-                        modifier =
-                                Modifier.weight(1f)
-                                        .padding(12.dp)
-                                        .verticalScroll(rememberScrollState())
+
+                // Diff Content with colorized lines
+                LazyColumn(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                    items(diffText.lines()) { line ->
+                        val (bgColor, textColor) =
+                                when {
+                                    line.startsWith("+") && !line.startsWith("+++") ->
+                                            Color(0xFF2D4F3E) to Color(0xFF73C991)
+                                    line.startsWith("-") && !line.startsWith("---") ->
+                                            Color(0xFF4F2D2D) to Color(0xFFF87171)
+                                    line.startsWith("@@") -> Color(0xFF2D3A4F) to Color(0xFF6BB3F5)
+                                    else -> Color.Transparent to TextSecondary
+                                }
+                        Box(
+                                modifier =
+                                        Modifier.fillMaxWidth()
+                                                .background(bgColor)
+                                                .padding(horizontal = 12.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                    line,
+                                    color = textColor,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 12.sp,
+                                    lineHeight = 18.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Merge Editor Dialog with WebView-based inline conflict resolution. */
+@Composable
+fun MergeEditorDialog(
+        filePath: String,
+        content: String,
+        onSave: (String, String) -> Unit,
+        onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+
+    // Create merge editor session
+    val mergeSession =
+            remember(filePath) {
+                MergeEditorSession(
+                        context = context,
+                        onSave = { path, mergedContent -> onSave(path, mergedContent) },
+                        onClose = { onDismiss() }
+                )
+            }
+
+    // Set content when session is ready
+    LaunchedEffect(content, filePath) { mergeSession.setMergeContent(content, filePath) }
+
+    // Cleanup on dispose
+    DisposableEffect(Unit) { onDispose { mergeSession.destroy() } }
+
+    Dialog(
+            onDismissRequest = onDismiss,
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        // Full screen WebView - no Card wrapper, no header
+        Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1E1E1E))) {
+            mergeSession.view?.let { webView ->
+                androidx.compose.ui.viewinterop.AndroidView(
+                        factory = { webView },
+                        modifier = Modifier.fillMaxSize()
+                )
+            }
+                    ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = AccentBlue)
+                    }
+        }
+    }
+}
+
+/** Dialog to select which remote branch to pull from. */
+@Composable
+fun PullBranchDialog(
+        remoteBranches: List<BranchInfo>,
+        onDismiss: () -> Unit,
+        onSelect: (String) -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+                colors = CardDefaults.cardColors(containerColor = BgCard),
+                modifier =
+                        Modifier.fillMaxWidth()
+                                .padding(16.dp)
+                                .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
+        ) {
+            Column {
+                // Header
+                Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                            diffText,
-                            color = TextSecondary,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                                Icons.Rounded.ArrowDownward,
+                                null,
+                                tint = AccentBlue,
+                                modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                                "Pull from Remote Branch",
+                                color = TextPrimary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                        )
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Rounded.Close, null, tint = TextTertiary)
+                    }
+                }
+                HorizontalDivider(color = BorderColor)
+
+                // Branch List
+                if (remoteBranches.isEmpty()) {
+                    Box(
+                            modifier = Modifier.fillMaxWidth().padding(32.dp),
+                            contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                    Icons.Rounded.CloudOff,
+                                    null,
+                                    tint = TextTertiary,
+                                    modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                    "No remote branches found",
+                                    color = TextSecondary,
+                                    fontSize = 13.sp
+                            )
+                            Text("Try fetching first", color = TextTertiary, fontSize = 11.sp)
+                        }
+                    }
+                } else {
+                    LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                        items(remoteBranches) { branch ->
+                            Row(
+                                    modifier =
+                                            Modifier.fillMaxWidth()
+                                                    .clickable {
+                                                        // Extract just the branch name (e.g.,
+                                                        // "origin/main" -> "main")
+                                                        val branchName =
+                                                                branch.name.substringAfter("/")
+                                                        onSelect(branchName)
+                                                    }
+                                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                        Icons.Rounded.Cloud,
+                                        null,
+                                        tint = AccentBlue,
+                                        modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(branch.name, color = TextPrimary, fontSize = 14.sp)
+                            }
+                            HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
+                        }
+                    }
                 }
             }
         }
