@@ -323,19 +323,13 @@ val alpineIndex = parentPath.indexOf("/alpine/")
                         Modifier.constrainAs(rightBox) {
                             top.linkTo(topRight.bottom)
                             bottom.linkTo(rightKb.top)
-                            start.linkTo(editor.start)
+                            start.linkTo(editor.end)
                             end.linkTo(parent.end)
                             width = Dimension.fillToConstraints
                             height = Dimension.fillToConstraints
-                        }
-                ) {
-                    if (showGitMenu) {
-                        LaunchedEffect(Unit) {
-                            gitViewModel.initializeGit()
-                        }
-                        com.bsbeetle.bananaspaghetti.directGit.ui.LandscapeGitPanel(gitViewModel)
-                    }
-                }
+                        },
+                        isVisible = showGitMenu
+                )
 
                 if (uiState.isLeftKeyboardVisible) {
                     SplitKeyboardHalf(
