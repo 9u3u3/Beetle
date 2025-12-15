@@ -142,6 +142,52 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             }
+
+            // File watcher: Monitor repository for file changes and auto-refresh
+            viewModelScope.launch(Dispatchers.IO) {
+                var lastRefreshTime = 0L
+                val debounceMs = 500L // Wait 500ms after last change before refreshing
+
+                while (true) {
+                    delay(1000) // Check every second
+
+                    val root = currentRoot
+                    if (root != null && root.exists() && File(root, ".git").exists()) {
+                        // Check if any tracked files have changed
+                        val repo = repository
+                        if (repo != null && !_uiState.value.isLoading) {
+                            val currentTime = System.currentTimeMillis()
+
+                            // Track .git/index changes (for staging/commits done via terminal)
+                            val gitIndexFile = File(root, ".git/index")
+                            val indexModTime =
+                                    if (gitIndexFile.exists()) gitIndexFile.lastModified() else 0L
+
+                            // Also check working directory files (limited depth for performance)
+                            val workingDirChanged =
+                                    root.listFiles()?.any { file ->
+                                        !file.name.startsWith(".") &&
+                                                file.lastModified() > lastRefreshTime
+                                    }
+                                            ?: false
+
+                            // Trigger refresh if files or git index changed
+                            val gitChanged = indexModTime > lastRefreshTime
+
+                            if ((workingDirChanged || gitChanged) &&
+                                            (currentTime - lastRefreshTime > debounceMs)
+                            ) {
+                                Log.d(
+                                        "GitViewModel",
+                                        "📂 File changes detected, auto-refreshing..."
+                                )
+                                lastRefreshTime = currentTime
+                                refreshStatus()
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -532,7 +578,23 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     fun loadDiff(filePath: String) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(operationInProgress = "Loading diff...")
-            val diff = repository?.getDiff(filePath) ?: "No diff available"
+
+            // Try JGit first
+            var diff = repository?.getDiff(filePath) ?: "No diff available"
+
+            // If JGit failed (missing objects), try using Alpine's git command as fallback
+            if (diff.contains("Repository objects missing") || diff.contains("Error loading diff")
+            ) {
+                Log.d("GitViewModel", "JGit diff failed, trying Alpine git diff...")
+                val repoPath = currentRoot?.absolutePath
+                if (repoPath != null) {
+                    val result = alpineGitHelper.getDiff(repoPath, filePath)
+                    if (result.isSuccess) {
+                        diff = result.getOrNull() ?: diff
+                    }
+                }
+            }
+
             _uiState.value = _uiState.value.copy(currentDiff = diff, operationInProgress = null)
         }
     }

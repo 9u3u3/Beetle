@@ -28,17 +28,30 @@ class DiffViewerSession(private val context: Context, private val onClose: () ->
     private fun createView() {
         webView =
                 WebView(context).apply {
+                    // Set layout params to fill available space
+                    layoutParams =
+                            android.view.ViewGroup.LayoutParams(
+                                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                                    android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                            )
+
                     WebView.setWebContentsDebuggingEnabled(true)
                     settings.apply {
                         javaScriptEnabled = true
                         domStorageEnabled = true
                         allowFileAccess = true
-                        allowUniversalAccessFromFileURLs = true
+                        @Suppress("DEPRECATION") allowUniversalAccessFromFileURLs = true
                         cacheMode = WebSettings.LOAD_NO_CACHE
                         setSupportZoom(false)
+                        useWideViewPort = true
+                        loadWithOverviewMode = true
                     }
 
                     addJavascriptInterface(DiffJsInterface(), "AndroidDiff")
+
+                    // Ensure WebView has visible background
+                    setBackgroundColor(android.graphics.Color.parseColor("#1e1e1e"))
+                    setInitialScale(100)
 
                     webViewClient =
                             object : WebViewClient() {

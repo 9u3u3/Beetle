@@ -12,6 +12,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,7 +20,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.bsbeetle.bananaspaghetti.LocalFileViewModel
@@ -656,34 +657,42 @@ fun GitHeader(
         ) {
             // Branch Selector (Pill Shape)
             Surface(
+                    shape = RoundedCornerShape(6.dp),
                     color = BgDark,
-                    shape = RoundedCornerShape(50),
                     border = BorderStroke(1.dp, BorderColor),
                     modifier = Modifier.clickable(onClick = onBranchClick)
             ) {
                 Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Icon(
                             Icons.Rounded.AccountTree,
                             null,
                             tint = AccentBlue,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(12.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                            branch,
-                            color = TextPrimary,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                            modifier =
+                                    Modifier.widthIn(max = 100.dp)
+                                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        Text(
+                                branch,
+                                color = TextPrimary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                softWrap = false
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                             Icons.Rounded.ExpandMore,
                             null,
                             tint = TextTertiary,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(12.dp)
                     )
                 }
             }
@@ -1889,44 +1898,66 @@ fun CommitHistoryDialog(commits: List<CommitInfo>, onDismiss: () -> Unit) {
 
 @Composable
 fun DiffDialog(diffText: String, onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-                colors = CardDefaults.cardColors(containerColor = BgDark),
-                modifier =
-                        Modifier.fillMaxSize()
-                                .padding(16.dp)
-                                .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
-        ) {
-            Column {
+    Dialog(
+            onDismissRequest = onDismiss,
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(modifier = Modifier.fillMaxSize().background(BgDark)) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Header
                 Row(
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        modifier = Modifier.fillMaxWidth().background(BgCard).padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                            "File Diff",
-                            color = TextPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                                Icons.Rounded.Difference,
+                                null,
+                                tint = AccentBlue,
+                                modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                                "File Diff",
+                                color = TextPrimary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                        )
+                    }
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Rounded.Close, null, tint = TextTertiary)
                     }
                 }
                 HorizontalDivider(color = BorderColor)
-                Box(
-                        modifier =
-                                Modifier.weight(1f)
-                                        .padding(12.dp)
-                                        .verticalScroll(rememberScrollState())
-                ) {
-                    Text(
-                            diffText,
-                            color = TextSecondary,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp
-                    )
+
+                // Diff Content with colorized lines
+                LazyColumn(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                    items(diffText.lines()) { line ->
+                        val (bgColor, textColor) =
+                                when {
+                                    line.startsWith("+") && !line.startsWith("+++") ->
+                                            Color(0xFF2D4F3E) to Color(0xFF73C991)
+                                    line.startsWith("-") && !line.startsWith("---") ->
+                                            Color(0xFF4F2D2D) to Color(0xFFF87171)
+                                    line.startsWith("@@") -> Color(0xFF2D3A4F) to Color(0xFF6BB3F5)
+                                    else -> Color.Transparent to TextSecondary
+                                }
+                        Box(
+                                modifier =
+                                        Modifier.fillMaxWidth()
+                                                .background(bgColor)
+                                                .padding(horizontal = 12.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                    line,
+                                    color = textColor,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 12.sp,
+                                    lineHeight = 18.sp
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -1959,63 +1990,21 @@ fun MergeEditorDialog(
     // Cleanup on dispose
     DisposableEffect(Unit) { onDispose { mergeSession.destroy() } }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-                colors = CardDefaults.cardColors(containerColor = BgDark),
-                modifier =
-                        Modifier.fillMaxSize()
-                                .padding(8.dp)
-                                .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
-        ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // Header
-                Row(
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                                Icons.Rounded.MergeType,
-                                null,
-                                tint = AccentOrange,
-                                modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                    "Resolve Conflict",
-                                    color = TextPrimary,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                    filePath.split("/").lastOrNull() ?: filePath,
-                                    color = TextSecondary,
-                                    fontSize = 11.sp
-                            )
-                        }
-                    }
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Rounded.Close, null, tint = TextTertiary)
-                    }
-                }
-                HorizontalDivider(color = BorderColor)
-
-                // WebView for merge editor
-                Box(modifier = Modifier.weight(1f)) {
-                    mergeSession.view?.let { webView ->
-                        androidx.compose.ui.viewinterop.AndroidView(
-                                factory = { webView },
-                                modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                            ?: Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                            ) { CircularProgressIndicator(color = AccentBlue) }
-                }
+    Dialog(
+            onDismissRequest = onDismiss,
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        // Full screen WebView - no Card wrapper, no header
+        Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1E1E1E))) {
+            mergeSession.view?.let { webView ->
+                androidx.compose.ui.viewinterop.AndroidView(
+                        factory = { webView },
+                        modifier = Modifier.fillMaxSize()
+                )
             }
+                    ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = AccentBlue)
+                    }
         }
     }
 }

@@ -438,6 +438,9 @@ class GitRepository(private val rootDir: File) {
 
             val result = out.toString()
             if (result.isBlank()) "No changes detected" else result
+        } catch (e: org.eclipse.jgit.errors.MissingObjectException) {
+            Log.e("GitRepository", "Missing blob for diff - repo may need repair", e)
+            "Unable to show diff: Repository objects missing.\n\nTry running 'git fsck' in terminal to check repo integrity,\nor 'git checkout -- $filePath' to restore the file."
         } catch (e: Exception) {
             Log.e("GitRepository", "Failed to get diff", e)
             "Error loading diff: ${e.message}"
