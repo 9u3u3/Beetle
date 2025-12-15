@@ -13,9 +13,9 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -36,7 +36,6 @@ import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.CloudUpload
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Sync
@@ -69,6 +68,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
@@ -76,10 +76,10 @@ import androidx.compose.ui.window.PopupProperties
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.documentfile.provider.DocumentFile
+import com.bsbeetle.bananaspaghetti.LocalFileViewModel
 import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.directGit.ui.BranchDialog
 import com.bsbeetle.bananaspaghetti.directGit.ui.CommitHistoryDialog
-import com.bsbeetle.bananaspaghetti.directGit.ui.FileChangeItem
 import com.bsbeetle.bananaspaghetti.directGit.ui.NewBranchDialog
 import com.bsbeetle.bananaspaghetti.directGit.viewmodel.GitViewModel
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.FileOperations
@@ -87,6 +87,8 @@ import com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 // Theme colors (matching GitTab.kt)
 private val BgDark = Color(0xFF1E1E1E)
@@ -94,6 +96,7 @@ private val BgCard = Color(0xFF252526)
 private val BgHover = Color(0xFF2D2D2D)
 private val AccentBlue = Color(0xFF007ACC)
 private val AccentGreen = Color(0xFF73C991)
+private val AccentYellow = Color(0xFFCCA700)
 private val AccentOrange = Color(0xFFFF8C00)
 private val TextPrimary = Color(0xFFE1E1E1)
 private val TextSecondary = Color(0xFFAAAAAA)
@@ -115,12 +118,15 @@ fun TopRightBox(
         fileViewModel: FileViewModel? = null,
         bufferViewModel: BufferViewModel? = null,
         currentFilePath: String? = null,
-        selectedFolderUri: android.net.Uri? = null,
         onCommitClick: (selectedFiles: List<String>) -> Unit = {},
         onPushClick: () -> Unit = {},
         onFileOpened: (DocumentFile) -> Unit = {},
         onFolderOpened: (DocumentFile) -> Unit = {}
 ) {
+    // Use LocalFileViewModel directly (same as GitTab) for live updates
+    val localFileViewModel: FileViewModel = LocalFileViewModel.current
+    val context = LocalContext.current
+
     // Collect uiState from GitViewModel (same as portrait mode)
     val uiState by
             (gitViewModel?.uiState
@@ -133,109 +139,175 @@ fun TopRightBox(
     var showNewBranchDialog by remember { mutableStateOf(false) }
     var showHistoryDialog by remember { mutableStateOf(false) }
 
-    // Debug: Log uiState changes
-    // android.util.Log.d("TopRightBox", "📊 uiState: staged=${uiState.stagedFiles.size},
-    // modified=${uiState.modifiedFiles.size}, untracked=${uiState.untrackedFiles.size},
-    // branch=${uiState.currentBranch}")
+    // DEBUG: Log mode immediately when composable runs
+    android.util.Log.d(
+            "TopRightBox",
+            "🎯 TopRightBox composable: mode=$mode, gitViewModel=${gitViewModel != null}"
+    )
+    android.util.Log.d(
+            "TopRightBox",
+            "📂 localFileViewModel.currentFilePath=${localFileViewModel.currentFilePath}"
+    )
+    android.util.Log.d(
+            "TopRightBox",
+            "📂 localFileViewModel.selectedFolderUri=${localFileViewModel.selectedFolderUri}"
+    )
 
-    // Initialize Git root directory from file path (same as portrait mode)
-    LaunchedEffect(currentFilePath) {
-        // android.util.Log.d("TopRightBox", "🔍 LaunchedEffect(currentFilePath): $currentFilePath")
-        if (currentFilePath != null) {
-            var dir = java.io.File(currentFilePath).parentFile
-            while (dir != null) {
-                if (java.io.File(dir, ".git").exists()) {
-                    // android.util.Log.d("TopRightBox", "✅ Found .git at: ${dir.absolutePath}")
-                    gitViewModel?.setRootDir(dir.absolutePath)
-                    break
-                }
-                dir = dir.parentFile
-            }
-            if (dir == null && currentFilePath.isNotEmpty()) {
-                val fallbackDir = java.io.File(currentFilePath).parentFile?.absolutePath ?: ""
-                // android.util.Log.d("TopRightBox", "⚠️ No .git found, using fallback:
-                // $fallbackDir")
-                gitViewModel?.setRootDir(fallbackDir)
-            }
-        } else {
-            // android.util.Log.d("TopRightBox", "⚠️ currentFilePath is null")
-        }
-    }
+    // Initialize Git from LocalFileViewModel's currentFilePath (same as GitTab)
+    LaunchedEffect(localFileViewModel.currentFilePath, mode) {
+        android.util.Log.d(
+                "TopRightBox",
+                "⚡ LaunchedEffect TRIGGERED: mode=$mode, path=${localFileViewModel.currentFilePath}"
+        )
+        if (mode == TopRightMode.GIT) {
+            val rawPath = localFileViewModel.currentFilePath
+            android.util.Log.d("TopRightBox", "🔍 Git mode, currentFilePath: $rawPath")
 
-    // Also watch for folder selection (same as portrait mode)
-    LaunchedEffect(selectedFolderUri) {
-        // android.util.Log.d("TopRightBox", "🔍 LaunchedEffect(selectedFolderUri):
-        // $selectedFolderUri")
-        if (selectedFolderUri != null) {
-            val uriPath = selectedFolderUri.toString()
+            // Handle content:// URIs - extract real path (same logic as selectedFolderUri)
             val realPath =
-                    when {
-                        uriPath.contains("primary:") -> {
-                            val pathPart =
-                                    uriPath.substringAfter("primary:")
-                                            .substringBefore("/document/")
-                                            .replace("%2F", "/")
-                                            .replace("%3A", ":")
-                            "/storage/emulated/0/$pathPart"
+                    if (rawPath != null && rawPath.startsWith("content://")) {
+                        try {
+                            val uri = android.net.Uri.parse(rawPath)
+                            when {
+                                uri.authority == "${context.packageName}.documents" -> {
+                                    // Alpine internal storage
+                                    val docId =
+                                            android.provider.DocumentsContract.getDocumentId(uri)
+                                    // docId format: /data/user/0/.../alpine/home/folder/file.ext
+                                    // Get parent directory
+                                    java.io.File(docId).parent
+                                }
+                                else -> null
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("TopRightBox", "Error parsing URI: $e")
+                            null
                         }
-                        uriPath.contains("primary%3A") -> {
-                            val pathPart =
-                                    uriPath.substringAfter("primary%3A")
-                                            .substringBefore("/document/")
-                                            .replace("%2F", "/")
-                                            .replace("%3A", ":")
-                            "/storage/emulated/0/$pathPart"
-                        }
-                        else -> null
+                    } else {
+                        rawPath?.let { java.io.File(it).parent }
                     }
 
-            // android.util.Log.d("TopRightBox", "📂 Extracted path from URI: $realPath")
+            android.util.Log.d(
+                    "TopRightBox",
+                    "📂 Extracted realPath from currentFilePath: $realPath"
+            )
 
             if (realPath != null) {
-                val dir = java.io.File(realPath)
-                if (dir.exists() && java.io.File(dir, ".git").exists()) {
-                    // android.util.Log.d("TopRightBox", "✅ Found .git in folder:
-                    // ${dir.absolutePath}")
-                    gitViewModel?.setRootDir(dir.absolutePath)
-                } else if (dir.exists()) {
-                    var parentDir = dir.parentFile
-                    var foundGit = false
-                    while (parentDir != null) {
-                        if (java.io.File(parentDir, ".git").exists()) {
-                            // android.util.Log.d("TopRightBox", "✅ Found .git in parent:
-                            // ${parentDir.absolutePath}")
-                            gitViewModel?.setRootDir(parentDir.absolutePath)
-                            foundGit = true
-                            break
-                        }
-                        parentDir = parentDir.parentFile
-                    }
-                    if (!foundGit) {
-                        // android.util.Log.d("TopRightBox", "⚠️ No .git found, using dir:
-                        // ${dir.absolutePath}")
+                var dir = java.io.File(realPath)
+                // Walk up to find .git
+                while (dir.parentFile != null) {
+                    if (java.io.File(dir, ".git").exists()) {
+                        android.util.Log.d("TopRightBox", "✅ Found .git at: ${dir.absolutePath}")
                         gitViewModel?.setRootDir(dir.absolutePath)
+                        break
                     }
+                    dir = dir.parentFile!!
                 }
             }
-        } else {
-            // android.util.Log.d("TopRightBox", "⚠️ selectedFolderUri is null")
-        }
-    }
-
-    // Auto-refresh when panel becomes visible
-    LaunchedEffect(mode) {
-        // android.util.Log.d("TopRightBox", "👁️ LaunchedEffect(mode): $mode,
-        // gitViewModel=${gitViewModel != null}")
-        if (mode == TopRightMode.GIT) {
-            // android.util.Log.d("TopRightBox", "🔄 Calling refreshStatus()")
+            // Initialize Git to start file watcher
+            gitViewModel?.initializeGit()
             gitViewModel?.refreshStatus()
         }
     }
 
-    // All changes combined
+    // Also watch for folder selection from LocalFileViewModel (same as GitTab)
+    LaunchedEffect(localFileViewModel.selectedFolderUri, mode) {
+        if (mode == TopRightMode.GIT) {
+            val folderUri = localFileViewModel.selectedFolderUri
+            android.util.Log.d("TopRightBox", "🔍 Git mode, selectedFolderUri: $folderUri")
+            if (folderUri != null) {
+                val uriPath = folderUri.toString()
+                val realPath =
+                        when {
+                            uriPath.contains("primary:") -> {
+                                val pathPart =
+                                        uriPath.substringAfter("primary:")
+                                                .substringBefore("/document/")
+                                                .replace("%2F", "/")
+                                                .replace("%3A", ":")
+                                "/storage/emulated/0/$pathPart"
+                            }
+                            uriPath.contains("primary%3A") -> {
+                                val pathPart =
+                                        uriPath.substringAfter("primary%3A")
+                                                .substringBefore("/document/")
+                                                .replace("%2F", "/")
+                                                .replace("%3A", ":")
+                                "/storage/emulated/0/$pathPart"
+                            }
+                            // Handle Alpine internal storage URIs (same as GitTab)
+                            folderUri.authority == "${context.packageName}.documents" -> {
+                                android.provider.DocumentsContract.getDocumentId(folderUri)
+                            }
+                            else -> null
+                        }
+
+                android.util.Log.d("TopRightBox", "📂 Extracted realPath: $realPath")
+
+                if (realPath != null) {
+                    val dir = java.io.File(realPath)
+                    if (dir.exists() && java.io.File(dir, ".git").exists()) {
+                        android.util.Log.d(
+                                "TopRightBox",
+                                "✅ Found .git in folder: ${dir.absolutePath}"
+                        )
+                        gitViewModel?.setRootDir(dir.absolutePath)
+                    } else if (dir.exists()) {
+                        var parentDir = dir.parentFile
+                        var foundGit = false
+                        while (parentDir != null) {
+                            if (java.io.File(parentDir, ".git").exists()) {
+                                android.util.Log.d(
+                                        "TopRightBox",
+                                        "✅ Found .git in parent: ${parentDir.absolutePath}"
+                                )
+                                gitViewModel?.setRootDir(parentDir.absolutePath)
+                                foundGit = true
+                                break
+                            }
+                            parentDir = parentDir.parentFile
+                        }
+                        if (!foundGit) {
+                            android.util.Log.d(
+                                    "TopRightBox",
+                                    "⚠️ No .git found, using: ${dir.absolutePath}"
+                            )
+                            gitViewModel?.setRootDir(dir.absolutePath)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Continuous refresh every 2 seconds while Git panel is visible
+    LaunchedEffect(mode) {
+        if (mode == TopRightMode.GIT) {
+            android.util.Log.d("TopRightBox", "🔄 Starting continuous refresh loop")
+            gitViewModel?.refreshStatus()
+            while (true) {
+                delay(2000)
+                android.util.Log.d(
+                        "TopRightBox",
+                        "🔄 Polling refresh... (staged=${gitViewModel?.uiState?.value?.stagedFiles?.size}, modified=${gitViewModel?.uiState?.value?.modifiedFiles?.size})"
+                )
+                gitViewModel?.refreshStatus()
+            }
+        }
+    }
+
+    // All changes combined (same logic as GitTab)
     val allChanges =
-            remember(uiState.stagedFiles, uiState.modifiedFiles, uiState.untrackedFiles) {
-                (uiState.stagedFiles + uiState.modifiedFiles + uiState.untrackedFiles)
+            remember(
+                    uiState.stagedFiles,
+                    uiState.modifiedFiles,
+                    uiState.untrackedFiles,
+                    uiState.conflictedFiles
+            ) {
+                (uiState.stagedFiles +
+                                uiState.modifiedFiles +
+                                uiState.untrackedFiles +
+                                uiState.conflictedFiles)
                         .distinct()
                         .sorted()
             }
@@ -840,95 +912,132 @@ private fun GitActionsGrid(
         onPushClick: () -> Unit,
         onHistoryClick: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        // Row 1: Pull, Push, Add All
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        // Single row of compact icon buttons
         Row(
-                Modifier.fillMaxWidth().weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
         ) {
-            GitActionIcon(
+            CompactActionIcon(
                     icon = Icons.Rounded.ArrowDownward,
                     label = "Pull",
                     color = AccentBlue,
-                    onClick = { gitViewModel?.pull() },
-                    modifier = Modifier.weight(1f).fillMaxHeight()
+                    onClick = { gitViewModel?.pull() }
             )
-            GitActionIcon(
+            CompactActionIcon(
                     icon = Icons.Rounded.ArrowUpward,
                     label = "Push",
                     color = AccentGreen,
-                    onClick = onPushClick,
-                    modifier = Modifier.weight(1f).fillMaxHeight()
+                    onClick = onPushClick
             )
-            GitActionIcon(
+            CompactActionIcon(
+                    icon = Icons.Rounded.Sync,
+                    label = "Fetch",
+                    color = TextSecondary,
+                    onClick = { gitViewModel?.fetch() }
+            )
+            CompactActionIcon(
                     icon = Icons.Rounded.Add,
-                    label = "Add",
+                    label = "Add All",
                     color = TextSecondary,
                     onClick = {
                         val allFiles = uiState.modifiedFiles + uiState.untrackedFiles
                         allFiles.forEach { gitViewModel?.stageFile(it) }
-                    },
-                    modifier = Modifier.weight(1f).fillMaxHeight()
+                    }
             )
-        }
-
-        // Row 2: Fetch, Stash, History
-        Row(
-                Modifier.fillMaxWidth().weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            GitActionIcon(
-                    icon = Icons.Rounded.Sync,
-                    label = "Fetch",
-                    color = TextSecondary,
-                    onClick = { gitViewModel?.fetch() },
-                    modifier = Modifier.weight(1f).fillMaxHeight()
-            )
-            GitActionIcon(
+            CompactActionIcon(
                     icon = Icons.Rounded.Archive,
                     label = "Stash",
                     color = TextSecondary,
-                    onClick = { gitViewModel?.stash() },
-                    modifier = Modifier.weight(1f).fillMaxHeight()
+                    onClick = { gitViewModel?.stash() }
             )
-            GitActionIcon(
+            CompactActionIcon(
                     icon = Icons.Rounded.History,
                     label = "History",
                     color = TextSecondary,
-                    onClick = onHistoryClick,
-                    modifier = Modifier.weight(1f).fillMaxHeight()
+                    onClick = onHistoryClick
             )
         }
 
-        // Row 3: Commit and Push buttons (separate operations)
-        Row(
-                Modifier.fillMaxWidth().weight(1.2f),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+        // Single full-width Commit button
+        Button(
+                onClick = onCommitClick,
+                modifier = Modifier.fillMaxWidth().height(32.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+                shape = RoundedCornerShape(6.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
         ) {
-            Button(
-                    onClick = onCommitClick,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
-                    shape = RoundedCornerShape(6.dp)
-            ) {
-                Icon(Icons.Rounded.Check, null, modifier = Modifier.size(14.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Commit", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            }
+            Icon(Icons.Rounded.Check, null, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Commit", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
 
-            Button(
-                    onClick = onPushClick,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    colors =
-                            ButtonDefaults.buttonColors(
-                                    containerColor = AccentGreen.copy(alpha = 0.8f),
-                                    contentColor = Color.White
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun CompactActionIcon(icon: ImageVector, label: String, color: Color, onClick: () -> Unit) {
+    var showTooltip by remember { mutableStateOf(false) }
+    var isPressed by remember { mutableStateOf(false) }
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+
+    val scale =
+            androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = if (isPressed) 0.85f else 1f,
+                    animationSpec =
+                            androidx.compose.animation.core.spring(
+                                    dampingRatio =
+                                            androidx.compose.animation.core.Spring
+                                                    .DampingRatioMediumBouncy,
+                                    stiffness = androidx.compose.animation.core.Spring.StiffnessHigh
                             ),
-                    shape = RoundedCornerShape(6.dp)
+                    label = "pressScale"
+            )
+
+    Box(
+            modifier =
+                    Modifier.scale(scale.value)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                    if (isPressed) color.copy(alpha = 0.15f) else Color.Transparent
+                            )
+                            .combinedClickable(
+                                    onClick = {
+                                        isPressed = true
+                                        onClick()
+                                        // Reset after short delay
+                                        coroutineScope.launch {
+                                            kotlinx.coroutines.delay(150)
+                                            isPressed = false
+                                        }
+                                    },
+                                    onLongClick = { showTooltip = true }
+                            )
+                            .padding(4.dp),
+            contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(20.dp))
+
+        // Tooltip on long press
+        if (showTooltip) {
+            Popup(
+                    alignment = Alignment.TopCenter,
+                    onDismissRequest = { showTooltip = false },
+                    properties = PopupProperties(focusable = true)
             ) {
-                Icon(Icons.Rounded.CloudUpload, null, modifier = Modifier.size(14.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Push", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Surface(
+                        color = Color.Black.copy(alpha = 0.9f),
+                        shape = RoundedCornerShape(4.dp),
+                        modifier = Modifier.padding(4.dp)
+                ) {
+                    Text(
+                            label,
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
             }
         }
     }
@@ -947,12 +1056,12 @@ private fun ChangesListPage(
     val allChanges = (stagedFiles + modifiedFiles + untrackedFiles).distinct().sorted()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Select All Header (same as portrait)
+        // Select All Header (compact for landscape)
         Row(
                 modifier =
                         Modifier.fillMaxWidth()
                                 .clickable(onClick = onSelectAll)
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
         ) {
             CompositionLocalProvider(LocalMinimumInteractiveComponentEnforcement provides false) {
@@ -965,27 +1074,27 @@ private fun ChangesListPage(
                                         uncheckedColor = TextTertiary,
                                         checkmarkColor = Color.White
                                 ),
-                        modifier = Modifier.scale(0.8f)
+                        modifier = Modifier.scale(0.7f)
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
                     "CHANGES (${allChanges.size})",
                     color = TextSecondary,
-                    fontSize = 11.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp
             )
         }
 
-        // Changes List (same as portrait with FileChangeItem)
+        // Changes List (compact file items for landscape)
         LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (allChanges.isEmpty()) {
                 item {
                     Box(
-                            modifier = Modifier.fillMaxWidth().padding(32.dp),
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
                             contentAlignment = Alignment.Center
-                    ) { Text("No changes detected", color = TextTertiary, fontSize = 13.sp) }
+                    ) { Text("No changes", color = TextTertiary, fontSize = 11.sp) }
                 }
             }
 
@@ -997,16 +1106,83 @@ private fun ChangesListPage(
                             modifiedFiles.contains(path) -> "M"
                             else -> "S"
                         }
-                FileChangeItem(
+                CompactFileItem(
                         path = path,
                         status = status,
                         isStaged = isStaged,
                         isSelected = selectedFiles.contains(path),
-                        onToggle = { onToggleFile(path) },
-                        onClick = { /* No diff view in landscape */}
+                        onToggle = { onToggleFile(path) }
                 )
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CompactFileItem(
+        path: String,
+        status: String,
+        isStaged: Boolean,
+        isSelected: Boolean,
+        onToggle: () -> Unit
+) {
+    val file = java.io.File(path)
+    val fileName = file.name
+
+    Row(
+            modifier =
+                    Modifier.fillMaxWidth()
+                            .clickable(onClick = onToggle)
+                            .background(if (isSelected) BgHover else Color.Transparent)
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+    ) {
+        CompositionLocalProvider(LocalMinimumInteractiveComponentEnforcement provides false) {
+            Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = { onToggle() },
+                    colors =
+                            CheckboxDefaults.colors(
+                                    checkedColor = AccentBlue,
+                                    uncheckedColor = TextTertiary,
+                                    checkmarkColor = Color.White
+                            ),
+                    modifier = Modifier.scale(0.6f)
+            )
+        }
+        Spacer(modifier = Modifier.width(4.dp))
+
+        // Status indicator
+        Text(
+                status,
+                color =
+                        when (status) {
+                            "U" -> AccentGreen
+                            "M" -> AccentYellow
+                            else -> AccentBlue
+                        },
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.width(14.dp)
+        )
+
+        Spacer(modifier = Modifier.width(4.dp))
+
+        // File name with ellipsis
+        Text(
+                fileName,
+                color =
+                        when (status) {
+                            "U" -> AccentGreen
+                            "M" -> AccentYellow
+                            else -> TextPrimary
+                        },
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+        )
     }
 }
 

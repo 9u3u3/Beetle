@@ -128,10 +128,10 @@ fun InitialEditorUI(navController: NavController) {
     LaunchedEffect(fileViewModel.selectedUri) {
         // delay(50) removed to speed up LSP startup
         fileViewModel.selectedUri?.let { uri ->
-            DocumentFile.fromSingleUri(context, uri)?.let { documentFile ->
+            DocumentFile.fromSingleUri(context, uri)?.let documentFile@{ documentFile ->
                 if (documentFile.isDirectory) {
                     Log.d("Buffer", "Opened directory: ${documentFile.name}, skipping LSP setup")
-                    return@let
+                    return@documentFile
                 }
 
                 if (bufferViewModel.filesOpenedList.none { it.uri.toString() == uri.toString() }) {
@@ -301,7 +301,11 @@ fun InitialEditorUI(navController: NavController) {
     Box(Modifier.fillMaxSize()) {
 
         // ---------------- MAIN UI ----------------
-        ConstraintLayout(Modifier.fillMaxSize()) {
+        ConstraintLayout(
+                Modifier.fillMaxSize()
+                        .background(Color(0xFF1B1B1B))
+                        .then(if (!isLandscape) Modifier.padding(top = 40.dp) else Modifier)
+        ) {
             val (
                     topLeft,
                     topMiddle,
@@ -318,15 +322,11 @@ fun InitialEditorUI(navController: NavController) {
             LeftTopBar(
                     modifier =
                             Modifier.constrainAs(topLeft) {
-                                        top.linkTo(parent.top)
-                                        start.linkTo(parent.start)
-                                        end.linkTo(topMiddle.start)
-                                        width = Dimension.wrapContent
-                                    }
-                                    .then(
-                                            if (!isLandscape) Modifier.statusBarsPadding()
-                                            else Modifier
-                                    ),
+                                top.linkTo(parent.top)
+                                start.linkTo(parent.start)
+                                end.linkTo(topMiddle.start)
+                                width = Dimension.wrapContent
+                            },
                     onMenuClick = { showSidebar = true },
                     showMenuIcon = !isLandscape,
                     showBranchButton = isLandscape,
@@ -362,30 +362,22 @@ fun InitialEditorUI(navController: NavController) {
             TopBar(
                     modifier =
                             Modifier.constrainAs(topMiddle) {
-                                        top.linkTo(parent.top)
-                                        start.linkTo(topLeft.end)
-                                        end.linkTo(topRight.start)
-                                        width = Dimension.fillToConstraints
-                                    }
-                                    .then(
-                                            if (!isLandscape) Modifier.statusBarsPadding()
-                                            else Modifier
-                                    ),
+                                top.linkTo(parent.top)
+                                start.linkTo(topLeft.end)
+                                end.linkTo(topRight.start)
+                                width = Dimension.fillToConstraints
+                            },
                     context = context
             )
 
             RightTopBar(
                     modifier =
                             Modifier.constrainAs(topRight) {
-                                        top.linkTo(parent.top)
-                                        start.linkTo(topMiddle.end)
-                                        end.linkTo(parent.end)
-                                        width = Dimension.wrapContent
-                                    }
-                                    .then(
-                                            if (!isLandscape) Modifier.statusBarsPadding()
-                                            else Modifier
-                                    ),
+                                top.linkTo(parent.top)
+                                start.linkTo(topMiddle.end)
+                                end.linkTo(parent.end)
+                                width = Dimension.wrapContent
+                            },
                     navController = navController
             )
 
@@ -415,7 +407,6 @@ fun InitialEditorUI(navController: NavController) {
                         fileViewModel = fileViewModel,
                         bufferViewModel = bufferViewModel,
                         currentFilePath = fileViewModel.currentFilePath,
-                        selectedFolderUri = fileViewModel.selectedFolderUri,
                         onCommitClick = { files ->
                             pendingCommitFiles = files
                             isCommitAndPush = false
@@ -512,7 +503,8 @@ fun InitialEditorUI(navController: NavController) {
                             if (it == SidebarTab.GIT) {
                                 gitViewModel.initializeGit()
                             }
-                        }
+                        },
+                        gitViewModel = gitViewModel
                 )
             }
         }

@@ -515,11 +515,7 @@ private fun TopBarIconButton(icon: Int, onClick: () -> Unit) {
 }
 
 @Composable
-fun RightTopBar(
-        modifier: Modifier = Modifier,
-        isTerminal: Boolean = false,
-        navController: NavController
-) {
+fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
         val configuration = LocalConfiguration.current
         val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         val context = LocalContext.current

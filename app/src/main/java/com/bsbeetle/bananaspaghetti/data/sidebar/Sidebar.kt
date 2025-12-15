@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.bsbeetle.bananaspaghetti.directGit.ui.GitTab
+import com.bsbeetle.bananaspaghetti.directGit.viewmodel.GitViewModel
 
 @Composable
 fun Sidebar(
@@ -23,7 +24,8 @@ fun Sidebar(
         currentPath: String? = null,
         enabledTabs: List<SidebarTab> = SidebarTab.values().toList(),
         modifier: Modifier = Modifier,
-        onTabChanged: (SidebarTab) -> Unit = {}
+        onTabChanged: (SidebarTab) -> Unit = {},
+        gitViewModel: GitViewModel? = null
 ) {
         // Initialize selectedTab with first enabled tab
         var selectedTab by
@@ -134,7 +136,16 @@ fun Sidebar(
                                                                                 onFileSelected
                                                                 )
                                                         SidebarTab.SEARCH -> SearchTab()
-                                                        SidebarTab.GIT -> GitTab()
+                                                        SidebarTab.GIT -> {
+                                                                if (gitViewModel != null) {
+                                                                        GitTab(
+                                                                                viewModel =
+                                                                                        gitViewModel
+                                                                        )
+                                                                } else {
+                                                                        GitTab()
+                                                                }
+                                                        }
                                                         SidebarTab.EXTENSIONS -> ExtensionsTab()
                                                         SidebarTab.SETTINGS -> SettingsTab()
                                                 }

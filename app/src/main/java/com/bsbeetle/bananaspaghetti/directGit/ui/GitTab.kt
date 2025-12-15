@@ -1052,8 +1052,8 @@ fun FileChangeItem(
         ) {
             Text(
                     when (status) {
-                        "U" -> "Added"
-                        "M" -> "Modified"
+                        "U" -> "A"
+                        "M" -> "M"
                         else -> status
                     },
                     color =
