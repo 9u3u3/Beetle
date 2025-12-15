@@ -59,6 +59,18 @@ fun InitialTerminalUI(navController: NavController) {
 
     BackHandler { navController.popBackStack() }
 
+    // Apply terminal font size when it changes
+    val terminalSession = remember {
+        SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
+    }
+    
+    androidx.compose.runtime.LaunchedEffect(uiState.terminalFontSize) {
+        terminalSession?.getOrInitView()?.evaluateJavascript(
+            "if(window.setFontSize) window.setFontSize(${uiState.terminalFontSize});",
+            null
+        )
+    }
+
     Box {
         ConstraintLayout(modifier = Modifier.fillMaxSize()) {
             val (topLeft, topRight, leftBox, rightBox, leftKb, editor, rightKb) = createRefs()
@@ -135,7 +147,7 @@ fun InitialTerminalUI(navController: NavController) {
                             Modifier.constrainAs(leftKb) {
                                         start.linkTo(parent.start)
                                         bottom.linkTo(parent.bottom)
-                                        width = Dimension.percent(sliderValue / 100f)
+                                        width = Dimension.percent(uiState.leftKeyboardWidth)
                                     }
                                     .background(Color(0xFF212121))
                     )
@@ -152,7 +164,7 @@ fun InitialTerminalUI(navController: NavController) {
                             Modifier.constrainAs(rightKb) {
                                         end.linkTo(parent.end)
                                         bottom.linkTo(parent.bottom)
-                                        width = Dimension.percent(sliderValue / 100f)
+                                        width = Dimension.percent(uiState.rightKeyboardWidth)
                                     }
                                     .background(Color(0xFF212121))
                     )

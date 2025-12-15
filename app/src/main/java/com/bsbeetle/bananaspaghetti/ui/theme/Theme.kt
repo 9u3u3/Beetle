@@ -32,7 +32,7 @@ private val TextColorLight = TextTheme(
 )
 
 @Composable
-fun BananaSpaghettiTheme(
+fun BeetleTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit

@@ -1,5 +1,6 @@
 package com.bsbeetle.bananaspaghetti.ui.screens.sessions
 
+import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,6 +41,7 @@ import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
 import com.bsbeetle.bananaspaghetti.viewmodel.SessionViewModel
 import com.bsbeetle.bananaspaghetti.LocalFileViewModel
+import com.bsbeetle.bananaspaghetti.utils.fileHandling.fileLauncher
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 
 //NO_PORTRAIT
@@ -51,6 +54,10 @@ fun ZoomOut(
     val fileViewModel: FileViewModel = LocalFileViewModel.current
     val bufferViewModel: com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel = com.bsbeetle.bananaspaghetti.LocalBufferViewModel.current
     var showNewSessionDialog by remember { mutableStateOf(false) }
+    var showEditorMenu by remember { mutableStateOf(false) }
+    var pendingEditorName by remember { mutableStateOf("Editor") }
+    val context = LocalContext.current
+    val launcher = fileLauncher(context, navController)
 
     // Capture snapshots when screen is shown
     LaunchedEffect(Unit) {
@@ -171,14 +178,122 @@ fun ZoomOut(
                     }
                     
                     when (sessionType) {
-                        SessionType.EDITOR -> EditorSession(appContext, finalName)
-                        SessionType.BROWSER -> BrowserSession(appContext, name = finalName)
-                        SessionType.TERMINAL -> TerminalSession(appContext, finalName)
-                        SessionType.DEMO -> DemoSession(appContext, finalName)
+                        SessionType.EDITOR -> {
+                            showNewSessionDialog = false
+                            showEditorMenu = true
+                            pendingEditorName = finalName
+                        }
+                        SessionType.BROWSER -> {
+                            BrowserSession(appContext, name = finalName)
+                            showNewSessionDialog = false
+                        }
+                        SessionType.TERMINAL -> {
+                            TerminalSession(appContext, finalName)
+                            showNewSessionDialog = false
+                        }
+                        SessionType.DEMO -> {
+                            DemoSession(appContext, finalName)
+                            showNewSessionDialog = false
+                        }
                     }
-                    showNewSessionDialog = false
                 }
             )
+        }
+        
+        // Editor Menu (3 simple buttons)
+        if (showEditorMenu) {
+            EditorMenu(
+                onDismiss = { showEditorMenu = false },
+                onOpenFolder = {
+                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+                    launcher.launch(intent)
+                },
+                onCreateNewFile = {
+                    val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "*/*"
+                    }
+                    launcher.launch(intent)
+                },
+                onOpenFile = {
+                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "*/*"
+                    }
+                    launcher.launch(intent)
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun EditorMenu(
+    onDismiss: () -> Unit,
+    onOpenFolder: () -> Unit,
+    onOpenFile: () -> Unit,
+    onCreateNewFile: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0x99000000))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .width(300.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFF2A2A2A))
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Open Editor",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Open Folder button
+            Button(
+                onClick = onOpenFolder,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3A3A3A)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("📁 Open a Folder", color = Color.White)
+            }
+            
+            // Open File button
+            Button(
+                onClick = onOpenFile,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3A3A3A)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("📂 Open a File", color = Color.White)
+            }
+            
+            // Create New File button
+            Button(
+                onClick = onCreateNewFile,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3A3A3A)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("📄 Create a New File", color = Color.White)
+            }
+            
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color(0xFF888888))
+            }
         }
     }
 }

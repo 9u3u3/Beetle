@@ -46,15 +46,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.bsbeetle.bananaspaghetti.directGit.ui.GitTheme
 
-// Theme colors
-private val BgDark = Color(0xFF1E1E1E)
-private val BgCard = Color(0xFF252526)
-private val AccentBlue = Color(0xFF007ACC)
-private val TextPrimary = Color(0xFFE1E1E1)
-private val TextSecondary = Color(0xFFAAAAAA)
-private val TextTertiary = Color(0xFF666666)
-private val BorderColor = Color(0xFF333333)
+// Uses GitTheme for colors
 
 @Composable
 fun LandscapeCommitDialog(
@@ -91,8 +85,8 @@ fun LandscapeCommitDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth(0.85f)
-                .background(BgCard, RoundedCornerShape(12.dp))
-                .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
+                .background(GitTheme.BgCard, RoundedCornerShape(12.dp))
+                .border(1.dp, GitTheme.BorderColor, RoundedCornerShape(12.dp))
                 .padding(16.dp)
         ) {
             // Title
@@ -103,7 +97,7 @@ fun LandscapeCommitDialog(
             ) {
                 Text(
                     if (isCommitAndPush) "Commit & Push" else "Commit",
-                    color = TextPrimary,
+                    color = GitTheme.TextPrimary,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -111,7 +105,7 @@ fun LandscapeCommitDialog(
                     Icon(
                         Icons.Rounded.Close,
                         null,
-                        tint = TextSecondary,
+                        tint = GitTheme.TextSecondary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -122,7 +116,7 @@ fun LandscapeCommitDialog(
             // Selected files count
             Text(
                 "$selectedFilesCount file(s) selected",
-                color = TextSecondary,
+                color = GitTheme.TextSecondary,
                 fontSize = 12.sp
             )
 
@@ -136,24 +130,24 @@ fun LandscapeCommitDialog(
                     // Note: In a real implementation, this would route through custom keyboard
                 },
                 textStyle = TextStyle(
-                    color = TextPrimary,
+                    color = GitTheme.TextPrimary,
                     fontSize = 14.sp,
                     fontFamily = FontFamily.Monospace
                 ),
-                cursorBrush = SolidColor(AccentBlue),
+                cursorBrush = SolidColor(GitTheme.AccentBlue),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(80.dp)
                     .focusRequester(focusRequester)
-                    .background(BgDark, RoundedCornerShape(6.dp))
-                    .border(1.dp, BorderColor, RoundedCornerShape(6.dp))
+                    .background(GitTheme.BgDark, RoundedCornerShape(6.dp))
+                    .border(1.dp, GitTheme.BorderColor, RoundedCornerShape(6.dp))
                     .padding(10.dp),
                 decorationBox = { innerTextField ->
                     Box {
                         if (commitMessage.isEmpty()) {
                             Text(
                                 "Enter commit message...",
-                                color = TextTertiary,
+                                color = GitTheme.TextTertiary,
                                 fontSize = 14.sp
                             )
                         }
@@ -174,10 +168,10 @@ fun LandscapeCommitDialog(
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f).height(44.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = BgDark,
-                        contentColor = TextSecondary
+                        containerColor = GitTheme.BgDark,
+                        contentColor = GitTheme.TextSecondary
                     ),
-                    border = BorderStroke(1.dp, BorderColor),
+                    border = BorderStroke(1.dp, GitTheme.BorderColor),
                     shape = RoundedCornerShape(6.dp)
                 ) {
                     Text("Cancel", fontSize = 13.sp)
@@ -192,8 +186,8 @@ fun LandscapeCommitDialog(
                     },
                     modifier = Modifier.weight(1f).height(44.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentBlue,
-                        disabledContainerColor = AccentBlue.copy(alpha = 0.5f)
+                        containerColor = GitTheme.AccentBlue,
+                        disabledContainerColor = GitTheme.AccentBlue.copy(alpha = 0.5f)
                     ),
                     enabled = commitMessage.isNotBlank(),
                     shape = RoundedCornerShape(6.dp)

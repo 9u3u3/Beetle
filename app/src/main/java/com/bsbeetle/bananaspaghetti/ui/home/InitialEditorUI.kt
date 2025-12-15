@@ -102,6 +102,14 @@ fun InitialEditorUI(navController: NavController) {
     val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
     val sliderValue by sliderViewModel.sliderValue.collectAsStateWithLifecycle()
 
+    // Apply editor font size when it changes
+    LaunchedEffect(uiState.editorFontSize) {
+        editorViewModel.webView?.evaluateJavascript(
+            "if(window.setFontSize) window.setFontSize(${uiState.editorFontSize});",
+            null
+        )
+    }
+
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
 
@@ -428,7 +436,7 @@ fun InitialEditorUI(navController: NavController) {
                             Modifier.constrainAs(leftKb) {
                                         start.linkTo(parent.start)
                                         bottom.linkTo(parent.bottom)
-                                        width = Dimension.percent(sliderValue / 100f)
+                                        width = Dimension.percent(uiState.leftKeyboardWidth)
                                     }
                                     .background(Color(0xFF212121))
                     )
@@ -445,7 +453,7 @@ fun InitialEditorUI(navController: NavController) {
                             Modifier.constrainAs(rightKb) {
                                         end.linkTo(parent.end)
                                         bottom.linkTo(parent.bottom)
-                                        width = Dimension.percent(sliderValue / 100f)
+                                        width = Dimension.percent(uiState.rightKeyboardWidth)
                                     }
                                     .background(Color(0xFF212121))
                     )

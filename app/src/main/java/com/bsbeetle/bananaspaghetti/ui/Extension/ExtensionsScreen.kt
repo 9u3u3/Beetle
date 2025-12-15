@@ -39,6 +39,21 @@ fun ExtensionsScreen(navController: NavController, viewModel: ExtensionsViewMode
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     var selectedExtensionId by remember { mutableStateOf<Int?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
+    
+    // Filter extensions based on search query
+    val filteredExtensions = remember(extensions, searchQuery) {
+        if (searchQuery.isBlank()) {
+            extensions
+        } else {
+            extensions.filter { ext ->
+                ext.name.contains(searchQuery, ignoreCase = true) ||
+                ext.description.contains(searchQuery, ignoreCase = true) ||
+                ext.slug.contains(searchQuery, ignoreCase = true) ||
+                ext.author.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
     
     // Derive the selected extension from the live list to ensure updates are reflected
     val selectedExtension = remember(extensions, selectedExtensionId) {
@@ -92,16 +107,27 @@ fun ExtensionsScreen(navController: NavController, viewModel: ExtensionsViewMode
                     modifier = Modifier.padding(16.dp)
                 )
 
-                // Search Bar (Dummy)
-                Box(
+                // Search Bar - Functional
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search Extensions", color = Color(0xFF858585), fontSize = 12.sp) },
+                    singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .background(Color(0xFF3C3C3C), RoundedCornerShape(2.dp))
-                        .padding(8.dp)
-                ) {
-                    Text("Search Extensions in Marketplace", color = Color(0xFF858585), fontSize = 12.sp)
-                }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color(0xFF007ACC),
+                        unfocusedBorderColor = Color(0xFF3C3C3C),
+                        focusedContainerColor = Color(0xFF3C3C3C),
+                        unfocusedContainerColor = Color(0xFF3C3C3C),
+                        cursorColor = Color.White
+                    ),
+                    textStyle = LocalTextStyle.current.copy(fontSize = 12.sp),
+                    shape = RoundedCornerShape(4.dp)
+                )
 
                 if (isLoading) {
                     Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
@@ -114,8 +140,8 @@ fun ExtensionsScreen(navController: NavController, viewModel: ExtensionsViewMode
                             .weight(1f)
                             .padding(top = 12.dp)
                     ) {
-                        val installed = extensions.filter { it.installed }
-                        val marketplace = extensions.filter { !it.installed }
+                        val installed = filteredExtensions.filter { it.installed }
+                        val marketplace = filteredExtensions.filter { !it.installed }
 
                         if (installed.isNotEmpty()) {
                             item {
