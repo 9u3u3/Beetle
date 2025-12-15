@@ -109,7 +109,7 @@ private fun SettingsSidebar(
         Spacer(modifier = Modifier.height(24.dp))
         
         // Navigation items
-        val categories = listOf("Keyboard")
+        val categories = listOf("Keyboard", "Appearance")
         
         categories.forEach { name ->
             SidebarItem(
@@ -253,10 +253,108 @@ private fun SettingsContent(
             "Keyboard" -> KeyboardSettingsContent(
                 isLeftVisible = uiState.isLeftKeyboardVisible,
                 isRightVisible = uiState.isRightKeyboardVisible,
+                leftWidth = uiState.leftKeyboardWidth,
+                rightWidth = uiState.rightKeyboardWidth,
+                isLinked = uiState.linkedKeyboardSliders,
                 onLeftToggle = { keyboardViewModel.toggleLeftKeyboardVisibility() },
-                onRightToggle = { keyboardViewModel.toggleRightKeyboardVisibility() }
+                onRightToggle = { keyboardViewModel.toggleRightKeyboardVisibility() },
+                onLeftWidthChange = { keyboardViewModel.updateLeftKeyboardWidth(it) },
+                onRightWidthChange = { keyboardViewModel.updateRightKeyboardWidth(it) },
+                onLinkToggle = { keyboardViewModel.toggleLinkedKeyboardSliders() }
+            )
+            "Appearance" -> AppearanceSettingsContent(
+                terminalFontSize = uiState.terminalFontSize,
+                editorFontSize = uiState.editorFontSize,
+                onTerminalFontSizeChange = { keyboardViewModel.updateTerminalFontSize(it) },
+                onEditorFontSizeChange = { keyboardViewModel.updateEditorFontSize(it) }
             )
         }
+    }
+}
+
+@Composable
+private fun AppearanceSettingsContent(
+    terminalFontSize: Int,
+    editorFontSize: Int,
+    onTerminalFontSizeChange: (Int) -> Unit,
+    onEditorFontSizeChange: (Int) -> Unit
+) {
+    SettingsCard(title = "Font Size") {
+        // Terminal font size
+        FontSizeSliderRow(
+            title = "Terminal",
+            description = "Font size for terminal (xterm.js)",
+            value = terminalFontSize,
+            onValueChange = onTerminalFontSizeChange
+        )
+        
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(DividerColor)
+        )
+        
+        // Editor font size
+        FontSizeSliderRow(
+            title = "Editor",
+            description = "Font size for code editor (CodeMirror)",
+            value = editorFontSize,
+            onValueChange = onEditorFontSizeChange
+        )
+    }
+}
+
+@Composable
+private fun FontSizeSliderRow(
+    title: String,
+    description: String,
+    value: Int,
+    onValueChange: (Int) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    color = TextPrimary,
+                    fontSize = 16.sp
+                )
+                Text(
+                    text = description,
+                    color = TextSecondary,
+                    fontSize = 13.sp
+                )
+            }
+            Text(
+                text = "${value}px",
+                color = AccentBlue,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Slider(
+            value = value.toFloat(),
+            onValueChange = { onValueChange(it.toInt()) },
+            valueRange = 8f..24f,
+            steps = 15,
+            colors = SliderDefaults.colors(
+                thumbColor = AccentBlue,
+                activeTrackColor = AccentBlue,
+                inactiveTrackColor = DividerColor
+            )
+        )
     }
 }
 
@@ -264,9 +362,16 @@ private fun SettingsContent(
 private fun KeyboardSettingsContent(
     isLeftVisible: Boolean,
     isRightVisible: Boolean,
+    leftWidth: Float,
+    rightWidth: Float,
+    isLinked: Boolean,
     onLeftToggle: () -> Unit,
-    onRightToggle: () -> Unit
+    onRightToggle: () -> Unit,
+    onLeftWidthChange: (Float) -> Unit,
+    onRightWidthChange: (Float) -> Unit,
+    onLinkToggle: () -> Unit
 ) {
+    // Visibility section
     SettingsCard(title = "Visibility") {
         SettingRowWithCheckbox(
             title = "Left Keyboard",
@@ -287,6 +392,98 @@ private fun KeyboardSettingsContent(
             description = "Show the right split keyboard",
             isChecked = isRightVisible,
             onCheckedChange = { onRightToggle() }
+        )
+    }
+    
+    Spacer(modifier = Modifier.height(24.dp))
+    
+    // Size section
+    SettingsCard(title = "Keyboard Size") {
+        // Link sliders toggle
+        SettingRowWithCheckbox(
+            title = "Link Sliders",
+            description = "Adjust both keyboards together",
+            isChecked = isLinked,
+            onCheckedChange = { onLinkToggle() }
+        )
+        
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(DividerColor)
+        )
+        
+        // Left keyboard slider
+        SliderRow(
+            title = "Left Keyboard",
+            value = leftWidth,
+            onValueChange = onLeftWidthChange,
+            enabled = isLeftVisible
+        )
+        
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(DividerColor)
+        )
+        
+        // Right keyboard slider
+        SliderRow(
+            title = "Right Keyboard",
+            value = rightWidth,
+            onValueChange = onRightWidthChange,
+            enabled = isRightVisible
+        )
+    }
+}
+
+@Composable
+private fun SliderRow(
+    title: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    enabled: Boolean = true
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                color = if (enabled) TextPrimary else TextSecondary,
+                fontSize = 16.sp
+            )
+            Text(
+                text = "${(value * 100).toInt()}%",
+                color = AccentBlue,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = 0.0f..0.4f,
+            enabled = enabled,
+            colors = SliderDefaults.colors(
+                thumbColor = AccentBlue,
+                activeTrackColor = AccentBlue,
+                inactiveTrackColor = DividerColor,
+                disabledThumbColor = TextSecondary,
+                disabledActiveTrackColor = TextSecondary,
+                disabledInactiveTrackColor = DividerColor
+            )
         )
     }
 }

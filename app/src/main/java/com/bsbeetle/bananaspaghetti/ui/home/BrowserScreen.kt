@@ -145,7 +145,7 @@ fun BrowserScreen(navController: NavController) {
                         Modifier.constrainAs(leftKb) {
                             start.linkTo(parent.start)
                             bottom.linkTo(parent.bottom)
-                            width = Dimension.percent(sliderValue / 100f)
+                            width = Dimension.percent(uiState.leftKeyboardWidth)
                         }
                             .background(Color(0xFF212121))
                     )
@@ -158,7 +158,7 @@ fun BrowserScreen(navController: NavController) {
                         Modifier.constrainAs(rightKb) {
                             end.linkTo(parent.end)
                             bottom.linkTo(parent.bottom)
-                            width = Dimension.percent(sliderValue / 100f)
+                            width = Dimension.percent(uiState.rightKeyboardWidth)
                         }
                             .background(Color(0xFF212121))
                     )

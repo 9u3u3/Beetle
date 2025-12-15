@@ -52,15 +52,20 @@ import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
 import com.bsbeetle.bananaspaghetti.viewmodel.DiagnosticItem
 import com.bsbeetle.bananaspaghetti.viewmodel.LspViewModel
+import com.bsbeetle.bananaspaghetti.directGit.viewmodel.GitViewModel
+import androidx.compose.runtime.collectAsState
 
 enum class BottomPanelTab {
     PROBLEMS,
-    TERMINAL
+    TERMINAL,
+    GIT_CONSOLE
 }
+
+
 
 @SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
-fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspViewModel = viewModel()) {
+fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspViewModel = viewModel(), gitViewModel: GitViewModel = viewModel()) {
 
     var targetHeight by remember { mutableStateOf(18.dp) }
     val logHeight by animateDpAsState(targetValue = targetHeight, label = "logHeightAnim")
@@ -221,6 +226,14 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspView
                     isSelected = selectedTab == BottomPanelTab.TERMINAL,
                     onClick = { selectedTab = BottomPanelTab.TERMINAL }
                 )
+
+                // Git Log tab
+                PanelTab(
+                    title = "Git Log",
+                    count = 0,
+                    isSelected = selectedTab == BottomPanelTab.GIT_CONSOLE,
+                    onClick = { selectedTab = BottomPanelTab.GIT_CONSOLE }
+                )
                 
                 Spacer(modifier = Modifier.weight(1f))
                 
@@ -278,6 +291,11 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspView
                             },
                             context = context
                         )
+                    }
+                    BottomPanelTab.GIT_CONSOLE -> {
+                        // Git Log - show commit history
+                        val gitUiState by gitViewModel.uiState.collectAsStateWithLifecycle()
+                        GitLogContent(commits = gitUiState.commits)
                     }
                 }
             }
@@ -373,6 +391,54 @@ private fun ProblemsContent(
                         )
                         Text(
                             text = "Line ${diag.line}, Column ${diag.column}",
+                            color = Color(0xFF888888),
+                            fontSize = 9.sp
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GitLogContent(commits: List<com.bsbeetle.bananaspaghetti.utils.git.CommitInfo>) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(8.dp)
+    ) {
+        if (commits.isEmpty()) {
+            Text(
+                text = "No commits yet",
+                color = Color(0xFF888888),
+                fontSize = 12.sp
+            )
+        } else {
+            commits.forEach { commit ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Text(
+                        text = commit.hash.take(7),
+                        color = Color(0xFF007ACC),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = commit.message,
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = "${commit.author} • ${commit.date}",
                             color = Color(0xFF888888),
                             fontSize = 9.sp
                         )

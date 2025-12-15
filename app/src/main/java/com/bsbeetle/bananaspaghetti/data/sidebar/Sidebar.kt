@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.bsbeetle.bananaspaghetti.directGit.ui.GitTab
+import com.bsbeetle.bananaspaghetti.directGit.viewmodel.GitViewModel
 
 @Composable
 fun Sidebar(
@@ -22,7 +23,9 @@ fun Sidebar(
         onFileSelected: (String?) -> Unit = {},
         currentPath: String? = null,
         enabledTabs: List<SidebarTab> = SidebarTab.values().toList(),
-        modifier: Modifier = Modifier
+        modifier: Modifier = Modifier,
+        onTabChanged: (SidebarTab) -> Unit = {},
+        gitViewModel: GitViewModel? = null
 ) {
         // Initialize selectedTab with first enabled tab
         var selectedTab by
@@ -33,7 +36,9 @@ fun Sidebar(
         // Auto-switch to first available tab if current tab becomes unavailable
         LaunchedEffect(enabledTabs) {
                 if (!enabledTabs.contains(selectedTab)) {
-                        selectedTab = enabledTabs.firstOrNull() ?: SidebarTab.SETTINGS
+                        val newTab = enabledTabs.firstOrNull() ?: SidebarTab.SETTINGS
+                        selectedTab = newTab
+                        onTabChanged(newTab)
                 }
         }
 
@@ -104,6 +109,7 @@ fun Sidebar(
                                                 // Only allow selection of enabled tabs
                                                 if (enabledTabs.contains(tab)) {
                                                         selectedTab = tab
+                                                        onTabChanged(tab)
                                                 }
                                         },
                                         enabledTabs = enabledTabs
@@ -130,7 +136,16 @@ fun Sidebar(
                                                                                 onFileSelected
                                                                 )
                                                         SidebarTab.SEARCH -> SearchTab()
-                                                        SidebarTab.GIT -> GitTab()
+                                                        SidebarTab.GIT -> {
+                                                                if (gitViewModel != null) {
+                                                                        GitTab(
+                                                                                viewModel =
+                                                                                        gitViewModel
+                                                                        )
+                                                                } else {
+                                                                        GitTab()
+                                                                }
+                                                        }
                                                         SidebarTab.EXTENSIONS -> ExtensionsTab()
                                                         SidebarTab.SETTINGS -> SettingsTab()
                                                 }

@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import android.os.FileObserver
 import org.eclipse.jgit.transport.SshSessionFactory
 
 data class GitUiState(
@@ -24,6 +26,7 @@ data class GitUiState(
         val modifiedFiles: List<String> = emptyList(),
         val stagedFiles: List<String> = emptyList(),
         val untrackedFiles: List<String> = emptyList(),
+        val conflictedFiles: List<String> = emptyList(), // Files with merge conflicts
         val isLoading: Boolean = false,
         val userName: String = "",
         val userEmail: String = "",
@@ -48,7 +51,11 @@ data class GitUiState(
         // SSH status
         val sshKeysConfigured: Boolean = false,
         // Terminal history
-        val terminalHistory: List<String> = emptyList()
+        val terminalHistory: List<String> = emptyList(),
+        // Merge editor state
+        val showMergeEditor: Boolean = false,
+        val mergeEditorFile: String? = null,
+        val mergeEditorContent: String? = null
 )
 
 class GitViewModel(application: Application) : AndroidViewModel(application) {
@@ -69,60 +76,173 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     // Alpine Git Helper for terminal-based Git operations
     private val alpineGitHelper = AlpineGitHelper(application)
 
+    private var isGitInitialized = false
+
+    // FileObserver to watch for Git changes made via terminal
+    private var gitFileObserver: FileObserver? = null
+    private var refreshJob: Job? = null
+
     init {
-        Log.d("GitViewModel", "🚀 Initializing GitViewModel...")
+        // Empty init - initialization happens lazily via initializeGit()
+    }
 
-        // Configure SSH for JGit operations (local commits, etc.)
-        SshSessionFactory.setInstance(sshSessionFactory)
+    fun initializeGit() {
+        if (isGitInitialized) return
+        isGitInitialized = true
 
-        // Check if Alpine SSH keys are configured (ED25519)
-        val hasAlpineKeys = alpineSshKeyManager.hasKeys()
-        Log.d("GitViewModel", "Alpine ED25519 keys exist: $hasAlpineKeys")
-        _uiState.value = _uiState.value.copy(sshKeysConfigured = hasAlpineKeys)
+        viewModelScope.launch(Dispatchers.IO) {
+            Log.d("GitViewModel", "🚀 Initializing GitViewModel lazily...")
 
-        // Auto-setup Alpine SSH keys if they exist
-        if (hasAlpineKeys) {
-            Log.d("GitViewModel", "🔑 Auto-setting up ED25519 SSH keys in Alpine...")
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    val privateKey = alpineSshKeyManager.getPrivateKeyPEM()
-                    val publicKey = alpineSshKeyManager.getPublicKey()
+            // Configure SSH for JGit operations (local commits, etc.)
+            SshSessionFactory.setInstance(sshSessionFactory)
 
-                    Log.d("GitViewModel", "Private key null: ${privateKey == null}")
-                    Log.d("GitViewModel", "Public key null: ${publicKey == null}")
+            // Check if Alpine SSH keys are configured (ED25519)
+            val hasAlpineKeys = alpineSshKeyManager.hasKeys()
+            Log.d("GitViewModel", "Alpine ED25519 keys exist: $hasAlpineKeys")
+            _uiState.value = _uiState.value.copy(sshKeysConfigured = hasAlpineKeys)
 
-                    if (privateKey != null && publicKey != null) {
-                        Log.d("GitViewModel", "📤 Calling alpineGitHelper.setupSshKeys()...")
-                        alpineGitHelper.setupSshKeys(privateKey, publicKey)
-                        Log.d("GitViewModel", "✅ ED25519 SSH keys auto-configured in Alpine")
-                    } else {
-                        Log.w("GitViewModel", "⚠️ Keys exist but are null - this shouldn't happen")
+            // Auto-setup Alpine SSH keys if they exist
+            if (hasAlpineKeys) {
+                Log.d("GitViewModel", "🔑 Auto-setting up ED25519 SSH keys in Alpine...")
+                viewModelScope.launch(Dispatchers.IO) {
+                    try {
+                        val privateKey = alpineSshKeyManager.getPrivateKeyPEM()
+                        val publicKey = alpineSshKeyManager.getPublicKey()
+
+                        Log.d("GitViewModel", "Private key null: ${privateKey == null}")
+                        Log.d("GitViewModel", "Public key null: ${publicKey == null}")
+
+                        if (privateKey != null && publicKey != null) {
+                            Log.d("GitViewModel", "📤 Calling alpineGitHelper.setupSshKeys()...")
+                            alpineGitHelper.setupSshKeys(privateKey, publicKey)
+                            Log.d("GitViewModel", "✅ ED25519 SSH keys auto-configured in Alpine")
+                        } else {
+                            Log.w(
+                                    "GitViewModel",
+                                    "⚠️ Keys exist but are null - this shouldn't happen"
+                            )
+                        }
+                    } catch (e: Exception) {
+                        Log.e("GitViewModel", "❌ Failed to auto-setup SSH keys", e)
                     }
-                } catch (e: Exception) {
-                    Log.e("GitViewModel", "❌ Failed to auto-setup SSH keys", e)
+                }
+            } else {
+                Log.d("GitViewModel", "ℹ️ No ED25519 SSH keys found - user needs to set up")
+            }
+
+            // Observe logs
+            viewModelScope.launch {
+                GitLogger.logs.collect { logs ->
+                    _uiState.value =
+                            _uiState.value.copy(logs = logs.reversed()) // Show newest first
                 }
             }
-        } else {
-            Log.d("GitViewModel", "ℹ️ No ED25519 SSH keys found - user needs to set up")
-        }
 
-        // Observe logs
-        viewModelScope.launch {
-            GitLogger.logs.collect { logs ->
-                _uiState.value = _uiState.value.copy(logs = logs.reversed()) // Show newest first
+            // Periodically update terminal history
+            viewModelScope.launch {
+                while (true) {
+                    delay(500) // Update every 500ms
+                    val history = alpineGitHelper.getCommandHistory()
+                    if (history != _uiState.value.terminalHistory) {
+                        _uiState.value = _uiState.value.copy(terminalHistory = history)
+                    }
+                }
             }
-        }
 
-        // Periodically update terminal history
-        viewModelScope.launch {
-            while (true) {
-                delay(500) // Update every 500ms
-                val history = alpineGitHelper.getCommandHistory()
-                if (history != _uiState.value.terminalHistory) {
-                    _uiState.value = _uiState.value.copy(terminalHistory = history)
+            // File watcher: Monitor repository for file changes and auto-refresh
+            viewModelScope.launch(Dispatchers.IO) {
+                var lastRefreshTime = 0L
+                val debounceMs = 500L // Wait 500ms after last change before refreshing
+
+                while (true) {
+                    delay(1000) // Check every second
+
+                    val root = currentRoot
+                    if (root != null && root.exists() && File(root, ".git").exists()) {
+                        // Check if any tracked files have changed
+                        val repo = repository
+                        if (repo != null && !_uiState.value.isLoading) {
+                            val currentTime = System.currentTimeMillis()
+
+                            // Track .git/index changes (for staging/commits done via terminal)
+                            val gitIndexFile = File(root, ".git/index")
+                            val indexModTime =
+                                    if (gitIndexFile.exists()) gitIndexFile.lastModified() else 0L
+
+                            // Also check working directory files (limited depth for performance)
+                            val workingDirChanged =
+                                    root.listFiles()?.any { file ->
+                                        !file.name.startsWith(".") &&
+                                                file.lastModified() > lastRefreshTime
+                                    }
+                                            ?: false
+
+                            // Trigger refresh if files or git index changed
+                            val gitChanged = indexModTime > lastRefreshTime
+
+                            if ((workingDirChanged || gitChanged) &&
+                                            (currentTime - lastRefreshTime > debounceMs)
+                            ) {
+                                Log.d(
+                                        "GitViewModel",
+                                        "📂 File changes detected, auto-refreshing..."
+                                )
+                                lastRefreshTime = currentTime
+                                refreshStatus()
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+
+    /**
+     * Start watching Git directory for changes made via terminal or external tools
+     */
+    private fun startWatchingGitChanges(gitDir: File) {
+        stopWatchingGitChanges()
+        
+        try {
+            gitFileObserver = object : FileObserver(
+                gitDir.path,
+                FileObserver.MODIFY or FileObserver.CREATE or 
+                FileObserver.DELETE or FileObserver.MOVED_TO or FileObserver.MOVED_FROM
+            ) {
+                override fun onEvent(event: Int, path: String?) {
+                    // Only refresh on relevant Git file changes
+                    if (path != null && (
+                        path.startsWith("index") ||  // Staging area
+                        path.startsWith("refs/") ||   // Branch/tag changes
+                        path.startsWith("HEAD") ||    // HEAD changes
+                        path.startsWith("logs/")      // Reflog changes
+                    )) {
+                        // Debounce: cancel previous refresh and schedule new one
+                        refreshJob?.cancel()
+                        refreshJob = viewModelScope.launch {
+                            delay(500) // Wait 500ms for multiple rapid changes
+                            Log.d("GitViewModel", "🔄 Auto-refreshing due to Git file change: $path")
+                            refreshStatus()
+                        }
+                    }
+                }
+            }.apply { 
+                startWatching()
+                Log.d("GitViewModel", "👁️ Started watching Git directory: ${gitDir.path}")
+            }
+        } catch (e: Exception) {
+            Log.e("GitViewModel", "Failed to start watching Git directory", e)
+        }
+    }
+
+    /**
+     * Stop watching Git directory
+     */
+    private fun stopWatchingGitChanges() {
+        gitFileObserver?.stopWatching()
+        gitFileObserver = null
+        refreshJob?.cancel()
+        refreshJob = null
     }
 
     fun setRootDir(path: String) {
@@ -139,6 +259,13 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
             Log.d("GitViewModel", "🔄 Creating new GitRepository for: ${file.absolutePath}")
             repository = GitRepository(file)
             Log.d("GitViewModel", "📊 Repository initialized: ${repository?.isInitialized()}")
+            
+            // Start watching for Git changes made via terminal
+            val gitDir = File(file, ".git")
+            if (gitDir.exists() && gitDir.isDirectory) {
+                startWatchingGitChanges(gitDir)
+            }
+            
             refreshStatus()
         } else {
             Log.d("GitViewModel", "♻️ Same root, skipping re-initialization")
@@ -178,10 +305,11 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                 val modified = status.modified + status.missing
                 val staged = status.added + status.changed + status.removed
                 val untracked = status.untracked
+                val conflicted = repo.getConflictedFiles()
 
                 Log.d(
                         "GitViewModel",
-                        "📊 Status: modified=${modified.size}, staged=${staged.size}, untracked=${untracked.size}"
+                        "📊 Status: modified=${modified.size}, staged=${staged.size}, untracked=${untracked.size}, conflicts=${conflicted.size}"
                 )
 
                 _uiState.value =
@@ -190,6 +318,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                                 modifiedFiles = modified.toList().sorted(),
                                 stagedFiles = staged.toList().sorted(),
                                 untrackedFiles = untracked.toList().sorted(),
+                                conflictedFiles = conflicted,
                                 userName = name,
                                 userEmail = email,
                                 remoteUrl = remote,
@@ -424,6 +553,14 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
      * automatically.
      */
     fun pull() {
+        pullFromBranch(null) // Pull from current branch
+    }
+
+    /**
+     * Pull changes from a specific remote branch using SSH authentication.
+     * @param remoteBranch The remote branch to pull from, or null to use current branch
+     */
+    fun pullFromBranch(remoteBranch: String?) {
         viewModelScope.launch(Dispatchers.IO) {
             // Check if SSH is configured
             if (!alpineSshKeyManager.hasKeys()) {
@@ -437,20 +574,21 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
+            val branch = remoteBranch ?: repository?.getCurrentBranch() ?: "main"
+
             _uiState.value =
                     _uiState.value.copy(
                             isLoading = true,
                             lastError = null,
-                            operationInProgress = "Pulling from remote..."
+                            operationInProgress = "Pulling from origin/$branch..."
                     )
 
             // Use Alpine's native git for SSH operations
-            val branch = repository?.getCurrentBranch() ?: "main"
             GitLogger.log("git pull origin $branch", LogType.COMMAND)
             val result = alpineGitHelper.pull(repoPath, branch)
             result.fold(
                     onSuccess = { output ->
-                        showSuccess("Pull completed")
+                        showSuccess("Pull from '$branch' completed")
                         Log.d("GitViewModel", "Pull output: $output")
                     },
                     onFailure = { e -> showError("Pull failed", e.message) }
@@ -501,13 +639,100 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     fun loadDiff(filePath: String) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(operationInProgress = "Loading diff...")
-            val diff = repository?.getDiff(filePath) ?: "No diff available"
+
+            // Try JGit first
+            var diff = repository?.getDiff(filePath) ?: "No diff available"
+
+            // If JGit failed (missing objects), try using Alpine's git command as fallback
+            if (diff.contains("Repository objects missing") || diff.contains("Error loading diff")
+            ) {
+                Log.d("GitViewModel", "JGit diff failed, trying Alpine git diff...")
+                val repoPath = currentRoot?.absolutePath
+                if (repoPath != null) {
+                    val result = alpineGitHelper.getDiff(repoPath, filePath)
+                    if (result.isSuccess) {
+                        diff = result.getOrNull() ?: diff
+                    }
+                }
+            }
+
             _uiState.value = _uiState.value.copy(currentDiff = diff, operationInProgress = null)
         }
     }
 
     fun clearDiff() {
         _uiState.value = _uiState.value.copy(currentDiff = null)
+    }
+
+    // === Merge Conflict Resolution ===
+
+    /**
+     * Open the merge editor for a conflicted file.
+     * @param relativePath Path relative to repository root
+     */
+    fun openMergeEditor(relativePath: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            Log.d("GitViewModel", "📂 openMergeEditor called for: $relativePath")
+            val content = repository?.getFileContent(relativePath)
+            Log.d(
+                    "GitViewModel",
+                    "📄 Content retrieved: ${content?.length ?: 0} chars, hasConflictMarkers=${content?.contains("<<<<<<<") == true}"
+            )
+
+            if (content != null) {
+                Log.d(
+                        "GitViewModel",
+                        "📝 Setting merge editor state: path=$relativePath, contentPreview=${content.take(200)}"
+                )
+                _uiState.value =
+                        _uiState.value.copy(
+                                showMergeEditor = true,
+                                mergeEditorFile = relativePath,
+                                mergeEditorContent = content
+                        )
+                Log.d("GitViewModel", "✅ Merge editor state updated")
+            } else {
+                showError("Cannot open file", "Failed to read file content")
+            }
+        }
+    }
+
+    /**
+     * Save the merged content and mark the conflict as resolved.
+     * @param relativePath Path relative to repository root
+     * @param content The resolved content
+     */
+    fun saveMergedContent(relativePath: String, content: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.value = _uiState.value.copy(operationInProgress = "Saving merged content...")
+
+            when (val writeResult = repository?.writeFileContent(relativePath, content)) {
+                is GitResult.Success -> {
+                    // Stage the file to mark conflict as resolved
+                    when (val stageResult = repository?.markConflictResolved(relativePath)) {
+                        is GitResult.Success -> {
+                            showSuccess("Conflict resolved: $relativePath")
+                            closeMergeEditor()
+                        }
+                        is GitResult.Error -> showError(stageResult.message, stageResult.details)
+                        null -> {}
+                    }
+                }
+                is GitResult.Error -> showError(writeResult.message, writeResult.details)
+                null -> showError("No repository")
+            }
+            refreshStatus()
+        }
+    }
+
+    /** Close the merge editor without saving. */
+    fun closeMergeEditor() {
+        _uiState.value =
+                _uiState.value.copy(
+                        showMergeEditor = false,
+                        mergeEditorFile = null,
+                        mergeEditorContent = null
+                )
     }
 
     fun clearMessages() {
@@ -791,6 +1016,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
+            Log.d("GitViewModel", "🚀 cloneRepository called for: $url -> $targetPath")
             _uiState.value =
                     _uiState.value.copy(
                             operationInProgress = "Cloning repository...",
@@ -799,6 +1025,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
 
             // Convert HTTPS URL to SSH if needed
             val sshUrl = GitUrlConverter.ensureSsh(url)
+            Log.d("GitViewModel", "🔄 Converted URL: $url -> $sshUrl")
 
             // Use the full path provided by user
             val targetDir = File(targetPath)
@@ -806,6 +1033,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
             // Check if parent directory exists
             val parentDir = targetDir.parentFile
             if (parentDir == null || !parentDir.exists()) {
+                Log.e("GitViewModel", "❌ Parent directory missing: ${parentDir?.absolutePath}")
                 showError(
                         "Invalid path",
                         "Parent directory does not exist: ${parentDir?.absolutePath}"
@@ -814,6 +1042,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             if (targetDir.exists()) {
+                Log.e("GitViewModel", "❌ Target directory exists: ${targetDir.absolutePath}")
                 showError(
                         "Directory already exists",
                         "Choose a different path or delete the existing directory"
@@ -822,9 +1051,14 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             // Use Alpine's native git for SSH clone
+            GitLogger.log("git clone $sshUrl", LogType.COMMAND)
+            Log.d("GitViewModel", "⏳ Calling alpineGitHelper.clone()...")
             val result = alpineGitHelper.clone(sshUrl, targetPath)
+            Log.d("GitViewModel", "✅ alpineGitHelper.clone() returned: $result")
+
             result.fold(
                     onSuccess = { output ->
+                        Log.d("GitViewModel", "✅ Clone success: $output")
                         // Set this as the current repository
                         repository?.close()
                         repository = GitRepository(targetDir)
@@ -834,13 +1068,18 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                         Log.d("GitViewModel", "Clone output: $output")
                         refreshStatus()
                     },
-                    onFailure = { e -> showError("Clone failed", e.message) }
+                    onFailure = { e ->
+                        Log.e("GitViewModel", "❌ Clone failed: ${e.message}", e)
+                        showError("Clone failed", e.message)
+                    }
             )
         }
     }
 
     override fun onCleared() {
         super.onCleared()
+        stopWatchingGitChanges()
         repository?.close()
+        Log.d("GitViewModel", "🛑 ViewModel cleared, stopped watching Git directory")
     }
 }

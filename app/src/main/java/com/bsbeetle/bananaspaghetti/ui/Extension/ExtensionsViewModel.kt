@@ -60,8 +60,8 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
             _isLoading.value = true
             _error.value = null
             try {
-                // Use 10.0.2.2 for localhost emulator access
-                val url = "http://192.168.1.14:3000/api/plugin/fetch"
+                // Use production backend
+                val url = "https://beetle-backend.vercel.app/api/plugin/fetch"
                 
                 val fetchedExtensions: List<ExtensionModel> = client.get(url).body()
                 

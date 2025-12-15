@@ -29,16 +29,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-// Theme colors (matching GitTab)
-private val BgDark = Color(0xFF1E1E1E)
-private val BgCard = Color(0xFF252526)
-private val BgHover = Color(0xFF2D2D2D)
-private val AccentBlue = Color(0xFF007ACC)
-private val AccentGreen = Color(0xFF73C991)
-private val TextPrimary = Color(0xFFE1E1E1)
-private val TextSecondary = Color(0xFFAAAAAA)
-private val TextTertiary = Color(0xFF666666)
-private val BorderColor = Color(0xFF333333)
+// Uses GitTheme for colors (same package)
 
 @Composable
 fun SshSetupDialog(viewModel: GitViewModel, onDismiss: () -> Unit, onComplete: () -> Unit) {
@@ -81,8 +72,8 @@ fun SshSetupDialog(viewModel: GitViewModel, onDismiss: () -> Unit, onComplete: (
         Surface(
                 modifier = Modifier.width(600.dp).heightIn(max = 700.dp),
                 shape = RoundedCornerShape(12.dp),
-                color = BgDark,
-                border = BorderStroke(1.dp, BorderColor)
+                color = GitTheme.BgDark,
+                border = BorderStroke(1.dp, GitTheme.BorderColor)
         ) {
             Column(modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState())) {
                 // Header
@@ -95,10 +86,10 @@ fun SshSetupDialog(viewModel: GitViewModel, onDismiss: () -> Unit, onComplete: (
                             "SSH Key Setup (ED25519)",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = GitTheme.TextPrimary
                     )
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Rounded.Close, null, tint = TextSecondary)
+                        Icon(Icons.Rounded.Close, null, tint = GitTheme.TextSecondary)
                     }
                 }
 
@@ -108,7 +99,7 @@ fun SshSetupDialog(viewModel: GitViewModel, onDismiss: () -> Unit, onComplete: (
                 Text(
                         "Set up ED25519 SSH authentication for Git operations",
                         fontSize = 14.sp,
-                        color = TextSecondary
+                        color = GitTheme.TextSecondary
                 )
 
                 // Warning if old keys exist
@@ -252,7 +243,7 @@ fun SshSetupDialog(viewModel: GitViewModel, onDismiss: () -> Unit, onComplete: (
                         modifier = Modifier.fillMaxWidth(),
                         colors =
                                 ButtonDefaults.buttonColors(
-                                        containerColor = AccentBlue,
+                                        containerColor = GitTheme.AccentBlue,
                                         contentColor = Color.White
                                 )
                 ) {
@@ -285,7 +276,7 @@ fun SshSetupDialog(viewModel: GitViewModel, onDismiss: () -> Unit, onComplete: (
                             "Step 3: Copy your public key",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
+                            color = GitTheme.TextPrimary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -293,15 +284,15 @@ fun SshSetupDialog(viewModel: GitViewModel, onDismiss: () -> Unit, onComplete: (
                         Box(
                                 modifier =
                                         Modifier.fillMaxWidth()
-                                                .background(BgCard, RoundedCornerShape(6.dp))
-                                                .border(1.dp, BorderColor, RoundedCornerShape(6.dp))
+                                                .background(GitTheme.BgCard, RoundedCornerShape(6.dp))
+                                                .border(1.dp, GitTheme.BorderColor, RoundedCornerShape(6.dp))
                                                 .padding(12.dp)
                         ) {
                             Text(
                                     publicKey,
                                     fontSize = 11.sp,
                                     fontFamily = FontFamily.Monospace,
-                                    color = AccentGreen,
+                                    color = GitTheme.AccentGreen,
                                     lineHeight = 16.sp
                             )
                         }
@@ -314,10 +305,10 @@ fun SshSetupDialog(viewModel: GitViewModel, onDismiss: () -> Unit, onComplete: (
                             modifier = Modifier.fillMaxWidth(),
                             colors =
                                     ButtonDefaults.buttonColors(
-                                            containerColor = BgHover,
-                                            contentColor = TextPrimary
+                                            containerColor = GitTheme.BgHover,
+                                            contentColor = GitTheme.TextPrimary
                                     ),
-                            border = BorderStroke(1.dp, BorderColor)
+                            border = BorderStroke(1.dp, GitTheme.BorderColor)
                     ) {
                         Icon(Icons.Rounded.ContentCopy, null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(8.dp))
@@ -331,32 +322,32 @@ fun SshSetupDialog(viewModel: GitViewModel, onDismiss: () -> Unit, onComplete: (
                             "Step 4: Add to GitHub",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
+                            color = GitTheme.TextPrimary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            color = AccentBlue.copy(alpha = 0.1f),
+                            color = GitTheme.AccentBlue.copy(alpha = 0.1f),
                             shape = RoundedCornerShape(6.dp),
-                            border = BorderStroke(1.dp, AccentBlue.copy(alpha = 0.3f))
+                            border = BorderStroke(1.dp, GitTheme.AccentBlue.copy(alpha = 0.3f))
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
                                     "1. Go to GitHub → Settings → SSH and GPG keys",
                                     fontSize = 12.sp,
-                                    color = TextSecondary
+                                    color = GitTheme.TextSecondary
                             )
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("2. Click 'New SSH key'", fontSize = 12.sp, color = TextSecondary)
+                            Text("2. Click 'New SSH key'", fontSize = 12.sp, color = GitTheme.TextSecondary)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                     "3. Paste the public key above",
                                     fontSize = 12.sp,
-                                    color = TextSecondary
+                                    color = GitTheme.TextSecondary
                             )
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("4. Click 'Add SSH key'", fontSize = 12.sp, color = TextSecondary)
+                            Text("4. Click 'Add SSH key'", fontSize = 12.sp, color = GitTheme.TextSecondary)
                         }
                     }
 
@@ -371,7 +362,7 @@ fun SshSetupDialog(viewModel: GitViewModel, onDismiss: () -> Unit, onComplete: (
                             modifier = Modifier.fillMaxWidth(),
                             colors =
                                     ButtonDefaults.buttonColors(
-                                            containerColor = AccentGreen,
+                                            containerColor = GitTheme.AccentGreen,
                                             contentColor = Color.White
                                     )
                     ) {

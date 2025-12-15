@@ -438,6 +438,9 @@ class GitRepository(private val rootDir: File) {
 
             val result = out.toString()
             if (result.isBlank()) "No changes detected" else result
+        } catch (e: org.eclipse.jgit.errors.MissingObjectException) {
+            Log.e("GitRepository", "Missing blob for diff - repo may need repair", e)
+            "Unable to show diff: Repository objects missing.\n\nTry running 'git fsck' in terminal to check repo integrity,\nor 'git checkout -- $filePath' to restore the file."
         } catch (e: Exception) {
             Log.e("GitRepository", "Failed to get diff", e)
             "Error loading diff: ${e.message}"
@@ -661,6 +664,65 @@ class GitRepository(private val rootDir: File) {
         } else {
             filePath
         }
+    }
+
+    // === Merge Conflict Detection ===
+
+    /** Get list of files with merge conflicts. Returns relative paths of conflicted files. */
+    fun getConflictedFiles(): List<String> {
+        return try {
+            val status = git?.status()?.call()
+            status?.conflicting?.toList() ?: emptyList()
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to get conflicted files", e)
+            emptyList()
+        }
+    }
+
+    /** Check if repository has any merge conflicts. */
+    fun hasConflicts(): Boolean {
+        return getConflictedFiles().isNotEmpty()
+    }
+
+    /**
+     * Read the content of a file (with conflict markers if present).
+     * @param relativePath Path relative to repository root
+     */
+    fun getFileContent(relativePath: String): String? {
+        return try {
+            val file = File(rootDir, relativePath)
+            if (file.exists()) {
+                file.readText()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to read file: $relativePath", e)
+            null
+        }
+    }
+
+    /**
+     * Write resolved content to a file.
+     * @param relativePath Path relative to repository root
+     * @param content The resolved content to write
+     */
+    fun writeFileContent(relativePath: String, content: String): GitResult<Unit> {
+        return try {
+            val file = File(rootDir, relativePath)
+            file.writeText(content)
+            GitLogger.log("Wrote resolved content to $relativePath", LogType.SUCCESS)
+            GitResult.Success(Unit, "Saved: $relativePath")
+        } catch (e: Exception) {
+            Log.e("GitRepository", "Failed to write file: $relativePath", e)
+            GitLogger.log("Failed to write file: ${e.message}", LogType.ERROR)
+            GitResult.Error("Failed to save file", e.message)
+        }
+    }
+
+    /** Mark a conflict as resolved by staging the file. */
+    fun markConflictResolved(relativePath: String): GitResult<Unit> {
+        return stageFile(relativePath)
     }
 
     companion object {
