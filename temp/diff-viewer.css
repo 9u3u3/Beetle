@@ -1,0 +1,113 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #1e1e1e;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow: hidden;
+}
+
+.diff-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #1e1e1e;
+}
+
+.diff-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.diff-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: #252526;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+}
+
+.diff-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e1e1e1;
+  margin-right: 12px;
+}
+
+.current-section .diff-label {
+  color: #73c991;
+}
+
+.incoming-section .diff-label {
+  color: #6bb3f5;
+}
+
+.diff-filename {
+  font-size: 11px;
+  color: #888;
+  font-family: monospace;
+}
+
+.diff-editor {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+.diff-divider {
+  height: 4px;
+  background: linear-gradient(to right, #007acc, #6bb3f5);
+  flex-shrink: 0;
+}
+
+/* CodeMirror overrides for diff view */
+.diff-editor .cm-editor {
+  height: 100%;
+  background: #1e1e1e;
+}
+
+.diff-editor .cm-scroller {
+  overflow: auto;
+}
+
+/* Line decorations for diff */
+.diff-line-added {
+  background-color: rgba(115, 201, 145, 0.15) !important;
+}
+
+.diff-line-added::before {
+  content: '+';
+  color: #73c991;
+  position: absolute;
+  left: 4px;
+}
+
+.diff-line-removed {
+  background-color: rgba(244, 135, 113, 0.15) !important;
+}
+
+.diff-line-removed::before {
+  content: '-';
+  color: #f48771;
+  position: absolute;
+  left: 4px;
+}
+
+.diff-line-unchanged {
+  opacity: 0.7;
+}
+
+/* Gutter styling */
+.diff-gutter-added {
+  color: #73c991;
+  font-weight: bold;
+}
+
+.diff-gutter-removed {
+  color: #f48771;
+  font-weight: bold;
+}
