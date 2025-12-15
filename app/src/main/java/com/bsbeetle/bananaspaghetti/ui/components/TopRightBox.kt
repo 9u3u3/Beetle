@@ -43,6 +43,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -371,6 +373,19 @@ fun TopRightBox(
         )
     }
 
+    // Merge Editor Dialog (for conflict resolution)
+    if (uiState.showMergeEditor &&
+                    uiState.mergeEditorFile != null &&
+                    uiState.mergeEditorContent != null
+    ) {
+        com.bsbeetle.bananaspaghetti.directGit.ui.MergeEditorDialog(
+                filePath = uiState.mergeEditorFile!!,
+                content = uiState.mergeEditorContent!!,
+                onSave = { path, content -> gitViewModel?.saveMergedContent(path, content) },
+                onDismiss = { gitViewModel?.closeMergeEditor() }
+        )
+    }
+
     ConstraintLayout(modifier = modifier.background(Color(0xFF050505))) {
         val (gridContent) = createRefs()
 
@@ -451,6 +466,7 @@ fun TopRightBox(
                                             stagedFiles = uiState.stagedFiles,
                                             modifiedFiles = uiState.modifiedFiles,
                                             untrackedFiles = uiState.untrackedFiles,
+                                            conflictedFiles = uiState.conflictedFiles,
                                             selectedFiles = selectedFiles,
                                             onToggleFile = { path ->
                                                 selectedFiles =
@@ -464,7 +480,8 @@ fun TopRightBox(
                                                 val all =
                                                         (uiState.stagedFiles +
                                                                         uiState.modifiedFiles +
-                                                                        uiState.untrackedFiles)
+                                                                        uiState.untrackedFiles +
+                                                                        uiState.conflictedFiles)
                                                                 .distinct()
                                                 selectedFiles =
                                                         if (selectedFiles.size == all.size) {
@@ -472,6 +489,11 @@ fun TopRightBox(
                                                         } else {
                                                             all.toSet()
                                                         }
+                                            },
+                                            onFileClick = { path ->
+                                                if (uiState.conflictedFiles.contains(path)) {
+                                                    gitViewModel?.openMergeEditor(path)
+                                                }
                                             }
                                     )
                                 }
@@ -927,21 +949,92 @@ private fun GitActionsGrid(
         onHistoryClick: () -> Unit,
         onPullFromBranchClick: () -> Unit = {}
 ) {
+    // Dropdown menu states
+    var showPullMenu by remember { mutableStateOf(false) }
+    var showStashMenu by remember { mutableStateOf(false) }
+
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        // Row 1: Pull, Push, Fetch
+        // Row 1: Pull (dropdown), Push, Fetch
         Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
         ) {
-            // Pull with dropdown indicator for "Pull from branch"
-            CompactActionIcon(
-                    icon = Icons.Rounded.ArrowDownward,
-                    label = "Pull",
-                    color = AccentBlue,
-                    onClick = { gitViewModel?.pull() },
-                    onLongClick = onPullFromBranchClick
-            )
+            // Pull Dropdown
+            Box {
+                Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier =
+                                Modifier.clip(RoundedCornerShape(8.dp))
+                                        .clickable { showPullMenu = true }
+                                        .padding(4.dp)
+                ) {
+                    Icon(
+                            Icons.Rounded.ArrowDownward,
+                            "Pull",
+                            tint = AccentBlue,
+                            modifier = Modifier.size(20.dp)
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                                "Pull",
+                                color = TextSecondary,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Medium
+                        )
+                        Icon(
+                                Icons.Rounded.ExpandMore,
+                                null,
+                                tint = TextTertiary,
+                                modifier = Modifier.size(10.dp)
+                        )
+                    }
+                }
+
+                DropdownMenu(
+                        expanded = showPullMenu,
+                        onDismissRequest = { showPullMenu = false },
+                        modifier =
+                                Modifier.background(BgCard)
+                                        .border(1.dp, BorderColor, RoundedCornerShape(4.dp))
+                ) {
+                    DropdownMenuItem(
+                            text = {
+                                Text("Pull (current)", color = TextPrimary, fontSize = 12.sp)
+                            },
+                            onClick = {
+                                gitViewModel?.pull()
+                                showPullMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(
+                                        Icons.Rounded.ArrowDownward,
+                                        null,
+                                        tint = AccentBlue,
+                                        modifier = Modifier.size(16.dp)
+                                )
+                            }
+                    )
+                    DropdownMenuItem(
+                            text = {
+                                Text("Pull from branch...", color = TextPrimary, fontSize = 12.sp)
+                            },
+                            onClick = {
+                                onPullFromBranchClick()
+                                showPullMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(
+                                        Icons.Rounded.AccountTree,
+                                        null,
+                                        tint = AccentGreen,
+                                        modifier = Modifier.size(16.dp)
+                                )
+                            }
+                    )
+                }
+            }
+
             CompactActionIcon(
                     icon = Icons.Rounded.ArrowUpward,
                     label = "Push",
@@ -956,7 +1049,7 @@ private fun GitActionsGrid(
             )
         }
 
-        // Row 2: Add All, Stash, History
+        // Row 2: Add All, Stash (dropdown), History
         Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -971,12 +1064,78 @@ private fun GitActionsGrid(
                         allFiles.forEach { gitViewModel?.stageFile(it) }
                     }
             )
-            CompactActionIcon(
-                    icon = Icons.Rounded.Archive,
-                    label = "Stash",
-                    color = TextSecondary,
-                    onClick = { gitViewModel?.stash() }
-            )
+
+            // Stash Dropdown
+            Box {
+                Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier =
+                                Modifier.clip(RoundedCornerShape(8.dp))
+                                        .clickable { showStashMenu = true }
+                                        .padding(4.dp)
+                ) {
+                    Icon(
+                            Icons.Rounded.Archive,
+                            "Stash",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(20.dp)
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                                "Stash",
+                                color = TextSecondary,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Medium
+                        )
+                        Icon(
+                                Icons.Rounded.ExpandMore,
+                                null,
+                                tint = TextTertiary,
+                                modifier = Modifier.size(10.dp)
+                        )
+                    }
+                }
+
+                DropdownMenu(
+                        expanded = showStashMenu,
+                        onDismissRequest = { showStashMenu = false },
+                        modifier =
+                                Modifier.background(BgCard)
+                                        .border(1.dp, BorderColor, RoundedCornerShape(4.dp))
+                ) {
+                    DropdownMenuItem(
+                            text = { Text("Stash Changes", color = TextPrimary, fontSize = 12.sp) },
+                            onClick = {
+                                gitViewModel?.stash()
+                                showStashMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(
+                                        Icons.Rounded.Archive,
+                                        null,
+                                        tint = AccentBlue,
+                                        modifier = Modifier.size(16.dp)
+                                )
+                            }
+                    )
+                    DropdownMenuItem(
+                            text = { Text("Pop Stash", color = TextPrimary, fontSize = 12.sp) },
+                            onClick = {
+                                gitViewModel?.stashPop()
+                                showStashMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(
+                                        Icons.Rounded.ArrowUpward,
+                                        null,
+                                        tint = AccentGreen,
+                                        modifier = Modifier.size(16.dp)
+                                )
+                            }
+                    )
+                }
+            }
+
             CompactActionIcon(
                     icon = Icons.Rounded.History,
                     label = "History",
@@ -1086,11 +1245,14 @@ private fun ChangesListPage(
         stagedFiles: List<String>,
         modifiedFiles: List<String>,
         untrackedFiles: List<String>,
+        conflictedFiles: List<String>,
         selectedFiles: Set<String>,
         onToggleFile: (String) -> Unit,
-        onSelectAll: () -> Unit
+        onSelectAll: () -> Unit,
+        onFileClick: (String) -> Unit
 ) {
-    val allChanges = (stagedFiles + modifiedFiles + untrackedFiles).distinct().sorted()
+    val allChanges =
+            (stagedFiles + modifiedFiles + untrackedFiles + conflictedFiles).distinct().sorted()
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Select All Header (compact for landscape)
@@ -1141,6 +1303,7 @@ private fun ChangesListPage(
                         when {
                             untrackedFiles.contains(path) -> "U"
                             modifiedFiles.contains(path) -> "M"
+                            conflictedFiles.contains(path) -> "C"
                             else -> "S"
                         }
                 CompactFileItem(
@@ -1148,7 +1311,8 @@ private fun ChangesListPage(
                         status = status,
                         isStaged = isStaged,
                         isSelected = selectedFiles.contains(path),
-                        onToggle = { onToggleFile(path) }
+                        onToggle = { onToggleFile(path) },
+                        onClick = { onFileClick(path) }
                 )
             }
         }
@@ -1162,7 +1326,8 @@ private fun CompactFileItem(
         status: String,
         isStaged: Boolean,
         isSelected: Boolean,
-        onToggle: () -> Unit
+        onToggle: () -> Unit,
+        onClick: () -> Unit
 ) {
     val file = java.io.File(path)
     val fileName = file.name
@@ -1170,7 +1335,7 @@ private fun CompactFileItem(
     Row(
             modifier =
                     Modifier.fillMaxWidth()
-                            .clickable(onClick = onToggle)
+                            .clickable(onClick = onClick)
                             .background(if (isSelected) BgHover else Color.Transparent)
                             .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -1197,6 +1362,7 @@ private fun CompactFileItem(
                         when (status) {
                             "U" -> AccentGreen
                             "M" -> AccentYellow
+                            "C" -> Color.Red
                             else -> AccentBlue
                         },
                 fontSize = 10.sp,
