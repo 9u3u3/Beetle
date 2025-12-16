@@ -43,9 +43,9 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
                 // For now, assume the path is valid for the shell (or mapped).
                 // If it's a content URI, we can't cd into it.
                 if (dir.startsWith("/")) {
-                     // It's a path
-                     insertText("cd \"$dir\"\n")
-                     insertText("clear\n") // Optional: clear the cd command from view
+                    // It's a path
+                    insertText("cd \"$dir\"\n")
+                    insertText("clear\n") // Optional: clear the cd command from view
                 }
             }
         } catch (e: Exception) {
@@ -58,6 +58,9 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
         if (view != null) return view!!
         view =
                 CustomWebView(context.applicationContext, this).apply {
+                    // Set dark background immediately to prevent white flash
+                    setBackgroundColor(android.graphics.Color.parseColor("#1E1E1E"))
+
                     WebView.setWebContentsDebuggingEnabled(true)
                     settings.apply {
                         javaScriptEnabled = true

@@ -37,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -542,20 +543,8 @@ private fun TerminalContent(
             // Key by terminal ID to ensure proper recreation
             key(activeTerminal.id) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    AndroidView(
-                            factory = { ctx -> activeTerminal.getOrInitView() },
-                            modifier =
-                                    Modifier.fillMaxSize().clickable {
-                                        // Set as active session when clicked
-                                        SessionList.activeSessionIndex =
-                                                SessionList.sessions.indexOf(activeTerminal)
-                                    },
-                            update = { webView ->
-                                // Don't auto-focus - let user tap to focus
-                            }
-                    )
-
-                    // Loading overlay - shown until terminal is fully initialized
+                    // Loading overlay - shown FIRST, under the WebView layer but visible when
+                    // WebView is transparent
                     if (!isTerminalReady) {
                         Box(
                                 modifier = Modifier.fillMaxSize().background(Color(0xFF1E1E1E)),
@@ -579,6 +568,22 @@ private fun TerminalContent(
                             }
                         }
                     }
+
+                    // WebView - invisible until ready (alpha = 0 prevents any flash)
+                    AndroidView(
+                            factory = { ctx -> activeTerminal.getOrInitView() },
+                            modifier =
+                                    Modifier.fillMaxSize()
+                                            .alpha(if (isTerminalReady) 1f else 0f)
+                                            .clickable {
+                                                // Set as active session when clicked
+                                                SessionList.activeSessionIndex =
+                                                        SessionList.sessions.indexOf(activeTerminal)
+                                            },
+                            update = { webView ->
+                                // Don't auto-focus - let user tap to focus
+                            }
+                    )
                 }
             }
         } else {
