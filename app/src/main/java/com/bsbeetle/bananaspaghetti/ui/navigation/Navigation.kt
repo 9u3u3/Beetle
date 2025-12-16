@@ -13,10 +13,13 @@ import com.bsbeetle.bananaspaghetti.ui.home.SettingsScreen
 import com.bsbeetle.bananaspaghetti.ui.keyboard.DemoEditorUi
 import com.bsbeetle.bananaspaghetti.ui.screens.sessions.ZoomOut
 
+import com.bsbeetle.bananaspaghetti.ui.home.AuthScreen
+
 @Composable
-fun AppNavigation() {
+fun AppNavigation(startDestination: String = Screen.Home.route) {
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = Screen.Home.route) {
+    NavHost(navController = navController, startDestination = startDestination) {
+        composable(Screen.Auth.route){AuthScreen(navController)} // Auth Screen
         composable(Screen.Home.route){HomeScreen(navController)} // Home Screen (Default)
         composable(Screen.OpenFile.route){InitialEditorUI(navController)} // Open File
         composable(Screen.NewFile.route){InitialEditorUI(navController)} // New File

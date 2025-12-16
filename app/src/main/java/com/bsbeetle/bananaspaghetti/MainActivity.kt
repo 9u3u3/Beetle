@@ -42,6 +42,8 @@ val LocalTerminalViewModel =
         compositionLocalOf<TerminalViewModel> { error("No terminal view model provided") }
 val LocalBrowserViewModel =
         compositionLocalOf<DevWebViewModel> { error("No browser view model provided") }
+val LocalAuthViewModel =
+        compositionLocalOf<com.bsbeetle.bananaspaghetti.viewmodel.AuthViewModel> { error("No auth view model provided") }
 
 class MainActivity : ComponentActivity() {
         override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,6 +68,13 @@ class MainActivity : ComponentActivity() {
                                 val expandViewModel: ExpandViewModel = viewModel()
                                 val terminalViewModel: TerminalViewModel = viewModel()
                                 val browserViewModel: DevWebViewModel = viewModel()
+                                val authViewModel: com.bsbeetle.bananaspaghetti.viewmodel.AuthViewModel = viewModel()
+
+                                val startDestination = if (authViewModel.isAuthorized.value) {
+                                    com.bsbeetle.bananaspaghetti.ui.navigation.Screen.Home.route
+                                } else {
+                                    com.bsbeetle.bananaspaghetti.ui.navigation.Screen.Auth.route
+                                }
 
                                 CompositionLocalProvider(
                                         LocalFileViewModel provides fileViewModel,
@@ -75,10 +84,11 @@ class MainActivity : ComponentActivity() {
                                         LocalEditorViewModel provides editorViewModel,
                                         LocalExpandViewModel provides expandViewModel,
                                         LocalTerminalViewModel provides terminalViewModel,
-                                        LocalBrowserViewModel provides browserViewModel
+                                        LocalBrowserViewModel provides browserViewModel,
+                                        LocalAuthViewModel provides authViewModel
                                 ) {
                                         Box(modifier = Modifier.fillMaxSize()) {
-                                                AppNavigation()
+                                                AppNavigation(startDestination = startDestination)
                                                 //
                                                 // BrowserScreen(navController)
                                         }

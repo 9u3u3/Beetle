@@ -61,6 +61,8 @@ private val DividerColor = Color(0xFF404040)
 @Composable
 fun SettingsScreen(navController: NavController) {
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
+    val authViewModel = com.bsbeetle.bananaspaghetti.LocalAuthViewModel.current
+    val userEmail by authViewModel.userEmail.collectAsStateWithLifecycle()
     var selectedCategory by remember { mutableStateOf("Keyboard") }
     
     BackHandler {
@@ -75,7 +77,8 @@ fun SettingsScreen(navController: NavController) {
         // Left sidebar
         SettingsSidebar(
             selectedCategory = selectedCategory,
-            onCategorySelected = { selectedCategory = it }
+            onCategorySelected = { selectedCategory = it },
+            userEmail = userEmail
         )
         
         // Main content area
@@ -89,7 +92,8 @@ fun SettingsScreen(navController: NavController) {
 @Composable
 private fun SettingsSidebar(
     selectedCategory: String,
-    onCategorySelected: (String) -> Unit
+    onCategorySelected: (String) -> Unit,
+    userEmail: String
 ) {
     Column(
         modifier = Modifier
@@ -99,7 +103,7 @@ private fun SettingsSidebar(
             .padding(16.dp)
     ) {
         // Profile section
-        ProfileCard()
+        ProfileCard(userEmail)
         
         Spacer(modifier = Modifier.height(16.dp))
         
@@ -123,7 +127,7 @@ private fun SettingsSidebar(
 }
 
 @Composable
-private fun ProfileCard() {
+private fun ProfileCard(userEmail: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -152,7 +156,7 @@ private fun ProfileCard() {
         
         Column {
             Text(
-                text = "User",
+                text = if (userEmail.isNotBlank()) userEmail else "User",
                 color = TextPrimary,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium

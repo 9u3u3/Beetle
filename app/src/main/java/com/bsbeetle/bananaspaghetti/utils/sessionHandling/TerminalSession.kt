@@ -133,6 +133,14 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
 
                     webViewClient =
                             object : WebViewClient() {
+                                override fun onPageFinished(view: WebView?, url: String?) {
+                                    super.onPageFinished(view, url)
+                                    // Make the WebView visible after page loads
+                                    view?.visibility = android.view.View.VISIBLE
+                                    view?.alpha = 1f
+                                    Log.d("TerminalSession", "Terminal page loaded, making visible")
+                                }
+                                
                                 override fun onRenderProcessGone(
                                         view: WebView?,
                                         detail: RenderProcessGoneDetail?

@@ -62,6 +62,9 @@ fun ExtensionsScreen(navController: NavController, viewModel: ExtensionsViewMode
     
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    
+    // Observe restart snackbar state
+    val showRestartSnackbar by viewModel.showRestartSnackbar.collectAsState()
 
     BackHandler {
         navController.popBackStack()
@@ -79,6 +82,17 @@ fun ExtensionsScreen(navController: NavController, viewModel: ExtensionsViewMode
     LaunchedEffect(error) {
         error?.let {
             snackbarHostState.showSnackbar(it)
+        }
+    }
+    
+    // Show restart snackbar when extension is installed
+    LaunchedEffect(showRestartSnackbar) {
+        if (showRestartSnackbar) {
+            snackbarHostState.showSnackbar(
+                message = "Restart the app for extension to take effect",
+                duration = SnackbarDuration.Long
+            )
+            viewModel.dismissRestartSnackbar()
         }
     }
 
@@ -366,37 +380,5 @@ fun ExtensionDetails(
                 }
             }
         }
-        
-        Spacer(Modifier.height(32.dp))
-        
-        HorizontalDivider(Modifier.padding(top = 8.dp, bottom = 24.dp), color = Color(0xFF333333))
-        
-        // Content (Readme)
-        Text(
-            text = """
-                # ${extension.name}
-                
-                ${extension.description}
-                
-                ## Features
-                - IntelliSense
-                - Debugging
-                - Code Navigation
-                - Refactoring
-                
-                ## Requirements
-                - VS Code 1.50.0 or higher
-                
-                ## Known Issues
-                None.
-                
-                ## Release Notes
-                ### ${extension.version}
-                - Initial release
-            """.trimIndent(),
-            color = Color(0xFFCCCCCC),
-            fontSize = 14.sp,
-            lineHeight = 22.sp
-        )
     }
 }
