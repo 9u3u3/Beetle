@@ -34,6 +34,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +57,8 @@ import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
 import com.bsbeetle.bananaspaghetti.viewmodel.DiagnosticItem
 import com.bsbeetle.bananaspaghetti.viewmodel.LspViewModel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 enum class BottomPanelTab {
     PROBLEMS,
@@ -87,6 +90,9 @@ fun BottomBar(
     // Terminal sessions for bottom panel
     val panelTerminals = remember { mutableStateListOf<TerminalSession>() }
     var activeTerminalIndex by remember { mutableIntStateOf(0) }
+
+    // Coroutine scope for async terminal creation
+    val scope = rememberCoroutineScope()
 
     // Update editor bottom padding when bottom bar height changes
     // This allows scrolling past the last line when bottom bar covers it
@@ -291,8 +297,17 @@ fun BottomBar(
                                                         "bash ${panelTerminals.size + 1}",
                                                         initialDir = currentPath
                                                 )
-                                        panelTerminals.add(newTerminal)
-                                        activeTerminalIndex = panelTerminals.size - 1
+                                        // Initialize the WebView first (required before isReady can
+                                        // become true)
+                                        // Then wait for terminal to be ready before adding to list
+                                        scope.launch {
+                                            // Initialize the view (this starts the WebView loading)
+                                            newTerminal.getOrInitView()
+                                            // Wait until terminal is fully ready
+                                            newTerminal.isReady.first { ready -> ready }
+                                            panelTerminals.add(newTerminal)
+                                            activeTerminalIndex = panelTerminals.size - 1
+                                        }
                                     }
                     )
                 }
