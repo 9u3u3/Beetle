@@ -3,6 +3,9 @@ package com.bsbeetle.bananaspaghetti.utils.fileHandling
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.documentfile.provider.DocumentFile
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
@@ -10,14 +13,14 @@ import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 
 object FileOperations {
 
-    // Clipboard for copy/cut operations
+    // Clipboard for copy/cut operations - using mutableStateOf for recomposition
     enum class ClipboardOp {
         NONE,
         COPY,
         CUT
     }
-    var clipboardFile: DocumentFile? = null
-    var clipboardOperation: ClipboardOp = ClipboardOp.NONE
+    var clipboardFile: DocumentFile? by mutableStateOf(null)
+    var clipboardOperation: ClipboardOp by mutableStateOf(ClipboardOp.NONE)
 
     fun createNewFile(
             context: Context,

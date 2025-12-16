@@ -85,6 +85,10 @@ fun FileMenuDialog(
     var fileToRename by remember { mutableStateOf<DocumentFile?>(null) }
     var selectedFolder by remember { mutableStateOf<DocumentFile?>(null) }
 
+    // For file/folder type selection dialog
+    var pendingOperation by remember { mutableStateOf<String?>(null) }
+    var showTypeSelector by remember { mutableStateOf(false) }
+
     // File picker launcher
     val openFileLauncher =
             rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocument()) {
@@ -445,14 +449,20 @@ fun FileMenuDialog(
 
                             FileMenuItem(
                                     icon = R.drawable.file_type_text,
-                                    title = "Rename File",
-                                    onClick = { renameFileLauncher.launch(arrayOf("*/*")) }
+                                    title = "Rename",
+                                    onClick = {
+                                        pendingOperation = "rename"
+                                        showTypeSelector = true
+                                    }
                             )
 
                             FileMenuItem(
-                                    icon = R.drawable.computer_folder_open_icon,
-                                    title = "Rename Folder",
-                                    onClick = { renameFolderLauncher.launch(null) }
+                                    icon = R.drawable.file_type_text,
+                                    title = "Delete",
+                                    onClick = {
+                                        pendingOperation = "delete"
+                                        showTypeSelector = true
+                                    }
                             )
 
                             HorizontalDivider(
@@ -462,43 +472,20 @@ fun FileMenuDialog(
 
                             FileMenuItem(
                                     icon = R.drawable.file_type_text,
-                                    title = "Delete File",
-                                    onClick = { deleteFileLauncher.launch(arrayOf("*/*")) }
-                            )
-
-                            FileMenuItem(
-                                    icon = R.drawable.computer_folder_open_icon,
-                                    title = "Delete Folder",
-                                    onClick = { deleteFolderLauncher.launch(null) }
-                            )
-
-                            HorizontalDivider(
-                                    color = Color(0xFF3C3C3C),
-                                    modifier = Modifier.padding(vertical = 4.dp)
+                                    title = "Copy",
+                                    onClick = {
+                                        pendingOperation = "copy"
+                                        showTypeSelector = true
+                                    }
                             )
 
                             FileMenuItem(
                                     icon = R.drawable.file_type_text,
-                                    title = "Copy File",
-                                    onClick = { copyFileLauncher.launch(arrayOf("*/*")) }
-                            )
-
-                            FileMenuItem(
-                                    icon = R.drawable.computer_folder_open_icon,
-                                    title = "Copy Folder",
-                                    onClick = { copyFolderLauncher.launch(null) }
-                            )
-
-                            FileMenuItem(
-                                    icon = R.drawable.file_type_text,
-                                    title = "Move File",
-                                    onClick = { moveFileLauncher.launch(arrayOf("*/*")) }
-                            )
-
-                            FileMenuItem(
-                                    icon = R.drawable.computer_folder_open_icon,
-                                    title = "Move Folder",
-                                    onClick = { moveFolderLauncher.launch(null) }
+                                    title = "Move",
+                                    onClick = {
+                                        pendingOperation = "move"
+                                        showTypeSelector = true
+                                    }
                             )
 
                             if (FileOperations.hasClipboardContent()) {
@@ -509,7 +496,7 @@ fun FileMenuDialog(
 
                                 FileMenuItem(
                                         icon = R.drawable.computer_folder_open_icon,
-                                        title = "Paste Here",
+                                        title = "Paste",
                                         onClick = { pasteDestLauncher.launch(null) }
                                 )
                             }
@@ -522,6 +509,60 @@ fun FileMenuDialog(
                                     modifier = Modifier.align(Alignment.End)
                             ) { Text("Cancel", color = Color(0xFF888888)) }
                         }
+                    }
+
+                    // Type selection dialog - inside NONE case but outside the Card
+                    if (showTypeSelector) {
+                        androidx.compose.material3.AlertDialog(
+                                onDismissRequest = {
+                                    showTypeSelector = false
+                                    pendingOperation = null
+                                },
+                                title = { Text("Select Type", color = Color.White) },
+                                text = {
+                                    Text(
+                                            "What do you want to ${pendingOperation}?",
+                                            color = Color(0xFF888888)
+                                    )
+                                },
+                                confirmButton = {
+                                    TextButton(
+                                            onClick = {
+                                                showTypeSelector = false
+                                                when (pendingOperation) {
+                                                    "rename" ->
+                                                            renameFileLauncher.launch(
+                                                                    arrayOf("*/*")
+                                                            )
+                                                    "delete" ->
+                                                            deleteFileLauncher.launch(
+                                                                    arrayOf("*/*")
+                                                            )
+                                                    "copy" ->
+                                                            copyFileLauncher.launch(arrayOf("*/*"))
+                                                    "move" ->
+                                                            moveFileLauncher.launch(arrayOf("*/*"))
+                                                }
+                                                pendingOperation = null
+                                            }
+                                    ) { Text("File", color = Color(0xFF007ACC)) }
+                                },
+                                dismissButton = {
+                                    TextButton(
+                                            onClick = {
+                                                showTypeSelector = false
+                                                when (pendingOperation) {
+                                                    "rename" -> renameFolderLauncher.launch(null)
+                                                    "delete" -> deleteFolderLauncher.launch(null)
+                                                    "copy" -> copyFolderLauncher.launch(null)
+                                                    "move" -> moveFolderLauncher.launch(null)
+                                                }
+                                                pendingOperation = null
+                                            }
+                                    ) { Text("Folder", color = Color(0xFF007ACC)) }
+                                },
+                                containerColor = Color(0xFF252526)
+                        )
                     }
                 }
                 FileMenuAction.NEW_FILE -> {
