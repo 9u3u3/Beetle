@@ -57,7 +57,7 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
                 horizontalArrangement = Arrangement.Start
             ) {
                 Image(
-                    painter = painterResource(R.drawable.beetle_logo),
+                    painter = painterResource(R.drawable.beetle),
                     contentDescription = "Beetle logo",
                     modifier = Modifier.size(65.dp).clip(RoundedCornerShape(12.dp))
                 )
