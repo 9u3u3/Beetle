@@ -27,6 +27,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -254,10 +255,10 @@ fun BottomBar(
                         onClick = { selectedTab = BottomPanelTab.TERMINAL }
                 )
 
-                // Git Log tab
+                // Git Console tab
                 PanelTab(
-                        title = "Git Log",
-                        count = 0,
+                        title = "Git Console",
+                        count = gitViewModel.uiState.collectAsState().value.terminalHistory.size,
                         isSelected = selectedTab == BottomPanelTab.GIT_CONSOLE,
                         onClick = { selectedTab = BottomPanelTab.GIT_CONSOLE }
                 )
@@ -294,6 +295,19 @@ fun BottomBar(
                                     }
                     )
                 }
+
+                // Clear button for Git Console tab
+                if (selectedTab == BottomPanelTab.GIT_CONSOLE) {
+                    Text(
+                            text = "Clear",
+                            color = Color(0xFFCCCCCC),
+                            fontSize = 11.sp,
+                            modifier =
+                                    Modifier.padding(horizontal = 8.dp).clickable {
+                                        gitViewModel.clearMessages()
+                                    }
+                    )
+                }
             }
 
             // Content area
@@ -326,9 +340,12 @@ fun BottomBar(
                         )
                     }
                     BottomPanelTab.GIT_CONSOLE -> {
-                        // Git Log - show commit history
+                        // Git Console - show terminal command history
                         val gitUiState by gitViewModel.uiState.collectAsStateWithLifecycle()
-                        GitLogContent(commits = gitUiState.commits)
+                        GitConsoleContent(
+                                terminalHistory = gitUiState.terminalHistory,
+                                onClear = { gitViewModel.clearMessages() }
+                        )
                     }
                 }
             }
@@ -405,37 +422,38 @@ private fun ProblemsContent(
 }
 
 @Composable
-private fun GitLogContent(commits: List<com.bsbeetle.bananaspaghetti.utils.git.CommitInfo>) {
+private fun GitConsoleContent(terminalHistory: List<String>, onClear: () -> Unit) {
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(8.dp)) {
-        if (commits.isEmpty()) {
-            Text(text = "No commits yet", color = Color(0xFF888888), fontSize = 12.sp)
+        if (terminalHistory.isEmpty()) {
+            Text(
+                    text = "No git commands executed yet",
+                    color = Color(0xFF888888),
+                    fontSize = 12.sp,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+            )
         } else {
-            commits.forEach { commit ->
-                Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.Top
-                ) {
-                    Text(
-                            text = commit.hash.take(7),
-                            color = Color(0xFF007ACC),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                                text = commit.message,
-                                color = Color.White,
-                                fontSize = 11.sp,
-                                maxLines = 1
-                        )
-                        Text(
-                                text = "${commit.author} • ${commit.date}",
-                                color = Color(0xFF888888),
-                                fontSize = 9.sp
-                        )
-                    }
-                }
+            terminalHistory.forEach { line ->
+                val (color, displayText) =
+                        when {
+                            line.startsWith("\$ ") ->
+                                    Color(0xFF61AFEF) to line // Command - cyan/blue
+                            line.startsWith("✅") -> Color(0xFF98C379) to line // Success - green
+                            line.startsWith("❌") -> Color(0xFFE06C75) to line // Error - red
+                            line.startsWith("📦") ||
+                                    line.startsWith("🔑") ||
+                                    line.startsWith("🔧") ->
+                                    Color(0xFFE5C07B) to line // Info/setup - yellow
+                            line.startsWith("⏳") -> Color(0xFF888888) to line // Waiting - gray
+                            else -> Color(0xFFABB2BF) to line // Default output - light gray
+                        }
+
+                Text(
+                        text = displayText,
+                        color = color,
+                        fontSize = 11.sp,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        modifier = Modifier.padding(vertical = 1.dp)
+                )
             }
         }
     }
