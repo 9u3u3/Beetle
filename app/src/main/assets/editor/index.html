@@ -6,6 +6,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title></title>
   <link href="./styles.css" rel="stylesheet">
+  <script>
+    // Define setBottomPadding early so it's available before bundle loads
+    // This prevents race condition when Kotlin calls it during editor init
+    window.setBottomPadding = function (paddingPx) {
+      var existingStyle = document.getElementById('editor-bottom-padding-style');
+      if (existingStyle) {
+        existingStyle.remove();
+      }
+
+      var paddingStyle = document.createElement('style');
+      paddingStyle.id = 'editor-bottom-padding-style';
+      paddingStyle.textContent = '.cm-scroller { padding-bottom: ' + paddingPx + 'px !important; }';
+      document.head.appendChild(paddingStyle);
+      console.log('[Editor] Bottom padding set to: ' + paddingPx);
+    };
+  </script>
 </head>
 
 <body>
