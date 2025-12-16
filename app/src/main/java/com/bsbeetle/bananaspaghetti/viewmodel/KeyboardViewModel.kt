@@ -3,6 +3,7 @@ package com.bsbeetle.bananaspaghetti.viewmodel
 import android.view.KeyEvent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bsbeetle.bananaspaghetti.data.Ic
 import com.bsbeetle.bananaspaghetti.model.Key
 import com.bsbeetle.bananaspaghetti.model.KeyType
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
@@ -22,7 +23,6 @@ sealed class KeyGesture {
     object DoubleTap : KeyGesture()
     object LongPress : KeyGesture()
 }
-
 
 // Editor command definitions
 sealed class EditorAction {
@@ -56,7 +56,6 @@ class KeyboardViewModel : ViewModel() {
     private val _textBuffer = StringBuilder()
     private var _bufferJob: kotlinx.coroutines.Job? = null
 
-
     // only Entry point for the key clicked
     fun onKeyEvent(key: Key, gesture: KeyGesture) {
         when (key.type) {
@@ -71,8 +70,14 @@ class KeyboardViewModel : ViewModel() {
             KeyType.ACTION_CTRL -> handleCtrl(gesture)
             KeyType.ACTION_ESCAPE -> handleEscape(gesture)
             KeyType.ACTION_ALT -> handleAlt(gesture)
-            KeyType.ACTION_LEFT, KeyType.ACTION_RIGHT, KeyType.ACTION_UP, KeyType.ACTION_DOWN,
-            KeyType.ACTION_HOME, KeyType.ACTION_END, KeyType.ACTION_PGUP, KeyType.ACTION_PGDN -> handleNavigation(key.type, gesture)
+            KeyType.ACTION_LEFT,
+            KeyType.ACTION_RIGHT,
+            KeyType.ACTION_UP,
+            KeyType.ACTION_DOWN,
+            KeyType.ACTION_HOME,
+            KeyType.ACTION_END,
+            KeyType.ACTION_PGUP,
+            KeyType.ACTION_PGDN -> handleNavigation(key.type, gesture)
         }
     }
 
@@ -85,8 +90,11 @@ class KeyboardViewModel : ViewModel() {
             KeyGesture.Tap -> {
                 // Check if CTRL is pressed for shortcuts
                 if (_uiState.value.isCtrlOn) {
-                    val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
-                    if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) {
+                    val session =
+                            SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
+                    if (session is
+                                    com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
+                    ) {
                         // Handle generic Ctrl+Key for Terminal (ASCII control codes)
                         val char = key.text.uppercase()
                         if (char.isNotEmpty()) {
@@ -99,12 +107,13 @@ class KeyboardViewModel : ViewModel() {
                             // '^' (94) -> 30 (RS)
                             // '_' (95) -> 31 (US)
                             // '?' (63) -> 127 (DEL) - often mapped to Ctrl+?
-                            
-                            val ctrlCode = if (code == '?'.code) {
-                                127
-                            } else {
-                                code - 64
-                            }
+
+                            val ctrlCode =
+                                    if (code == '?'.code) {
+                                        127
+                                    } else {
+                                        code - 64
+                                    }
 
                             if (ctrlCode in 0..31 || ctrlCode == 127) {
                                 emitText(ctrlCode.toChar().toString())
@@ -142,20 +151,20 @@ class KeyboardViewModel : ViewModel() {
         }
     }
 
-
     private fun handleCtrlShortcut(key: Key) {
-        val action = when (key.text.lowercase()) {
-            "c" -> EditorAction.CtrlC  // Always interrupt
-            "v" -> EditorAction.Paste
-            "x" -> EditorAction.Cut
-            "d" -> EditorAction.CtrlD
-            "z" -> EditorAction.Undo
-            "y" -> EditorAction.Redo
-            "a" -> EditorAction.SelectAll
-            "f" -> EditorAction.Find
-            "s" -> EditorAction.Save
-            else -> return
-        }
+        val action =
+                when (key.text.lowercase()) {
+                    "c" -> EditorAction.CtrlC // Always interrupt
+                    "v" -> EditorAction.Paste
+                    "x" -> EditorAction.Cut
+                    "d" -> EditorAction.CtrlD
+                    "z" -> EditorAction.Undo
+                    "y" -> EditorAction.Redo
+                    "a" -> EditorAction.SelectAll
+                    "f" -> EditorAction.Find
+                    "s" -> EditorAction.Save
+                    else -> return
+                }
 
         action?.let {
             emitAction(it)
@@ -166,17 +175,13 @@ class KeyboardViewModel : ViewModel() {
 
     private fun handleCtrl(gesture: KeyGesture) {
         if (gesture == KeyGesture.Tap) {
-            _uiState.update { currentState ->
-                currentState.copy(isCtrlOn = !currentState.isCtrlOn)
-            }
+            _uiState.update { currentState -> currentState.copy(isCtrlOn = !currentState.isCtrlOn) }
         }
     }
 
     private fun handleAlt(gesture: KeyGesture) {
         if (gesture == KeyGesture.Tap) {
-            _uiState.update { currentState ->
-                currentState.copy(isAltOn = !currentState.isAltOn)
-            }
+            _uiState.update { currentState -> currentState.copy(isAltOn = !currentState.isAltOn) }
         }
     }
 
@@ -186,17 +191,18 @@ class KeyboardViewModel : ViewModel() {
             if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
                 emitAction(EditorAction.Navigation(type))
             } else {
-                val sequence = when (type) {
-                    KeyType.ACTION_LEFT -> "\u001B[D"
-                    KeyType.ACTION_RIGHT -> "\u001B[C"
-                    KeyType.ACTION_UP -> "\u001B[A"
-                    KeyType.ACTION_DOWN -> "\u001B[B"
-                    KeyType.ACTION_HOME -> "\u001B[H"
-                    KeyType.ACTION_END -> "\u001B[F"
-                    KeyType.ACTION_PGUP -> "\u001B[5~"
-                    KeyType.ACTION_PGDN -> "\u001B[6~"
-                    else -> ""
-                }
+                val sequence =
+                        when (type) {
+                            KeyType.ACTION_LEFT -> "\u001B[D"
+                            KeyType.ACTION_RIGHT -> "\u001B[C"
+                            KeyType.ACTION_UP -> "\u001B[A"
+                            KeyType.ACTION_DOWN -> "\u001B[B"
+                            KeyType.ACTION_HOME -> "\u001B[H"
+                            KeyType.ACTION_END -> "\u001B[F"
+                            KeyType.ACTION_PGUP -> "\u001B[5~"
+                            KeyType.ACTION_PGDN -> "\u001B[6~"
+                            else -> ""
+                        }
                 if (sequence.isNotEmpty()) {
                     sendTerminalSequence(sequence)
                 }
@@ -234,31 +240,40 @@ class KeyboardViewModel : ViewModel() {
 
     private fun handleShift(gesture: KeyGesture) {
         when (gesture) {
-            KeyGesture.Tap -> _uiState.update { currentState ->
-                if (currentState.isCapsLockOn){
-                    currentState.copy(isCapsLockOn = false)
-                } else {
-                    currentState.copy(isShiftOn = !currentState.isShiftOn)  // This line is correct
-                }
-            }
-
-            KeyGesture.DoubleTap -> _uiState.update { currentState ->
-                currentState.copy(isCapsLockOn = !currentState.isCapsLockOn, isShiftOn = false)
-            }
-            KeyGesture.Press -> _uiState.update { currentState ->
-                // If caps lock is on, pressing shift toggles it off temporarily
-                // Otherwise, it just turns on shift
-                if (currentState.isCapsLockOn) currentState else currentState.copy(isShiftOn = true)
-            }
-            KeyGesture.Release -> _uiState.update { currentState ->
-                // If caps lock is on, releasing shift does nothing
-                // Otherwise, it turns shift off
-                if (currentState.isCapsLockOn) currentState else currentState.copy(isShiftOn = false)
-            }
+            KeyGesture.Tap ->
+                    _uiState.update { currentState ->
+                        if (currentState.isCapsLockOn) {
+                            currentState.copy(isCapsLockOn = false)
+                        } else {
+                            currentState.copy(
+                                    isShiftOn = !currentState.isShiftOn
+                            ) // This line is correct
+                        }
+                    }
+            KeyGesture.DoubleTap ->
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                                isCapsLockOn = !currentState.isCapsLockOn,
+                                isShiftOn = false
+                        )
+                    }
+            KeyGesture.Press ->
+                    _uiState.update { currentState ->
+                        // If caps lock is on, pressing shift toggles it off temporarily
+                        // Otherwise, it just turns on shift
+                        if (currentState.isCapsLockOn) currentState
+                        else currentState.copy(isShiftOn = true)
+                    }
+            KeyGesture.Release ->
+                    _uiState.update { currentState ->
+                        // If caps lock is on, releasing shift does nothing
+                        // Otherwise, it turns shift off
+                        if (currentState.isCapsLockOn) currentState
+                        else currentState.copy(isShiftOn = false)
+                    }
             else -> {}
         }
     }
-
 
     private fun handleEnter(gesture: KeyGesture) {
         when (gesture) {
@@ -277,7 +292,7 @@ class KeyboardViewModel : ViewModel() {
 
     private fun handleTab(gesture: KeyGesture) {
         when (gesture) {
-            KeyGesture.Tap , KeyGesture.LongPress -> {
+            KeyGesture.Tap, KeyGesture.LongPress -> {
                 // Check if we're in terminal mode - send actual tab for autocomplete
                 val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
                 if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) {
@@ -299,7 +314,7 @@ class KeyboardViewModel : ViewModel() {
             currentState.copy(keyboardPage = nextPage)
         }
     }
-    
+
     fun previousKeyboardPage() {
         _uiState.update { currentState ->
             // Cycle backwards: 0 -> 2 -> 1 -> 0
@@ -312,7 +327,6 @@ class KeyboardViewModel : ViewModel() {
         _uiState.update { currentState ->
             currentState.copy(isLeftKeyboardVisible = !currentState.isLeftKeyboardVisible)
         }
-
     }
     fun toggleRightKeyboardVisibility() {
         _uiState.update { currentState ->
@@ -321,9 +335,7 @@ class KeyboardViewModel : ViewModel() {
     }
 
     fun updateIndentSize(newSize: Int) {
-        _uiState.update { currentState ->
-            currentState.copy(indentValue = newSize)
-        }
+        _uiState.update { currentState -> currentState.copy(indentValue = newSize) }
     }
 
     fun updateLeftKeyboardWidth(width: Float) {
@@ -353,8 +365,13 @@ class KeyboardViewModel : ViewModel() {
             val newLinked = !currentState.linkedKeyboardSliders
             if (newLinked) {
                 // When linking, set both to the average of current values
-                val avgWidth = (currentState.leftKeyboardWidth + currentState.rightKeyboardWidth) / 2
-                currentState.copy(linkedKeyboardSliders = true, leftKeyboardWidth = avgWidth, rightKeyboardWidth = avgWidth)
+                val avgWidth =
+                        (currentState.leftKeyboardWidth + currentState.rightKeyboardWidth) / 2
+                currentState.copy(
+                        linkedKeyboardSliders = true,
+                        leftKeyboardWidth = avgWidth,
+                        rightKeyboardWidth = avgWidth
+                )
             } else {
                 currentState.copy(linkedKeyboardSliders = false)
             }
@@ -368,11 +385,8 @@ class KeyboardViewModel : ViewModel() {
     }
 
     fun updateEditorFontSize(size: Int) {
-        _uiState.update { currentState ->
-            currentState.copy(editorFontSize = size.coerceIn(8, 24))
-        }
+        _uiState.update { currentState -> currentState.copy(editorFontSize = size.coerceIn(8, 24)) }
     }
-
 
     // Emitter functions -> Basic it helps to implements better things
 
@@ -380,39 +394,64 @@ class KeyboardViewModel : ViewModel() {
         // Buffer text input to prevent flooding the WebView with evaluateJavascript calls
         // This is crucial for landscape mode where custom keyboard is used
         _textBuffer.append(text)
-        
+
         if (_bufferJob?.isActive != true) {
-            _bufferJob = viewModelScope.launch {
-                kotlinx.coroutines.delay(16) // Wait for 1 frame (approx 16ms) to batch inputs
-                
-                val textToSend = _textBuffer.toString()
-                _textBuffer.clear()
-                
-                if (textToSend.isNotEmpty()) {
-                    val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
-                    if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
-                        session.insertTextToEditor(textToSend)
-                    } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) {
-                        session.insertText(textToSend)
-                    } else {
-                        session?._inputConnection?.commitText(textToSend, 1)
+            _bufferJob =
+                    viewModelScope.launch {
+                        kotlinx.coroutines.delay(
+                                16
+                        ) // Wait for 1 frame (approx 16ms) to batch inputs
+
+                        val textToSend = _textBuffer.toString()
+                        _textBuffer.clear()
+
+                        if (textToSend.isNotEmpty()) {
+                            // Priority: If Ic.ic is set (native EditText has focus), use it
+                            // directly
+                            val overrideConnection = Ic.ic
+                            if (overrideConnection != null) {
+                                overrideConnection.commitText(textToSend, 1)
+                                return@launch
+                            }
+
+                            val session =
+                                    SessionList.sessions.getOrNull(
+                                            SessionList.activeSessionIndex ?: -1
+                                    )
+                            if (session is
+                                            com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
+                            ) {
+                                session.insertTextToEditor(textToSend)
+                            } else if (session is
+                                            com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
+                            ) {
+                                session.insertText(textToSend)
+                            } else {
+                                session?._inputConnection?.commitText(textToSend, 1)
+                            }
+                        }
                     }
-                }
-            }
         }
     }
 
     // Simple backspace throttling - max one call per 50ms
     private var _lastBackspaceTime = 0L
-    
+
     private fun onBackspace() {
         val now = System.currentTimeMillis()
-        
+
         // Throttle: only allow one backspace per 50ms (safe after position validation fix)
         if (now - _lastBackspaceTime < 50) return
         _lastBackspaceTime = now
-        
+
         viewModelScope.launch {
+            // Priority: If Ic.ic is set (native EditText has focus), use it directly
+            val overrideConnection = Ic.ic
+            if (overrideConnection != null) {
+                overrideConnection.deleteSurroundingText(1, 0)
+                return@launch
+            }
+
             val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
             if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
                 // Guard: don't send backspace if cursor is at start of file (line 1, col 1)
@@ -420,7 +459,8 @@ class KeyboardViewModel : ViewModel() {
                     return@launch
                 }
                 session.performEditorAction("performBackspace")
-            } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) {
+            } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
+            ) {
                 session.insertText("\u007F")
             } else {
                 session?._inputConnection?.deleteSurroundingText(1, 0)
@@ -430,17 +470,32 @@ class KeyboardViewModel : ViewModel() {
 
     private fun onEnter() {
         viewModelScope.launch {
-            val session = SessionList.sessions[SessionList.activeSessionIndex!!]
+            // Priority: If Ic.ic is set (native EditText has focus), use it directly
+            val overrideConnection = Ic.ic
+            if (overrideConnection != null) {
+                overrideConnection.commitText("\n", 1)
+                return@launch
+            }
+
+            val session =
+                    SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
+                            ?: return@launch
             if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
                 session.performEditorAction("performEnter")
-            } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) {
+            } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
+            ) {
                 session.insertText("\n")
             } else {
                 // First try key event (lets web editors intercept Enter)
-                val sent = session._inputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER)) == true &&
-                        session._inputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER)) == true
+                val sent =
+                        session._inputConnection?.sendKeyEvent(
+                                KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER)
+                        ) == true &&
+                                session._inputConnection?.sendKeyEvent(
+                                        KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER)
+                                ) == true
 
-                // If that didn’t trigger (common in WebViews), manually insert newline
+                // If that didn't trigger (common in WebViews), manually insert newline
                 if (!sent) {
                     session._inputConnection?.commitText("\n", 1)
                 }
@@ -464,7 +519,8 @@ class KeyboardViewModel : ViewModel() {
                     // Add other actions as needed
                     else -> _editorAction.emit(action)
                 }
-            } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) {
+            } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
+            ) {
                 when (action) {
                     is EditorAction.Escape -> session.insertText("\u001B")
                     else -> _editorAction.emit(action)
