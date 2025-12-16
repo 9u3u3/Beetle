@@ -201,14 +201,6 @@ fun InitialTerminalUI(navController: NavController) {
                     // Change the webview used here
                     webView = SessionList.sessions[SessionList.activeSessionIndex!!].getOrInitView()
             )
-
-            if (!isLandscape) {
-                Sidebar(
-                        isVisible = showSidebar,
-                        onDismiss = { showSidebar = false },
-                        enabledTabs = listOf(SidebarTab.EXTENSIONS, SidebarTab.SETTINGS)
-                )
-            }
         }
 
         if (!isLandscape) {

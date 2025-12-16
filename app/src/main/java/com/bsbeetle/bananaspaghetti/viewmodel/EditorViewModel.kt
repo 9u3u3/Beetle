@@ -56,7 +56,24 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
             Log.d("EditorViewModel", "Stopped LSP for $victimSlug to free up resources")
         }
 
-        // Start new server
+        // Start new server - check if ports are available
+        if (availablePorts.isEmpty()) {
+            Log.w("EditorViewModel", "No available ports for LSP, reusing lowest port")
+            // Force stop the first server if no ports available
+            if (lruSlugs.isNotEmpty()) {
+                val victimSlug = lruSlugs.removeAt(0)
+                val victimServer = lspServers.remove(victimSlug)
+                val victimPort = lspPorts.remove(victimSlug)
+                victimServer?.stop()
+                if (victimPort != null) {
+                    availablePorts.add(victimPort)
+                }
+            } else {
+                // Fallback - just use 8081
+                availablePorts.add(8081)
+            }
+        }
+        
         val port = availablePorts.removeAt(0)
         val newServer = LspServer(getApplication(), port)
         

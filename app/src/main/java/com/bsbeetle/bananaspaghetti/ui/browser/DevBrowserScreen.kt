@@ -161,7 +161,7 @@ private fun LandscapeTopBar(
             CompactTextFieldAlternative(
                 value = urlInput,
                 onValueChange = onUrlChange,
-                placeholder = "Search or enter URL",
+                placeholder = "Search",
                 modifier = Modifier.weight(1f).height(28.dp),
                 onEnterPressed = { onNavigate() }
             )
@@ -185,49 +185,36 @@ private fun PortraitTopBar(
     onNavigate: () -> Unit,
     onToggleDevTools: () -> Unit
 ) {
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFF0A0A0A))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .height(42.dp)
+            .background(Color(0xFF1B1B1B))
     ) {
-        PortraitIconButton(onClick = onBack, enabled = canGoBack, icon = Icons.Default.ArrowBack)
-        PortraitIconButton(onClick = onForward, enabled = canGoForward, icon = Icons.Default.ArrowForward)
-        PortraitIconButton(onClick = onRefresh, enabled = true, icon = Icons.Default.Refresh)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(42.dp)
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            CompactIconButton(onClick = onBack, enabled = canGoBack, icon = Icons.Default.ArrowBack)
+            CompactIconButton(onClick = onForward, enabled = canGoForward, icon = Icons.Default.ArrowForward)
+            CompactIconButton(onClick = onRefresh, enabled = true, icon = Icons.Default.Refresh)
 
-        // Wrapper for Portrait Mode Text Field
-        // Note: For full custom keyboard support in portrait, you might want to wrap
-        // CompactTextFieldAlternative in a box here too, but OutlinedTextField is used for standard UI.
-        // If you need the custom keyboard in Portrait, replace this OutlinedTextField with CompactTextFieldAlternative.
-        OutlinedTextField(
-            value = urlInput,
-            onValueChange = onUrlChange,
-            modifier = Modifier.weight(1f).heightIn(min = 52.dp),
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF3D3D3D),
-                unfocusedBorderColor = Color(0xFF2A2A2A),
-                focusedContainerColor = Color(0xFF1A1A1A),
-                unfocusedContainerColor = Color(0xFF151515),
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color(0xFFE0E0E0),
-                cursorColor = Color.White
-            ),
-            textStyle = LocalTextStyle.current.copy(fontSize = 14.sp, fontWeight = FontWeight.Normal),
-            placeholder = { Text("Search or enter URL", color = Color(0xFF666666), fontSize = 14.sp) },
-            trailingIcon = {
-                Box(modifier = Modifier.size(28.dp).padding(end = 4.dp), contentAlignment = Alignment.Center) {
-                    IconButton(onClick = onNavigate, modifier = Modifier.size(24.dp)) {
-                        Icon(Icons.Default.ArrowForward, null, tint = Color(0xFFBBBBBB), modifier = Modifier.size(16.dp))
-                    }
-                }
-            }
-        )
+            // Compact text field matching landscape style
+            CompactTextFieldAlternative(
+                value = urlInput,
+                onValueChange = onUrlChange,
+                placeholder = "Search",
+                modifier = Modifier.weight(1f).height(28.dp),
+                onEnterPressed = { onNavigate() }
+            )
 
-        PortraitIconButton(onClick = onToggleDevTools, enabled = true, icon = Icons.Default.Build, isActive = showDevTools)
+            CompactIconButton(onClick = onNavigate, enabled = true, icon = Icons.Default.Search)
+            CompactIconButton(onClick = onToggleDevTools, enabled = true, icon = Icons.Default.Build, isActive = showDevTools)
+        }
     }
 }
 

@@ -19,14 +19,14 @@ import androidx.compose.ui.unit.dp
 fun SidebarTabBar(
     selectedTab: SidebarTab,
     onTabSelected: (SidebarTab) -> Unit,
-    enabledTabs: List<SidebarTab> = SidebarTab.values().toList(), // Changed parameter name
+    enabledTabs: List<SidebarTab> = SidebarTab.values().toList(),
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(48.dp)
-            .background(Color(0xFF252525)),
+            .background(Color(0xFF2D2D30)), // Plain grey like top bar
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         // Iterate over ALL tabs, but check if each is enabled
@@ -35,9 +35,9 @@ fun SidebarTabBar(
             SidebarTabItem(
                 tab = tab,
                 isSelected = selectedTab == tab,
-                isEnabled = isEnabled, // Pass enabled state
+                isEnabled = isEnabled,
                 onClick = {
-                    if (isEnabled) { // Only allow click if enabled
+                    if (isEnabled) {
                         onTabSelected(tab)
                     }
                 }
@@ -50,18 +50,9 @@ fun SidebarTabBar(
 private fun RowScope.SidebarTabItem(
     tab: SidebarTab,
     isSelected: Boolean,
-    isEnabled: Boolean, // Add this parameter
+    isEnabled: Boolean,
     onClick: () -> Unit
 ) {
-    val scale by animateFloatAsState(
-        targetValue = if (isSelected && isEnabled) 1.1f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "iconScale"
-    )
-
     val interactionSource = remember { MutableInteractionSource() }
 
     Box(
@@ -69,59 +60,53 @@ private fun RowScope.SidebarTabItem(
             .weight(1f)
             .fillMaxHeight()
             .background(
-                // Darker background for disabled tabs
+                // No special background, just transparent
                 if (!isEnabled) Color(0xFF1A1A1A) else Color.Transparent
             )
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
-                enabled = isEnabled, // Disable click for disabled tabs
+                enabled = isEnabled,
                 onClick = onClick
             ),
         contentAlignment = Alignment.Center
     ) {
-        // Animated indicator line - only show for enabled selected tabs
+        // Simple white line indicator at bottom - only show for enabled selected tabs
         if (isSelected && isEnabled) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.7f)
+                    .fillMaxWidth(0.6f)
                     .height(2.dp)
-                    .background(
-                        androidx.compose.ui.graphics.Brush.horizontalGradient(
-                            colors = listOf(
-                                Color(0xFF4379FF).copy(alpha = 0.1f),
-                                Color(0xFF4379FF),
-                                Color(0xFF4379FF).copy(alpha = 0.1f)
-                            )
-                        )
-                    )
+                    .background(Color(0xFFCCCCCC)) // Simple white/grey line
                     .align(Alignment.BottomCenter)
             )
         }
 
-        // Icon with scale animation
-        Box(modifier = Modifier.scale(scale)) {
-            tab.icon?.let { icon ->
-                Icon(
-                    imageVector = icon,
-                    contentDescription = tab.label,
-                    tint = when {
-                        !isEnabled -> Color.Gray.copy(alpha = 0.3f) // Grayed out for disabled
-                        isSelected -> Color(0xFF007ACC)
-                        else -> Color(0xFF858585)
-                    },
-                    modifier = Modifier.size(22.dp)
-                )
-            }
+        // Icon - no scale animation, simpler
+        tab.imageRes?.let { imageRes ->
+            Image(
+                painter = painterResource(id = imageRes),
+                contentDescription = tab.label,
+                modifier = Modifier.size(22.dp),
+                alpha = when {
+                    !isEnabled -> 0.3f
+                    isSelected -> 1f
+                    else -> 0.6f
+                }
+            )
+        }
 
-            tab.imageRes?.let { imageRes ->
-                Image(
-                    painter = painterResource(id = imageRes),
-                    contentDescription = tab.label,
-                    modifier = Modifier.size(22.dp),
-                    alpha = if (!isEnabled) 0.3f else 1f // Reduced opacity for disabled
-                )
-            }
+        tab.icon?.let { icon ->
+            Icon(
+                imageVector = icon,
+                contentDescription = tab.label,
+                tint = when {
+                    !isEnabled -> Color.Gray.copy(alpha = 0.3f)
+                    isSelected -> Color.White
+                    else -> Color(0xFF858585)
+                },
+                modifier = Modifier.size(22.dp)
+            )
         }
     }
 }

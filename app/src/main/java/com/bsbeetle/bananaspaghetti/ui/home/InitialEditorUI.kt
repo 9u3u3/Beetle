@@ -502,7 +502,7 @@ fun InitialEditorUI(navController: NavController) {
 
             BottomBar(
                     Modifier.constrainAs(bottomBarRef) {
-                        bottom.linkTo(editor.bottom)
+                        bottom.linkTo(parent.bottom)
                         start.linkTo(editor.start)
                         end.linkTo(editor.end)
                         width = Dimension.fillToConstraints
@@ -525,11 +525,8 @@ fun InitialEditorUI(navController: NavController) {
                         fileViewModel.currentFilePath,
                         listOf(
                                 SidebarTab.FILES,
-                                SidebarTab.SEARCH,
-                                SidebarTab.GIT,
-                                SidebarTab.EXTENSIONS,
-                                SidebarTab.SETTINGS
-                        ),
+                                SidebarTab.GIT
+                        ), // Only Files and Git in sidebar
                         onTabChanged = {
                             if (it == SidebarTab.GIT) {
                                 gitViewModel.initializeGit()

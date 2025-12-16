@@ -194,18 +194,6 @@ fun BrowserScreen(navController: NavController) {
                 webView = SessionList.sessions[SessionList.activeSessionIndex!!].view!!,
                 viewModel = devWebViewModel
             )
-
-            if(!isLandscape){
-                Sidebar(
-                    isVisible = showSidebar,
-                    onDismiss = { showSidebar = false },
-                    enabledTabs = listOf(
-                        SidebarTab.EXTENSIONS,
-                        SidebarTab.SETTINGS
-                    )
-                )
-
-            }
         }
 
         // MERGE NOTE: Kept Block 2's Extra Keys Row logic

@@ -30,13 +30,13 @@ fun Sidebar(
         // Initialize selectedTab with first enabled tab
         var selectedTab by
                 remember(enabledTabs) {
-                        mutableStateOf(enabledTabs.firstOrNull() ?: SidebarTab.SETTINGS)
+                        mutableStateOf(enabledTabs.firstOrNull() ?: SidebarTab.FILES)
                 }
 
         // Auto-switch to first available tab if current tab becomes unavailable
         LaunchedEffect(enabledTabs) {
                 if (!enabledTabs.contains(selectedTab)) {
-                        val newTab = enabledTabs.firstOrNull() ?: SidebarTab.SETTINGS
+                        val newTab = enabledTabs.firstOrNull() ?: SidebarTab.FILES
                         selectedTab = newTab
                         onTabChanged(newTab)
                 }
@@ -120,7 +120,7 @@ fun Sidebar(
                                 // Content Area with transition
                                 Box(
                                         modifier =
-                                                Modifier.fillMaxSize().background(Color(0xFF1E1E1E))
+                                                Modifier.fillMaxSize().background(Color(0xFF121212)) // Black like landscape boxes
                                 ) {
                                         Crossfade(
                                                 targetState = selectedTab,
@@ -135,7 +135,6 @@ fun Sidebar(
                                                                         onFileSelected =
                                                                                 onFileSelected
                                                                 )
-                                                        SidebarTab.SEARCH -> SearchTab()
                                                         SidebarTab.GIT -> {
                                                                 if (gitViewModel != null) {
                                                                         GitTab(
@@ -146,8 +145,6 @@ fun Sidebar(
                                                                         GitTab()
                                                                 }
                                                         }
-                                                        SidebarTab.EXTENSIONS -> ExtensionsTab()
-                                                        SidebarTab.SETTINGS -> SettingsTab()
                                                 }
                                         }
                                 }
