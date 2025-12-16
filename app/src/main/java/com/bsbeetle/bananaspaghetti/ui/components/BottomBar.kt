@@ -297,16 +297,18 @@ fun BottomBar(
                                                         "bash ${panelTerminals.size + 1}",
                                                         initialDir = currentPath
                                                 )
-                                        // Initialize the WebView first (required before isReady can
-                                        // become true)
-                                        // Then wait for terminal to be ready before adding to list
+                                        // Add to list but DON'T switch to it yet
+                                        // This lets it load in the "background" while current view
+                                        // stays
+                                        val newIndex = panelTerminals.size
+                                        panelTerminals.add(newTerminal)
+
+                                        // Wait for terminal to be ready, then switch to it
                                         scope.launch {
-                                            // Initialize the view (this starts the WebView loading)
                                             newTerminal.getOrInitView()
-                                            // Wait until terminal is fully ready
                                             newTerminal.isReady.first { ready -> ready }
-                                            panelTerminals.add(newTerminal)
-                                            activeTerminalIndex = panelTerminals.size - 1
+                                            // Now safe to switch - terminal is fully loaded
+                                            activeTerminalIndex = newIndex
                                         }
                                     }
                     )
