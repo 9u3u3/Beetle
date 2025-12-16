@@ -502,7 +502,7 @@ fun InitialEditorUI(navController: NavController) {
 
             BottomBar(
                     Modifier.constrainAs(bottomBarRef) {
-                        bottom.linkTo(editor.bottom)
+                        bottom.linkTo(parent.bottom)
                         start.linkTo(editor.start)
                         end.linkTo(editor.end)
                         width = Dimension.fillToConstraints

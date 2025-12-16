@@ -93,6 +93,8 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
         // view = WebViewPool.get(context.applicationContext).apply {
         view = CustomWebView(context.applicationContext, null).apply {
             session = this@EditorSession
+            // Set dark background immediately to prevent white flash
+            setBackgroundColor(android.graphics.Color.parseColor("#1E1E1E"))
             WebView.setWebContentsDebuggingEnabled(true)
             settings.apply {
                 javaScriptEnabled = true
