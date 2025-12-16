@@ -182,6 +182,166 @@ fun FileOptionsPanel(
                 }
             }
 
+    // Delete file launcher
+    val deleteFileLauncher =
+            rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocument()) {
+                    uri ->
+                uri?.let {
+                    try {
+                        context.contentResolver.takePersistableUriPermission(
+                                it,
+                                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                        android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                        )
+                        val documentFile = DocumentFile.fromSingleUri(context, it)
+                        documentFile?.let { file ->
+                            if (fileViewModel != null) {
+                                FileOperations.deleteFile(context, file, fileViewModel)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("FileMenu", "Error deleting file", e)
+                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+
+    // Delete folder launcher
+    val deleteFolderLauncher =
+            rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.OpenDocumentTree()
+            ) { uri ->
+                uri?.let {
+                    try {
+                        context.contentResolver.takePersistableUriPermission(
+                                it,
+                                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                        android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                        )
+                        val documentFile = DocumentFile.fromTreeUri(context, it)
+                        documentFile?.let { folder ->
+                            if (fileViewModel != null) {
+                                FileOperations.deleteFile(context, folder, fileViewModel)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("FileMenu", "Error deleting folder", e)
+                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+
+    // Copy file launcher
+    val copyFileLauncher =
+            rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocument()) {
+                    uri ->
+                uri?.let {
+                    try {
+                        context.contentResolver.takePersistableUriPermission(
+                                it,
+                                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                        android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                        )
+                        val documentFile = DocumentFile.fromSingleUri(context, it)
+                        documentFile?.let { file -> FileOperations.copyToClipboard(file, context) }
+                    } catch (e: Exception) {
+                        Log.e("FileMenu", "Error copying file", e)
+                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+
+    // Copy folder launcher
+    val copyFolderLauncher =
+            rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.OpenDocumentTree()
+            ) { uri ->
+                uri?.let {
+                    try {
+                        context.contentResolver.takePersistableUriPermission(
+                                it,
+                                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                        android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                        )
+                        val documentFile = DocumentFile.fromTreeUri(context, it)
+                        documentFile?.let { folder ->
+                            FileOperations.copyToClipboard(folder, context)
+                        }
+                    } catch (e: Exception) {
+                        Log.e("FileMenu", "Error copying folder", e)
+                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+
+    // Move (cut) file launcher
+    val moveFileLauncher =
+            rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocument()) {
+                    uri ->
+                uri?.let {
+                    try {
+                        context.contentResolver.takePersistableUriPermission(
+                                it,
+                                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                        android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                        )
+                        val documentFile = DocumentFile.fromSingleUri(context, it)
+                        documentFile?.let { file -> FileOperations.cutToClipboard(file, context) }
+                    } catch (e: Exception) {
+                        Log.e("FileMenu", "Error cutting file", e)
+                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+
+    // Move (cut) folder launcher
+    val moveFolderLauncher =
+            rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.OpenDocumentTree()
+            ) { uri ->
+                uri?.let {
+                    try {
+                        context.contentResolver.takePersistableUriPermission(
+                                it,
+                                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                        android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                        )
+                        val documentFile = DocumentFile.fromTreeUri(context, it)
+                        documentFile?.let { folder ->
+                            FileOperations.cutToClipboard(folder, context)
+                        }
+                    } catch (e: Exception) {
+                        Log.e("FileMenu", "Error cutting folder", e)
+                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+
+    // Paste destination launcher
+    val pasteDestLauncher =
+            rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.OpenDocumentTree()
+            ) { uri ->
+                uri?.let {
+                    try {
+                        context.contentResolver.takePersistableUriPermission(
+                                it,
+                                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                        android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                        )
+                        val documentFile = DocumentFile.fromTreeUri(context, it)
+                        documentFile?.let { destFolder ->
+                            if (fileViewModel != null) {
+                                FileOperations.paste(context, destFolder, fileViewModel)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("FileMenu", "Error pasting", e)
+                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (currentAction == FileMenuAction.NONE) {
             LazyColumn(
@@ -255,6 +415,75 @@ fun FileOptionsPanel(
                             title = "Rename Folder",
                             onClick = { renameFolderLauncher.launch(null) }
                     )
+                }
+                item {
+                    HorizontalDivider(
+                            color = GitTheme.BorderColor,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+                item {
+                    FileOptionItem(
+                            icon = R.drawable.file_type_text,
+                            title = "Delete File",
+                            onClick = { deleteFileLauncher.launch(arrayOf("*/*")) }
+                    )
+                }
+                item {
+                    FileOptionItem(
+                            icon = R.drawable.computer_folder_open_icon,
+                            title = "Delete Folder",
+                            onClick = { deleteFolderLauncher.launch(null) }
+                    )
+                }
+                item {
+                    HorizontalDivider(
+                            color = GitTheme.BorderColor,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+                item {
+                    FileOptionItem(
+                            icon = R.drawable.file_type_text,
+                            title = "Copy File",
+                            onClick = { copyFileLauncher.launch(arrayOf("*/*")) }
+                    )
+                }
+                item {
+                    FileOptionItem(
+                            icon = R.drawable.computer_folder_open_icon,
+                            title = "Copy Folder",
+                            onClick = { copyFolderLauncher.launch(null) }
+                    )
+                }
+                item {
+                    FileOptionItem(
+                            icon = R.drawable.file_type_text,
+                            title = "Move File",
+                            onClick = { moveFileLauncher.launch(arrayOf("*/*")) }
+                    )
+                }
+                item {
+                    FileOptionItem(
+                            icon = R.drawable.computer_folder_open_icon,
+                            title = "Move Folder",
+                            onClick = { moveFolderLauncher.launch(null) }
+                    )
+                }
+                if (FileOperations.hasClipboardContent()) {
+                    item {
+                        HorizontalDivider(
+                                color = GitTheme.BorderColor,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
+                    item {
+                        FileOptionItem(
+                                icon = R.drawable.computer_folder_open_icon,
+                                title = "Paste Here",
+                                onClick = { pasteDestLauncher.launch(null) }
+                        )
+                    }
                 }
             }
         } else {
