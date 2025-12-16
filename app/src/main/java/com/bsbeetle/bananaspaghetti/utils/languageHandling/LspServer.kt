@@ -322,46 +322,53 @@ go 1.21
             }
         }
 
-        server = embeddedServer(Netty, port = port, host = "0.0.0.0") {
-            install(WebSockets.Plugin) {
-                pingPeriod = 15.seconds
-                timeout = 30.seconds
-                maxFrameSize = Long.MAX_VALUE
-                masking = false
-            }
+        try {
+            server = embeddedServer(Netty, port = port, host = "0.0.0.0") {
+                install(WebSockets.Plugin) {
+                    pingPeriod = 15.seconds
+                    timeout = 30.seconds
+                    maxFrameSize = Long.MAX_VALUE
+                    masking = false
+                }
 
-            routing {
-                webSocket("/clsp") {
-                    Log.d("cLsp", "Client connected to /clsp")
-                    
-                    // Register this session as the current one
-                    currentSession = this
+                routing {
+                    webSocket("/clsp") {
+                        Log.d("cLsp", "Client connected to /clsp")
+                        
+                        // Register this session as the current one
+                        currentSession = this
 
-                    // Handle incoming messages from client
-                    for (frame in incoming) {
-                        if (frame is Frame.Text) {
-                            val text = frame.readText()
-                            try {
-                                val finalBytes = text.toByteArray(Charsets.UTF_8)
-                                val header = "Content-Length: ${finalBytes.size}\r\n\r\n"
-                                synchronized(output!!) {
-                                    output!!.write(header.toByteArray(Charsets.UTF_8))
-                                    output!!.write(finalBytes)
-                                    output!!.flush()
+                        // Handle incoming messages from client
+                        for (frame in incoming) {
+                            if (frame is Frame.Text) {
+                                val text = frame.readText()
+                                try {
+                                    val finalBytes = text.toByteArray(Charsets.UTF_8)
+                                    val header = "Content-Length: ${finalBytes.size}\r\n\r\n"
+                                    synchronized(output!!) {
+                                        output!!.write(header.toByteArray(Charsets.UTF_8))
+                                        output!!.write(finalBytes)
+                                        output!!.flush()
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("cLsp", "Failed to write to LSP", e)
                                 }
-                            } catch (e: Exception) {
-                                Log.e("cLsp", "Failed to write to LSP", e)
                             }
                         }
+                        
+                        // Client disconnected
+                        if (currentSession == this) {
+                            currentSession = null
+                        }
+                        Log.d("cLsp", "Client disconnected from /clsp")
                     }
-                    
-                    // Client disconnected
-                    if (currentSession == this) {
-                        currentSession = null
-                    }
-                    Log.d("cLsp", "Client disconnected from /clsp")
                 }
-            }
-        }.start(wait = false)
+            }.start(wait = false)
+        } catch (e: java.net.BindException) {
+            Log.w("LspServer", "Port $port already in use, server may already be running")
+            // Port is already bound, likely from a previous instance - that's OK
+        } catch (e: Exception) {
+            Log.e("LspServer", "Failed to start WebSocket server on port $port", e)
+        }
     }
 }

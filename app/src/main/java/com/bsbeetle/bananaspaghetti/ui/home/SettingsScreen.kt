@@ -1,5 +1,6 @@
 package com.bsbeetle.bananaspaghetti.ui.home
 
+import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,11 +21,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
@@ -39,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -61,27 +66,201 @@ private val DividerColor = Color(0xFF404040)
 @Composable
 fun SettingsScreen(navController: NavController) {
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
-    var selectedCategory by remember { mutableStateOf("Keyboard") }
+    val authViewModel = com.bsbeetle.bananaspaghetti.LocalAuthViewModel.current
+    val userEmail by authViewModel.userEmail.collectAsStateWithLifecycle()
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     
+    // Handle back navigation - in portrait mode, go back to list first if category is selected
     BackHandler {
-        navController.popBackStack()
+        if (!isLandscape && selectedCategory != null) {
+            selectedCategory = null
+        } else {
+            navController.popBackStack()
+        }
     }
     
+    if (isLandscape) {
+        // LANDSCAPE LAYOUT - Sidebar + Content
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(BackgroundDark)
+        ) {
+            SettingsSidebar(
+                selectedCategory = selectedCategory ?: "Keyboard",
+                onCategorySelected = { selectedCategory = it },
+                userEmail = userEmail
+            )
+            
+            SettingsContent(
+                selectedCategory = selectedCategory ?: "Keyboard",
+                keyboardViewModel = keyboardViewModel
+            )
+        }
+    } else {
+        // PORTRAIT LAYOUT - Full screen list or content
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(BackgroundDark)
+        ) {
+            if (selectedCategory == null) {
+                // Category List View
+                // Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(SidebarDark)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = { navController.popBackStack() },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = TextPrimary
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "Settings",
+                        color = TextPrimary,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp)
+                ) {
+                    // Profile Card
+                    PortraitProfileCard(userEmail)
+                    
+                    Spacer(Modifier.height(24.dp))
+                    
+                    // Settings categories
+                    val categories = listOf("Keyboard", "Appearance")
+                    categories.forEach { name ->
+                        PortraitSettingsItem(
+                            label = name,
+                            onClick = { selectedCategory = name }
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+                }
+            } else {
+                // Content View
+                // Header with back button
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(SidebarDark)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = { selectedCategory = null },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = TextPrimary
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = selectedCategory!!,
+                        color = TextPrimary,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                SettingsContent(
+                    selectedCategory = selectedCategory!!,
+                    keyboardViewModel = keyboardViewModel
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PortraitProfileCard(userEmail: String) {
     Row(
         modifier = Modifier
-            .fillMaxSize()
-            .background(BackgroundDark)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(CardDark)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // Left sidebar
-        SettingsSidebar(
-            selectedCategory = selectedCategory,
-            onCategorySelected = { selectedCategory = it }
-        )
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(AccentBlue),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.AccountCircle,
+                contentDescription = "Profile",
+                tint = TextPrimary,
+                modifier = Modifier.size(48.dp)
+            )
+        }
         
-        // Main content area
-        SettingsContent(
-            selectedCategory = selectedCategory,
-            keyboardViewModel = keyboardViewModel
+        Spacer(Modifier.width(16.dp))
+        
+        Column {
+            Text(
+                text = if (userEmail.isNotBlank()) userEmail else "User",
+                color = TextPrimary,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = "Local Account",
+                color = TextSecondary,
+                fontSize = 14.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun PortraitSettingsItem(
+    label: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(CardDark)
+            .clickable { onClick() }
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            color = TextPrimary,
+            fontSize = 16.sp
+        )
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = "Go",
+            tint = TextSecondary
         )
     }
 }
@@ -89,7 +268,8 @@ fun SettingsScreen(navController: NavController) {
 @Composable
 private fun SettingsSidebar(
     selectedCategory: String,
-    onCategorySelected: (String) -> Unit
+    onCategorySelected: (String) -> Unit,
+    userEmail: String
 ) {
     Column(
         modifier = Modifier
@@ -99,7 +279,7 @@ private fun SettingsSidebar(
             .padding(16.dp)
     ) {
         // Profile section
-        ProfileCard()
+        ProfileCard(userEmail)
         
         Spacer(modifier = Modifier.height(16.dp))
         
@@ -123,7 +303,7 @@ private fun SettingsSidebar(
 }
 
 @Composable
-private fun ProfileCard() {
+private fun ProfileCard(userEmail: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -152,7 +332,7 @@ private fun ProfileCard() {
         
         Column {
             Text(
-                text = "User",
+                text = if (userEmail.isNotBlank()) userEmail else "User",
                 color = TextPrimary,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium

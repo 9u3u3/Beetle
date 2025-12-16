@@ -2,6 +2,7 @@ package com.bsbeetle.bananaspaghetti.ui.components
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.util.Log
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -26,15 +27,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -47,13 +51,14 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bsbeetle.bananaspaghetti.R
+import com.bsbeetle.bananaspaghetti.directGit.viewmodel.GitViewModel
 import com.bsbeetle.bananaspaghetti.ui.theme.codaRegular
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
 import com.bsbeetle.bananaspaghetti.viewmodel.DiagnosticItem
 import com.bsbeetle.bananaspaghetti.viewmodel.LspViewModel
-import com.bsbeetle.bananaspaghetti.directGit.viewmodel.GitViewModel
-import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 enum class BottomPanelTab {
     PROBLEMS,
@@ -61,85 +66,118 @@ enum class BottomPanelTab {
     GIT_CONSOLE
 }
 
-
-
 @SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
-fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspViewModel = viewModel(), gitViewModel: GitViewModel = viewModel()) {
+fun BottomBar(
+        modifier: Modifier = Modifier,
+        color: Color,
+        lspViewModel: LspViewModel = viewModel(),
+        gitViewModel: GitViewModel = viewModel(),
+        editorViewModel: com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel? = null
+) {
 
     var targetHeight by remember { mutableStateOf(18.dp) }
     val logHeight by animateDpAsState(targetValue = targetHeight, label = "logHeightAnim")
     val density = LocalDensity.current
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val context = LocalContext.current
-    
+
     val lspStatus by lspViewModel.lspStatus.collectAsStateWithLifecycle()
-    
+
     // Tab state
     var selectedTab by remember { mutableStateOf(BottomPanelTab.PROBLEMS) }
-    
+
     // Terminal sessions for bottom panel
     val panelTerminals = remember { mutableStateListOf<TerminalSession>() }
     var activeTerminalIndex by remember { mutableIntStateOf(0) }
+
+    // Coroutine scope for async terminal creation
+    val scope = rememberCoroutineScope()
+
+    // Update editor bottom padding when bottom bar height changes
+    // This allows scrolling past the last line when bottom bar covers it
+    androidx.compose.runtime.LaunchedEffect(logHeight) {
+        val paddingPx = with(density) { logHeight.toPx().toInt() }
+        Log.d(
+                "BottomBar",
+                "Bottom bar height changed: ${logHeight}, paddingPx: $paddingPx, webView: ${editorViewModel?.webView}"
+        )
+        editorViewModel?.webView?.let { webView ->
+            val js =
+                    "if(window.setBottomPadding) { window.setBottomPadding($paddingPx); console.log('[Editor] setBottomPadding called with $paddingPx'); } else { console.log('[Editor] setBottomPadding not available yet'); }"
+            webView.evaluateJavascript(js, null)
+            Log.d("BottomBar", "Executed JS for bottom padding: $paddingPx")
+        }
+                ?: Log.w("BottomBar", "webView is null, cannot set bottom padding")
+    }
 
     Box(modifier = modifier.height(logHeight)) {
         Column {
             // Status bar header - 18dp (UNCHANGED)
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(18.dp)
-                    .background(color)
-                    .draggable(
-                        orientation = Orientation.Vertical,
-                        state = rememberDraggableState { delta ->
-                            targetHeight = (targetHeight + with(density) { -delta.toDp() })
-                                .coerceIn(18.dp, screenHeight)
-                        }
-                    )
+                    modifier =
+                            Modifier.fillMaxWidth()
+                                    .height(18.dp)
+                                    .background(color)
+                                    .draggable(
+                                            orientation = Orientation.Vertical,
+                                            state =
+                                                    rememberDraggableState { delta ->
+                                                        targetHeight =
+                                                                (targetHeight +
+                                                                                with(density) {
+                                                                                    -delta.toDp()
+                                                                                })
+                                                                        .coerceIn(
+                                                                                18.dp,
+                                                                                screenHeight
+                                                                        )
+                                                    }
+                                    )
             ) {
                 Row(
-                    modifier = Modifier.padding(start = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.padding(start = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Ln ${lspStatus.line}, Col ${lspStatus.column}",
-                        fontFamily = codaRegular,
-                        fontSize = 9.sp,
-                        color = Color(0xFFFFFFFF)
+                            text = "Ln ${lspStatus.line}, Col ${lspStatus.column}",
+                            fontFamily = codaRegular,
+                            fontSize = 9.sp,
+                            color = Color(0xFFFFFFFF)
                     )
 
                     Spacer(modifier = Modifier.width(8.dp))
 
                     if (lspStatus.breadcrumbs.isNotEmpty()) {
                         lspStatus.breadcrumbs.forEachIndexed { index, item ->
-                            val icon = when (item.kind) {
-                                5, 23 -> R.drawable.class_cube // Class, Struct
-                                6, 12 -> R.drawable.data_object // Method, Function
-                                else -> R.drawable.data_object
-                            }
+                            val icon =
+                                    when (item.kind) {
+                                        5, 23 -> R.drawable.class_cube // Class, Struct
+                                        6, 12 -> R.drawable.data_object // Method, Function
+                                        else -> R.drawable.data_object
+                                    }
 
                             Image(
-                                painter = painterResource(icon),
-                                contentDescription = "Symbol",
-                                modifier = Modifier.size(9.dp),
-                                alignment = Alignment.Center
+                                    painter = painterResource(icon),
+                                    contentDescription = "Symbol",
+                                    modifier = Modifier.size(9.dp),
+                                    alignment = Alignment.Center
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = item.name,
-                                fontFamily = codaRegular,
-                                fontSize = 9.sp,
-                                color = Color(0xFFFFFFFF)
+                                    text = item.name,
+                                    fontFamily = codaRegular,
+                                    fontSize = 9.sp,
+                                    color = Color(0xFFFFFFFF)
                             )
 
                             if (index < lspStatus.breadcrumbs.size - 1) {
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Image(
-                                    painter = painterResource(R.drawable.chevron_right),
-                                    contentDescription = ">",
-                                    modifier = Modifier.size(9.dp),
-                                    alignment = Alignment.Center
+                                        painter = painterResource(R.drawable.chevron_right),
+                                        contentDescription = ">",
+                                        modifier = Modifier.size(9.dp),
+                                        alignment = Alignment.Center
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                             }
@@ -147,17 +185,17 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspView
                     } else if (lspStatus.currentSymbol.isNotEmpty()) {
                         // Fallback to old single symbol if no breadcrumbs (e.g. older LSP)
                         Image(
-                            painter = painterResource(R.drawable.class_cube),
-                            contentDescription = "Symbol",
-                            modifier = Modifier.size(9.dp),
-                            alignment = Alignment.Center
+                                painter = painterResource(R.drawable.class_cube),
+                                contentDescription = "Symbol",
+                                modifier = Modifier.size(9.dp),
+                                alignment = Alignment.Center
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = lspStatus.currentSymbol,
-                            fontFamily = codaRegular,
-                            fontSize = 9.sp,
-                            color = Color(0xFFFFFFFF)
+                                text = lspStatus.currentSymbol,
+                                fontFamily = codaRegular,
+                                fontSize = 9.sp,
+                                color = Color(0xFFFFFFFF)
                         )
                     }
 
@@ -165,137 +203,167 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspView
 
                     // Center Swipe Up Icon
                     Image(
-                        painter = painterResource(R.drawable.swipe_up),
-                        contentDescription = "Swipe Up",
-                        modifier = Modifier.size(12.dp),
-                        alignment = Alignment.Center
+                            painter = painterResource(R.drawable.swipe_up),
+                            contentDescription = "Swipe Up",
+                            modifier = Modifier.size(12.dp),
+                            alignment = Alignment.Center
                     )
 
                     Spacer(modifier = Modifier.weight(1f))
 
                     Image(
-                        painter = painterResource(R.drawable.warning_icon),
-                        contentDescription = "warning",
-                        modifier = Modifier.size(9.dp),
-                        alignment = Alignment.Center
+                            painter = painterResource(R.drawable.warning_icon),
+                            contentDescription = "warning",
+                            modifier = Modifier.size(9.dp),
+                            alignment = Alignment.Center
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = lspStatus.warningCount.toString(),
-                        fontFamily = codaRegular,
-                        fontSize = 9.sp,
-                        color = Color(0xFFFFFFFF)
+                            text = lspStatus.warningCount.toString(),
+                            fontFamily = codaRegular,
+                            fontSize = 9.sp,
+                            color = Color(0xFFFFFFFF)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Image(
-                        painter = painterResource(R.drawable.error_icon),
-                        contentDescription = "error",
-                        modifier = Modifier.size(9.dp),
-                        alignment = Alignment.Center
+                            painter = painterResource(R.drawable.error_icon),
+                            contentDescription = "error",
+                            modifier = Modifier.size(9.dp),
+                            alignment = Alignment.Center
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = lspStatus.errorCount.toString(),
-                        fontFamily = codaRegular,
-                        fontSize = 9.sp,
-                        color = Color(0xFFFFFFFF)
+                            text = lspStatus.errorCount.toString(),
+                            fontFamily = codaRegular,
+                            fontSize = 9.sp,
+                            color = Color(0xFFFFFFFF)
                     )
                 }
             }
-            
+
             // Tab bar - 24dp
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(24.dp)
-                    .background(Color(0xFF1E1E1E)),
-                verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth().height(24.dp).background(Color(0xFF1E1E1E)),
+                    verticalAlignment = Alignment.CenterVertically
             ) {
                 // Problems tab
                 PanelTab(
-                    title = "Problems",
-                    count = lspStatus.diagnostics.size,
-                    isSelected = selectedTab == BottomPanelTab.PROBLEMS,
-                    onClick = { selectedTab = BottomPanelTab.PROBLEMS }
-                )
-                
-                // Terminal tab
-                PanelTab(
-                    title = "Terminal",
-                    count = panelTerminals.size,
-                    isSelected = selectedTab == BottomPanelTab.TERMINAL,
-                    onClick = { selectedTab = BottomPanelTab.TERMINAL }
+                        title = "Problems",
+                        count = lspStatus.diagnostics.size,
+                        isSelected = selectedTab == BottomPanelTab.PROBLEMS,
+                        onClick = { selectedTab = BottomPanelTab.PROBLEMS }
                 )
 
-                // Git Log tab
+                // Terminal tab
                 PanelTab(
-                    title = "Git Log",
-                    count = 0,
-                    isSelected = selectedTab == BottomPanelTab.GIT_CONSOLE,
-                    onClick = { selectedTab = BottomPanelTab.GIT_CONSOLE }
+                        title = "Terminal",
+                        count = panelTerminals.size,
+                        isSelected = selectedTab == BottomPanelTab.TERMINAL,
+                        onClick = { selectedTab = BottomPanelTab.TERMINAL }
                 )
-                
+
+                // Git Console tab
+                PanelTab(
+                        title = "Git Console",
+                        count = gitViewModel.uiState.collectAsState().value.terminalHistory.size,
+                        isSelected = selectedTab == BottomPanelTab.GIT_CONSOLE,
+                        onClick = { selectedTab = BottomPanelTab.GIT_CONSOLE }
+                )
+
                 Spacer(modifier = Modifier.weight(1f))
-                
+
                 // Add terminal button (only show when on Terminal tab)
                 if (selectedTab == BottomPanelTab.TERMINAL) {
                     val fileViewModel = com.bsbeetle.bananaspaghetti.LocalFileViewModel.current
                     Text(
-                        text = "+",
-                        color = Color(0xFFCCCCCC),
-                        fontSize = 16.sp,
-                        modifier = Modifier
-                            .padding(horizontal = 8.dp)
-                            .clickable {
-                                val currentPath = fileViewModel.currentFilePath ?:
-                                                  (SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession)?.projectRoot?.uri?.toString()
+                            text = "+",
+                            color = Color(0xFFCCCCCC),
+                            fontSize = 16.sp,
+                            modifier =
+                                    Modifier.padding(horizontal = 8.dp).clickable {
+                                        val currentPath =
+                                                fileViewModel.currentFilePath
+                                                        ?: (SessionList.sessions.getOrNull(
+                                                                        SessionList
+                                                                                .activeSessionIndex
+                                                                                ?: -1
+                                                                ) as?
+                                                                        com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession)
+                                                                ?.projectRoot?.uri?.toString()
 
-                                val newTerminal = TerminalSession(context.applicationContext, "bash ${panelTerminals.size + 1}", initialDir = currentPath)
-                                panelTerminals.add(newTerminal)
-                                activeTerminalIndex = panelTerminals.size - 1
-                            }
+                                        val newTerminal =
+                                                TerminalSession(
+                                                        context.applicationContext,
+                                                        "bash ${panelTerminals.size + 1}",
+                                                        initialDir = currentPath
+                                                )
+                                        // Add to list but DON'T switch to it yet
+                                        // This lets it load in the "background" while current view
+                                        // stays
+                                        val newIndex = panelTerminals.size
+                                        panelTerminals.add(newTerminal)
+
+                                        // Wait for terminal to be ready, then switch to it
+                                        scope.launch {
+                                            newTerminal.getOrInitView()
+                                            newTerminal.isReady.first { ready -> ready }
+                                            // Now safe to switch - terminal is fully loaded
+                                            activeTerminalIndex = newIndex
+                                        }
+                                    }
+                    )
+                }
+
+                // Clear button for Git Console tab
+                if (selectedTab == BottomPanelTab.GIT_CONSOLE) {
+                    Text(
+                            text = "Clear",
+                            color = Color(0xFFCCCCCC),
+                            fontSize = 11.sp,
+                            modifier =
+                                    Modifier.padding(horizontal = 8.dp).clickable {
+                                        gitViewModel.clearMessages()
+                                    }
                     )
                 }
             }
 
             // Content area
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFF050505))
-            ) {
+            Box(modifier = Modifier.fillMaxSize().background(Color(0xFF050505))) {
                 when (selectedTab) {
                     BottomPanelTab.PROBLEMS -> {
                         ProblemsContent(
-                            diagnostics = lspStatus.diagnostics,
-                            onDiagnosticClick = { diag ->
-                                // TODO: Navigate to line in editor
-                            }
+                                diagnostics = lspStatus.diagnostics,
+                                onDiagnosticClick = { diag ->
+                                    // TODO: Navigate to line in editor
+                                }
                         )
                     }
                     BottomPanelTab.TERMINAL -> {
                         TerminalContent(
-                            terminals = panelTerminals,
-                            activeIndex = activeTerminalIndex,
-                            onTabClick = { index -> 
-                                activeTerminalIndex = index
-                            },
-                            onClose = { index ->
-                                if (index < panelTerminals.size) {
-                                    panelTerminals[index].destroy()
-                                    panelTerminals.removeAt(index)
-                                    if (activeTerminalIndex >= panelTerminals.size) {
-                                        activeTerminalIndex = (panelTerminals.size - 1).coerceAtLeast(0)
+                                terminals = panelTerminals,
+                                activeIndex = activeTerminalIndex,
+                                onTabClick = { index -> activeTerminalIndex = index },
+                                onClose = { index ->
+                                    if (index < panelTerminals.size) {
+                                        panelTerminals[index].destroy()
+                                        panelTerminals.removeAt(index)
+                                        if (activeTerminalIndex >= panelTerminals.size) {
+                                            activeTerminalIndex =
+                                                    (panelTerminals.size - 1).coerceAtLeast(0)
+                                        }
                                     }
-                                }
-                            },
-                            context = context
+                                },
+                                context = context
                         )
                     }
                     BottomPanelTab.GIT_CONSOLE -> {
-                        // Git Log - show commit history
+                        // Git Console - show terminal command history
                         val gitUiState by gitViewModel.uiState.collectAsStateWithLifecycle()
-                        GitLogContent(commits = gitUiState.commits)
+                        GitConsoleContent(
+                                terminalHistory = gitUiState.terminalHistory,
+                                onClear = { gitViewModel.clearMessages() }
+                        )
                     }
                 }
             }
@@ -304,95 +372,65 @@ fun BottomBar(modifier: Modifier = Modifier, color: Color, lspViewModel: LspView
 }
 
 @Composable
-private fun PanelTab(
-    title: String,
-    count: Int,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
+private fun PanelTab(title: String, count: Int, isSelected: Boolean, onClick: () -> Unit) {
     val bgColor = if (isSelected) Color(0xFF050505) else Color.Transparent
     val textColor = if (isSelected) Color.White else Color(0xFF888888)
     val bottomBorder = if (isSelected) Color(0xFF007ACC) else Color.Transparent
-    
+
     Column(
-        modifier = Modifier
-            .clickable(onClick = onClick)
-            .background(bgColor)
-            .padding(horizontal = 12.dp)
-            .fillMaxHeight(),
-        verticalArrangement = Arrangement.Center
+            modifier =
+                    Modifier.clickable(onClick = onClick)
+                            .background(bgColor)
+                            .padding(horizontal = 12.dp)
+                            .fillMaxHeight(),
+            verticalArrangement = Arrangement.Center
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = title,
-                color = textColor,
-                fontSize = 11.sp,
-                fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
+                    text = title,
+                    color = textColor,
+                    fontSize = 11.sp,
+                    fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
             )
             if (count > 0) {
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "($count)",
-                    color = textColor.copy(alpha = 0.7f),
-                    fontSize = 10.sp
-                )
+                Text(text = "($count)", color = textColor.copy(alpha = 0.7f), fontSize = 10.sp)
             }
         }
         // Bottom accent line
-        Box(
-            modifier = Modifier
-                .width(40.dp)
-                .height(2.dp)
-                .background(bottomBorder)
-        )
+        Box(modifier = Modifier.width(40.dp).height(2.dp).background(bottomBorder))
     }
 }
 
 @Composable
 private fun ProblemsContent(
-    diagnostics: List<DiagnosticItem>,
-    onDiagnosticClick: (DiagnosticItem) -> Unit
+        diagnostics: List<DiagnosticItem>,
+        onDiagnosticClick: (DiagnosticItem) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(8.dp)
-    ) {
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(8.dp)) {
         if (diagnostics.isEmpty()) {
-            Text(
-                text = "No problems",
-                color = Color(0xFF50fa7b),
-                fontSize = 12.sp
-            )
+            Text(text = "No problems", color = Color(0xFF50fa7b), fontSize = 12.sp)
         } else {
             diagnostics.forEach { diag ->
-                val iconColor = if (diag.severity == "error") Color(0xFFff5555) else Color(0xFFffb86c)
+                val iconColor =
+                        if (diag.severity == "error") Color(0xFFff5555) else Color(0xFFffb86c)
                 val icon = if (diag.severity == "error") "✗" else "⚠"
-                
+
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onDiagnosticClick(diag) }
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.Top
+                        modifier =
+                                Modifier.fillMaxWidth()
+                                        .clickable { onDiagnosticClick(diag) }
+                                        .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.Top
                 ) {
-                    Text(
-                        text = icon,
-                        color = iconColor,
-                        fontSize = 11.sp
-                    )
+                    Text(text = icon, color = iconColor, fontSize = 11.sp)
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
+                        Text(text = diag.message, color = Color.White, fontSize = 11.sp)
                         Text(
-                            text = diag.message,
-                            color = Color.White,
-                            fontSize = 11.sp
-                        )
-                        Text(
-                            text = "Line ${diag.line}, Column ${diag.column}",
-                            color = Color(0xFF888888),
-                            fontSize = 9.sp
+                                text = "Line ${diag.line}, Column ${diag.column}",
+                                color = Color(0xFF888888),
+                                fontSize = 9.sp
                         )
                     }
                 }
@@ -402,48 +440,38 @@ private fun ProblemsContent(
 }
 
 @Composable
-private fun GitLogContent(commits: List<com.bsbeetle.bananaspaghetti.utils.git.CommitInfo>) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(8.dp)
-    ) {
-        if (commits.isEmpty()) {
+private fun GitConsoleContent(terminalHistory: List<String>, onClear: () -> Unit) {
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(8.dp)) {
+        if (terminalHistory.isEmpty()) {
             Text(
-                text = "No commits yet",
-                color = Color(0xFF888888),
-                fontSize = 12.sp
+                    text = "No git commands executed yet",
+                    color = Color(0xFF888888),
+                    fontSize = 12.sp,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
             )
         } else {
-            commits.forEach { commit ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Text(
-                        text = commit.hash.take(7),
-                        color = Color(0xFF007ACC),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = commit.message,
-                            color = Color.White,
-                            fontSize = 11.sp,
-                            maxLines = 1
-                        )
-                        Text(
-                            text = "${commit.author} • ${commit.date}",
-                            color = Color(0xFF888888),
-                            fontSize = 9.sp
-                        )
-                    }
-                }
+            terminalHistory.forEach { line ->
+                val (color, displayText) =
+                        when {
+                            line.startsWith("\$ ") ->
+                                    Color(0xFF61AFEF) to line // Command - cyan/blue
+                            line.startsWith("✅") -> Color(0xFF98C379) to line // Success - green
+                            line.startsWith("❌") -> Color(0xFFE06C75) to line // Error - red
+                            line.startsWith("📦") ||
+                                    line.startsWith("🔑") ||
+                                    line.startsWith("🔧") ->
+                                    Color(0xFFE5C07B) to line // Info/setup - yellow
+                            line.startsWith("⏳") -> Color(0xFF888888) to line // Waiting - gray
+                            else -> Color(0xFFABB2BF) to line // Default output - light gray
+                        }
+
+                Text(
+                        text = displayText,
+                        color = color,
+                        fontSize = 11.sp,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        modifier = Modifier.padding(vertical = 1.dp)
+                )
             }
         }
     }
@@ -451,76 +479,79 @@ private fun GitLogContent(commits: List<com.bsbeetle.bananaspaghetti.utils.git.C
 
 @Composable
 private fun TerminalContent(
-    terminals: List<TerminalSession>,
-    activeIndex: Int,
-    onTabClick: (Int) -> Unit,
-    onClose: (Int) -> Unit,
-    context: Context
+        terminals: List<TerminalSession>,
+        activeIndex: Int,
+        onTabClick: (Int) -> Unit,
+        onClose: (Int) -> Unit,
+        context: Context
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         // Terminal tabs row - horizontally scrollable
         if (terminals.isNotEmpty()) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(26.dp)
-                    .background(Color(0xFF252526))
-                    .horizontalScroll(rememberScrollState()),
-                verticalAlignment = Alignment.CenterVertically
+                    modifier =
+                            Modifier.fillMaxWidth()
+                                    .height(26.dp)
+                                    .background(Color(0xFF252526))
+                                    .horizontalScroll(rememberScrollState()),
+                    verticalAlignment = Alignment.CenterVertically
             ) {
                 terminals.forEachIndexed { index, terminal ->
                     val isActive = index == activeIndex
                     Row(
-                        modifier = Modifier
-                            .clickable { onTabClick(index) }
-                            .background(if (isActive) Color(0xFF1E1E1E) else Color.Transparent)
-                            .padding(horizontal = 10.dp, vertical = 5.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            modifier =
+                                    Modifier.clickable { onTabClick(index) }
+                                            .background(
+                                                    if (isActive) Color(0xFF1E1E1E)
+                                                    else Color.Transparent
+                                            )
+                                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Terminal icon
                         Image(
-                            painter = painterResource(R.drawable.terminal_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
-                            contentDescription = "Terminal",
-                            modifier = Modifier.size(12.dp)
+                                painter =
+                                        painterResource(
+                                                R.drawable
+                                                        .terminal_24dp_e3e3e3_fill0_wght400_grad0_opsz24
+                                        ),
+                                contentDescription = "Terminal",
+                                modifier = Modifier.size(12.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = terminal.name,
-                            color = if (isActive) Color.White else Color(0xFFAAAAAA),
-                            fontSize = 11.sp
+                                text = terminal.name,
+                                color = if (isActive) Color.White else Color(0xFFAAAAAA),
+                                fontSize = 11.sp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         // Close button
                         Box(
-                            modifier = Modifier
-                                .size(16.dp)
-                                .background(
-                                    color = Color.Transparent,
-                                    shape = androidx.compose.foundation.shape.CircleShape
-                                )
-                                .clickable { onClose(index) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "×",
-                                color = Color(0xFF888888),
-                                fontSize = 14.sp
-                            )
-                        }
+                                modifier =
+                                        Modifier.size(16.dp)
+                                                .background(
+                                                        color = Color.Transparent,
+                                                        shape =
+                                                                androidx.compose.foundation.shape
+                                                                        .CircleShape
+                                                )
+                                                .clickable { onClose(index) },
+                                contentAlignment = Alignment.Center
+                        ) { Text(text = "×", color = Color(0xFF888888), fontSize = 14.sp) }
                     }
                     // Separator between tabs
                     if (index < terminals.size - 1) {
                         Box(
-                            modifier = Modifier
-                                .width(1.dp)
-                                .height(16.dp)
-                                .background(Color(0xFF3C3C3C))
+                                modifier =
+                                        Modifier.width(1.dp)
+                                                .height(16.dp)
+                                                .background(Color(0xFF3C3C3C))
                         )
                     }
                 }
             }
         }
-        
+
         // Terminal WebView - use key() to force recreation for each terminal
         if (terminals.isNotEmpty() && activeIndex < terminals.size) {
             val activeTerminal = terminals[activeIndex]
@@ -529,20 +560,8 @@ private fun TerminalContent(
             // Key by terminal ID to ensure proper recreation
             key(activeTerminal.id) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    AndroidView(
-                            factory = { ctx -> activeTerminal.getOrInitView() },
-                            modifier =
-                                    Modifier.fillMaxSize().clickable {
-                                        // Set as active session when clicked
-                                        SessionList.activeSessionIndex =
-                                                SessionList.sessions.indexOf(activeTerminal)
-                                    },
-                            update = { webView ->
-                                // Don't auto-focus - let user tap to focus
-                            }
-                    )
-
-                    // Loading overlay - shown until terminal is fully initialized
+                    // Loading overlay - shown FIRST, under the WebView layer but visible when
+                    // WebView is transparent
                     if (!isTerminalReady) {
                         Box(
                                 modifier = Modifier.fillMaxSize().background(Color(0xFF1E1E1E)),
@@ -566,6 +585,26 @@ private fun TerminalContent(
                             }
                         }
                     }
+
+                    // WebView - invisible until ready (alpha = 0 prevents any flash)
+                    AndroidView(
+                            factory = { ctx -> activeTerminal.getOrInitView() },
+                            modifier =
+                                    Modifier.fillMaxSize()
+                                            .alpha(if (isTerminalReady) 1f else 0f)
+                                            .clickable {
+                                                // Set as active session when clicked
+                                                SessionList.activeSessionIndex =
+                                                        SessionList.sessions.indexOf(activeTerminal)
+                                            },
+                            update = { webView ->
+                                // Make native WebView visible when ready
+                                if (isTerminalReady) {
+                                    webView.visibility = android.view.View.VISIBLE
+                                    webView.alpha = 1f
+                                }
+                            }
+                    )
                 }
             }
         } else {

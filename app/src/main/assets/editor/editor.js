@@ -1313,3 +1313,22 @@ window.setFontSize = function (size) {
   document.head.appendChild(fontStyle);
   console.log('[Editor] Font size set to:', size);
 };
+
+// Dynamic bottom padding for when bottom bar is expanded
+// This allows scrolling past the last line when bottom bar covers it
+window.setBottomPadding = function (paddingPx) {
+  const existingStyle = document.getElementById('editor-bottom-padding-style');
+  if (existingStyle) {
+    existingStyle.remove();
+  }
+
+  const paddingStyle = document.createElement('style');
+  paddingStyle.id = 'editor-bottom-padding-style';
+  paddingStyle.textContent = `
+    .cm-scroller {
+      padding-bottom: ${paddingPx}px !important;
+    }
+  `;
+  document.head.appendChild(paddingStyle);
+  console.log('[Editor] Bottom padding set to:', paddingPx);
+};

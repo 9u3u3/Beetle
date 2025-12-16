@@ -39,6 +39,14 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+    
+    // Snackbar to remind user to restart app after extension install
+    private val _showRestartSnackbar = MutableStateFlow(false)
+    val showRestartSnackbar: StateFlow<Boolean> = _showRestartSnackbar.asStateFlow()
+    
+    fun dismissRestartSnackbar() {
+        _showRestartSnackbar.value = false
+    }
 
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
@@ -160,6 +168,10 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                 updateExtensionState(extension.id) { it.copy(installed = true, isInstalling = false) }
                 
                 Log.d("ExtensionsViewModel", "Installed ${extension.name}")
+                
+                // Show restart snackbar after 3 seconds
+                delay(3000)
+                _showRestartSnackbar.value = true
 
             } catch (e: Exception) {
                 Log.e("ExtensionsViewModel", "Error installing extension ${extension.name}", e)

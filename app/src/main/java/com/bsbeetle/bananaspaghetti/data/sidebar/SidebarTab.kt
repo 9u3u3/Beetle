@@ -12,8 +12,5 @@ enum class SidebarTab(
     val label: String
 ) {
     FILES(imageRes = R.drawable.computer_folder_open_icon, label = "Files"),
-    SEARCH(imageRes = R.drawable.search_image, label = "Search"),
-    GIT(icon = Icons.Default.AccountTree, label = "Source Control"),
-    EXTENSIONS(icon = Icons.Default.Extension, label = "Extensions"),
-    SETTINGS(icon = Icons.Default.Settings, label = "Settings")
+    GIT(icon = Icons.Default.AccountTree, label = "Source Control")
 }

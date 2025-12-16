@@ -399,44 +399,15 @@ fun SessionCard(
             )
         }
 
-        // Session type label with icon
-        Row(
+        // Session name label (simplified - no icon)
+        Box(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(12.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .background(Color(0xCC000000))
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                .padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(
-                        when (session.type) {
-                            SessionType.EDITOR -> Color(0xFF4A90E2)
-                            SessionType.BROWSER -> Color(0xFF7B68EE)
-                            SessionType.TERMINAL -> Color(0xFF50C878)
-                            SessionType.DEMO -> Color(0xFFFFB347)
-                        }
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = when (session.type) {
-                        SessionType.EDITOR -> "E"
-                        SessionType.BROWSER -> "B"
-                        SessionType.TERMINAL -> "T"
-                        SessionType.DEMO -> "D"
-                    },
-                    color = Color.White,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
             Text(
                 text = session.name,
                 color = Color.White,
@@ -517,7 +488,8 @@ fun NewSessionDialog(
                         onDismissRequest = { expanded = false },
                         modifier = Modifier.background(Color(0xFF1A1A1A))
                     ) {
-                        SessionType.values().forEach { type ->
+                        // Filter out DEMO from the list
+                        SessionType.values().filter { it != SessionType.DEMO }.forEach { type ->
                             DropdownMenuItem(
                                 text = {
                                     Text(

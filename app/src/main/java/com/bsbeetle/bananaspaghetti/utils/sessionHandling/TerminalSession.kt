@@ -43,9 +43,9 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
                 // For now, assume the path is valid for the shell (or mapped).
                 // If it's a content URI, we can't cd into it.
                 if (dir.startsWith("/")) {
-                     // It's a path
-                     insertText("cd \"$dir\"\n")
-                     insertText("clear\n") // Optional: clear the cd command from view
+                    // It's a path
+                    insertText("cd \"$dir\"\n")
+                    insertText("clear\n") // Optional: clear the cd command from view
                 }
             }
         } catch (e: Exception) {
@@ -58,6 +58,12 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
         if (view != null) return view!!
         view =
                 CustomWebView(context.applicationContext, this).apply {
+                    // Make WebView completely invisible during creation to prevent any flash
+                    visibility = android.view.View.INVISIBLE
+                    alpha = 0f
+                    // Set dark background as fallback
+                    setBackgroundColor(android.graphics.Color.parseColor("#1E1E1E"))
+
                     WebView.setWebContentsDebuggingEnabled(true)
                     settings.apply {
                         javaScriptEnabled = true
@@ -127,6 +133,14 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
 
                     webViewClient =
                             object : WebViewClient() {
+                                override fun onPageFinished(view: WebView?, url: String?) {
+                                    super.onPageFinished(view, url)
+                                    // Make the WebView visible after page loads
+                                    view?.visibility = android.view.View.VISIBLE
+                                    view?.alpha = 1f
+                                    Log.d("TerminalSession", "Terminal page loaded, making visible")
+                                }
+                                
                                 override fun onRenderProcessGone(
                                         view: WebView?,
                                         detail: RenderProcessGoneDetail?

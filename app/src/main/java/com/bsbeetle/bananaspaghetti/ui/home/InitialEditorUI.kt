@@ -105,8 +105,8 @@ fun InitialEditorUI(navController: NavController) {
     // Apply editor font size when it changes
     LaunchedEffect(uiState.editorFontSize) {
         editorViewModel.webView?.evaluateJavascript(
-            "if(window.setFontSize) window.setFontSize(${uiState.editorFontSize});",
-            null
+                "if(window.setFontSize) window.setFontSize(${uiState.editorFontSize});",
+                null
         )
     }
 
@@ -120,6 +120,28 @@ fun InitialEditorUI(navController: NavController) {
                 1 -> KeyboardLayout.editorLayout // Symbols
                 else -> KeyboardLayout.terminalLayout // Navigation
             }
+
+    // Monitor IME keyboard and apply bottom padding to editor
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val imeInsets = WindowInsets.ime
+    val imeHeight = imeInsets.getBottom(density)
+
+    // Apply bottom padding when IME keyboard is visible
+    LaunchedEffect(imeHeight) {
+        val paddingPx = imeHeight
+        Log.d("EditorUI", "IME height changed: $paddingPx px")
+        if (paddingPx > 0) {
+            editorViewModel.webView?.let { webView ->
+                val js =
+                        "if(window.setBottomPadding) { window.setBottomPadding($paddingPx); console.log('[Editor] IME padding set to $paddingPx'); }"
+                webView.evaluateJavascript(js, null)
+                Log.d("EditorUI", "Applied IME bottom padding: $paddingPx")
+            }
+        } else {
+            // Reset padding when keyboard is hidden (but keep bottom bar padding if present)
+            Log.d("EditorUI", "IME hidden, padding will be managed by BottomBar")
+        }
+    }
 
     // UI States
     var showSidebar by rememberSaveable { mutableStateOf(false) }
@@ -480,14 +502,15 @@ fun InitialEditorUI(navController: NavController) {
 
             BottomBar(
                     Modifier.constrainAs(bottomBarRef) {
-                        bottom.linkTo(editor.bottom)
+                        bottom.linkTo(parent.bottom)
                         start.linkTo(editor.start)
                         end.linkTo(editor.end)
                         width = Dimension.fillToConstraints
                     },
                     color = Color(0xFF1B1B1B),
                     lspViewModel = lspViewModel,
-                    gitViewModel = gitViewModel
+                    gitViewModel = gitViewModel,
+                    editorViewModel = editorViewModel
             )
 
             if (!isLandscape) {
@@ -502,11 +525,8 @@ fun InitialEditorUI(navController: NavController) {
                         fileViewModel.currentFilePath,
                         listOf(
                                 SidebarTab.FILES,
-                                SidebarTab.SEARCH,
-                                SidebarTab.GIT,
-                                SidebarTab.EXTENSIONS,
-                                SidebarTab.SETTINGS
-                        ),
+                                SidebarTab.GIT
+                        ), // Only Files and Git in sidebar
                         onTabChanged = {
                             if (it == SidebarTab.GIT) {
                                 gitViewModel.initializeGit()
