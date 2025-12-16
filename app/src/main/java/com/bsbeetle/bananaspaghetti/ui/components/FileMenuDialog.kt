@@ -156,6 +156,35 @@ fun FileMenuDialog(
                 }
             }
 
+    // Rename folder picker launcher
+    val renameFolderLauncher =
+            rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.OpenDocumentTree()
+            ) { uri ->
+                uri?.let {
+                    try {
+                        context.contentResolver.takePersistableUriPermission(
+                                it,
+                                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                        android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                        )
+                        val documentFile = DocumentFile.fromTreeUri(context, it)
+                        documentFile?.let { folder ->
+                            fileToRename = folder
+                            renameFileName = folder.name ?: ""
+                            currentAction = FileMenuAction.RENAME_FILE
+                        }
+                    } catch (e: Exception) {
+                        Log.e("FileMenu", "Error selecting folder for rename", e)
+                        Toast.makeText(context, "Error selecting folder", Toast.LENGTH_SHORT).show()
+                        currentAction = FileMenuAction.NONE
+                    }
+                }
+                if (uri == null) {
+                    currentAction = FileMenuAction.NONE
+                }
+            }
+
     // Centered popup overlay
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         AnimatedVisibility(
@@ -247,15 +276,15 @@ fun FileMenuDialog(
                             )
 
                             FileMenuItem(
-                                    icon = R.drawable.file_type_text, // Using generic text icon for
-                                    // rename
+                                    icon = R.drawable.file_type_text,
                                     title = "Rename File",
-                                    onClick = {
-                                        // Don't set currentAction here - let the file picker
-                                        // callback set it
-                                        // after fileToRename is set, so the dialog shows correctly
-                                        renameFileLauncher.launch(arrayOf("*/*"))
-                                    }
+                                    onClick = { renameFileLauncher.launch(arrayOf("*/*")) }
+                            )
+
+                            FileMenuItem(
+                                    icon = R.drawable.computer_folder_open_icon,
+                                    title = "Rename Folder",
+                                    onClick = { renameFolderLauncher.launch(null) }
                             )
 
                             Spacer(modifier = Modifier.height(12.dp))
@@ -330,7 +359,7 @@ fun FileMenuDialog(
                 FileMenuAction.RENAME_FILE -> {
                     if (fileToRename != null) {
                         NewItemPopup(
-                                title = "Rename File",
+                                title = "Rename",
                                 placeholder = "new_name.ext",
                                 value = renameFileName,
                                 onValueChange = { renameFileName = it },

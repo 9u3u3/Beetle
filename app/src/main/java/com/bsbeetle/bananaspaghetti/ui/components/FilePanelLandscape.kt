@@ -110,7 +110,7 @@ fun FileOptionsPanel(
     val renameFileLauncher =
             rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocument()) {
                     uri ->
-                Log.d("FileMenu", "Rename launcher callback - uri: $uri")
+                Log.d("FileMenu", "Rename file launcher callback - uri: $uri")
                 uri?.let {
                     try {
                         context.contentResolver.takePersistableUriPermission(
@@ -140,6 +140,44 @@ fun FileOptionsPanel(
                 }
                 if (uri == null) {
                     Log.d("FileMenu", "Rename launcher - uri was null, user cancelled")
+                    currentAction = FileMenuAction.NONE
+                }
+            }
+
+    val renameFolderLauncher =
+            rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.OpenDocumentTree()
+            ) { uri ->
+                Log.d("FileMenu", "Rename folder launcher callback - uri: $uri")
+                uri?.let {
+                    try {
+                        context.contentResolver.takePersistableUriPermission(
+                                it,
+                                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                        android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                        )
+                        val documentFile = DocumentFile.fromTreeUri(context, it)
+                        Log.d(
+                                "FileMenu",
+                                "DocumentFile (folder): $documentFile, name: ${documentFile?.name}"
+                        )
+                        documentFile?.let { folder ->
+                            fileToRename = folder
+                            renameFileName = folder.name ?: ""
+                            currentAction = FileMenuAction.RENAME_FILE
+                            Log.d(
+                                    "FileMenu",
+                                    "Set currentAction=RENAME_FILE, fileToRename=${fileToRename?.name}"
+                            )
+                        }
+                    } catch (e: Exception) {
+                        Log.e("FileMenu", "Error selecting folder for rename", e)
+                        Toast.makeText(context, "Error selecting folder", Toast.LENGTH_SHORT).show()
+                        currentAction = FileMenuAction.NONE
+                    }
+                }
+                if (uri == null) {
+                    Log.d("FileMenu", "Rename folder launcher - uri was null, user cancelled")
                     currentAction = FileMenuAction.NONE
                 }
             }
@@ -208,11 +246,14 @@ fun FileOptionsPanel(
                     FileOptionItem(
                             icon = R.drawable.file_type_text,
                             title = "Rename File",
-                            onClick = {
-                                // Don't set currentAction here - the file picker callback sets it
-                                // after fileToRename is set, so the form shows correctly
-                                renameFileLauncher.launch(arrayOf("*/*"))
-                            }
+                            onClick = { renameFileLauncher.launch(arrayOf("*/*")) }
+                    )
+                }
+                item {
+                    FileOptionItem(
+                            icon = R.drawable.computer_folder_open_icon,
+                            title = "Rename Folder",
+                            onClick = { renameFolderLauncher.launch(null) }
                     )
                 }
             }
@@ -297,7 +338,7 @@ fun FileOptionsPanel(
                     FileMenuAction.RENAME_FILE -> {
                         if (fileToRename != null) {
                             InlineInputForm(
-                                    title = "Rename File",
+                                    title = "Rename",
                                     placeholder = "new_name.ext",
                                     value = renameFileName,
                                     onValueChange = { renameFileName = it },
