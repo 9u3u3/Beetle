@@ -525,11 +525,8 @@ fun InitialEditorUI(navController: NavController) {
                         fileViewModel.currentFilePath,
                         listOf(
                                 SidebarTab.FILES,
-                                SidebarTab.SEARCH,
-                                SidebarTab.GIT,
-                                SidebarTab.EXTENSIONS,
-                                SidebarTab.SETTINGS
-                        ),
+                                SidebarTab.GIT
+                        ), // Only Files and Git in sidebar
                         onTabChanged = {
                             if (it == SidebarTab.GIT) {
                                 gitViewModel.initializeGit()

@@ -53,15 +53,11 @@ fun RecentFileItem(
                 val uri = Uri.parse(file.uri)
                 
                 // Create new session for the file to prevent NPE in InitialEditorUI
+                // Note: Session constructor already adds itself to SessionList
                 val session = com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession(
                     context, 
                     file.name
                 )
-                
-                // Add to session list and set active
-                com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList.sessions.add(session)
-                com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList.activeSessionIndex = 
-                    com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList.sessions.lastIndex
                 
                 // Initialize EditorViewModel with the new session's WebView
                 // CRITICAL: Ensure view is created immediately
