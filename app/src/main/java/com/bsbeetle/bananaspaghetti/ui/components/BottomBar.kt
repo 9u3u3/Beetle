@@ -598,7 +598,11 @@ private fun TerminalContent(
                                                         SessionList.sessions.indexOf(activeTerminal)
                                             },
                             update = { webView ->
-                                // Don't auto-focus - let user tap to focus
+                                // Make native WebView visible when ready
+                                if (isTerminalReady) {
+                                    webView.visibility = android.view.View.VISIBLE
+                                    webView.alpha = 1f
+                                }
                             }
                     )
                 }

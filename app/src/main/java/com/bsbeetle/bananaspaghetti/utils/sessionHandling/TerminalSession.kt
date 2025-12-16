@@ -58,7 +58,10 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
         if (view != null) return view!!
         view =
                 CustomWebView(context.applicationContext, this).apply {
-                    // Set dark background immediately to prevent white flash
+                    // Make WebView completely invisible during creation to prevent any flash
+                    visibility = android.view.View.INVISIBLE
+                    alpha = 0f
+                    // Set dark background as fallback
                     setBackgroundColor(android.graphics.Color.parseColor("#1E1E1E"))
 
                     WebView.setWebContentsDebuggingEnabled(true)
