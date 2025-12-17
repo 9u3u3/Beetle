@@ -13,6 +13,20 @@ AndroidTerminalResize.getRowsCols(dims.rows, dims.cols);
 
 let currentCommand = '';
 
+// CTRL modifier state for portrait keyboard
+let isCtrlOn = false;
+
+// Function to set CTRL state from Android
+window.setCtrlState = function (state) {
+  isCtrlOn = state;
+  console.log('CTRL state set to:', isCtrlOn);
+};
+
+// Function to get current CTRL state
+window.getCtrlState = function () {
+  return isCtrlOn;
+};
+
 setTimeout(() => {
   const textarea = term.textarea;
   if (textarea) {
@@ -33,27 +47,56 @@ setTimeout(() => {
 }, 0);
 
 term.onData((data) => {
-  const code = data.charCodeAt(0);
+  // Check if CTRL is on and this is a single printable character
+  if (isCtrlOn && data.length === 1) {
+    const char = data.toUpperCase();
+    const code = char.charCodeAt(0);
 
-  if (code < 0x20 && data !== '\r' && data !== '\t') {
-    console.log('Ignoring control character:', code);
-    return;
+    // Convert A-Z to Ctrl+A - Ctrl+Z (ASCII 1-26)
+    if (code >= 65 && code <= 90) {
+      const ctrlCode = code - 64; // A=1, B=2, ... Z=26
+      const ctrlChar = String.fromCharCode(ctrlCode);
+      console.log('Sending Ctrl+' + char + ' (0x' + ctrlCode.toString(16) + ')');
+      AndroidTerminal.sendRaw(ctrlChar);
+
+      // Turn off CTRL and notify Android
+      isCtrlOn = false;
+      if (typeof AndroidTerminalCtrl !== 'undefined') {
+        AndroidTerminalCtrl.ctrlUsed();
+      }
+      return; // Don't send the original character
+    }
   }
 
+  // Pass all keyboard input directly to the PTY
+  // The PTY and shell will handle all processing (echo, line editing, etc.)
+  // This ensures interactive CLI tools (like npm create) work correctly
+
+  // Log for debugging (can be removed later)
+  if (data.length === 1) {
+    const code = data.charCodeAt(0);
+    if (code === 0x0D) {
+      console.log('Enter key pressed');
+    } else if (code === 0x1B) {
+      console.log('ESC key pressed');
+    } else if (code < 0x20) {
+      console.log('Control char:', code.toString(16));
+    }
+  } else if (data.charCodeAt(0) === 0x1B) {
+    console.log('Escape sequence:', data.split('').map(c => c.charCodeAt(0).toString(16)).join(' '));
+  }
+
+  // Send everything directly to PTY
+  AndroidTerminal.sendRaw(data);
+
+  // Track command for local purposes (optional)
   if (data === '\r') {
-    console.log('COMMAND ENTERED via onData:', currentCommand);
-    // Send newline to PTY - it will echo back
-    AndroidTerminal.sendRaw('\n');
     currentCommand = '';
   } else if (data === '\x7f') {
-    // Send backspace to PTY - it will handle the display
-    AndroidTerminal.sendRaw('\x7f');
     if (currentCommand.length > 0) {
       currentCommand = currentCommand.slice(0, -1);
     }
-  } else {
-    // Send character to PTY - it will echo back
-    AndroidTerminal.sendRaw(data);
+  } else if (data.length === 1 && data.charCodeAt(0) >= 0x20) {
     currentCommand += data;
   }
 });
@@ -87,8 +130,8 @@ window.performBackspace = function () {
 
 window.performEnter = function () {
   term.focus();
-  // Send newline to PTY
-  AndroidTerminal.sendRaw('\n');
+  // Send carriage return to PTY
+  AndroidTerminal.sendRaw('\r');
   currentCommand = '';
 };
 

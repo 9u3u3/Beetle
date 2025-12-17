@@ -2,198 +2,321 @@ package com.bsbeetle.bananaspaghetti.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsbeetle.bananaspaghetti.model.Key
 import com.bsbeetle.bananaspaghetti.model.KeyType
-import com.bsbeetle.bananaspaghetti.viewmodel.EditorAction
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyGesture
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 
-import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
+// App theme colors - matching the existing dark theme
+private val BackgroundColor = Color(0xFF1E1E1E) // Matches app's main dark bg
+private val KeyColor = Color(0xFF2D2D30) // Slightly lighter for keys
+private val KeyPressedColor = Color(0xFF3E3E42) // Pressed state
+private val ActiveColor = Color(0xFF007ACC) // Blue accent for active keys
+private val TextColor = Color(0xFFCCCCCC) // Light text
 
 @Composable
 fun ExtraKeysRow(
-    keyboardViewModel: KeyboardViewModel,
-    mode: SessionType,
-    modifier: Modifier = Modifier
+        keyboardViewModel: KeyboardViewModel,
+        mode: SessionType,
+        modifier: Modifier = Modifier
 ) {
-    val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
-    val scrollState = rememberScrollState()
+        val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
 
-    // Editor Keys
-    val editorRow1 = listOf(
-        "ESC" to KeyType.ACTION_ESCAPE,
-        "/" to KeyType.CHARACTER,
-        "-" to KeyType.CHARACTER,
-        "{" to KeyType.CHARACTER,
-        "}" to KeyType.CHARACTER,
-        "(" to KeyType.CHARACTER,
-        ")" to KeyType.CHARACTER
-    )
-
-    val editorRow2 = listOf(
-        "TAB" to KeyType.ACTION_TAB,
-        "CTRL" to KeyType.ACTION_CTRL,
-        "ALT" to KeyType.ACTION_ALT,
-        "[" to KeyType.CHARACTER,
-        "]" to KeyType.CHARACTER,
-        "<" to KeyType.CHARACTER,
-        ">" to KeyType.CHARACTER
-    )
-
-    // Terminal Keys
-    val terminalRow1 = listOf(
-        "ESC" to KeyType.ACTION_ESCAPE,
-        "/" to KeyType.CHARACTER,
-        "-" to KeyType.CHARACTER,
-        "HOME" to KeyType.ACTION_HOME,
-        "UP" to KeyType.ACTION_UP,
-        "END" to KeyType.ACTION_END,
-        "PGUP" to KeyType.ACTION_PGUP
-    )
-
-    val terminalRow2 = listOf(
-        "TAB" to KeyType.ACTION_TAB,
-        "CTRL" to KeyType.ACTION_CTRL,
-        "ALT" to KeyType.ACTION_ALT,
-        "LEFT" to KeyType.ACTION_LEFT,
-        "DOWN" to KeyType.ACTION_DOWN,
-        "RIGHT" to KeyType.ACTION_RIGHT,
-        "PGDN" to KeyType.ACTION_PGDN
-    )
-
-    val (row1, row2) = if (mode == SessionType.TERMINAL) {
-        terminalRow1 to terminalRow2
-    } else {
-        editorRow1 to editorRow2
-    }
-
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .zIndex(1f)
-            .background(Color(0xFF2E2E2E))
-            .padding(vertical = 4.dp)
-    ) {
-        // Row 1
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(scrollState)
-                .padding(horizontal = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            row1.forEach { (label, type) ->
-                ExtraKeyButton(
-                    label = label,
-                    isActive = false, // No toggle state for these yet
-                    onClick = {
-                        handleExtraKey(label, keyboardViewModel)
-                    }
+        // Row 1 Keys: ESC, /, -, HOME, ↑, END, PGUP
+        val row1Keys =
+                listOf(
+                        KeyData("ESC", "ESC", KeyType.ACTION_ESCAPE),
+                        KeyData("/", "/", KeyType.CHARACTER),
+                        KeyData("−", "-", KeyType.CHARACTER), // Minus sign
+                        KeyData("HOME", "HOME", KeyType.ACTION_HOME),
+                        KeyData("↑", "UP", KeyType.ACTION_UP),
+                        KeyData("END", "END", KeyType.ACTION_END),
+                        KeyData("PGUP", "PGUP", KeyType.ACTION_PGUP)
                 )
-            }
-        }
-        
-        // Row 2
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(scrollState) // Share scroll state? Or independent? Independent is better for now.
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+
+        // Row 2 Keys: ⇥, CTRL, ALT, ←, ↓, →, PGDN
+        val row2Keys =
+                listOf(
+                        KeyData("⇥", "TAB", KeyType.ACTION_TAB),
+                        KeyData("CTRL", "CTRL", KeyType.ACTION_CTRL),
+                        KeyData("ALT", "ALT", KeyType.ACTION_ALT),
+                        KeyData("←", "LEFT", KeyType.ACTION_LEFT),
+                        KeyData("↓", "DOWN", KeyType.ACTION_DOWN),
+                        KeyData("→", "RIGHT", KeyType.ACTION_RIGHT),
+                        KeyData("PGDN", "PGDN", KeyType.ACTION_PGDN)
+                )
+
+        Column(
+                modifier =
+                        modifier.fillMaxWidth()
+                                .zIndex(1f)
+                                .background(BackgroundColor)
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
         ) {
-            row2.forEach { (label, type) ->
-                val isActive = when (label) {
-                    "CTRL" -> uiState.isCtrlOn
-                    "ALT" -> uiState.isAltOn
-                    else -> false
+                // Row 1
+                Row(
+                        modifier = Modifier.fillMaxWidth().height(38.dp).padding(vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                        row1Keys.forEach { keyData ->
+                                AssistantKeyButton(
+                                        displayLabel = keyData.displayLabel,
+                                        isActive = false,
+                                        onClick = {
+                                                handleExtraKey(
+                                                        keyData.actionLabel,
+                                                        keyboardViewModel
+                                                )
+                                        }
+                                )
+                        }
                 }
-                ExtraKeyButton(
-                    label = label,
-                    isActive = isActive,
-                    onClick = {
-                        handleExtraKey(label, keyboardViewModel)
-                    }
-                )
-            }
+
+                // Row 2
+                Row(
+                        modifier = Modifier.fillMaxWidth().height(38.dp).padding(vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                        row2Keys.forEach { keyData ->
+                                val isActive =
+                                        when (keyData.actionLabel) {
+                                                "CTRL" -> uiState.isCtrlOn
+                                                "ALT" -> uiState.isAltOn
+                                                else -> false
+                                        }
+                                AssistantKeyButton(
+                                        displayLabel = keyData.displayLabel,
+                                        isActive = isActive,
+                                        onClick = {
+                                                handleExtraKey(
+                                                        keyData.actionLabel,
+                                                        keyboardViewModel
+                                                )
+                                        }
+                                )
+                        }
+                }
         }
-    }
 }
 
+// Data class to hold key information
+private data class KeyData(
+        val displayLabel: String, // What to show on the key
+        val actionLabel: String, // What to pass to handler
+        val type: KeyType
+)
+
 @Composable
-fun ExtraKeyButton(
-    label: String,
-    isActive: Boolean,
-    onClick: () -> Unit
+private fun RowScope.AssistantKeyButton(
+        displayLabel: String,
+        isActive: Boolean,
+        onClick: () -> Unit
 ) {
-    Box(
-        modifier = Modifier
-            .height(36.dp)
-            .widthIn(min = 40.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(if (isActive) Color(0xFF228edd) else Color(0xFF424242))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            color = Color.White,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold
-        )
-    }
+        val interactionSource = remember { MutableInteractionSource() }
+        val isPressed by interactionSource.collectIsPressedAsState()
+
+        val backgroundColor =
+                when {
+                        isActive -> ActiveColor
+                        isPressed -> KeyPressedColor
+                        else -> KeyColor
+                }
+
+        Box(
+                modifier =
+                        Modifier.weight(1f)
+                                .height(34.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(backgroundColor)
+                                .clickable(
+                                        interactionSource = interactionSource,
+                                        indication = null,
+                                        onClick = onClick
+                                ),
+                contentAlignment = Alignment.Center
+        ) {
+                Text(
+                        text = displayLabel,
+                        color = TextColor,
+                        fontSize = if (displayLabel.length <= 2) 16.sp else 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center
+                )
+        }
+}
+
+// Keep the old ExtraKeyButton for backward compatibility if needed
+@Composable
+fun ExtraKeyButton(label: String, isActive: Boolean, onClick: () -> Unit) {
+        val interactionSource = remember { MutableInteractionSource() }
+        val isPressed by interactionSource.collectIsPressedAsState()
+
+        val backgroundColor =
+                when {
+                        isActive -> ActiveColor
+                        isPressed -> KeyPressedColor
+                        else -> KeyColor
+                }
+
+        Box(
+                modifier =
+                        Modifier.height(34.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(backgroundColor)
+                                .clickable(
+                                        interactionSource = interactionSource,
+                                        indication = null,
+                                        onClick = onClick
+                                )
+                                .padding(horizontal = 12.dp),
+                contentAlignment = Alignment.Center
+        ) {
+                Text(
+                        text = label,
+                        color = TextColor,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                )
+        }
 }
 
 fun handleExtraKey(label: String, viewModel: KeyboardViewModel) {
-    when (label) {
-        "ESC" -> viewModel.onKeyEvent(Key("ESC", type = KeyType.ACTION_ESCAPE), KeyGesture.Tap)
-        "/" -> viewModel.onKeyEvent(Key("/", type = KeyType.CHARACTER), KeyGesture.Tap)
-        "-" -> viewModel.onKeyEvent(Key("-", type = KeyType.CHARACTER), KeyGesture.Tap)
-        "TAB" -> viewModel.onKeyEvent(Key("TAB", type = KeyType.ACTION_TAB), KeyGesture.Tap)
-        "CTRL" -> viewModel.onKeyEvent(Key("CTRL", type = KeyType.ACTION_CTRL), KeyGesture.Tap)
-        "ALT" -> viewModel.onKeyEvent(Key("ALT", type = KeyType.ACTION_ALT), KeyGesture.Tap)
-        
-        // Editor Symbols
-        "{" -> viewModel.onKeyEvent(Key("{", type = KeyType.CHARACTER), KeyGesture.Tap)
-        "}" -> viewModel.onKeyEvent(Key("}", type = KeyType.CHARACTER), KeyGesture.Tap)
-        "(" -> viewModel.onKeyEvent(Key("(", type = KeyType.CHARACTER), KeyGesture.Tap)
-        ")" -> viewModel.onKeyEvent(Key(")", type = KeyType.CHARACTER), KeyGesture.Tap)
-        "[" -> viewModel.onKeyEvent(Key("[", type = KeyType.CHARACTER), KeyGesture.Tap)
-        "]" -> viewModel.onKeyEvent(Key("]", type = KeyType.CHARACTER), KeyGesture.Tap)
-        "<" -> viewModel.onKeyEvent(Key("<", type = KeyType.CHARACTER), KeyGesture.Tap)
-        ">" -> viewModel.onKeyEvent(Key(">", type = KeyType.CHARACTER), KeyGesture.Tap)
+        when (label) {
+                "ESC" ->
+                        viewModel.onKeyEvent(
+                                Key("ESC", type = KeyType.ACTION_ESCAPE),
+                                KeyGesture.Tap
+                        )
+                "/" -> viewModel.onKeyEvent(Key("/", type = KeyType.CHARACTER), KeyGesture.Tap)
+                "-" -> viewModel.onKeyEvent(Key("-", type = KeyType.CHARACTER), KeyGesture.Tap)
+                "TAB" -> viewModel.onKeyEvent(Key("TAB", type = KeyType.ACTION_TAB), KeyGesture.Tap)
+                "CTRL" -> {
+                        // Toggle CTRL state and sync with terminal JavaScript
+                        viewModel.onKeyEvent(
+                                Key("CTRL", type = KeyType.ACTION_CTRL),
+                                KeyGesture.Tap
+                        )
 
-        // Navigation Keys (now handled by ViewModel)
-        "HOME" -> viewModel.onKeyEvent(Key("HOME", type = KeyType.ACTION_HOME), KeyGesture.Tap)
-        "END" -> viewModel.onKeyEvent(Key("END", type = KeyType.ACTION_END), KeyGesture.Tap)
-        "PGUP" -> viewModel.onKeyEvent(Key("PGUP", type = KeyType.ACTION_PGUP), KeyGesture.Tap)
-        "PGDN" -> viewModel.onKeyEvent(Key("PGDN", type = KeyType.ACTION_PGDN), KeyGesture.Tap)
-        "UP" -> viewModel.onKeyEvent(Key("UP", type = KeyType.ACTION_UP), KeyGesture.Tap)
-        "DOWN" -> viewModel.onKeyEvent(Key("DOWN", type = KeyType.ACTION_DOWN), KeyGesture.Tap)
-        "RIGHT" -> viewModel.onKeyEvent(Key("RIGHT", type = KeyType.ACTION_RIGHT), KeyGesture.Tap)
-        "LEFT" -> viewModel.onKeyEvent(Key("LEFT", type = KeyType.ACTION_LEFT), KeyGesture.Tap)
-    }
+                        // For terminal sessions, also tell JS that CTRL is toggled
+                        val session =
+                                com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
+                                        .sessions.getOrNull(
+                                        com.bsbeetle
+                                                .bananaspaghetti
+                                                .utils
+                                                .sessionHandling
+                                                .SessionList
+                                                .activeSessionIndex
+                                                ?: -1
+                                )
+                        if (session is
+                                        com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
+                        ) {
+                                // Get the new CTRL state after toggle
+                                val isCtrlOn = viewModel.uiState.value.isCtrlOn
+
+                                // Set up callback to reset CTRL state when JS uses it
+                                if (isCtrlOn) {
+                                        session.onCtrlUsed = {
+                                                // Reset CTRL state in ViewModel (from background
+                                                // thread)
+                                                android.os.Handler(
+                                                                android.os.Looper.getMainLooper()
+                                                        )
+                                                        .post {
+                                                                viewModel.onKeyEvent(
+                                                                        Key(
+                                                                                "CTRL",
+                                                                                type =
+                                                                                        KeyType.ACTION_CTRL
+                                                                        ),
+                                                                        KeyGesture.Tap
+                                                                )
+                                                        }
+                                        }
+                                } else {
+                                        session.onCtrlUsed = null
+                                }
+
+                                // Tell JS about the CTRL state so it can intercept next character
+                                session.view?.post {
+                                        session.view?.evaluateJavascript(
+                                                "window.setCtrlState($isCtrlOn)",
+                                                null
+                                        )
+                                }
+                        }
+                }
+                "ALT" -> viewModel.onKeyEvent(Key("ALT", type = KeyType.ACTION_ALT), KeyGesture.Tap)
+
+                // Navigation Keys
+                "HOME" ->
+                        viewModel.onKeyEvent(
+                                Key("HOME", type = KeyType.ACTION_HOME),
+                                KeyGesture.Tap
+                        )
+                "END" -> viewModel.onKeyEvent(Key("END", type = KeyType.ACTION_END), KeyGesture.Tap)
+                "PGUP" ->
+                        viewModel.onKeyEvent(
+                                Key("PGUP", type = KeyType.ACTION_PGUP),
+                                KeyGesture.Tap
+                        )
+                "PGDN" ->
+                        viewModel.onKeyEvent(
+                                Key("PGDN", type = KeyType.ACTION_PGDN),
+                                KeyGesture.Tap
+                        )
+                "UP" -> viewModel.onKeyEvent(Key("UP", type = KeyType.ACTION_UP), KeyGesture.Tap)
+                "DOWN" ->
+                        viewModel.onKeyEvent(
+                                Key("DOWN", type = KeyType.ACTION_DOWN),
+                                KeyGesture.Tap
+                        )
+                "RIGHT" ->
+                        viewModel.onKeyEvent(
+                                Key("RIGHT", type = KeyType.ACTION_RIGHT),
+                                KeyGesture.Tap
+                        )
+                "LEFT" ->
+                        viewModel.onKeyEvent(
+                                Key("LEFT", type = KeyType.ACTION_LEFT),
+                                KeyGesture.Tap
+                        )
+
+                // Editor Symbols (kept for backward compatibility)
+                "{" -> viewModel.onKeyEvent(Key("{", type = KeyType.CHARACTER), KeyGesture.Tap)
+                "}" -> viewModel.onKeyEvent(Key("}", type = KeyType.CHARACTER), KeyGesture.Tap)
+                "(" -> viewModel.onKeyEvent(Key("(", type = KeyType.CHARACTER), KeyGesture.Tap)
+                ")" -> viewModel.onKeyEvent(Key(")", type = KeyType.CHARACTER), KeyGesture.Tap)
+                "[" -> viewModel.onKeyEvent(Key("[", type = KeyType.CHARACTER), KeyGesture.Tap)
+                "]" -> viewModel.onKeyEvent(Key("]", type = KeyType.CHARACTER), KeyGesture.Tap)
+                "<" -> viewModel.onKeyEvent(Key("<", type = KeyType.CHARACTER), KeyGesture.Tap)
+                ">" -> viewModel.onKeyEvent(Key(">", type = KeyType.CHARACTER), KeyGesture.Tap)
+        }
 }

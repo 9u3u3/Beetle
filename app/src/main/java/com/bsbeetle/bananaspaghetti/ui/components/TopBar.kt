@@ -520,6 +520,14 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
         val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         val context = LocalContext.current
         val browserViewModel = LocalBrowserViewModel.current
+        val fileViewModel = LocalFileViewModel.current
+
+        // State for live server
+        var isServerRunning by remember {
+                mutableStateOf(
+                        com.bsbeetle.bananaspaghetti.liveserver.LiveServerManager.isRunning()
+                )
+        }
 
         // Helper to save content before navigation
         val currentEditorSession =
@@ -548,6 +556,246 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
                                 onClick = {
                                         currentEditorSession?.saveContent()
                                         navController.navigate(Screen.ZoomOut.route)
+                                }
+                        )
+
+                        VerticalDivider(
+                                modifier = Modifier.fillMaxHeight().width(1.dp),
+                                color = Color(0xFF3E3E42)
+                        )
+
+                        // Play button - Live Server
+                        TopBarIconButton(
+                                icon = R.drawable.play_arrow,
+                                onClick = {
+                                        currentEditorSession?.saveContent()
+
+                                        // Get current file info
+                                        val currentFileUri = fileViewModel.selectedUri
+                                        val currentFilePath =
+                                                currentFileUri?.let { uri ->
+                                                        com.bsbeetle.bananaspaghetti.liveserver
+                                                                .LiveServerManager.getPathFromUri(
+                                                                context,
+                                                                uri
+                                                        )
+                                                }
+
+                                        // Get file name from path
+                                        val currentFileName =
+                                                currentFilePath?.substringAfterLast("/")
+
+                                        // Get parent directory of current file
+                                        val fileParentDir =
+                                                currentFilePath?.substringBeforeLast("/")
+
+                                        // Get project root - try multiple methods
+                                        val projectRoot = run {
+                                                // Method 1: Use the open folder from sidebar
+                                                fileViewModel.selectedFolderUri?.let { folderUri ->
+                                                        com.bsbeetle.bananaspaghetti.liveserver
+                                                                .LiveServerManager.getPathFromUri(
+                                                                context,
+                                                                folderUri
+                                                        )
+                                                }
+                                                // Method 2: Editor session project root
+                                                ?: currentEditorSession?.projectRoot?.uri?.let { uri
+                                                                ->
+                                                                com.bsbeetle.bananaspaghetti
+                                                                        .liveserver
+                                                                        .LiveServerManager
+                                                                        .getPathFromUri(
+                                                                                context,
+                                                                                uri
+                                                                        )
+                                                        }
+                                                        // Method 3: Use parent directory of current
+                                                        // file
+                                                        ?: fileParentDir
+                                        }
+
+                                        if (projectRoot == null) {
+                                                android.widget.Toast.makeText(
+                                                                context,
+                                                                "Could not find file location",
+                                                                android.widget.Toast.LENGTH_LONG
+                                                        )
+                                                        .show()
+                                                return@TopBarIconButton
+                                        }
+
+                                        // Find actual project root by searching upward for
+                                        // package.json or index.html
+                                        val actualProjectRoot =
+                                                com.bsbeetle.bananaspaghetti.liveserver
+                                                        .LiveServerManager.findProjectRoot(
+                                                        projectRoot
+                                                )
+
+                                        // Determine entry file - use current file if it's HTML,
+                                        // otherwise null
+                                        val entryFile =
+                                                if (currentFileName?.endsWith(".html", true) ==
+                                                                true ||
+                                                                currentFileName?.endsWith(
+                                                                        ".htm",
+                                                                        true
+                                                                ) == true
+                                                ) {
+                                                        currentFileName
+                                                } else {
+                                                        null // Will use index.html
+                                                }
+
+                                        // Start live server
+                                        val result =
+                                                com.bsbeetle.bananaspaghetti.liveserver
+                                                        .LiveServerManager.startServer(
+                                                        context,
+                                                        actualProjectRoot,
+                                                        entryFile
+                                                )
+
+                                        if (result.success) {
+                                                isServerRunning = true
+
+                                                // For React projects, automatically run the dev
+                                                // server
+                                                if (result.reactDevPort != null) {
+                                                        val devPort = result.reactDevPort
+                                                        val devCommand =
+                                                                if (devPort == 5173) "npm run dev"
+                                                                else "npm start"
+
+                                                        // Show starting message
+                                                        android.widget.Toast.makeText(
+                                                                        context,
+                                                                        "Starting dev server...",
+                                                                        android.widget.Toast
+                                                                                .LENGTH_SHORT
+                                                                )
+                                                                .show()
+
+                                                        // Create a terminal session in the project
+                                                        // directory
+                                                        val termSession =
+                                                                com.bsbeetle.bananaspaghetti.utils
+                                                                        .sessionHandling
+                                                                        .TerminalSession(
+                                                                                context,
+                                                                                "Dev Server",
+                                                                                actualProjectRoot
+                                                                        )
+                                                        termSession.createView()
+
+                                                        // Wait a bit for terminal to initialize,
+                                                        // then run npm command
+                                                        android.os.Handler(
+                                                                        android.os.Looper
+                                                                                .getMainLooper()
+                                                                )
+                                                                .postDelayed(
+                                                                        {
+                                                                                // Send cd command
+                                                                                // first (in case
+                                                                                // initialDir didn't
+                                                                                // work)
+                                                                                termSession
+                                                                                        .insertText(
+                                                                                                "cd \"$actualProjectRoot\" && $devCommand\n"
+                                                                                        )
+
+                                                                                // Wait for server
+                                                                                // to start, then
+                                                                                // open browser
+                                                                                android.os.Handler(
+                                                                                                android.os
+                                                                                                        .Looper
+                                                                                                        .getMainLooper()
+                                                                                        )
+                                                                                        .postDelayed(
+                                                                                                {
+                                                                                                        android.widget
+                                                                                                                .Toast
+                                                                                                                .makeText(
+                                                                                                                        context,
+                                                                                                                        "Dev server started! Opening browser...",
+                                                                                                                        android.widget
+                                                                                                                                .Toast
+                                                                                                                                .LENGTH_SHORT
+                                                                                                                )
+                                                                                                                .show()
+
+                                                                                                        // Open browser to dev server
+                                                                                                        val urlToOpen =
+                                                                                                                "http://localhost:$devPort"
+                                                                                                        BrowserSession(
+                                                                                                                context
+                                                                                                        )
+                                                                                                        browserViewModel
+                                                                                                                .setDevWebView(
+                                                                                                                        SessionList
+                                                                                                                                        .sessions[
+                                                                                                                                        SessionList
+                                                                                                                                                .activeSessionIndex!!]
+                                                                                                                                .view!!
+                                                                                                                )
+                                                                                                        browserViewModel
+                                                                                                                .loadUrl(
+                                                                                                                        urlToOpen
+                                                                                                                )
+                                                                                                        navController
+                                                                                                                .navigate(
+                                                                                                                        Screen.Browser
+                                                                                                                                .route
+                                                                                                                )
+                                                                                                },
+                                                                                                5000
+                                                                                        ) // Wait 5
+                                                                                // seconds
+                                                                                // for dev
+                                                                                // server
+                                                                                // to
+                                                                                // start
+                                                                        },
+                                                                        2000
+                                                                ) // Wait 2 seconds for terminal to
+                                                        // initialize
+
+                                                        return@TopBarIconButton
+                                                }
+
+                                                // Show message for vanilla HTML
+                                                android.widget.Toast.makeText(
+                                                                context,
+                                                                result.message,
+                                                                android.widget.Toast.LENGTH_SHORT
+                                                        )
+                                                        .show()
+
+                                                // Get URL to open (only for vanilla HTML)
+                                                val urlToOpen =
+                                                        result.serverUrl ?: "http://localhost:5500"
+
+                                                // Create browser session and navigate
+                                                BrowserSession(context)
+                                                browserViewModel.setDevWebView(
+                                                        SessionList.sessions[
+                                                                        SessionList
+                                                                                .activeSessionIndex!!]
+                                                                .view!!
+                                                )
+                                                browserViewModel.loadUrl(urlToOpen)
+                                                navController.navigate(Screen.Browser.route)
+                                        } else {
+                                                android.widget.Toast.makeText(
+                                                                context,
+                                                                result.message,
+                                                                android.widget.Toast.LENGTH_LONG
+                                                        )
+                                                        .show()
+                                        }
                                 }
                         )
 
