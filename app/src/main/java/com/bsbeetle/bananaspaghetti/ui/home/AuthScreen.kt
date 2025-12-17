@@ -147,7 +147,7 @@ fun AuthScreen(navController: NavController) {
                     horizontalArrangement = Arrangement.Center
                 ) {
                     androidx.compose.foundation.Image(
-                        painter = painterResource(R.drawable.beetle_logo),
+                        painter = painterResource(R.drawable.beetle),
                         contentDescription = "Beetle logo",
                         modifier = Modifier.size(50.dp).clip(RoundedCornerShape(10.dp))
                     )
