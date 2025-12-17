@@ -98,6 +98,45 @@ object LiveServerManager {
         return null
     }
 
+    /**
+     * Find the actual project root by searching upward from a given path. Looks for package.json
+     * (Node/React) or index.html (vanilla HTML).
+     */
+    fun findProjectRoot(startPath: String): String {
+        var current = File(startPath)
+
+        // If startPath is a file, start from its parent
+        if (current.isFile) {
+            current = current.parentFile ?: return startPath
+        }
+
+        // Search upward for project markers
+        var depth = 0
+        val maxDepth = 10 // Don't go too far up
+
+        while (current.exists() && depth < maxDepth) {
+            // Check for package.json (Node/React project)
+            if (File(current, "package.json").exists()) {
+                Log.d(TAG, "Found project root (package.json): ${current.absolutePath}")
+                return current.absolutePath
+            }
+
+            // Check for index.html (vanilla HTML project)
+            if (File(current, "index.html").exists()) {
+                Log.d(TAG, "Found project root (index.html): ${current.absolutePath}")
+                return current.absolutePath
+            }
+
+            // Move up
+            current = current.parentFile ?: break
+            depth++
+        }
+
+        // If nothing found, return the original path
+        Log.d(TAG, "No project markers found, using: $startPath")
+        return startPath
+    }
+
     /** Detect project type from the given directory */
     fun detectProjectType(projectPath: String): ProjectType {
         val projectDir = File(projectPath)

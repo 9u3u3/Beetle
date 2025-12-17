@@ -625,6 +625,14 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
                                                 return@TopBarIconButton
                                         }
 
+                                        // Find actual project root by searching upward for
+                                        // package.json or index.html
+                                        val actualProjectRoot =
+                                                com.bsbeetle.bananaspaghetti.liveserver
+                                                        .LiveServerManager.findProjectRoot(
+                                                        projectRoot
+                                                )
+
                                         // Determine entry file - use current file if it's HTML,
                                         // otherwise null
                                         val entryFile =
@@ -645,28 +653,130 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
                                                 com.bsbeetle.bananaspaghetti.liveserver
                                                         .LiveServerManager.startServer(
                                                         context,
-                                                        projectRoot,
+                                                        actualProjectRoot,
                                                         entryFile
                                                 )
 
                                         if (result.success) {
                                                 isServerRunning = true
 
-                                                // Get URL to open
-                                                val urlToOpen =
-                                                        result.serverUrl
-                                                                ?: result.reactDevPort?.let {
-                                                                        "http://localhost:$it"
-                                                                }
-                                                                        ?: "http://localhost:5500"
+                                                // For React projects, automatically run the dev
+                                                // server
+                                                if (result.reactDevPort != null) {
+                                                        val devPort = result.reactDevPort
+                                                        val devCommand =
+                                                                if (devPort == 5173) "npm run dev"
+                                                                else "npm start"
 
-                                                // Show message
+                                                        // Show starting message
+                                                        android.widget.Toast.makeText(
+                                                                        context,
+                                                                        "Starting dev server...",
+                                                                        android.widget.Toast
+                                                                                .LENGTH_SHORT
+                                                                )
+                                                                .show()
+
+                                                        // Create a terminal session in the project
+                                                        // directory
+                                                        val termSession =
+                                                                com.bsbeetle.bananaspaghetti.utils
+                                                                        .sessionHandling
+                                                                        .TerminalSession(
+                                                                                context,
+                                                                                "Dev Server",
+                                                                                actualProjectRoot
+                                                                        )
+                                                        termSession.createView()
+
+                                                        // Wait a bit for terminal to initialize,
+                                                        // then run npm command
+                                                        android.os.Handler(
+                                                                        android.os.Looper
+                                                                                .getMainLooper()
+                                                                )
+                                                                .postDelayed(
+                                                                        {
+                                                                                // Send cd command
+                                                                                // first (in case
+                                                                                // initialDir didn't
+                                                                                // work)
+                                                                                termSession
+                                                                                        .insertText(
+                                                                                                "cd \"$actualProjectRoot\" && $devCommand\n"
+                                                                                        )
+
+                                                                                // Wait for server
+                                                                                // to start, then
+                                                                                // open browser
+                                                                                android.os.Handler(
+                                                                                                android.os
+                                                                                                        .Looper
+                                                                                                        .getMainLooper()
+                                                                                        )
+                                                                                        .postDelayed(
+                                                                                                {
+                                                                                                        android.widget
+                                                                                                                .Toast
+                                                                                                                .makeText(
+                                                                                                                        context,
+                                                                                                                        "Dev server started! Opening browser...",
+                                                                                                                        android.widget
+                                                                                                                                .Toast
+                                                                                                                                .LENGTH_SHORT
+                                                                                                                )
+                                                                                                                .show()
+
+                                                                                                        // Open browser to dev server
+                                                                                                        val urlToOpen =
+                                                                                                                "http://localhost:$devPort"
+                                                                                                        BrowserSession(
+                                                                                                                context
+                                                                                                        )
+                                                                                                        browserViewModel
+                                                                                                                .setDevWebView(
+                                                                                                                        SessionList
+                                                                                                                                        .sessions[
+                                                                                                                                        SessionList
+                                                                                                                                                .activeSessionIndex!!]
+                                                                                                                                .view!!
+                                                                                                                )
+                                                                                                        browserViewModel
+                                                                                                                .loadUrl(
+                                                                                                                        urlToOpen
+                                                                                                                )
+                                                                                                        navController
+                                                                                                                .navigate(
+                                                                                                                        Screen.Browser
+                                                                                                                                .route
+                                                                                                                )
+                                                                                                },
+                                                                                                5000
+                                                                                        ) // Wait 5
+                                                                                // seconds
+                                                                                // for dev
+                                                                                // server
+                                                                                // to
+                                                                                // start
+                                                                        },
+                                                                        2000
+                                                                ) // Wait 2 seconds for terminal to
+                                                        // initialize
+
+                                                        return@TopBarIconButton
+                                                }
+
+                                                // Show message for vanilla HTML
                                                 android.widget.Toast.makeText(
                                                                 context,
                                                                 result.message,
                                                                 android.widget.Toast.LENGTH_SHORT
                                                         )
                                                         .show()
+
+                                                // Get URL to open (only for vanilla HTML)
+                                                val urlToOpen =
+                                                        result.serverUrl ?: "http://localhost:5500"
 
                                                 // Create browser session and navigate
                                                 BrowserSession(context)
