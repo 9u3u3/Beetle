@@ -4,6 +4,14 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     
+    <!-- Foreground service permissions (for terminal background execution like Termux) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    
+    <!-- Notification permission for Android 13+ -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    
     <!-- Storage permissions for Git operations -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" 
         android:maxSdkVersion="32" />
@@ -39,6 +47,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
+        <!-- Terminal foreground service (keeps terminal running in background like Termux) -->
+        <service
+            android:name=".services.TerminalService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Terminal session execution and extension installation" />
+        </service>
 
         <provider
             android:name="com.bsbeetle.bananaspaghetti.utils.fileHandling.AlpineDocumentProvider"

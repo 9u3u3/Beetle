@@ -105,6 +105,24 @@ fun ExtensionsScreen(navController: NavController, viewModel: ExtensionsViewMode
             viewModel.dismissRestartSnackbar()
         }
     }
+    
+    // Installation dialog state
+    val showInstallDialog by viewModel.showInstallDialog.collectAsState()
+    val installingExtensionName by viewModel.installingExtensionName.collectAsState()
+    val installationOutput by viewModel.installationOutput.collectAsState()
+    val installationComplete by viewModel.installationComplete.collectAsState()
+    val installationError by viewModel.installationError.collectAsState()
+    
+    // Installation Progress Dialog
+    if (showInstallDialog) {
+        InstallationDialog(
+            extensionName = installingExtensionName,
+            outputLines = installationOutput,
+            isComplete = installationComplete,
+            isError = installationError,
+            onDismiss = { viewModel.dismissInstallDialog() }
+        )
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }

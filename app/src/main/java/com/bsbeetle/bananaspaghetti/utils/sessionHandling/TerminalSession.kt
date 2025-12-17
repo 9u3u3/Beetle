@@ -12,6 +12,7 @@ import android.webkit.WebViewClient
 import com.bsbeetle.bananaspaghetti.tenebrio.pty.Tenebrio
 import com.bsbeetle.bananaspaghetti.utils.AppConfig
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
+import com.bsbeetle.bananaspaghetti.services.TerminalService
 import java.io.FileOutputStream
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -23,6 +24,9 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
     var rows: Int? = 24
     var cols: Int? = 80
     var onOutput: ((String) -> Unit)? = null
+    
+    // Track if this session has been counted in the service
+    private var isRegisteredWithService = false
 
     // Observable state for UI to show loading until terminal is ready
     private val _isReady = kotlinx.coroutines.flow.MutableStateFlow(false)
@@ -33,6 +37,14 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
         tenebrio = Tenebrio(context.applicationContext, this)
         try {
             tenebrio!!.init()
+            
+            // Start foreground service and register this session
+            // Skip for internal installation sessions (they have special handling)
+            if (!name.startsWith("Install-")) {
+                TerminalService.startService(context.applicationContext)
+                TerminalService.incrementSessionCount()
+                isRegisteredWithService = true
+            }
 
             // If initial directory is provided, cd into it
             initialDir?.let { dir ->
@@ -51,6 +63,33 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
         } catch (e: Exception) {
             Log.e("TerminalSession", "Null tenebrio, object creation failed!")
         }
+    }
+    
+    override fun destroy() {
+        Log.d("TerminalSession", "Destroying terminal session: $name")
+        
+        // Unregister from service if we were registered
+        if (isRegisteredWithService) {
+            TerminalService.decrementSessionCount(context)
+            isRegisteredWithService = false
+        }
+        
+        // Clean up tenebrio reference (no explicit destroy method)
+        tenebrio = null
+        
+        // Clean up output callback
+        onOutput = null
+        
+        // Close file descriptor
+        try {
+            outputFd?.close()
+        } catch (e: Exception) {
+            Log.e("TerminalSession", "Error closing outputFd", e)
+        }
+        outputFd = null
+        
+        // Call parent destroy
+        super.destroy()
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -163,3 +202,4 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
         }
     }
 }
+

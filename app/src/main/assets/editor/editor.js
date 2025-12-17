@@ -96,7 +96,8 @@ style.textContent = `
   z-index: 10000; /* High z-index */
   max-height: 200px;
   overflow-y: auto;
-  width: 250px;
+  min-width: 180px;
+  max-width: calc(100vw - 20px); /* Don't overflow viewport */
   font-family: monospace;
   display: none;
 }
@@ -389,17 +390,39 @@ function setupEditor() {
             <span class="lsp-completion-label">${item.label}</span>
             <span class="lsp-completion-detail">${item.detail}</span>
         `;
-      el.onclick = () => {
+      // Use touchend to prevent keyboard dismissal on mobile
+      el.ontouchend = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         window.completionIndex = index;
         window.applyCompletion();
+        // Refocus editor to keep keyboard open
+        view.focus();
+      };
+      el.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.completionIndex = index;
+        window.applyCompletion();
+        // Refocus editor to keep keyboard open
+        view.focus();
       };
       completionListEl.appendChild(el);
     });
 
-    // Position list at cursor
+    // Position list at cursor with boundary checks
     const coords = view.coordsAtPos(view.state.selection.main.head);
     if (coords) {
-      completionListEl.style.left = `${coords.left}px`;
+      const viewportWidth = window.innerWidth;
+      const listWidth = 200; // Approximate width
+
+      // Calculate left position, ensuring it doesn't overflow right side
+      let leftPos = coords.left;
+      if (leftPos + listWidth > viewportWidth - 10) {
+        leftPos = Math.max(10, viewportWidth - listWidth - 10);
+      }
+
+      completionListEl.style.left = `${leftPos}px`;
       completionListEl.style.top = `${coords.bottom + 5}px`;
       completionListEl.style.display = 'block';
       window.completionActive = true;
@@ -424,6 +447,14 @@ function setupEditor() {
     return true;
   };
 
+  // Function to hide completion list
+  window.hideCompletion = function () {
+    completionListEl.style.display = 'none';
+    window.completionActive = false;
+    window.completionItems = [];
+    window.completionIndex = 0;
+  };
+
   window.applyCompletion = function () {
     if (!window.completionActive) return false;
 
@@ -438,8 +469,8 @@ function setupEditor() {
         selection: { anchor: from + text.length }
       });
 
-      completionListEl.style.display = 'none';
-      window.completionActive = false;
+      // Hide and clear completion state
+      window.hideCompletion();
       return true;
     }
     return false;
@@ -656,21 +687,49 @@ function setupEditor() {
             // console.log('[LSP-JS] Content changed (user), calling onContentChanged');
             window.AndroidEditor.onContentChanged();
           }
+
+          // Auto-hide completion if text no longer matches any suggestion
+          if (window.completionActive && window.completionItems.length > 0) {
+            // Get current word being typed
+            const pos = update.state.selection.main.head;
+            const firstItem = window.completionItems[0];
+            if (firstItem && firstItem.from !== undefined) {
+              const typedText = update.state.doc.sliceString(firstItem.from, pos);
+
+              // Check if typed text matches any completion
+              const hasMatch = window.completionItems.some(item =>
+                item.label.toLowerCase().startsWith(typedText.toLowerCase())
+              );
+
+              // Check if typed text exactly equals a completion (word complete)
+              const exactMatch = window.completionItems.some(item =>
+                item.label.toLowerCase() === typedText.toLowerCase()
+              );
+
+              if (!hasMatch || (exactMatch && typedText.length > 0)) {
+                // Hide if no prefix match OR if exact match (word is complete)
+                window.hideCompletion();
+              }
+            }
+          }
         }
 
         // Handle Completion UI on selection change
         if (update.selectionSet) {
           if (window.completionActive) {
-            // If selection changed but not due to completion, hide it or update position
-            // For now, let's hide it if the cursor moved significantly, or update position
             const coords = view.coordsAtPos(view.state.selection.main.head);
             if (coords) {
-              completionListEl.style.left = `${coords.left}px`;
+              const viewportWidth = window.innerWidth;
+              const listWidth = 200;
+              let leftPos = coords.left;
+              if (leftPos + listWidth > viewportWidth - 10) {
+                leftPos = Math.max(10, viewportWidth - listWidth - 10);
+              }
+              completionListEl.style.left = `${leftPos}px`;
               completionListEl.style.top = `${coords.bottom + 5}px`;
             } else {
               // Cursor off screen or invalid, hide
-              completionListEl.style.display = 'none';
-              window.completionActive = false;
+              window.hideCompletion();
             }
           }
         }
@@ -1152,16 +1211,35 @@ function setupEditor() {
         // Send didOpen if we have a file
         if (URI) {
           window.lspVersion = 1; // Reset version for new document
+          const currentText = view?.state.doc.toString() || '';
           sendNotification(ws, 'textDocument/didOpen', {
             textDocument: {
               uri: URI,
               languageId: currentLanguageId || 'cpp',
               version: window.lspVersion,
-              text: view?.state.doc.toString() || ''
+              text: currentText
             }
           });
           openedDocumentUri = URI;
           console.log(`[LSP-JS] Initial didOpen for ${URI}`);
+
+          // If user was typing during initialization, the document may have changed
+          // by the time didOpen was sent. Schedule a sync to ensure LSP has latest text.
+          // This fixes the race condition where user types before LSP is ready.
+          setTimeout(() => {
+            if (ws && ws.readyState === WebSocket.OPEN && openedDocumentUri === URI && view) {
+              const latestText = view.state.doc.toString();
+              // Only sync if text actually changed since didOpen
+              if (latestText !== currentText) {
+                window.lspVersion++;
+                sendNotification(ws, 'textDocument/didChange', {
+                  textDocument: { uri: URI, version: window.lspVersion },
+                  contentChanges: [{ text: latestText }]
+                });
+                console.log(`[LSP-JS] Post-init sync: text changed during init, sent didChange v${window.lspVersion}`);
+              }
+            }
+          }, 200); // 200ms after didOpen to catch any typing during init
         }
       }).catch(e => {
         console.error("LSP Init failed:", JSON.stringify(e));
