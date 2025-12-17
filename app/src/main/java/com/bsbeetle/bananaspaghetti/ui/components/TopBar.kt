@@ -520,6 +520,14 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
         val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         val context = LocalContext.current
         val browserViewModel = LocalBrowserViewModel.current
+        val fileViewModel = LocalFileViewModel.current
+
+        // State for live server
+        var isServerRunning by remember {
+                mutableStateOf(
+                        com.bsbeetle.bananaspaghetti.liveserver.LiveServerManager.isRunning()
+                )
+        }
 
         // Helper to save content before navigation
         val currentEditorSession =
@@ -548,6 +556,136 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
                                 onClick = {
                                         currentEditorSession?.saveContent()
                                         navController.navigate(Screen.ZoomOut.route)
+                                }
+                        )
+
+                        VerticalDivider(
+                                modifier = Modifier.fillMaxHeight().width(1.dp),
+                                color = Color(0xFF3E3E42)
+                        )
+
+                        // Play button - Live Server
+                        TopBarIconButton(
+                                icon = R.drawable.play_arrow,
+                                onClick = {
+                                        currentEditorSession?.saveContent()
+
+                                        // Get current file info
+                                        val currentFileUri = fileViewModel.selectedUri
+                                        val currentFilePath =
+                                                currentFileUri?.let { uri ->
+                                                        com.bsbeetle.bananaspaghetti.liveserver
+                                                                .LiveServerManager.getPathFromUri(
+                                                                context,
+                                                                uri
+                                                        )
+                                                }
+
+                                        // Get file name from path
+                                        val currentFileName =
+                                                currentFilePath?.substringAfterLast("/")
+
+                                        // Get parent directory of current file
+                                        val fileParentDir =
+                                                currentFilePath?.substringBeforeLast("/")
+
+                                        // Get project root - try multiple methods
+                                        val projectRoot = run {
+                                                // Method 1: Use the open folder from sidebar
+                                                fileViewModel.selectedFolderUri?.let { folderUri ->
+                                                        com.bsbeetle.bananaspaghetti.liveserver
+                                                                .LiveServerManager.getPathFromUri(
+                                                                context,
+                                                                folderUri
+                                                        )
+                                                }
+                                                // Method 2: Editor session project root
+                                                ?: currentEditorSession?.projectRoot?.uri?.let { uri
+                                                                ->
+                                                                com.bsbeetle.bananaspaghetti
+                                                                        .liveserver
+                                                                        .LiveServerManager
+                                                                        .getPathFromUri(
+                                                                                context,
+                                                                                uri
+                                                                        )
+                                                        }
+                                                        // Method 3: Use parent directory of current
+                                                        // file
+                                                        ?: fileParentDir
+                                        }
+
+                                        if (projectRoot == null) {
+                                                android.widget.Toast.makeText(
+                                                                context,
+                                                                "Could not find file location",
+                                                                android.widget.Toast.LENGTH_LONG
+                                                        )
+                                                        .show()
+                                                return@TopBarIconButton
+                                        }
+
+                                        // Determine entry file - use current file if it's HTML,
+                                        // otherwise null
+                                        val entryFile =
+                                                if (currentFileName?.endsWith(".html", true) ==
+                                                                true ||
+                                                                currentFileName?.endsWith(
+                                                                        ".htm",
+                                                                        true
+                                                                ) == true
+                                                ) {
+                                                        currentFileName
+                                                } else {
+                                                        null // Will use index.html
+                                                }
+
+                                        // Start live server
+                                        val result =
+                                                com.bsbeetle.bananaspaghetti.liveserver
+                                                        .LiveServerManager.startServer(
+                                                        context,
+                                                        projectRoot,
+                                                        entryFile
+                                                )
+
+                                        if (result.success) {
+                                                isServerRunning = true
+
+                                                // Get URL to open
+                                                val urlToOpen =
+                                                        result.serverUrl
+                                                                ?: result.reactDevPort?.let {
+                                                                        "http://localhost:$it"
+                                                                }
+                                                                        ?: "http://localhost:5500"
+
+                                                // Show message
+                                                android.widget.Toast.makeText(
+                                                                context,
+                                                                result.message,
+                                                                android.widget.Toast.LENGTH_SHORT
+                                                        )
+                                                        .show()
+
+                                                // Create browser session and navigate
+                                                BrowserSession(context)
+                                                browserViewModel.setDevWebView(
+                                                        SessionList.sessions[
+                                                                        SessionList
+                                                                                .activeSessionIndex!!]
+                                                                .view!!
+                                                )
+                                                browserViewModel.loadUrl(urlToOpen)
+                                                navController.navigate(Screen.Browser.route)
+                                        } else {
+                                                android.widget.Toast.makeText(
+                                                                context,
+                                                                result.message,
+                                                                android.widget.Toast.LENGTH_LONG
+                                                        )
+                                                        .show()
+                                        }
                                 }
                         )
 

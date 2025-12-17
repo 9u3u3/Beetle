@@ -165,6 +165,37 @@ Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_startAlpine(
       exit(-1);
     }
 
+    // Configure terminal attributes for proper interactive use
+    struct termios tio;
+    if (tcgetattr(slave_fd, &tio) == 0) {
+      // Enable standard input processing
+      tio.c_iflag |= ICRNL;  // Map CR to NL on input
+      tio.c_iflag &= ~IGNCR; // Don't ignore CR
+
+      // Enable echo and canonical mode (can be changed by programs)
+      tio.c_lflag |= ECHO | ECHOE | ECHOK | ICANON | ISIG | IEXTEN;
+
+      // Output processing
+      tio.c_oflag |= OPOST | ONLCR;
+
+      // Control modes
+      tio.c_cflag |= CS8;
+      tio.c_cflag &= ~PARENB;
+
+      // Special characters
+      tio.c_cc[VINTR] = 0x03;  // Ctrl+C
+      tio.c_cc[VEOF] = 0x04;   // Ctrl+D
+      tio.c_cc[VERASE] = 0x7f; // Backspace
+      tio.c_cc[VKILL] = 0x15;  // Ctrl+U
+      tio.c_cc[VSUSP] = 0x1a;  // Ctrl+Z
+
+      if (tcsetattr(slave_fd, TCSANOW, &tio) < 0) {
+        ALOGE("Failed to set terminal attributes");
+      }
+    } else {
+      ALOGE("Failed to get terminal attributes");
+    }
+
     if (setsid() < 0) {
       ALOGE("Failed setsid");
       exit(-1);

@@ -484,7 +484,8 @@ class KeyboardViewModel : ViewModel() {
                 session.performEditorAction("performEnter")
             } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
             ) {
-                session.insertText("\n")
+                // Send carriage return for terminal - interactive CLI tools expect \r
+                session.insertText("\r")
             } else {
                 // First try key event (lets web editors intercept Enter)
                 val sent =
