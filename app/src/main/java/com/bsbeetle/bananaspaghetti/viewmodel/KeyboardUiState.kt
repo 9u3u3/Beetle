@@ -18,5 +18,13 @@ data class KeyboardUiState(
     val linkedKeyboardSliders: Boolean = true, // When true, both sliders move together
     // Font size settings (8-24 range)
     val terminalFontSize: Int = 14,
-    val editorFontSize: Int = 14
+    val editorFontSize: Int = 14,
+    // Left keyboard padding for landscape mode (to avoid camera)
+    // Range: 0dp to 50dp
+    val leftKeyboardPadding: Float = 0f,
+    // Keyboard height settings for landscape mode
+    // Range: 0.3 to 0.7 (30% to 70% of screen height)
+    val leftKeyboardHeight: Float = 0.5f,
+    val rightKeyboardHeight: Float = 0.5f,
+    val linkedKeyboardHeight: Boolean = true // When true, both height sliders move together
 )

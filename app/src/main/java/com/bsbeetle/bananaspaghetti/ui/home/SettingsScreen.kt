@@ -91,7 +91,8 @@ fun SettingsScreen(navController: NavController) {
             SettingsSidebar(
                 selectedCategory = selectedCategory ?: "Keyboard",
                 onCategorySelected = { selectedCategory = it },
-                userEmail = userEmail
+                userEmail = userEmail,
+                onBackClick = { navController.popBackStack() }
             )
             
             SettingsContent(
@@ -269,7 +270,8 @@ private fun PortraitSettingsItem(
 private fun SettingsSidebar(
     selectedCategory: String,
     onCategorySelected: (String) -> Unit,
-    userEmail: String
+    userEmail: String,
+    onBackClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -278,6 +280,32 @@ private fun SettingsSidebar(
             .background(SidebarDark)
             .padding(16.dp)
     ) {
+        // Back button header for landscape
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = TextPrimary
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "Settings",
+                color = TextPrimary,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        
         // Profile section
         ProfileCard(userEmail)
         
@@ -436,11 +464,19 @@ private fun SettingsContent(
                 leftWidth = uiState.leftKeyboardWidth,
                 rightWidth = uiState.rightKeyboardWidth,
                 isLinked = uiState.linkedKeyboardSliders,
+                leftPadding = uiState.leftKeyboardPadding,
+                leftHeight = uiState.leftKeyboardHeight,
+                rightHeight = uiState.rightKeyboardHeight,
+                isHeightLinked = uiState.linkedKeyboardHeight,
                 onLeftToggle = { keyboardViewModel.toggleLeftKeyboardVisibility() },
                 onRightToggle = { keyboardViewModel.toggleRightKeyboardVisibility() },
                 onLeftWidthChange = { keyboardViewModel.updateLeftKeyboardWidth(it) },
                 onRightWidthChange = { keyboardViewModel.updateRightKeyboardWidth(it) },
-                onLinkToggle = { keyboardViewModel.toggleLinkedKeyboardSliders() }
+                onLinkToggle = { keyboardViewModel.toggleLinkedKeyboardSliders() },
+                onLeftPaddingChange = { keyboardViewModel.updateLeftKeyboardPadding(it) },
+                onLeftHeightChange = { keyboardViewModel.updateLeftKeyboardHeight(it) },
+                onRightHeightChange = { keyboardViewModel.updateRightKeyboardHeight(it) },
+                onHeightLinkToggle = { keyboardViewModel.toggleLinkedKeyboardHeight() }
             )
             "Appearance" -> AppearanceSettingsContent(
                 terminalFontSize = uiState.terminalFontSize,
@@ -545,11 +581,19 @@ private fun KeyboardSettingsContent(
     leftWidth: Float,
     rightWidth: Float,
     isLinked: Boolean,
+    leftPadding: Float = 0f,
+    leftHeight: Float = 0.5f,
+    rightHeight: Float = 0.5f,
+    isHeightLinked: Boolean = true,
     onLeftToggle: () -> Unit,
     onRightToggle: () -> Unit,
     onLeftWidthChange: (Float) -> Unit,
     onRightWidthChange: (Float) -> Unit,
-    onLinkToggle: () -> Unit
+    onLinkToggle: () -> Unit,
+    onLeftPaddingChange: (Float) -> Unit = {},
+    onLeftHeightChange: (Float) -> Unit = {},
+    onRightHeightChange: (Float) -> Unit = {},
+    onHeightLinkToggle: () -> Unit = {}
 ) {
     // Visibility section
     SettingsCard(title = "Visibility") {
@@ -578,7 +622,7 @@ private fun KeyboardSettingsContent(
     Spacer(modifier = Modifier.height(24.dp))
     
     // Size section
-    SettingsCard(title = "Keyboard Size") {
+    SettingsCard(title = "Keyboard Width") {
         // Link sliders toggle
         SettingRowWithCheckbox(
             title = "Link Sliders",
@@ -615,6 +659,151 @@ private fun KeyboardSettingsContent(
             value = rightWidth,
             onValueChange = onRightWidthChange,
             enabled = isRightVisible
+        )
+    }
+    
+    Spacer(modifier = Modifier.height(24.dp))
+    
+    // Left Padding section (for camera avoidance)
+    SettingsCard(title = "Left Keyboard Padding") {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Camera Offset",
+                        color = if (isLeftVisible) TextPrimary else TextSecondary,
+                        fontSize = 16.sp
+                    )
+                    Text(
+                        text = "Add padding to avoid camera cutout",
+                        color = TextSecondary,
+                        fontSize = 13.sp
+                    )
+                }
+                Text(
+                    text = "${leftPadding.toInt()}dp",
+                    color = AccentBlue,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Slider(
+                value = leftPadding,
+                onValueChange = onLeftPaddingChange,
+                valueRange = 0f..50f,
+                enabled = isLeftVisible,
+                colors = SliderDefaults.colors(
+                    thumbColor = AccentBlue,
+                    activeTrackColor = AccentBlue,
+                    inactiveTrackColor = DividerColor,
+                    disabledThumbColor = TextSecondary,
+                    disabledActiveTrackColor = TextSecondary,
+                    disabledInactiveTrackColor = DividerColor
+                )
+            )
+        }
+    }
+    
+    Spacer(modifier = Modifier.height(24.dp))
+    
+    // Keyboard Height section
+    SettingsCard(title = "Keyboard Height (Landscape)") {
+        // Link height sliders toggle
+        SettingRowWithCheckbox(
+            title = "Link Height Sliders",
+            description = "Adjust both keyboard heights together",
+            isChecked = isHeightLinked,
+            onCheckedChange = { onHeightLinkToggle() }
+        )
+        
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(DividerColor)
+        )
+        
+        // Left keyboard height slider
+        HeightSliderRow(
+            title = "Left Keyboard",
+            value = leftHeight,
+            onValueChange = onLeftHeightChange,
+            enabled = isLeftVisible
+        )
+        
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(DividerColor)
+        )
+        
+        // Right keyboard height slider
+        HeightSliderRow(
+            title = "Right Keyboard",
+            value = rightHeight,
+            onValueChange = onRightHeightChange,
+            enabled = isRightVisible
+        )
+    }
+}
+
+@Composable
+private fun HeightSliderRow(
+    title: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    enabled: Boolean = true
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                color = if (enabled) TextPrimary else TextSecondary,
+                fontSize = 16.sp
+            )
+            Text(
+                text = "${(value * 100).toInt()}%",
+                color = AccentBlue,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = 0.3f..0.7f,
+            enabled = enabled,
+            colors = SliderDefaults.colors(
+                thumbColor = AccentBlue,
+                activeTrackColor = AccentBlue,
+                inactiveTrackColor = DividerColor,
+                disabledThumbColor = TextSecondary,
+                disabledActiveTrackColor = TextSecondary,
+                disabledInactiveTrackColor = DividerColor
+            )
         )
     }
 }
