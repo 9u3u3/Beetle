@@ -456,38 +456,6 @@ fun FileMenuDialog(
                                     }
                             )
 
-                            FileMenuItem(
-                                    icon = R.drawable.file_type_text,
-                                    title = "Delete",
-                                    onClick = {
-                                        pendingOperation = "delete"
-                                        showTypeSelector = true
-                                    }
-                            )
-
-                            HorizontalDivider(
-                                    color = Color(0xFF3C3C3C),
-                                    modifier = Modifier.padding(vertical = 4.dp)
-                            )
-
-                            FileMenuItem(
-                                    icon = R.drawable.file_type_text,
-                                    title = "Copy",
-                                    onClick = {
-                                        pendingOperation = "copy"
-                                        showTypeSelector = true
-                                    }
-                            )
-
-                            FileMenuItem(
-                                    icon = R.drawable.file_type_text,
-                                    title = "Move",
-                                    onClick = {
-                                        pendingOperation = "move"
-                                        showTypeSelector = true
-                                    }
-                            )
-
                             if (FileOperations.hasClipboardContent()) {
                                 HorizontalDivider(
                                         color = Color(0xFF3C3C3C),

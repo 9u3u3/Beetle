@@ -30,6 +30,10 @@ fun Tree (modifier: Modifier = Modifier) {
     val context = LocalContext.current
     var expandedFolders by remember { mutableStateOf(setOf<String>()) }
     val scrollState = rememberScrollState()
+    
+    // Multi-select state from FileViewModel
+    val isMultiSelectMode = fileViewModel.isMultiSelectMode
+    val selectedFilePaths = fileViewModel.selectedFilePaths
 
     val files = remember(fileViewModel.selectedFolderUri, expandedFolders, fileViewModel.fileTreeRefreshCounter) {
         val rootUri = fileViewModel.selectedFolderUri
@@ -68,7 +72,18 @@ fun Tree (modifier: Modifier = Modifier) {
                             expandedFolders + file.path
                         }
                     },
-                    onFileClick = { fileViewModel.selectedUri = Uri.parse(file.path); fileViewModel.currentFilePath = file.path; }
+                    onFileClick = { fileViewModel.selectedUri = Uri.parse(file.path); fileViewModel.currentFilePath = file.path; },
+                    // Multi-select support
+                    isMultiSelectMode = isMultiSelectMode,
+                    isMultiSelected = selectedFilePaths.contains(file.path),
+                    onLongPress = {
+                        // Enter multi-select mode with this file selected
+                        fileViewModel.enterMultiSelectMode(file.path)
+                    },
+                    onMultiSelectTap = {
+                        // Toggle this file's selection
+                        fileViewModel.toggleFileSelection(file.path)
+                    }
                 )
             }
         }

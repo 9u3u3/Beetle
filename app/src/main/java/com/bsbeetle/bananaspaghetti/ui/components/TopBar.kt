@@ -824,6 +824,20 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
                                 color = Color(0xFF3E3E42)
                         )
 
+                        // Back button
+                        TopBarIconButton(
+                                icon = R.drawable.back_logout,
+                                onClick = {
+                                        currentEditorSession?.saveContent()
+                                        navController.popBackStack()
+                                }
+                        )
+
+                        VerticalDivider(
+                                modifier = Modifier.fillMaxHeight().width(1.dp),
+                                color = Color(0xFF3E3E42)
+                        )
+
                         // Settings button
                         TopBarIconButton(
                                 icon = R.drawable.settings_24dp_e3e3e3_fill0_wght400_grad0_opsz24,

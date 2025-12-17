@@ -416,42 +416,6 @@ fun FileOptionsPanel(
                             }
                     )
                 }
-                item {
-                    FileOptionItem(
-                            icon = R.drawable.file_type_text,
-                            title = "Delete",
-                            onClick = {
-                                pendingOperation = "delete"
-                                showTypeSelector = true
-                            }
-                    )
-                }
-                item {
-                    HorizontalDivider(
-                            color = GitTheme.BorderColor,
-                            modifier = Modifier.padding(vertical = 4.dp)
-                    )
-                }
-                item {
-                    FileOptionItem(
-                            icon = R.drawable.file_type_text,
-                            title = "Copy",
-                            onClick = {
-                                pendingOperation = "copy"
-                                showTypeSelector = true
-                            }
-                    )
-                }
-                item {
-                    FileOptionItem(
-                            icon = R.drawable.file_type_text,
-                            title = "Move",
-                            onClick = {
-                                pendingOperation = "move"
-                                showTypeSelector = true
-                            }
-                    )
-                }
                 if (FileOperations.hasClipboardContent()) {
                     item {
                         HorizontalDivider(

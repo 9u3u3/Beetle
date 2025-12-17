@@ -23,19 +23,29 @@ fun SplitKeyboardHalf(
     isShiftOn: Boolean,
     isCtrlOn: Boolean = false,
     onKeyEvent: (Key, KeyGesture) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    leftPadding: Float = 0f, // Padding in dp for left keyboard (to avoid camera)
+    keyboardHeightFraction: Float = 0.5f // Height as fraction of screen height (0.3-0.7)
 ) {
 
     val configuration = LocalConfiguration.current
     val screenHeightDp = configuration.screenHeightDp.dp
-    val keyboardHeight = screenHeightDp / 2f
+    val keyboardHeight = screenHeightDp * keyboardHeightFraction.coerceIn(0.3f, 0.7f)
     val numberOfRows = layout.rows.size
     val totalVerticalPadding = 16.dp
     val availableHeight = keyboardHeight - totalVerticalPadding
     val rowHeight = availableHeight / numberOfRows
 
+    // Apply left padding only to left keyboard
+    val paddingModifier = if (side == KeyboardSide.LEFT && leftPadding > 0f) {
+        Modifier.padding(start = leftPadding.dp)
+    } else {
+        Modifier
+    }
+
     Column (
         modifier = modifier
+            .then(paddingModifier)
             .width(IntrinsicSize.Max)
             .height(keyboardHeight)
             .padding(vertical = 4.dp, horizontal = 2.dp),

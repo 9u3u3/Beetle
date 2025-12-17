@@ -163,13 +163,24 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                             function updateInputMode() {
                                 const content = document.querySelector('.cm-content');
                                 if (!content) return;
-                                const isLandscape = window.innerWidth > window.innerHeight;
+                                // Use screen.orientation API for reliable landscape detection
+                                // This doesn't get fooled by editor size changes when custom keyboard grows
+                                const orientation = screen.orientation ? screen.orientation.type : '';
+                                const isLandscape = orientation.includes('landscape') || 
+                                    (window.screen && window.screen.width > window.screen.height);
+                                // Always use 'none' in landscape to prevent IME popup
                                 const mode = isLandscape ? 'none' : 'text';
                                 if (content.getAttribute('inputmode') !== mode) {
                                     content.setAttribute('inputmode', mode);
+                                    console.log('[Editor] inputmode set to: ' + mode + ' (landscape: ' + isLandscape + ')');
                                 }
                             }
                             window.addEventListener('resize', updateInputMode);
+                            // Also listen for orientation change event
+                            window.addEventListener('orientationchange', updateInputMode);
+                            if (screen.orientation) {
+                                screen.orientation.addEventListener('change', updateInputMode);
+                            }
                             
                             // Initial check
                             updateInputMode();

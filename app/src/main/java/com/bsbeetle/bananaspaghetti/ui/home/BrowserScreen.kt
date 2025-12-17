@@ -140,27 +140,38 @@ fun BrowserScreen(navController: NavController) {
 
                 if (uiState.isLeftKeyboardVisible) {
                     SplitKeyboardHalf(
-                        layout, KeyboardSide.LEFT, uiState.isCapsLockOn,
-                        uiState.isShiftOn, uiState.isCtrlOn, keyboardViewModel::onKeyEvent,
-                        Modifier.constrainAs(leftKb) {
+                        layout = layout,
+                        side = KeyboardSide.LEFT,
+                        isCapsLockOn = uiState.isCapsLockOn,
+                        isShiftOn = uiState.isShiftOn,
+                        isCtrlOn = uiState.isCtrlOn,
+                        onKeyEvent = keyboardViewModel::onKeyEvent,
+                        modifier = Modifier.constrainAs(leftKb) {
                             start.linkTo(parent.start)
                             bottom.linkTo(parent.bottom)
                             width = Dimension.percent(uiState.leftKeyboardWidth)
                         }
-                            .background(Color(0xFF212121))
+                            .background(Color(0xFF212121)),
+                        leftPadding = uiState.leftKeyboardPadding,
+                        keyboardHeightFraction = uiState.leftKeyboardHeight
                     )
                 }
 
                 if (uiState.isRightKeyboardVisible) {
                     SplitKeyboardHalf(
-                        layout, KeyboardSide.RIGHT, uiState.isCapsLockOn,
-                        uiState.isShiftOn, uiState.isCtrlOn, keyboardViewModel::onKeyEvent,
-                        Modifier.constrainAs(rightKb) {
+                        layout = layout,
+                        side = KeyboardSide.RIGHT,
+                        isCapsLockOn = uiState.isCapsLockOn,
+                        isShiftOn = uiState.isShiftOn,
+                        isCtrlOn = uiState.isCtrlOn,
+                        onKeyEvent = keyboardViewModel::onKeyEvent,
+                        modifier = Modifier.constrainAs(rightKb) {
                             end.linkTo(parent.end)
                             bottom.linkTo(parent.bottom)
                             width = Dimension.percent(uiState.rightKeyboardWidth)
                         }
-                            .background(Color(0xFF212121))
+                            .background(Color(0xFF212121)),
+                        keyboardHeightFraction = uiState.rightKeyboardHeight
                     )
                 }
             }

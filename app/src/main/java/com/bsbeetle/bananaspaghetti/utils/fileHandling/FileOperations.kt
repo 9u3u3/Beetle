@@ -20,6 +20,7 @@ object FileOperations {
         CUT
     }
     var clipboardFile: DocumentFile? by mutableStateOf(null)
+    var clipboardFiles: List<DocumentFile> by mutableStateOf(emptyList())
     var clipboardOperation: ClipboardOp by mutableStateOf(ClipboardOp.NONE)
 
     fun createNewFile(
@@ -151,7 +152,7 @@ object FileOperations {
         }
     }
 
-    fun deleteFile(context: Context, file: DocumentFile, fileViewModel: FileViewModel) {
+    fun deleteFile(context: Context, file: DocumentFile, fileViewModel: FileViewModel, showToast: Boolean = true): Boolean {
         val name = file.name ?: "item"
         Log.d("FileOperations", "deleteFile called: $name")
 
@@ -159,7 +160,8 @@ object FileOperations {
             val deleted = file.delete()
             if (deleted) {
                 fileViewModel.refreshFileTree()
-                Toast.makeText(context, "Deleted: $name", Toast.LENGTH_SHORT).show()
+                if (showToast) Toast.makeText(context, "Deleted: $name", Toast.LENGTH_SHORT).show()
+                return true
             } else {
                 // Try DocumentsContract as fallback
                 try {
@@ -170,18 +172,22 @@ object FileOperations {
                             )
                     if (success) {
                         fileViewModel.refreshFileTree()
-                        Toast.makeText(context, "Deleted: $name", Toast.LENGTH_SHORT).show()
+                        if (showToast) Toast.makeText(context, "Deleted: $name", Toast.LENGTH_SHORT).show()
+                        return true
                     } else {
-                        Toast.makeText(context, "Failed to delete", Toast.LENGTH_SHORT).show()
+                        if (showToast) Toast.makeText(context, "Failed to delete", Toast.LENGTH_SHORT).show()
+                        return false
                     }
                 } catch (e: Exception) {
                     Log.e("FileOperations", "Error deleting with DocumentsContract", e)
-                    Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    if (showToast) Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    return false
                 }
             }
         } catch (e: Exception) {
             Log.e("FileOperations", "Error deleting file", e)
-            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            if (showToast) Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            return false
         }
     }
 
@@ -198,45 +204,78 @@ object FileOperations {
         Log.d("FileOperations", "Cut to clipboard: ${file.name}")
         Toast.makeText(context, "Cut: ${file.name}", Toast.LENGTH_SHORT).show()
     }
+    
+    // Bulk clipboard operations for multi-select
+    fun copyMultipleToClipboard(files: List<DocumentFile>, context: Context) {
+        clipboardFiles = files
+        clipboardFile = files.firstOrNull()
+        clipboardOperation = ClipboardOp.COPY
+        Log.d("FileOperations", "Copied ${files.size} items to clipboard")
+        Toast.makeText(context, "Copied ${files.size} items", Toast.LENGTH_SHORT).show()
+    }
+    
+    fun cutMultipleToClipboard(files: List<DocumentFile>, context: Context) {
+        clipboardFiles = files
+        clipboardFile = files.firstOrNull()
+        clipboardOperation = ClipboardOp.CUT
+        Log.d("FileOperations", "Cut ${files.size} items to clipboard")
+        Toast.makeText(context, "Cut ${files.size} items", Toast.LENGTH_SHORT).show()
+    }
 
     fun clearClipboard() {
         clipboardFile = null
+        clipboardFiles = emptyList()
         clipboardOperation = ClipboardOp.NONE
     }
 
-    fun hasClipboardContent(): Boolean = clipboardFile != null
+    fun hasClipboardContent(): Boolean = clipboardFile != null || clipboardFiles.isNotEmpty()
 
     fun paste(context: Context, destFolder: DocumentFile, fileViewModel: FileViewModel) {
-        val source =
-                clipboardFile
-                        ?: run {
-                            Toast.makeText(context, "Nothing to paste", Toast.LENGTH_SHORT).show()
-                            return
-                        }
+        // Handle multiple files if present
+        val filesToPaste = if (clipboardFiles.isNotEmpty()) {
+            clipboardFiles
+        } else if (clipboardFile != null) {
+            listOf(clipboardFile!!)
+        } else {
+            Toast.makeText(context, "Nothing to paste", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
         val operation = clipboardOperation
-        val sourceName = source.name ?: "item"
+        val count = filesToPaste.size
 
         Log.d(
                 "FileOperations",
-                "paste called: source=$sourceName, dest=${destFolder.name}, op=$operation"
+                "paste called: ${count} items, dest=${destFolder.name}, op=$operation"
         )
 
         try {
-            if (source.isDirectory) {
-                copyFolderRecursive(context, source, destFolder)
-            } else {
-                copyFile(context, source, destFolder)
+            var successCount = 0
+            filesToPaste.forEach { source ->
+                try {
+                    if (source.isDirectory) {
+                        copyFolderRecursive(context, source, destFolder)
+                    } else {
+                        copyFile(context, source, destFolder)
+                    }
+                    
+                    if (operation == ClipboardOp.CUT) {
+                        // Delete source after copy for move operation
+                        source.delete()
+                    }
+                    successCount++
+                } catch (e: Exception) {
+                    Log.e("FileOperations", "Error pasting ${source.name}", e)
+                }
             }
 
             fileViewModel.refreshFileTree()
 
             if (operation == ClipboardOp.CUT) {
-                // Delete source after copy for move operation
-                source.delete()
                 clearClipboard()
-                Toast.makeText(context, "Moved: $sourceName", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Moved $successCount items", Toast.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(context, "Pasted: $sourceName", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Pasted $successCount items", Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
             Log.e("FileOperations", "Error during paste", e)

@@ -72,8 +72,9 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
                                                 "TerminalSession",
                                                 "Creating symlink: $symlinkPath -> $dir"
                                         )
+                                        // Export HOME=/home so that /home/project shows as ~/project
                                         insertText(
-                                                "rm -f \"$symlinkPath\" 2>/dev/null; ln -sf \"$dir\" \"$symlinkPath\" && cd \"$symlinkPath\" && clear\n"
+                                                "rm -f \"$symlinkPath\" 2>/dev/null; ln -sf \"$dir\" \"$symlinkPath\" && export HOME=/home && cd \"$symlinkPath\" && clear\n"
                                         )
                                         null // Already handled
                                     }
@@ -94,7 +95,7 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
                         // If we have a path to cd to (wasn't handled by symlink)
                         alpinePath?.let { path ->
                             Log.d("TerminalSession", "cd to: $path")
-                            insertText("cd \"$path\" && clear\n")
+                            insertText("export HOME=/home && cd \"$path\" && clear\n")
                         }
                     }
                 }
@@ -164,14 +165,12 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
                             object {
                                 @JavascriptInterface
                                 fun sendInput(input: String) {
-                                    outputFd?.write("$input\n".toByteArray())
-                                    outputFd?.flush()
+                                    writeToTerminal("$input\n".toByteArray())
                                 }
 
                                 @JavascriptInterface
                                 fun sendRaw(input: String) {
-                                    outputFd?.write(input.toByteArray())
-                                    outputFd?.flush()
+                                    writeToTerminal(input.toByteArray())
                                 }
                             },
                             "AndroidTerminal"
@@ -244,13 +243,19 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
         return view!!
     }
 
-    fun insertText(text: String) {
+    @Synchronized
+    private fun writeToTerminal(data: ByteArray) {
+        if (data.isEmpty()) return
         try {
-            outputFd?.write(text.toByteArray())
+            outputFd?.write(data)
             outputFd?.flush()
         } catch (e: Exception) {
             Log.e("TerminalSession", "Failed to write to terminal", e)
         }
+    }
+
+    fun insertText(text: String) {
+        writeToTerminal(text.toByteArray())
     }
 }
 

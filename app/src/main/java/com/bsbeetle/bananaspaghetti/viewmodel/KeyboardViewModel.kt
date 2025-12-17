@@ -1,7 +1,9 @@
 package com.bsbeetle.bananaspaghetti.viewmodel
 
+import android.app.Application
+import android.content.Context
 import android.view.KeyEvent
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsbeetle.bananaspaghetti.data.Ic
 import com.bsbeetle.bananaspaghetti.model.Key
@@ -45,10 +47,49 @@ sealed class EditorAction {
     data class Navigation(val type: KeyType) : EditorAction()
 }
 
-class KeyboardViewModel : ViewModel() {
+class KeyboardViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _uiState = MutableStateFlow(KeyboardUiState())
+    private val sharedPreferences = application.getSharedPreferences("keyboard_settings", Context.MODE_PRIVATE)
+
+    private val _uiState = MutableStateFlow(loadSettings())
     val uiState: StateFlow<KeyboardUiState> = _uiState.asStateFlow()
+
+    // Load settings from SharedPreferences
+    private fun loadSettings(): KeyboardUiState {
+        return KeyboardUiState(
+            isLeftKeyboardVisible = sharedPreferences.getBoolean("isLeftKeyboardVisible", true),
+            isRightKeyboardVisible = sharedPreferences.getBoolean("isRightKeyboardVisible", true),
+            indentValue = sharedPreferences.getInt("indentValue", 4),
+            leftKeyboardWidth = sharedPreferences.getFloat("leftKeyboardWidth", 0.2f),
+            rightKeyboardWidth = sharedPreferences.getFloat("rightKeyboardWidth", 0.2f),
+            linkedKeyboardSliders = sharedPreferences.getBoolean("linkedKeyboardSliders", true),
+            terminalFontSize = sharedPreferences.getInt("terminalFontSize", 14),
+            editorFontSize = sharedPreferences.getInt("editorFontSize", 14),
+            leftKeyboardPadding = sharedPreferences.getFloat("leftKeyboardPadding", 0f),
+            leftKeyboardHeight = sharedPreferences.getFloat("leftKeyboardHeight", 0.5f),
+            rightKeyboardHeight = sharedPreferences.getFloat("rightKeyboardHeight", 0.5f),
+            linkedKeyboardHeight = sharedPreferences.getBoolean("linkedKeyboardHeight", true)
+        )
+    }
+
+    // Save settings to SharedPreferences
+    private fun saveSettings() {
+        val state = _uiState.value
+        sharedPreferences.edit()
+            .putBoolean("isLeftKeyboardVisible", state.isLeftKeyboardVisible)
+            .putBoolean("isRightKeyboardVisible", state.isRightKeyboardVisible)
+            .putInt("indentValue", state.indentValue)
+            .putFloat("leftKeyboardWidth", state.leftKeyboardWidth)
+            .putFloat("rightKeyboardWidth", state.rightKeyboardWidth)
+            .putBoolean("linkedKeyboardSliders", state.linkedKeyboardSliders)
+            .putInt("terminalFontSize", state.terminalFontSize)
+            .putInt("editorFontSize", state.editorFontSize)
+            .putFloat("leftKeyboardPadding", state.leftKeyboardPadding)
+            .putFloat("leftKeyboardHeight", state.leftKeyboardHeight)
+            .putFloat("rightKeyboardHeight", state.rightKeyboardHeight)
+            .putBoolean("linkedKeyboardHeight", state.linkedKeyboardHeight)
+            .apply()
+    }
 
     private val _editorAction = MutableSharedFlow<EditorAction>()
     val editorAction = _editorAction.asSharedFlow()
@@ -330,15 +371,18 @@ class KeyboardViewModel : ViewModel() {
         _uiState.update { currentState ->
             currentState.copy(isLeftKeyboardVisible = !currentState.isLeftKeyboardVisible)
         }
+        saveSettings()
     }
     fun toggleRightKeyboardVisibility() {
         _uiState.update { currentState ->
             currentState.copy(isRightKeyboardVisible = !currentState.isRightKeyboardVisible)
         }
+        saveSettings()
     }
 
     fun updateIndentSize(newSize: Int) {
         _uiState.update { currentState -> currentState.copy(indentValue = newSize) }
+        saveSettings()
     }
 
     fun updateLeftKeyboardWidth(width: Float) {
@@ -350,6 +394,7 @@ class KeyboardViewModel : ViewModel() {
                 currentState.copy(leftKeyboardWidth = width)
             }
         }
+        saveSettings()
     }
 
     fun updateRightKeyboardWidth(width: Float) {
@@ -361,6 +406,7 @@ class KeyboardViewModel : ViewModel() {
                 currentState.copy(rightKeyboardWidth = width)
             }
         }
+        saveSettings()
     }
 
     fun toggleLinkedKeyboardSliders() {
@@ -379,16 +425,69 @@ class KeyboardViewModel : ViewModel() {
                 currentState.copy(linkedKeyboardSliders = false)
             }
         }
+        saveSettings()
     }
 
     fun updateTerminalFontSize(size: Int) {
         _uiState.update { currentState ->
             currentState.copy(terminalFontSize = size.coerceIn(8, 24))
         }
+        saveSettings()
     }
 
     fun updateEditorFontSize(size: Int) {
         _uiState.update { currentState -> currentState.copy(editorFontSize = size.coerceIn(8, 24)) }
+        saveSettings()
+    }
+
+    // Left keyboard padding for landscape mode (to avoid camera)
+    fun updateLeftKeyboardPadding(padding: Float) {
+        _uiState.update { currentState ->
+            currentState.copy(leftKeyboardPadding = padding.coerceIn(0f, 50f))
+        }
+        saveSettings()
+    }
+
+    // Keyboard height settings for landscape mode
+    fun updateLeftKeyboardHeight(height: Float) {
+        _uiState.update { currentState ->
+            if (currentState.linkedKeyboardHeight) {
+                currentState.copy(leftKeyboardHeight = height, rightKeyboardHeight = height)
+            } else {
+                currentState.copy(leftKeyboardHeight = height)
+            }
+        }
+        saveSettings()
+    }
+
+    fun updateRightKeyboardHeight(height: Float) {
+        _uiState.update { currentState ->
+            if (currentState.linkedKeyboardHeight) {
+                currentState.copy(leftKeyboardHeight = height, rightKeyboardHeight = height)
+            } else {
+                currentState.copy(rightKeyboardHeight = height)
+            }
+        }
+        saveSettings()
+    }
+
+    fun toggleLinkedKeyboardHeight() {
+        _uiState.update { currentState ->
+            val newLinked = !currentState.linkedKeyboardHeight
+            if (newLinked) {
+                // When linking, set both to the average of current values
+                val avgHeight =
+                        (currentState.leftKeyboardHeight + currentState.rightKeyboardHeight) / 2
+                currentState.copy(
+                        linkedKeyboardHeight = true,
+                        leftKeyboardHeight = avgHeight,
+                        rightKeyboardHeight = avgHeight
+                )
+            } else {
+                currentState.copy(linkedKeyboardHeight = false)
+            }
+        }
+        saveSettings()
     }
 
     // Emitter functions -> Basic it helps to implements better things

@@ -347,15 +347,28 @@ fun SessionCard(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text(
-                            text = when (session.type) {
-                                SessionType.EDITOR -> "📝"
-                                SessionType.BROWSER -> "🌐"
-                                SessionType.TERMINAL -> "💻"
-                                SessionType.DEMO -> "🎨"
-                            },
-                            fontSize = 48.sp
-                        )
+                        when (session.type) {
+                            SessionType.EDITOR -> Text(
+                                text = "📝",
+                                fontSize = 48.sp
+                            )
+                            SessionType.BROWSER -> Icon(
+                                painter = androidx.compose.ui.res.painterResource(id = com.bsbeetle.bananaspaghetti.R.drawable.web_icon),
+                                contentDescription = "Browser",
+                                tint = Color(0xFFAAAAAA),
+                                modifier = Modifier.size(48.dp)
+                            )
+                            SessionType.TERMINAL -> Icon(
+                                painter = androidx.compose.ui.res.painterResource(id = com.bsbeetle.bananaspaghetti.R.drawable.terminal_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
+                                contentDescription = "Terminal",
+                                tint = Color(0xFFAAAAAA),
+                                modifier = Modifier.size(48.dp)
+                            )
+                            SessionType.DEMO -> Text(
+                                text = "🎨",
+                                fontSize = 48.sp
+                            )
+                        }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = session.name,

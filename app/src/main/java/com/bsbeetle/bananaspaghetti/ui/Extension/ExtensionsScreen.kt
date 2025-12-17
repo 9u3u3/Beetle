@@ -142,12 +142,31 @@ fun ExtensionsScreen(navController: NavController, viewModel: ExtensionsViewMode
                         .fillMaxHeight()
                         .background(Color(0xFF252526))
                 ) {
-                    Text(
-                        text = "EXTENSIONS",
-                        color = Color(0xFFBBBBBB),
-                        fontSize = 11.sp,
-                        modifier = Modifier.padding(16.dp)
-                    )
+                    // Back button header for landscape
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = { navController.popBackStack() },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color(0xFFBBBBBB),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = "EXTENSIONS",
+                            color = Color(0xFFBBBBBB),
+                            fontSize = 11.sp
+                        )
+                    }
 
                     OutlinedTextField(
                         value = searchQuery,
