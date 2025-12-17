@@ -14,7 +14,10 @@ import com.bsbeetle.bananaspaghetti.utils.AppConfig
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 import com.bsbeetle.bananaspaghetti.services.TerminalService
 import java.io.FileOutputStream
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 class TerminalSession(context: Context, name: String = "Terminal", val initialDir: String? = null) :
         Session(context.applicationContext, SessionType.TERMINAL, name) {
@@ -24,20 +27,21 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
     var rows: Int? = 24
     var cols: Int? = 80
     var onOutput: ((String) -> Unit)? = null
-    
+
     // Track if this session has been counted in the service
     private var isRegisteredWithService = false
+    var onCtrlUsed: (() -> Unit)? = null
 
     // Observable state for UI to show loading until terminal is ready
     private val _isReady = kotlinx.coroutines.flow.MutableStateFlow(false)
     val isReady: kotlinx.coroutines.flow.StateFlow<Boolean> = _isReady.asStateFlow()
 
     init {
-        Log.d("TerminalSession", "Creating tenebrio for ID: $id")
+        Log.d("TerminalSession", "Creating tenebrio for ID: $id, initialDir: $initialDir")
         tenebrio = Tenebrio(context.applicationContext, this)
         try {
             tenebrio!!.init()
-            
+
             // Start foreground service and register this session
             // Skip for internal installation sessions (they have special handling)
             if (!name.startsWith("Install-")) {
@@ -46,40 +50,75 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
                 isRegisteredWithService = true
             }
 
-            // If initial directory is provided, cd into it
+            // If initial directory is provided, we need to cd into it
+            // We delay this so it runs AFTER the shell's init script completes
             initialDir?.let { dir ->
-                // We need to wait a bit or just write it?
-                // Writing immediately might be lost if shell isn't fully ready,
-                // but usually it buffers.
-                // Also need to handle internal vs external paths.
-                // For now, assume the path is valid for the shell (or mapped).
-                // If it's a content URI, we can't cd into it.
+                Log.d("TerminalSession", "Setting up initial directory: $dir")
                 if (dir.startsWith("/")) {
-                    // It's a path
-                    insertText("cd \"$dir\"\n")
-                    insertText("clear\n") // Optional: clear the cd command from view
+                    // Use a coroutine to delay the cd command
+                    GlobalScope.launch {
+                        // Wait for shell to initialize (initrc runs and does 'cd')
+                        delay(1500)
+
+                        // Convert the path to Alpine-friendly format
+                        val alpinePath =
+                                when {
+                                    // External storage - create symlink in /home
+                                    dir.startsWith("/storage/emulated/0/") -> {
+                                        val projectName =
+                                                dir.substringAfterLast("/").ifEmpty { "project" }
+                                        val symlinkPath = "/home/$projectName"
+                                        Log.d(
+                                                "TerminalSession",
+                                                "Creating symlink: $symlinkPath -> $dir"
+                                        )
+                                        insertText(
+                                                "rm -f \"$symlinkPath\" 2>/dev/null; ln -sf \"$dir\" \"$symlinkPath\" && cd \"$symlinkPath\" && clear\n"
+                                        )
+                                        null // Already handled
+                                    }
+                                    // Alpine internal storage (e.g.,
+                                    // /data/user/0/.../alpine/home/Test)
+                                    dir.contains("/alpine/home/") -> {
+                                        // Extract the path after "alpine/home/" to get the relative
+                                        // path
+                                        val relativePath = dir.substringAfter("/alpine/home/")
+                                        "/home/$relativePath"
+                                    }
+                                    // Already a /home path
+                                    dir.startsWith("/home/") -> dir
+                                    // Other paths
+                                    else -> dir
+                                }
+
+                        // If we have a path to cd to (wasn't handled by symlink)
+                        alpinePath?.let { path ->
+                            Log.d("TerminalSession", "cd to: $path")
+                            insertText("cd \"$path\" && clear\n")
+                        }
+                    }
                 }
             }
         } catch (e: Exception) {
             Log.e("TerminalSession", "Null tenebrio, object creation failed!")
         }
     }
-    
+
     override fun destroy() {
         Log.d("TerminalSession", "Destroying terminal session: $name")
-        
+
         // Unregister from service if we were registered
         if (isRegisteredWithService) {
             TerminalService.decrementSessionCount(context)
             isRegisteredWithService = false
         }
-        
+
         // Clean up tenebrio reference (no explicit destroy method)
         tenebrio = null
-        
+
         // Clean up output callback
         onOutput = null
-        
+
         // Close file descriptor
         try {
             outputFd?.close()
@@ -87,7 +126,7 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
             Log.e("TerminalSession", "Error closing outputFd", e)
         }
         outputFd = null
-        
+
         // Call parent destroy
         super.destroy()
     }
@@ -170,6 +209,18 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
                             "AndroidTerminalResize"
                     )
 
+                    // CTRL callback interface - called by JS when Ctrl+key is used
+                    addJavascriptInterface(
+                            object {
+                                @JavascriptInterface
+                                fun ctrlUsed() {
+                                    Log.d("TerminalSession", "CTRL used, resetting state")
+                                    onCtrlUsed?.invoke()
+                                }
+                            },
+                            "AndroidTerminalCtrl"
+                    )
+
                     webViewClient =
                             object : WebViewClient() {
                                 override fun onPageFinished(view: WebView?, url: String?) {
@@ -179,7 +230,7 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
                                     view?.alpha = 1f
                                     Log.d("TerminalSession", "Terminal page loaded, making visible")
                                 }
-                                
+
                                 override fun onRenderProcessGone(
                                         view: WebView?,
                                         detail: RenderProcessGoneDetail?
