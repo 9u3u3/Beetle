@@ -25,8 +25,10 @@ import java.io.FileOutputStream
 
 import com.bsbeetle.bananaspaghetti.utils.languageHandling.LanguageRegistry
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
+import com.bsbeetle.bananaspaghetti.services.TerminalService
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 
 class ExtensionsViewModel(application: Application) : AndroidViewModel(application) {
@@ -44,8 +46,41 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
     private val _showRestartSnackbar = MutableStateFlow(false)
     val showRestartSnackbar: StateFlow<Boolean> = _showRestartSnackbar.asStateFlow()
     
+    // Installation dialog state
+    private val _showInstallDialog = MutableStateFlow(false)
+    val showInstallDialog: StateFlow<Boolean> = _showInstallDialog.asStateFlow()
+    
+    private val _installingExtensionName = MutableStateFlow("")
+    val installingExtensionName: StateFlow<String> = _installingExtensionName.asStateFlow()
+    
+    private val _installationOutput = MutableStateFlow<List<String>>(emptyList())
+    val installationOutput: StateFlow<List<String>> = _installationOutput.asStateFlow()
+    
+    private val _installationComplete = MutableStateFlow(false)
+    val installationComplete: StateFlow<Boolean> = _installationComplete.asStateFlow()
+    
+    private val _installationError = MutableStateFlow(false)
+    val installationError: StateFlow<Boolean> = _installationError.asStateFlow()
+    
     fun dismissRestartSnackbar() {
         _showRestartSnackbar.value = false
+    }
+    
+    fun dismissInstallDialog() {
+        _showInstallDialog.value = false
+        _installationOutput.value = emptyList()
+        _installationComplete.value = false
+        _installationError.value = false
+        _installingExtensionName.value = ""
+        
+        // Clear installation notification
+        TerminalService.setInstallationInProgress(null)
+    }
+    
+    private fun addInstallOutput(line: String) {
+        viewModelScope.launch(Dispatchers.Main) {
+            _installationOutput.value = _installationOutput.value + line
+        }
     }
 
     private val client = HttpClient(CIO) {
@@ -94,22 +129,44 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
             // Set installing state
             updateExtensionState(extension.id) { it.copy(isInstalling = true) }
             
+            // Show installation dialog
+            withContext(Dispatchers.Main) {
+                _installingExtensionName.value = extension.name
+                _installationOutput.value = emptyList()
+                _installationComplete.value = false
+                _installationError.value = false
+                _showInstallDialog.value = true
+            }
+            
             try {
                 val context = getApplication<Application>()
+                
+                // Start foreground service for background installation support
+                TerminalService.startService(context)
+                TerminalService.setInstallationInProgress(extension.name)
+                
+                addInstallOutput("$ Starting installation of ${extension.name}...")
+                addInstallOutput("$ Downloading extension files...")
+                
                 val pluginDir = File(context.filesDir, "plugins/${extension.slug}")
                 if (!pluginDir.exists()) {
                     pluginDir.mkdirs()
                 }
 
                 // Download JS Module
+                addInstallOutput("$ Downloading JS module...")
                 downloadFile(extension.jsModule, File(pluginDir, "${extension.slug}.js"))
+                addInstallOutput("  ✓ JS module downloaded")
 
                 // Download LSP Script
+                addInstallOutput("$ Downloading LSP script...")
                 val scriptFile = File(pluginDir, "${extension.slug}.sh")
                 downloadFile(extension.lspScript, scriptFile)
                 scriptFile.setExecutable(true)
+                addInstallOutput("  ✓ LSP script downloaded")
 
                 // --- Installation Logic ---
+                addInstallOutput("$ Preparing installation environment...")
                 val publicDir = File(context.filesDir, "public")
                 if (!publicDir.exists()) publicDir.mkdirs()
 
@@ -135,12 +192,23 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                 """.trimIndent())
                 wrapperFile.setExecutable(true)
 
+                addInstallOutput("$ Running installation script in Alpine Linux...")
+                addInstallOutput("")
+
                 val installComplete = CompletableDeferred<Boolean>()
                 val session = TerminalSession(context, "Install-${extension.slug}")
                 
                 session.onOutput = { output ->
                     // Log all shell output to logcat
                     Log.d("PluginInstall", "[${extension.slug}] $output")
+                    
+                    // Add to UI output (filter out control characters)
+                    val cleanOutput = output
+                        .replace(Regex("\\x1B\\[[0-9;]*[a-zA-Z]"), "") // Remove ANSI codes
+                        .trim()
+                    if (cleanOutput.isNotEmpty() && !cleanOutput.contains("INSTALLATION_COMPLETE")) {
+                        addInstallOutput(cleanOutput)
+                    }
                     
                     if (output.contains("INSTALLATION_COMPLETE")) {
                         installComplete.complete(true)
@@ -159,7 +227,11 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                 // Cleanup
                 tempScript.delete()
                 wrapperFile.delete()
+                session.destroy()
                 // --------------------------
+
+                addInstallOutput("")
+                addInstallOutput("✓ Installation complete!")
 
                 // Update LanguageRegistry
                 LanguageRegistry.setInstalled(extension.slug, extension.version, extension.id)
@@ -167,17 +239,38 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                 // Update list to reflect installation
                 updateExtensionState(extension.id) { it.copy(installed = true, isInstalling = false) }
                 
+                // Mark as complete
+                withContext(Dispatchers.Main) {
+                    _installationComplete.value = true
+                }
+                
+                // Clear installation notification
+                TerminalService.setInstallationInProgress(null)
+                TerminalService.stopServiceIfNoSessions(context)
+                
                 Log.d("ExtensionsViewModel", "Installed ${extension.name}")
                 
-                // Show restart snackbar after 3 seconds
-                delay(3000)
+                // Show restart snackbar after dialog is dismissed
+                delay(500)
                 _showRestartSnackbar.value = true
 
             } catch (e: Exception) {
                 Log.e("ExtensionsViewModel", "Error installing extension ${extension.name}", e)
+                
+                addInstallOutput("")
+                addInstallOutput("✗ Error: ${e.message ?: "Installation failed"}")
+                
+                withContext(Dispatchers.Main) {
+                    _installationError.value = true
+                }
+                
                 _error.value = "Failed to install ${extension.name}"
                 // Revert installing state
                 updateExtensionState(extension.id) { it.copy(isInstalling = false) }
+                
+                // Clear installation notification
+                TerminalService.setInstallationInProgress(null)
+                TerminalService.stopServiceIfNoSessions(getApplication())
             }
         }
     }

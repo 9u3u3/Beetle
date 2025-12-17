@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <!-- Simple "B" letter for Beetle -->
+  <path
+      android:fillColor="#FFFFFF"
+      android:pathData="M7,4h6c2.21,0 4,1.79 4,4c0,1.25 -0.58,2.37 -1.49,3.1c1.3,0.77 2.17,2.19 2.17,3.81c0,2.43 -1.97,4.4 -4.4,4.4H7V4zM10,7v3h2.5c0.83,0 1.5,-0.67 1.5,-1.5S13.33,7 12.5,7H10zM10,13v3h3c0.83,0 1.5,-0.67 1.5,-1.5S13.83,13 13,13H10z"/>
+</vector>

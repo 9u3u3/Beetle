@@ -3,15 +3,20 @@
 
 package com.bsbeetle.bananaspaghetti
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import com.bsbeetle.bananaspaghetti.ui.DisableDefaultKeyboard
@@ -46,9 +51,28 @@ val LocalAuthViewModel =
         compositionLocalOf<com.bsbeetle.bananaspaghetti.viewmodel.AuthViewModel> { error("No auth view model provided") }
 
 class MainActivity : ComponentActivity() {
+    
+        // Notification permission launcher for Android 13+
+        private val notificationPermissionLauncher = registerForActivityResult(
+                ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+                // Permission result - service will work regardless, but notification may not show
+                android.util.Log.d("MainActivity", "Notification permission granted: $isGranted")
+        }
+        
         override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
                 enableEdgeToEdge()
+                
+                // Request notification permission for Android 13+ (TIRAMISU)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        if (ContextCompat.checkSelfPermission(
+                                this,
+                                Manifest.permission.POST_NOTIFICATIONS
+                        ) != PackageManager.PERMISSION_GRANTED) {
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                }
 
                 setContent {
                         BeetleTheme(dynamicColor = false) {
@@ -97,3 +121,4 @@ class MainActivity : ComponentActivity() {
                 }
         }
 }
+
