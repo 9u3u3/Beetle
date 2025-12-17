@@ -175,10 +175,13 @@ class KeyboardViewModel : ViewModel() {
 
     private fun handleCtrl(gesture: KeyGesture) {
         if (gesture == KeyGesture.Tap) {
-            _uiState.update { currentState -> currentState.copy(isCtrlOn = !currentState.isCtrlOn) }
+            _uiState.update { currentState ->
+                val newState = currentState.copy(isCtrlOn = !currentState.isCtrlOn)
+                android.util.Log.d("KeyboardViewModel", "CTRL toggled: ${newState.isCtrlOn}")
+                newState
+            }
         }
     }
-
     private fun handleAlt(gesture: KeyGesture) {
         if (gesture == KeyGesture.Tap) {
             _uiState.update { currentState -> currentState.copy(isAltOn = !currentState.isAltOn) }

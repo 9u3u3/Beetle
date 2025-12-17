@@ -13,6 +13,20 @@ AndroidTerminalResize.getRowsCols(dims.rows, dims.cols);
 
 let currentCommand = '';
 
+// CTRL modifier state for portrait keyboard
+let isCtrlOn = false;
+
+// Function to set CTRL state from Android
+window.setCtrlState = function (state) {
+  isCtrlOn = state;
+  console.log('CTRL state set to:', isCtrlOn);
+};
+
+// Function to get current CTRL state
+window.getCtrlState = function () {
+  return isCtrlOn;
+};
+
 setTimeout(() => {
   const textarea = term.textarea;
   if (textarea) {
@@ -33,6 +47,27 @@ setTimeout(() => {
 }, 0);
 
 term.onData((data) => {
+  // Check if CTRL is on and this is a single printable character
+  if (isCtrlOn && data.length === 1) {
+    const char = data.toUpperCase();
+    const code = char.charCodeAt(0);
+
+    // Convert A-Z to Ctrl+A - Ctrl+Z (ASCII 1-26)
+    if (code >= 65 && code <= 90) {
+      const ctrlCode = code - 64; // A=1, B=2, ... Z=26
+      const ctrlChar = String.fromCharCode(ctrlCode);
+      console.log('Sending Ctrl+' + char + ' (0x' + ctrlCode.toString(16) + ')');
+      AndroidTerminal.sendRaw(ctrlChar);
+
+      // Turn off CTRL and notify Android
+      isCtrlOn = false;
+      if (typeof AndroidTerminalCtrl !== 'undefined') {
+        AndroidTerminalCtrl.ctrlUsed();
+      }
+      return; // Don't send the original character
+    }
+  }
+
   // Pass all keyboard input directly to the PTY
   // The PTY and shell will handle all processing (echo, line editing, etc.)
   // This ensures interactive CLI tools (like npm create) work correctly
