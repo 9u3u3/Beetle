@@ -24,6 +24,10 @@ fun FilesTab(
 ) {
     val context = LocalContext.current
     val fileViewModel = LocalFileViewModel.current
+    
+    // Multi-select state from FileViewModel
+    val isMultiSelectMode = fileViewModel.isMultiSelectMode
+    val selectedFilePaths = fileViewModel.selectedFilePaths
 
     LaunchedEffect(Unit) {
         Log.d("FilesTab", "selectedUri: ${fileViewModel.selectedUri}")
@@ -125,13 +129,25 @@ fun FilesTab(
                                 expandedFolders + file.path
                             }
                         },
-                        onFileClick = { onFileSelected(file.path) }
+                        onFileClick = { onFileSelected(file.path) },
+                        // Multi-select support
+                        isMultiSelectMode = isMultiSelectMode,
+                        isMultiSelected = selectedFilePaths.contains(file.path),
+                        onLongPress = {
+                            // Enter multi-select mode with this file selected
+                            fileViewModel.enterMultiSelectMode(file.path)
+                        },
+                        onMultiSelectTap = {
+                            // Toggle this file's selection
+                            fileViewModel.toggleFileSelection(file.path)
+                        }
                     )
                 }
             }
         }
     }
 }
+
 
 // Helper function to build file tree recursively
 fun buildFileTree(

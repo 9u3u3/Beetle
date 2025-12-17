@@ -100,7 +100,8 @@ import kotlinx.coroutines.launch
 enum class TopRightMode {
     NONE,
     GIT,
-    FILE
+    FILE,
+    MULTI_SELECT
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -381,7 +382,8 @@ fun TopRightBox(
     ConstraintLayout(modifier = modifier.background(Color(0xFF050505))) {
         val (gridContent) = createRefs()
 
-        if (mode != TopRightMode.NONE) {
+        // Show panel if mode is set OR if multi-select mode is active
+        if (mode != TopRightMode.NONE || localFileViewModel.isMultiSelectMode) {
             Box(
                     modifier =
                             Modifier.constrainAs(gridContent) {
@@ -394,7 +396,14 @@ fun TopRightBox(
                                     }
                                     .padding(8.dp)
             ) {
-                if (mode == TopRightMode.GIT) {
+                // Multi-select mode takes priority
+                if (localFileViewModel.isMultiSelectMode) {
+                    MultiSelectActionsPanel(
+                        fileViewModel = localFileViewModel,
+                        selectedFilePaths = localFileViewModel.selectedFilePaths,
+                        onOperationComplete = {}
+                    )
+                } else if (mode == TopRightMode.GIT) {
                     Column(
                             modifier = Modifier.fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(4.dp)

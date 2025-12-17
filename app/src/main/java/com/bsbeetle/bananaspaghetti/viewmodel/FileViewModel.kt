@@ -38,4 +38,57 @@ class FileViewModel : ViewModel() {
     fun refreshFileTree() {
         fileTreeRefreshCounter++
     }
+    
+    // ========== Multi-Select State ==========
+    
+    // Set of currently selected file/folder paths (URIs as strings)
+    var selectedFilePaths by mutableStateOf<Set<String>>(emptySet())
+        private set
+    
+    // Whether multi-select mode is currently active
+    var isMultiSelectMode by mutableStateOf(false)
+        private set
+    
+    /**
+     * Enter multi-select mode and select the initial file/folder
+     */
+    fun enterMultiSelectMode(initialPath: String) {
+        isMultiSelectMode = true
+        selectedFilePaths = setOf(initialPath)
+        android.util.Log.d("FileViewModel", "Entered multi-select mode with: $initialPath")
+    }
+    
+    /**
+     * Toggle a file/folder in the selection
+     */
+    fun toggleFileSelection(path: String) {
+        selectedFilePaths = if (selectedFilePaths.contains(path)) {
+            selectedFilePaths - path
+        } else {
+            selectedFilePaths + path
+        }
+        android.util.Log.d("FileViewModel", "Toggled selection: $path, now selected: ${selectedFilePaths.size}")
+        
+        // Exit multi-select if no files selected
+        if (selectedFilePaths.isEmpty()) {
+            exitMultiSelectMode()
+        }
+    }
+    
+    /**
+     * Clear selection and exit multi-select mode
+     */
+    fun exitMultiSelectMode() {
+        isMultiSelectMode = false
+        selectedFilePaths = emptySet()
+        android.util.Log.d("FileViewModel", "Exited multi-select mode")
+    }
+    
+    /**
+     * Select all files in the provided list
+     */
+    fun selectAll(paths: List<String>) {
+        selectedFilePaths = paths.toSet()
+        android.util.Log.d("FileViewModel", "Selected all: ${selectedFilePaths.size} files")
+    }
 }
