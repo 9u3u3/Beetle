@@ -2,6 +2,7 @@ package com.bsbeetle.bananaspaghetti.ui.home
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -214,6 +215,7 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
                     color = Color(0xFFFF4444)
                 )
             }
+            
         }
     }
     
