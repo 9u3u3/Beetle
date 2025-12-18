@@ -148,7 +148,7 @@ fun SettingsScreen(navController: NavController) {
                     Spacer(Modifier.height(24.dp))
                     
                     // Settings categories
-                    val categories = listOf("Keyboard", "Appearance")
+                    val categories = listOf("Keyboard", "Appearance", "Licenses")
                     categories.forEach { name ->
                         PortraitSettingsItem(
                             label = name,
@@ -317,7 +317,7 @@ private fun SettingsSidebar(
         Spacer(modifier = Modifier.height(24.dp))
         
         // Navigation items
-        val categories = listOf("Keyboard", "Appearance")
+        val categories = listOf("Keyboard", "Appearance", "Licenses")
         
         categories.forEach { name ->
             SidebarItem(
@@ -486,6 +486,7 @@ private fun SettingsContent(
                 onTerminalFontSizeChange = { keyboardViewModel.updateTerminalFontSize(it) },
                 onEditorFontSizeChange = { keyboardViewModel.updateEditorFontSize(it) }
             )
+            "Licenses" -> LicensesContent()
         }
     }
 }
@@ -938,6 +939,217 @@ private fun SettingRowWithCheckbox(
                 uncheckedColor = TextSecondary,
                 checkmarkColor = TextPrimary
             )
+        )
+    }
+}
+
+@Composable
+private fun LicensesContent() {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = "Open Source Licenses",
+            color = TextSecondary,
+            fontSize = 14.sp,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        
+        // PRoot - GPL License
+        LicenseSection(
+            libraryName = "PRoot",
+            license = "GPLv2",
+            description = "PRoot is used to provide Linux environment emulation.",
+            sourceCodeUrl = "https://github.com/proot-me/proot",
+            licenseText = """
+                GNU GENERAL PUBLIC LICENSE
+                Version 2, June 1991
+                
+                Copyright (C) 1989, 1991 Free Software Foundation, Inc.
+                51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+                
+                Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed.
+                
+                This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+                
+                This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+                
+                You should have received a copy of the GNU General Public License along with this program; if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+                
+                Full license: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+            """.trimIndent()
+        )
+        
+        Spacer(Modifier.height(24.dp))
+        
+        // CodeMirror - MIT License
+        LicenseSection(
+            libraryName = "CodeMirror",
+            license = "MIT License",
+            description = "CodeMirror is used for the code editor component.",
+            sourceCodeUrl = "https://github.com/codemirror/codemirror",
+            licenseText = """
+                MIT License
+                
+                Copyright (C) 2017 by Marijn Haverbeke <marijn@haverbeke.berlin> and others
+                
+                Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+                
+                The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+                
+                THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+            """.trimIndent()
+        )
+        
+        Spacer(Modifier.height(24.dp))
+        
+        // xterm.js - MIT License
+        LicenseSection(
+            libraryName = "xterm.js",
+            license = "MIT License",
+            description = "xterm.js is used for the terminal emulator.",
+            sourceCodeUrl = "https://github.com/xtermjs/xterm.js",
+            licenseText = """
+                MIT License
+                
+                Copyright (c) 2017-present, The xterm.js authors
+                
+                Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+                
+                The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+                
+                THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+            """.trimIndent()
+        )
+        
+        Spacer(Modifier.height(24.dp))
+        
+        // Additional Libraries Summary
+        Text(
+            text = "Additional Libraries",
+            color = TextPrimary,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+        
+        AdditionalLibraryItem("JGit", "EDL (Eclipse Distribution License)")
+        AdditionalLibraryItem("Ktor", "Apache License 2.0")
+        AdditionalLibraryItem("NanoHTTPD", "BSD License")
+        AdditionalLibraryItem("Android Libraries", "Apache License 2.0")
+    }
+}
+
+@Composable
+private fun LicenseSection(
+    libraryName: String,
+    license: String,
+    description: String,
+    sourceCodeUrl: String,
+    licenseText: String
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+    
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(CardDark)
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = libraryName,
+                    color = TextPrimary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = license,
+                    color = AccentBlue,
+                    fontSize = 14.sp
+                )
+            }
+        }
+        
+        Spacer(Modifier.height(8.dp))
+        
+        Text(
+            text = description,
+            color = TextSecondary,
+            fontSize = 14.sp
+        )
+        
+        Spacer(Modifier.height(12.dp))
+        
+        Text(
+            text = "Source Code:",
+            color = TextPrimary,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text = sourceCodeUrl,
+            color = AccentBlue,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(top = 4.dp)
+        )
+        
+        Spacer(Modifier.height(12.dp))
+        
+        // Expand/Collapse License Text
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(BackgroundDark)
+                .clickable { isExpanded = !isExpanded }
+                .padding(12.dp)
+        ) {
+            Text(
+                text = if (isExpanded) "Hide License Text" else "Show License Text",
+                color = AccentBlue,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+        
+        if (isExpanded) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = licenseText,
+                color = TextSecondary,
+                fontSize = 11.sp,
+                lineHeight = 16.sp,
+                modifier = Modifier.padding(8.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun AdditionalLibraryItem(name: String, license: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = name,
+            color = TextPrimary,
+            fontSize = 14.sp
+        )
+        Text(
+            text = license,
+            color = TextSecondary,
+            fontSize = 13.sp
         )
     }
 }
