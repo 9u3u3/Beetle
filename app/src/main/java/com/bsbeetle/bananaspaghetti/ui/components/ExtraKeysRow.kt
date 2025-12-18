@@ -1,5 +1,9 @@
 package com.bsbeetle.bananaspaghetti.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -12,14 +16,22 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -47,6 +59,13 @@ fun ExtraKeysRow(
         modifier: Modifier = Modifier
 ) {
         val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
+        
+        // Collapsible state - persisted across recompositions
+        var isExpanded by rememberSaveable { mutableStateOf(true) }
+        val chevronRotation by animateFloatAsState(
+                targetValue = if (isExpanded) 0f else 180f,
+                label = "chevronRotation"
+        )
 
         // Row 1 Keys: ESC, /, -, HOME, ↑, END, PGUP
         val row1Keys =
@@ -77,49 +96,79 @@ fun ExtraKeysRow(
                         modifier.fillMaxWidth()
                                 .zIndex(1f)
                                 .background(BackgroundColor)
-                                .padding(horizontal = 4.dp, vertical = 2.dp)
         ) {
-                // Row 1
-                Row(
-                        modifier = Modifier.fillMaxWidth().height(38.dp).padding(vertical = 2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                // Chevron toggle bar - always visible
+                Box(
+                        modifier = Modifier
+                                .fillMaxWidth()
+                                .height(20.dp)
+                                .clickable { isExpanded = !isExpanded },
+                        contentAlignment = Alignment.Center
                 ) {
-                        row1Keys.forEach { keyData ->
-                                AssistantKeyButton(
-                                        displayLabel = keyData.displayLabel,
-                                        isActive = false,
-                                        onClick = {
-                                                handleExtraKey(
-                                                        keyData.actionLabel,
-                                                        keyboardViewModel
-                                                )
-                                        }
-                                )
-                        }
+                        Icon(
+                                imageVector = Icons.Default.KeyboardArrowDown,
+                                contentDescription = if (isExpanded) "Collapse" else "Expand",
+                                tint = TextColor.copy(alpha = 0.7f),
+                                modifier = Modifier
+                                        .size(20.dp)
+                                        .rotate(chevronRotation)
+                        )
                 }
-
-                // Row 2
-                Row(
-                        modifier = Modifier.fillMaxWidth().height(38.dp).padding(vertical = 2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                
+                // Keys content - collapsible
+                AnimatedVisibility(
+                        visible = isExpanded,
+                        enter = expandVertically(),
+                        exit = shrinkVertically()
                 ) {
-                        row2Keys.forEach { keyData ->
-                                val isActive =
-                                        when (keyData.actionLabel) {
-                                                "CTRL" -> uiState.isCtrlOn
-                                                "ALT" -> uiState.isAltOn
-                                                else -> false
-                                        }
-                                AssistantKeyButton(
-                                        displayLabel = keyData.displayLabel,
-                                        isActive = isActive,
-                                        onClick = {
-                                                handleExtraKey(
-                                                        keyData.actionLabel,
-                                                        keyboardViewModel
+                        Column(
+                                modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                        ) {
+                                // Row 1
+                                Row(
+                                        modifier = Modifier.fillMaxWidth().height(38.dp).padding(vertical = 2.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                        row1Keys.forEach { keyData ->
+                                                AssistantKeyButton(
+                                                        displayLabel = keyData.displayLabel,
+                                                        isActive = false,
+                                                        onClick = {
+                                                                handleExtraKey(
+                                                                        keyData.actionLabel,
+                                                                        keyboardViewModel
+                                                                )
+                                                        }
                                                 )
                                         }
-                                )
+                                }
+
+                                // Row 2
+                                Row(
+                                        modifier = Modifier.fillMaxWidth().height(38.dp).padding(vertical = 2.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                        row2Keys.forEach { keyData ->
+                                                val isActive =
+                                                        when (keyData.actionLabel) {
+                                                                "CTRL" -> uiState.isCtrlOn
+                                                                "ALT" -> uiState.isAltOn
+                                                                else -> false
+                                                        }
+                                                AssistantKeyButton(
+                                                        displayLabel = keyData.displayLabel,
+                                                        isActive = isActive,
+                                                        onClick = {
+                                                                handleExtraKey(
+                                                                        keyData.actionLabel,
+                                                                        keyboardViewModel
+                                                                )
+                                                        }
+                                                )
+                                        }
+                                }
                         }
                 }
         }

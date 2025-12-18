@@ -138,7 +138,8 @@ fun BrowserScreen(navController: NavController) {
                     }
                 )
 
-                if (uiState.isLeftKeyboardVisible) {
+                // Only show custom keyboards if NOT using landscape IME mode
+                if (uiState.isLeftKeyboardVisible && !uiState.useLandscapeIme) {
                     SplitKeyboardHalf(
                         layout = layout,
                         side = KeyboardSide.LEFT,
@@ -157,7 +158,7 @@ fun BrowserScreen(navController: NavController) {
                     )
                 }
 
-                if (uiState.isRightKeyboardVisible) {
+                if (uiState.isRightKeyboardVisible && !uiState.useLandscapeIme) {
                     SplitKeyboardHalf(
                         layout = layout,
                         side = KeyboardSide.RIGHT,
@@ -186,13 +187,17 @@ fun BrowserScreen(navController: NavController) {
                     }
                     bottom.linkTo(parent.bottom)
 
-                    if (isLandscape && uiState.isLeftKeyboardVisible) {
+                    // If using landscape IME mode, give full width to browser
+                    val showLeftKb = isLandscape && uiState.isLeftKeyboardVisible && !uiState.useLandscapeIme
+                    val showRightKb = isLandscape && uiState.isRightKeyboardVisible && !uiState.useLandscapeIme
+                    
+                    if (showLeftKb) {
                         start.linkTo(leftKb.end)
                     } else {
                         start.linkTo(parent.start)
                     }
 
-                    if (isLandscape && uiState.isRightKeyboardVisible) {
+                    if (showRightKb) {
                         end.linkTo(rightKb.start)
                     } else {
                         end.linkTo(parent.end)
@@ -207,8 +212,9 @@ fun BrowserScreen(navController: NavController) {
             )
         }
 
-        // MERGE NOTE: Kept Block 2's Extra Keys Row logic
-        if (!isLandscape) {
+        // Extra Keys Row - Shows in portrait mode OR in landscape mode when useLandscapeIme is enabled
+        val showExtraKeys = !isLandscape || uiState.useLandscapeIme
+        if (showExtraKeys) {
             val imeInsets = WindowInsets.ime
             val density = LocalDensity.current
             val isKeyboardVisible = imeInsets.getBottom(density) > 0

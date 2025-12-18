@@ -447,7 +447,8 @@ fun InitialEditorUI(navController: NavController) {
                         onFolderOpened = onFolderOpened
                 )
 
-                if (uiState.isLeftKeyboardVisible) {
+                // Only show custom keyboards if NOT using landscape IME mode
+                if (uiState.isLeftKeyboardVisible && !uiState.useLandscapeIme) {
                     SplitKeyboardHalf(
                             layout = layout,
                             side = KeyboardSide.LEFT,
@@ -466,7 +467,7 @@ fun InitialEditorUI(navController: NavController) {
                     )
                 }
 
-                if (uiState.isRightKeyboardVisible) {
+                if (uiState.isRightKeyboardVisible && !uiState.useLandscapeIme) {
                     SplitKeyboardHalf(
                             layout = layout,
                             side = KeyboardSide.RIGHT,
@@ -489,12 +490,15 @@ fun InitialEditorUI(navController: NavController) {
                     Modifier.constrainAs(editor) {
                         top.linkTo(topMiddle.bottom)
                         bottom.linkTo(parent.bottom)
+                        // If using landscape IME mode, give full width to editor
+                        val showLeftKb = isLandscape && uiState.isLeftKeyboardVisible && !uiState.useLandscapeIme
+                        val showRightKb = isLandscape && uiState.isRightKeyboardVisible && !uiState.useLandscapeIme
                         start.linkTo(
-                                if (isLandscape && uiState.isLeftKeyboardVisible) leftKb.end
+                                if (showLeftKb) leftKb.end
                                 else parent.start
                         )
                         end.linkTo(
-                                if (isLandscape && uiState.isRightKeyboardVisible) rightKb.start
+                                if (showRightKb) rightKb.start
                                 else parent.end
                         )
                         width = Dimension.fillToConstraints
@@ -540,8 +544,9 @@ fun InitialEditorUI(navController: NavController) {
             }
         }
 
-        // Extra Keys Row for Portrait Mode (From Block 2)
-        if (!isLandscape) {
+        // Extra Keys Row - Shows in portrait mode OR in landscape mode when useLandscapeIme is enabled
+        val showExtraKeys = !isLandscape || uiState.useLandscapeIme
+        if (showExtraKeys) {
             val imeInsets = WindowInsets.ime
             val density = androidx.compose.ui.platform.LocalDensity.current
             val isKeyboardVisible = imeInsets.getBottom(density) > 0

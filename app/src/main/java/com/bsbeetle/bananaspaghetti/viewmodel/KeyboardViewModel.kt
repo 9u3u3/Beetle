@@ -68,7 +68,8 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
             leftKeyboardPadding = sharedPreferences.getFloat("leftKeyboardPadding", 0f),
             leftKeyboardHeight = sharedPreferences.getFloat("leftKeyboardHeight", 0.5f),
             rightKeyboardHeight = sharedPreferences.getFloat("rightKeyboardHeight", 0.5f),
-            linkedKeyboardHeight = sharedPreferences.getBoolean("linkedKeyboardHeight", true)
+            linkedKeyboardHeight = sharedPreferences.getBoolean("linkedKeyboardHeight", true),
+            useLandscapeIme = sharedPreferences.getBoolean("useLandscapeIme", false)
         )
     }
 
@@ -88,6 +89,7 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
             .putFloat("leftKeyboardHeight", state.leftKeyboardHeight)
             .putFloat("rightKeyboardHeight", state.rightKeyboardHeight)
             .putBoolean("linkedKeyboardHeight", state.linkedKeyboardHeight)
+            .putBoolean("useLandscapeIme", state.useLandscapeIme)
             .apply()
     }
 
@@ -486,6 +488,14 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
             } else {
                 currentState.copy(linkedKeyboardHeight = false)
             }
+        }
+        saveSettings()
+    }
+
+    // Toggle landscape IME mode (use system keyboard instead of custom split keyboard)
+    fun toggleUseLandscapeIme() {
+        _uiState.update { currentState ->
+            currentState.copy(useLandscapeIme = !currentState.useLandscapeIme)
         }
         saveSettings()
     }

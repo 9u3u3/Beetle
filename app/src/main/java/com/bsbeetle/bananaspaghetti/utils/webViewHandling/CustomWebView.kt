@@ -14,6 +14,13 @@ import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 @SuppressLint("ClickableViewAccessibility")
 class CustomWebView(context: Context, var session: Session?) : WebView(context) {
     
+    companion object {
+        // Static flag to control IME behavior in landscape mode
+        // When true, system IME keyboard is allowed in landscape mode
+        @Volatile
+        var useLandscapeIme: Boolean = false
+    }
+    
     private val gestureDetector = android.view.GestureDetector(context, object : android.view.GestureDetector.SimpleOnGestureListener() {
         override fun onSingleTapUp(e: MotionEvent): Boolean {
             handleTapFocus()
@@ -78,7 +85,8 @@ class CustomWebView(context: Context, var session: Session?) : WebView(context) 
             session?._inputConnection = inputConnection
         }
 
-        if (isLandscape) {
+        // Only block IME in landscape if useLandscapeIme is false
+        if (isLandscape && !useLandscapeIme) {
             outAttrs.inputType = EditorInfo.TYPE_NULL
             outAttrs.imeOptions = EditorInfo.IME_FLAG_NO_FULLSCREEN or EditorInfo.IME_ACTION_NONE
             outAttrs.initialSelStart = 0

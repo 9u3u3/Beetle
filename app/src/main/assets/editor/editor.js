@@ -175,12 +175,171 @@ style.textContent = `
     -webkit-tap-highlight-color: transparent;
 }
 /* JS Status Bar CSS REMOVED - Using Kotlin BottomBar instead */
+
+/* Documentation popup for completion item long-press */
+.lsp-doc-popup {
+  position: absolute;
+  background: #252526;
+  border: 1px solid #454545;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 10001; /* Above completion list */
+  max-height: 200px;
+  max-width: 280px;
+  min-width: 150px;
+  overflow-y: auto;
+  padding: 8px 12px 10px 12px;
+  font-family: monospace;
+  font-size: 12px;
+  color: #d4d4d4;
+  line-height: 1.5;
+  display: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.lsp-doc-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+.lsp-doc-popup-close {
+  background: transparent;
+  border: none;
+  color: #808080;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+  margin: -4px -4px 0 8px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.lsp-doc-popup-close:hover {
+  color: #fff;
+}
+.lsp-doc-popup-close:active {
+  color: #ff5555;
+}
+.lsp-doc-popup code {
+  background: #1e1e1e;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+.lsp-doc-popup-title {
+  color: #569cd6;
+  font-weight: bold;
+  font-size: 13px;
+  flex: 1;
+}
+.lsp-doc-popup-empty {
+  color: #808080;
+  font-style: italic;
+}
+.lsp-doc-popup-content {
+  margin-top: 6px;
+}
 `;
 document.head.appendChild(style);
 
 const completionListEl = document.createElement('div');
 completionListEl.className = 'lsp-completion-list';
 document.body.appendChild(completionListEl);
+
+// Documentation popup element
+const docPopupEl = document.createElement('div');
+docPopupEl.className = 'lsp-doc-popup';
+document.body.appendChild(docPopupEl);
+
+// Show documentation popup for a completion item
+function showDocPopup(item, targetElement) {
+  if (!item) return;
+
+  const doc = item.info || '';
+  const detail = item.detail || '';
+
+  // Build HTML with header containing title and close button
+  let html = '<div class="lsp-doc-popup-header">';
+
+  if (item.label) {
+    html += `<span class="lsp-doc-popup-title">${escapeHtml(item.label)}</span>`;
+  } else {
+    html += '<span class="lsp-doc-popup-title">Documentation</span>';
+  }
+
+  // Close button (X)
+  html += '<button class="lsp-doc-popup-close" id="doc-popup-close">✕</button>';
+  html += '</div>';
+
+  // Content area
+  if (!doc && !detail) {
+    html += '<span class="lsp-doc-popup-empty">No documentation available</span>';
+  } else {
+    html += '<div class="lsp-doc-popup-content">';
+    if (detail) {
+      html += `<code>${escapeHtml(detail)}</code><br><br>`;
+    }
+    if (doc) {
+      // Basic markdown rendering for documentation
+      html += escapeHtml(doc).replace(/`([^`]+)`/g, '<code>$1</code>');
+    }
+    html += '</div>';
+  }
+
+  docPopupEl.innerHTML = html;
+
+  // Attach close button event listener
+  const closeBtn = document.getElementById('doc-popup-close');
+  if (closeBtn) {
+    closeBtn.ontouchend = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      hideDocPopup();
+    };
+    closeBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      hideDocPopup();
+    };
+  }
+
+  // Position popup to the right of the completion list
+  const listRect = completionListEl.getBoundingClientRect();
+  const targetRect = targetElement.getBoundingClientRect();
+
+  // Default: position to the right of the completion list
+  let leftPos = listRect.right + 5;
+  let topPos = targetRect.top;
+
+  // If not enough space on the right, position to the left
+  if (leftPos + 280 > window.innerWidth) {
+    leftPos = listRect.left - 285;
+    if (leftPos < 5) leftPos = 5; // Fallback if no space on left either
+  }
+
+  // Ensure popup doesn't go below viewport
+  if (topPos + 200 > window.innerHeight) {
+    topPos = window.innerHeight - 205;
+  }
+
+  docPopupEl.style.left = `${leftPos}px`;
+  docPopupEl.style.top = `${topPos}px`;
+  docPopupEl.style.display = 'block';
+
+  console.log(`[LSP-JS] Showing doc popup for: ${item.label}`);
+}
+
+// Hide documentation popup
+function hideDocPopup() {
+  docPopupEl.style.display = 'none';
+}
+
+// Helper to escape HTML
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
 
 // --- Debug HUD (DISABLED) ---
 // (commented out for performance)
@@ -189,6 +348,7 @@ document.body.appendChild(completionListEl);
 // --- JS Status Bar REMOVED - Using Kotlin BottomBar instead ---
 // statusBarEl, updateStatusBar, updateLspStatus all removed.
 // Kotlin BottomBar.kt is used for UI, EditorSession parses console.log([LSP-STATUS])
+
 
 // Debug stats function (DISABLED)
 window.updateDebugStats = function (stats) {
@@ -390,15 +550,56 @@ function setupEditor() {
             <span class="lsp-completion-label">${item.label}</span>
             <span class="lsp-completion-detail">${item.detail}</span>
         `;
-      // Use touchend to prevent keyboard dismissal on mobile
+
+      // Long-press detection for documentation popup
+      let longPressTimer = null;
+      let isLongPress = false;
+      const LONG_PRESS_DURATION = 500; // 500ms for long press
+
+      el.ontouchstart = (e) => {
+        isLongPress = false;
+        longPressTimer = setTimeout(() => {
+          isLongPress = true;
+          window.completionIndex = index;
+          showDocPopup(item, el);
+        }, LONG_PRESS_DURATION);
+      };
+
       el.ontouchend = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        window.completionIndex = index;
-        window.applyCompletion();
-        // Refocus editor to keep keyboard open
-        view.focus();
+
+        // Clear the long-press timer
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+
+        if (isLongPress) {
+          // Long-press release: keep doc popup visible, don't apply completion
+          // User will close it via X button
+          isLongPress = false;
+        } else {
+          // Quick tap: apply completion
+          hideDocPopup(); // Hide any open doc popup first
+          window.completionIndex = index;
+          window.applyCompletion();
+          // Refocus editor to keep keyboard open
+          view.focus();
+        }
       };
+
+      el.ontouchcancel = (e) => {
+        // Touch was cancelled (e.g., scrolled away)
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+        isLongPress = false;
+        // Don't hide doc popup on cancel - let user close via X
+      };
+
+      // Desktop click support (simple click = apply completion)
       el.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -450,6 +651,7 @@ function setupEditor() {
   // Function to hide completion list
   window.hideCompletion = function () {
     completionListEl.style.display = 'none';
+    hideDocPopup(); // Also hide documentation popup
     window.completionActive = false;
     window.completionItems = [];
     window.completionIndex = 0;
@@ -902,6 +1104,28 @@ function setupEditor() {
   window.isEditorReady = true
 
   const editorEl = document.querySelector('.cm-editor')
+
+  // Dismiss completion dropdown when clicking on the editor (not on completion list)
+  editorEl.addEventListener('mousedown', (e) => {
+    // Check if click is on completion list or doc popup
+    if (!completionListEl.contains(e.target) && !docPopupEl.contains(e.target)) {
+      if (window.completionActive) {
+        window.hideCompletion();
+        hideDocPopup();
+      }
+    }
+  });
+
+  editorEl.addEventListener('touchstart', (e) => {
+    // Check if touch is on completion list or doc popup
+    if (!completionListEl.contains(e.target) && !docPopupEl.contains(e.target)) {
+      if (window.completionActive) {
+        window.hideCompletion();
+        hideDocPopup();
+      }
+    }
+  }, { passive: true });
+
   // --- Custom Touch Handling REMOVED to allow native selection ---
   /*
   let lastTouchY = 0;

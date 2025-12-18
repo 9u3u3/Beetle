@@ -168,11 +168,15 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                                 const orientation = screen.orientation ? screen.orientation.type : '';
                                 const isLandscape = orientation.includes('landscape') || 
                                     (window.screen && window.screen.width > window.screen.height);
-                                // Always use 'none' in landscape to prevent IME popup
-                                const mode = isLandscape ? 'none' : 'text';
+                                
+                                // Check if useLandscapeIme is enabled (set from Kotlin)
+                                // If enabled, use 'text' mode even in landscape to allow system IME
+                                const useLandscapeIme = window.useLandscapeIme || false;
+                                const mode = (isLandscape && !useLandscapeIme) ? 'none' : 'text';
+                                
                                 if (content.getAttribute('inputmode') !== mode) {
                                     content.setAttribute('inputmode', mode);
-                                    console.log('[Editor] inputmode set to: ' + mode + ' (landscape: ' + isLandscape + ')');
+                                    console.log('[Editor] inputmode set to: ' + mode + ' (landscape: ' + isLandscape + ', useLandscapeIme: ' + useLandscapeIme + ')');
                                 }
                             }
                             window.addEventListener('resize', updateInputMode);
@@ -181,6 +185,9 @@ class EditorSession(context: Context, name: String = "Editor") : Session(context
                             if (screen.orientation) {
                                 screen.orientation.addEventListener('change', updateInputMode);
                             }
+                            
+                            // Expose updateInputMode globally so it can be called when setting changes
+                            window.updateInputMode = updateInputMode;
                             
                             // Initial check
                             updateInputMode();

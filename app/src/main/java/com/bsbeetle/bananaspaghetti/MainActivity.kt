@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
@@ -79,7 +80,6 @@ class MainActivity : ComponentActivity() {
 
                                 // System UI settings (Global settings)
                                 EnterImmersiveMode()
-                                DisableDefaultKeyboard()
 
                                 val navController = rememberNavController()
 
@@ -93,6 +93,28 @@ class MainActivity : ComponentActivity() {
                                 val terminalViewModel: TerminalViewModel = viewModel()
                                 val browserViewModel: DevWebViewModel = viewModel()
                                 val authViewModel: com.bsbeetle.bananaspaghetti.viewmodel.AuthViewModel = viewModel()
+                                
+                                // Collect keyboard UI state for IME mode
+                                val keyboardUiState = keyboardViewModel.uiState.collectAsState()
+                                
+                                // Sync CustomWebView's static IME flag with the setting
+                                // And notify all active WebViews to update their inputmode
+                                androidx.compose.runtime.LaunchedEffect(keyboardUiState.value.useLandscapeIme) {
+                                    val useLandscapeIme = keyboardUiState.value.useLandscapeIme
+                                    
+                                    // Update static flag
+                                    com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView.useLandscapeIme = useLandscapeIme
+                                    
+                                    // Update all active session WebViews to reflect the new setting
+                                    com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList.sessions.forEach { session ->
+                                        session.view?.evaluateJavascript("""
+                                            window.useLandscapeIme = $useLandscapeIme;
+                                            if (window.updateInputMode) window.updateInputMode();
+                                        """.trimIndent(), null)
+                                    }
+                                }
+                                
+                                DisableDefaultKeyboard(useLandscapeIme = keyboardUiState.value.useLandscapeIme)
 
                                 val startDestination = if (authViewModel.isAuthorized.value) {
                                     com.bsbeetle.bananaspaghetti.ui.navigation.Screen.Home.route

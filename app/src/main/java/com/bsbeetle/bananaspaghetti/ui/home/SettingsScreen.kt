@@ -468,6 +468,7 @@ private fun SettingsContent(
                 leftHeight = uiState.leftKeyboardHeight,
                 rightHeight = uiState.rightKeyboardHeight,
                 isHeightLinked = uiState.linkedKeyboardHeight,
+                useLandscapeIme = uiState.useLandscapeIme,
                 onLeftToggle = { keyboardViewModel.toggleLeftKeyboardVisibility() },
                 onRightToggle = { keyboardViewModel.toggleRightKeyboardVisibility() },
                 onLeftWidthChange = { keyboardViewModel.updateLeftKeyboardWidth(it) },
@@ -476,7 +477,8 @@ private fun SettingsContent(
                 onLeftPaddingChange = { keyboardViewModel.updateLeftKeyboardPadding(it) },
                 onLeftHeightChange = { keyboardViewModel.updateLeftKeyboardHeight(it) },
                 onRightHeightChange = { keyboardViewModel.updateRightKeyboardHeight(it) },
-                onHeightLinkToggle = { keyboardViewModel.toggleLinkedKeyboardHeight() }
+                onHeightLinkToggle = { keyboardViewModel.toggleLinkedKeyboardHeight() },
+                onUseLandscapeImeToggle = { keyboardViewModel.toggleUseLandscapeIme() }
             )
             "Appearance" -> AppearanceSettingsContent(
                 terminalFontSize = uiState.terminalFontSize,
@@ -585,6 +587,7 @@ private fun KeyboardSettingsContent(
     leftHeight: Float = 0.5f,
     rightHeight: Float = 0.5f,
     isHeightLinked: Boolean = true,
+    useLandscapeIme: Boolean = false,
     onLeftToggle: () -> Unit,
     onRightToggle: () -> Unit,
     onLeftWidthChange: (Float) -> Unit,
@@ -593,8 +596,21 @@ private fun KeyboardSettingsContent(
     onLeftPaddingChange: (Float) -> Unit = {},
     onLeftHeightChange: (Float) -> Unit = {},
     onRightHeightChange: (Float) -> Unit = {},
-    onHeightLinkToggle: () -> Unit = {}
+    onHeightLinkToggle: () -> Unit = {},
+    onUseLandscapeImeToggle: () -> Unit = {}
 ) {
+    // Landscape IME Mode section (at the top)
+    SettingsCard(title = "Input Mode (Landscape)") {
+        SettingRowWithCheckbox(
+            title = "Use System Keyboard",
+            description = "Use the system IME keyboard instead of custom split keyboard in landscape mode",
+            isChecked = useLandscapeIme,
+            onCheckedChange = { onUseLandscapeImeToggle() }
+        )
+    }
+    
+    Spacer(modifier = Modifier.height(24.dp))
+    
     // Visibility section
     SettingsCard(title = "Visibility") {
         SettingRowWithCheckbox(

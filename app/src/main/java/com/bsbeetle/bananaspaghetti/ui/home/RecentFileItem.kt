@@ -51,6 +51,7 @@ fun RecentFileItem(
             .fillMaxWidth()
             .clickable {
                 val uri = Uri.parse(file.uri)
+                val documentFile = androidx.documentfile.provider.DocumentFile.fromSingleUri(context, uri)
                 
                 // Create new session for the file to prevent NPE in InitialEditorUI
                 // Note: Session constructor already adds itself to SessionList
@@ -58,6 +59,12 @@ fun RecentFileItem(
                     context, 
                     file.name
                 )
+                
+                // Set project root from the file's parent folder for proper LSP initialization
+                documentFile?.parentFile?.let { parentFolder ->
+                    session.projectRoot = parentFolder
+                    fileViewModel.selectedFolderUri = parentFolder.uri
+                }
                 
                 // Initialize EditorViewModel with the new session's WebView
                 // CRITICAL: Ensure view is created immediately

@@ -136,7 +136,8 @@ fun InitialTerminalUI(navController: NavController) {
                         }
                 )
 
-                if (uiState.isLeftKeyboardVisible) {
+                // Only show custom keyboards if NOT using landscape IME mode
+                if (uiState.isLeftKeyboardVisible && !uiState.useLandscapeIme) {
                     SplitKeyboardHalf(
                             layout = layout,
                             side = KeyboardSide.LEFT,
@@ -155,7 +156,7 @@ fun InitialTerminalUI(navController: NavController) {
                     )
                 }
 
-                if (uiState.isRightKeyboardVisible) {
+                if (uiState.isRightKeyboardVisible && !uiState.useLandscapeIme) {
                     SplitKeyboardHalf(
                             layout = layout,
                             side = KeyboardSide.RIGHT,
@@ -186,13 +187,16 @@ fun InitialTerminalUI(navController: NavController) {
                                 bottom.linkTo(parent.bottom)
 
                                 // adapt constraints depending on keyboard visibility & orientation
-                                if (isLandscape && uiState.isLeftKeyboardVisible) {
+                                val showLeftKb = isLandscape && uiState.isLeftKeyboardVisible && !uiState.useLandscapeIme
+                                val showRightKb = isLandscape && uiState.isRightKeyboardVisible && !uiState.useLandscapeIme
+                                
+                                if (showLeftKb) {
                                     start.linkTo(leftKb.end)
                                 } else {
                                     start.linkTo(parent.start)
                                 }
 
-                                if (isLandscape && uiState.isRightKeyboardVisible) {
+                                if (showRightKb) {
                                     end.linkTo(rightKb.start)
                                 } else {
                                     end.linkTo(parent.end)
@@ -206,9 +210,9 @@ fun InitialTerminalUI(navController: NavController) {
             )
         }
 
-        if (!isLandscape) {
-            // Extra Keys Row for Portrait Mode
-            // We use WindowInsets.ime to detect keyboard visibility and position the row
+        // Extra Keys Row - Shows in portrait mode OR in landscape mode when useLandscapeIme is enabled
+        val showExtraKeys = !isLandscape || uiState.useLandscapeIme
+        if (showExtraKeys) {
             val imeInsets = androidx.compose.foundation.layout.WindowInsets.ime
             val density = androidx.compose.ui.platform.LocalDensity.current
             val isKeyboardVisible = imeInsets.getBottom(density) > 0
