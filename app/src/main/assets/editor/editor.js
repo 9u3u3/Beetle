@@ -1,16 +1,26 @@
 import { EditorView, basicSetup } from "codemirror"
 import { EditorState, StateEffect, StateField, Compartment } from "@codemirror/state"
 import { oneDark } from "@codemirror/theme-one-dark"
-import { autocompletion, completionKeymap, closeCompletion, startCompletion, completionStatus } from "@codemirror/autocomplete"
-import { keymap, drawSelection } from "@codemirror/view"
+import { autocompletion, completionKeymap, closeCompletion, startCompletion, completionStatus, closeBrackets } from "@codemirror/autocomplete"
+import { keymap, drawSelection, lineNumbers, highlightActiveLineGutter, highlightActiveLine } from "@codemirror/view"
 import { linter, lintGutter, forceLinting, setDiagnostics } from "@codemirror/lint"
 import { cpp } from "@codemirror/lang-cpp"
 import { python } from "@codemirror/lang-python"
 import { insertNewlineAndIndent, deleteCharBackward, undo, redo } from "@codemirror/commands"
 import { openSearchPanel, closeSearchPanel } from "@codemirror/search"
+import { bracketMatching } from "@codemirror/language"
+import { indentUnit } from "@codemirror/language"
 
+// Compartments for dynamic settings
 const languageCompartment = new Compartment()
 const themeCompartment = new Compartment()
+const lineWrapCompartment = new Compartment()
+const lineNumbersCompartment = new Compartment()
+const highlightActiveLineCompartment = new Compartment()
+const bracketMatchingCompartment = new Compartment()
+const closeBracketsCompartment = new Compartment()
+const tabSizeCompartment = new Compartment()
+
 let currentLanguageId = 'cpp'; // Track current language for LSP
 window.currentTheme = 'oneDark';
 
@@ -115,11 +125,10 @@ window.setWordWrap = function (enabled) {
   console.log('[Editor] setWordWrap:', enabled);
   if (!window.view) return false;
 
-  // Word wrap in CM6 is controlled by lineWrapping extension
-  // We need to rebuild the editor with the extension - for now just log
-  // CM6 doesn't have a simple toggle for line wrapping at runtime
-  // Would need Compartment similar to theme switching
-  console.log('[Editor] Word wrap setting:', enabled);
+  window.view.dispatch({
+    effects: lineWrapCompartment.reconfigure(enabled ? EditorView.lineWrapping : [])
+  });
+  console.log('[Editor] Word wrap applied:', enabled);
   return true;
 };
 
@@ -128,11 +137,10 @@ window.setLineNumbers = function (enabled) {
   console.log('[Editor] setLineNumbers:', enabled);
   if (!window.view) return false;
 
-  // Line numbers are part of basicSetup - hiding them via CSS
-  const gutters = document.querySelectorAll('.cm-lineNumbers');
-  gutters.forEach(el => {
-    el.style.display = enabled ? '' : 'none';
+  window.view.dispatch({
+    effects: lineNumbersCompartment.reconfigure(enabled ? [lineNumbers(), highlightActiveLineGutter()] : [])
   });
+  console.log('[Editor] Line numbers applied:', enabled);
   return true;
 };
 
@@ -141,21 +149,50 @@ window.setTabSize = function (size) {
   console.log('[Editor] setTabSize:', size);
   if (!window.view) return false;
 
-  // Tab size is set via EditorState.tabSize
-  // For now, just log - would need Compartment for runtime changes
-  console.log('[Editor] Tab size setting:', size);
+  const spaces = ' '.repeat(size);
+  window.view.dispatch({
+    effects: tabSizeCompartment.reconfigure([
+      EditorState.tabSize.of(size),
+      indentUnit.of(spaces)
+    ])
+  });
+  console.log('[Editor] Tab size applied:', size);
   return true;
 };
 
-// Highlight active line
+// Highlight active line setting
 window.setHighlightActiveLine = function (enabled) {
   console.log('[Editor] setHighlightActiveLine:', enabled);
   if (!window.view) return false;
 
-  const activeLine = document.querySelector('.cm-activeLine');
-  if (activeLine) {
-    activeLine.style.backgroundColor = enabled ? '' : 'transparent';
-  }
+  window.view.dispatch({
+    effects: highlightActiveLineCompartment.reconfigure(enabled ? highlightActiveLine() : [])
+  });
+  console.log('[Editor] Highlight active line applied:', enabled);
+  return true;
+};
+
+// Bracket matching setting
+window.setBracketMatching = function (enabled) {
+  console.log('[Editor] setBracketMatching:', enabled);
+  if (!window.view) return false;
+
+  window.view.dispatch({
+    effects: bracketMatchingCompartment.reconfigure(enabled ? bracketMatching() : [])
+  });
+  console.log('[Editor] Bracket matching applied:', enabled);
+  return true;
+};
+
+// Auto close brackets setting
+window.setCloseBrackets = function (enabled) {
+  console.log('[Editor] setCloseBrackets:', enabled);
+  if (!window.view) return false;
+
+  window.view.dispatch({
+    effects: closeBracketsCompartment.reconfigure(enabled ? closeBrackets() : [])
+  });
+  console.log('[Editor] Close brackets applied:', enabled);
   return true;
 };
 
@@ -165,6 +202,7 @@ window.setMinimap = function (enabled) {
   // CM6 doesn't have built-in minimap - would need a third-party extension
   return true;
 };
+
 window.setLanguage = async function (slug, port = 8081) {
   console.log(`[LSP-JS] setLanguage called for ${slug} port: ${port}`);
   currentLanguageId = slug; // Update current language
@@ -808,6 +846,13 @@ function setupEditor() {
     extensions: [
       basicSetup,
       themeCompartment.of(oneDark),
+      // Dynamic settings compartments
+      lineWrapCompartment.of(EditorView.lineWrapping), // Default: word wrap ON
+      lineNumbersCompartment.of([lineNumbers(), highlightActiveLineGutter()]), // Default: ON
+      highlightActiveLineCompartment.of(highlightActiveLine()), // Default: ON
+      bracketMatchingCompartment.of(bracketMatching()), // Default: ON
+      closeBracketsCompartment.of(closeBrackets()), // Default: ON
+      tabSizeCompartment.of([EditorState.tabSize.of(4), indentUnit.of('    ')]), // Default: 4
       drawSelection(), // Ensure custom cursor drawing
       languageCompartment.of(cpp()), // Default
       lintGutter(), // Gutter for diagnostic markers

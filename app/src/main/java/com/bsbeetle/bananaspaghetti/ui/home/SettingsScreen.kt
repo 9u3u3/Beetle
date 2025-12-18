@@ -1017,6 +1017,10 @@ private fun EditorSettingsContent() {
                                 onValueChange = {
                                         tabSize = it.toInt()
                                         prefs.tabSize = tabSize
+                                        editorViewModel.webView?.evaluateJavascript(
+                                                "if(window.setTabSize) window.setTabSize($tabSize);",
+                                                null
+                                        )
                                 },
                                 valueRange = 2f..8f,
                                 steps = 5,
@@ -1126,6 +1130,10 @@ private fun EditorSettingsContent() {
                         onCheckedChange = {
                                 bracketMatching = it
                                 prefs.bracketMatching = it
+                                editorViewModel.webView?.evaluateJavascript(
+                                        "if(window.setBracketMatching) window.setBracketMatching($it);",
+                                        null
+                                )
                         }
                 )
 
@@ -1138,6 +1146,10 @@ private fun EditorSettingsContent() {
                         onCheckedChange = {
                                 autoCloseBrackets = it
                                 prefs.autoCloseBrackets = it
+                                editorViewModel.webView?.evaluateJavascript(
+                                        "if(window.setCloseBrackets) window.setCloseBrackets($it);",
+                                        null
+                                )
                         }
                 )
 
