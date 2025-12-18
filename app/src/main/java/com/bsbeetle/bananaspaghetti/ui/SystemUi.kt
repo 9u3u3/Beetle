@@ -13,24 +13,24 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 
 @Composable
-fun DisableDefaultKeyboard() {
+fun DisableDefaultKeyboard(useLandscapeIme: Boolean = false) {
     val context = LocalContext.current
     val window = (context as Activity).window
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    LaunchedEffect(isLandscape) {
+    LaunchedEffect(isLandscape, useLandscapeIme) {
         window.let { win ->
             WindowCompat.setDecorFitsSystemWindows(win, false)
 
-            if (isLandscape) {
-                // Disable IME keyboard in landscape
+            if (isLandscape && !useLandscapeIme) {
+                // Disable IME keyboard in landscape (use custom split keyboard)
                 win.setSoftInputMode(
                     WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN or
                             WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING
                 )
             } else {
-                // Enable IME keyboard in portrait
+                // Enable IME keyboard (in portrait, or in landscape when useLandscapeIme is true)
                 win.setSoftInputMode(
                     WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
                             WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN

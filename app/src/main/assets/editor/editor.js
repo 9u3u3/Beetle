@@ -1,16 +1,266 @@
 import { EditorView, basicSetup } from "codemirror"
 import { EditorState, StateEffect, StateField, Compartment } from "@codemirror/state"
 import { oneDark } from "@codemirror/theme-one-dark"
-import { autocompletion, completionKeymap, closeCompletion, startCompletion, completionStatus } from "@codemirror/autocomplete"
-import { keymap, drawSelection } from "@codemirror/view"
+import { autocompletion, completionKeymap, closeCompletion, startCompletion, completionStatus, closeBrackets } from "@codemirror/autocomplete"
+import { keymap, drawSelection, lineNumbers, highlightActiveLineGutter, highlightActiveLine } from "@codemirror/view"
 import { linter, lintGutter, forceLinting, setDiagnostics } from "@codemirror/lint"
 import { cpp } from "@codemirror/lang-cpp"
 import { python } from "@codemirror/lang-python"
 import { insertNewlineAndIndent, deleteCharBackward, undo, redo } from "@codemirror/commands"
 import { openSearchPanel, closeSearchPanel } from "@codemirror/search"
+import { bracketMatching } from "@codemirror/language"
+import { indentUnit } from "@codemirror/language"
+import { indentationMarkers } from "@replit/codemirror-indentation-markers"
 
+// Compartments for dynamic settings
 const languageCompartment = new Compartment()
+const themeCompartment = new Compartment()
+const lineWrapCompartment = new Compartment()
+const lineNumbersCompartment = new Compartment()
+const highlightActiveLineCompartment = new Compartment()
+const bracketMatchingCompartment = new Compartment()
+const closeBracketsCompartment = new Compartment()
+const tabSizeCompartment = new Compartment()
+const relativeLineNumbersCompartment = new Compartment()
+const indentGuidesCompartment = new Compartment()
+
 let currentLanguageId = 'cpp'; // Track current language for LSP
+window.currentTheme = 'oneDark';
+
+// Theme definitions for dynamic switching
+const themes = {
+  'oneDark': oneDark,
+  'dark': EditorView.theme({
+    "&": { backgroundColor: "#1e1e1e", color: "#d4d4d4" },
+    ".cm-content": { caretColor: "#fff" },
+    ".cm-cursor": { borderLeftColor: "#fff" },
+    ".cm-gutters": { backgroundColor: "#252526", color: "#858585", border: "none" },
+    ".cm-activeLineGutter": { backgroundColor: "#2a2a2a" },
+    ".cm-activeLine": { backgroundColor: "#2a2a2a" },
+    ".cm-selectionBackground": { backgroundColor: "#264f78" },
+    "&.cm-focused .cm-selectionBackground": { backgroundColor: "#264f78" },
+    ".cm-line": { padding: "0 4px" }
+  }, { dark: true }),
+  'monokai': EditorView.theme({
+    "&": { backgroundColor: "#272822", color: "#f8f8f2" },
+    ".cm-content": { caretColor: "#f8f8f0" },
+    ".cm-cursor": { borderLeftColor: "#f8f8f0" },
+    ".cm-gutters": { backgroundColor: "#272822", color: "#75715e", border: "none" },
+    ".cm-activeLineGutter": { backgroundColor: "#3e3d32" },
+    ".cm-activeLine": { backgroundColor: "#3e3d32" },
+    ".cm-selectionBackground": { backgroundColor: "#49483e" },
+    "&.cm-focused .cm-selectionBackground": { backgroundColor: "#49483e" }
+  }, { dark: true }),
+  'github': EditorView.theme({
+    "&": { backgroundColor: "#0d1117", color: "#c9d1d9" },
+    ".cm-content": { caretColor: "#58a6ff" },
+    ".cm-cursor": { borderLeftColor: "#58a6ff" },
+    ".cm-gutters": { backgroundColor: "#0d1117", color: "#8b949e", border: "none" },
+    ".cm-activeLineGutter": { backgroundColor: "#161b22" },
+    ".cm-activeLine": { backgroundColor: "#161b22" },
+    ".cm-selectionBackground": { backgroundColor: "#264f78" },
+    "&.cm-focused .cm-selectionBackground": { backgroundColor: "#264f78" }
+  }, { dark: true }),
+  'dracula': EditorView.theme({
+    "&": { backgroundColor: "#282a36", color: "#f8f8f2" },
+    ".cm-content": { caretColor: "#f8f8f2" },
+    ".cm-cursor": { borderLeftColor: "#f8f8f2" },
+    ".cm-gutters": { backgroundColor: "#282a36", color: "#6272a4", border: "none" },
+    ".cm-activeLineGutter": { backgroundColor: "#44475a" },
+    ".cm-activeLine": { backgroundColor: "#44475a" },
+    ".cm-selectionBackground": { backgroundColor: "#44475a" },
+    "&.cm-focused .cm-selectionBackground": { backgroundColor: "#44475a" }
+  }, { dark: true }),
+  'solarizedDark': EditorView.theme({
+    "&": { backgroundColor: "#002b36", color: "#839496" },
+    ".cm-content": { caretColor: "#839496" },
+    ".cm-cursor": { borderLeftColor: "#839496" },
+    ".cm-gutters": { backgroundColor: "#073642", color: "#586e75", border: "none" },
+    ".cm-activeLineGutter": { backgroundColor: "#073642" },
+    ".cm-activeLine": { backgroundColor: "#073642" },
+    ".cm-selectionBackground": { backgroundColor: "#073642" },
+    "&.cm-focused .cm-selectionBackground": { backgroundColor: "#073642" }
+  }, { dark: true }),
+  'nord': EditorView.theme({
+    "&": { backgroundColor: "#2e3440", color: "#d8dee9" },
+    ".cm-content": { caretColor: "#d8dee9" },
+    ".cm-cursor": { borderLeftColor: "#d8dee9" },
+    ".cm-gutters": { backgroundColor: "#2e3440", color: "#4c566a", border: "none" },
+    ".cm-activeLineGutter": { backgroundColor: "#3b4252" },
+    ".cm-activeLine": { backgroundColor: "#3b4252" },
+    ".cm-selectionBackground": { backgroundColor: "#434c5e" },
+    "&.cm-focused .cm-selectionBackground": { backgroundColor: "#434c5e" }
+  }, { dark: true })
+};
+
+// Set editor theme function - exposed globally
+window.setTheme = function (themeName) {
+  console.log('[Editor] setTheme called with:', themeName);
+  const theme = themes[themeName];
+  if (theme && window.view) {
+    window.view.dispatch({
+      effects: themeCompartment.reconfigure(theme)
+    });
+    window.currentTheme = themeName;
+    console.log('[Editor] Theme applied:', themeName);
+
+    // Extract and apply background color after theme change
+    setTimeout(() => {
+      const editorEl = document.querySelector('.cm-editor');
+      if (editorEl) {
+        const bg = window.getComputedStyle(editorEl).backgroundColor;
+        document.body.style.backgroundColor = bg;
+        console.log('[Editor] Background color updated to:', bg);
+      }
+    }, 50); // Small delay to ensure theme is fully applied
+
+    return true;
+  }
+  console.warn('[Editor] Unknown theme or no view:', themeName);
+  return false;
+};
+
+// Get available themes
+window.getAvailableThemes = function () {
+  return Object.keys(themes);
+};
+
+// Get current theme
+window.getCurrentTheme = function () {
+  return window.currentTheme;
+};
+
+// ========================================
+// EDITOR SETTINGS APPLICATION
+// ========================================
+
+// Word wrap setting
+window.setWordWrap = function (enabled) {
+  console.log('[Editor] setWordWrap:', enabled);
+  if (!window.view) return false;
+
+  window.view.dispatch({
+    effects: lineWrapCompartment.reconfigure(enabled ? EditorView.lineWrapping : [])
+  });
+  console.log('[Editor] Word wrap applied:', enabled);
+  return true;
+};
+
+// Line numbers setting
+window.setLineNumbers = function (enabled) {
+  console.log('[Editor] setLineNumbers:', enabled);
+  if (!window.view) return false;
+
+  window.view.dispatch({
+    effects: lineNumbersCompartment.reconfigure(enabled ? [lineNumbers(), highlightActiveLineGutter()] : [])
+  });
+  console.log('[Editor] Line numbers applied:', enabled);
+  return true;
+};
+
+// Tab size setting
+window.setTabSize = function (size) {
+  console.log('[Editor] setTabSize:', size);
+  if (!window.view) return false;
+
+  const spaces = ' '.repeat(size);
+  window.view.dispatch({
+    effects: tabSizeCompartment.reconfigure([
+      EditorState.tabSize.of(size),
+      indentUnit.of(spaces)
+    ])
+  });
+  console.log('[Editor] Tab size applied:', size);
+  return true;
+};
+
+// Relative line numbers setting  
+let relativeLineNumbersEnabled = false;
+window.setRelativeLineNumbers = function (enabled) {
+  console.log('[Editor] setRelativeLineNumbers:', enabled);
+  if (!window.view) return false;
+
+  relativeLineNumbersEnabled = enabled;
+
+  if (enabled) {
+    window.view.dispatch({
+      effects: lineNumbersCompartment.reconfigure([
+        lineNumbers({
+          formatNumber: (lineNo, state) => {
+            const cursorLine = state.doc.lineAt(state.selection.main.head).number;
+            const distance = Math.abs(lineNo - cursorLine);
+            return distance === 0 ? String(lineNo) : String(distance);
+          }
+        }),
+        highlightActiveLineGutter()
+      ])
+    });
+  } else {
+    window.view.dispatch({
+      effects: lineNumbersCompartment.reconfigure([lineNumbers(), highlightActiveLineGutter()])
+    });
+  }
+
+  console.log('[Editor] Relative line numbers applied:', enabled);
+  return true;
+};
+
+// Indent guides setting
+window.setIndentGuides = function (enabled) {
+  console.log('[Editor] setIndentGuides:', enabled);
+  if (!window.view) return false;
+
+  window.view.dispatch({
+    effects: indentGuidesCompartment.reconfigure(enabled ? indentationMarkers() : [])
+  });
+  console.log('[Editor] Indent guides applied:', enabled);
+  return true;
+};
+
+// Highlight active line setting
+window.setHighlightActiveLine = function (enabled) {
+  console.log('[Editor] setHighlightActiveLine:', enabled);
+  if (!window.view) return false;
+
+  window.view.dispatch({
+    effects: highlightActiveLineCompartment.reconfigure(enabled ? highlightActiveLine() : [])
+  });
+  console.log('[Editor] Highlight active line applied:', enabled);
+  return true;
+};
+
+// Bracket matching setting
+window.setBracketMatching = function (enabled) {
+  console.log('[Editor] setBracketMatching:', enabled);
+  if (!window.view) return false;
+
+  window.view.dispatch({
+    effects: bracketMatchingCompartment.reconfigure(enabled ? bracketMatching() : [])
+  });
+  console.log('[Editor] Bracket matching applied:', enabled);
+  return true;
+};
+
+// Auto close brackets setting
+window.setCloseBrackets = function (enabled) {
+  console.log('[Editor] setCloseBrackets:', enabled);
+  if (!window.view) return false;
+
+  window.view.dispatch({
+    effects: closeBracketsCompartment.reconfigure(enabled ? closeBrackets() : [])
+  });
+  console.log('[Editor] Close brackets applied:', enabled);
+  return true;
+};
+
+// Minimap (not natively supported in CM6, would need extension)
+window.setMinimap = function (enabled) {
+  console.log('[Editor] setMinimap:', enabled);
+  // CM6 doesn't have built-in minimap - would need a third-party extension
+  // For now, we just store the preference and log it
+  console.log('[Editor] Minimap toggled to:', enabled, '(requires third-party extension for actual implementation)');
+  return true;
+};
 
 window.setLanguage = async function (slug, port = 8081) {
   console.log(`[LSP-JS] setLanguage called for ${slug} port: ${port}`);
@@ -175,12 +425,171 @@ style.textContent = `
     -webkit-tap-highlight-color: transparent;
 }
 /* JS Status Bar CSS REMOVED - Using Kotlin BottomBar instead */
+
+/* Documentation popup for completion item long-press */
+.lsp-doc-popup {
+  position: absolute;
+  background: #252526;
+  border: 1px solid #454545;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 10001; /* Above completion list */
+  max-height: 200px;
+  max-width: 280px;
+  min-width: 150px;
+  overflow-y: auto;
+  padding: 8px 12px 10px 12px;
+  font-family: monospace;
+  font-size: 12px;
+  color: #d4d4d4;
+  line-height: 1.5;
+  display: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.lsp-doc-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+.lsp-doc-popup-close {
+  background: transparent;
+  border: none;
+  color: #808080;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+  margin: -4px -4px 0 8px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.lsp-doc-popup-close:hover {
+  color: #fff;
+}
+.lsp-doc-popup-close:active {
+  color: #ff5555;
+}
+.lsp-doc-popup code {
+  background: #1e1e1e;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+.lsp-doc-popup-title {
+  color: #569cd6;
+  font-weight: bold;
+  font-size: 13px;
+  flex: 1;
+}
+.lsp-doc-popup-empty {
+  color: #808080;
+  font-style: italic;
+}
+.lsp-doc-popup-content {
+  margin-top: 6px;
+}
 `;
 document.head.appendChild(style);
 
 const completionListEl = document.createElement('div');
 completionListEl.className = 'lsp-completion-list';
 document.body.appendChild(completionListEl);
+
+// Documentation popup element
+const docPopupEl = document.createElement('div');
+docPopupEl.className = 'lsp-doc-popup';
+document.body.appendChild(docPopupEl);
+
+// Show documentation popup for a completion item
+function showDocPopup(item, targetElement) {
+  if (!item) return;
+
+  const doc = item.info || '';
+  const detail = item.detail || '';
+
+  // Build HTML with header containing title and close button
+  let html = '<div class="lsp-doc-popup-header">';
+
+  if (item.label) {
+    html += `<span class="lsp-doc-popup-title">${escapeHtml(item.label)}</span>`;
+  } else {
+    html += '<span class="lsp-doc-popup-title">Documentation</span>';
+  }
+
+  // Close button (X)
+  html += '<button class="lsp-doc-popup-close" id="doc-popup-close">✕</button>';
+  html += '</div>';
+
+  // Content area
+  if (!doc && !detail) {
+    html += '<span class="lsp-doc-popup-empty">No documentation available</span>';
+  } else {
+    html += '<div class="lsp-doc-popup-content">';
+    if (detail) {
+      html += `<code>${escapeHtml(detail)}</code><br><br>`;
+    }
+    if (doc) {
+      // Basic markdown rendering for documentation
+      html += escapeHtml(doc).replace(/`([^`]+)`/g, '<code>$1</code>');
+    }
+    html += '</div>';
+  }
+
+  docPopupEl.innerHTML = html;
+
+  // Attach close button event listener
+  const closeBtn = document.getElementById('doc-popup-close');
+  if (closeBtn) {
+    closeBtn.ontouchend = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      hideDocPopup();
+    };
+    closeBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      hideDocPopup();
+    };
+  }
+
+  // Position popup to the right of the completion list
+  const listRect = completionListEl.getBoundingClientRect();
+  const targetRect = targetElement.getBoundingClientRect();
+
+  // Default: position to the right of the completion list
+  let leftPos = listRect.right + 5;
+  let topPos = targetRect.top;
+
+  // If not enough space on the right, position to the left
+  if (leftPos + 280 > window.innerWidth) {
+    leftPos = listRect.left - 285;
+    if (leftPos < 5) leftPos = 5; // Fallback if no space on left either
+  }
+
+  // Ensure popup doesn't go below viewport
+  if (topPos + 200 > window.innerHeight) {
+    topPos = window.innerHeight - 205;
+  }
+
+  docPopupEl.style.left = `${leftPos}px`;
+  docPopupEl.style.top = `${topPos}px`;
+  docPopupEl.style.display = 'block';
+
+  console.log(`[LSP-JS] Showing doc popup for: ${item.label}`);
+}
+
+// Hide documentation popup
+function hideDocPopup() {
+  docPopupEl.style.display = 'none';
+}
+
+// Helper to escape HTML
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
 
 // --- Debug HUD (DISABLED) ---
 // (commented out for performance)
@@ -189,6 +598,7 @@ document.body.appendChild(completionListEl);
 // --- JS Status Bar REMOVED - Using Kotlin BottomBar instead ---
 // statusBarEl, updateStatusBar, updateLspStatus all removed.
 // Kotlin BottomBar.kt is used for UI, EditorSession parses console.log([LSP-STATUS])
+
 
 // Debug stats function (DISABLED)
 window.updateDebugStats = function (stats) {
@@ -390,15 +800,56 @@ function setupEditor() {
             <span class="lsp-completion-label">${item.label}</span>
             <span class="lsp-completion-detail">${item.detail}</span>
         `;
-      // Use touchend to prevent keyboard dismissal on mobile
+
+      // Long-press detection for documentation popup
+      let longPressTimer = null;
+      let isLongPress = false;
+      const LONG_PRESS_DURATION = 500; // 500ms for long press
+
+      el.ontouchstart = (e) => {
+        isLongPress = false;
+        longPressTimer = setTimeout(() => {
+          isLongPress = true;
+          window.completionIndex = index;
+          showDocPopup(item, el);
+        }, LONG_PRESS_DURATION);
+      };
+
       el.ontouchend = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        window.completionIndex = index;
-        window.applyCompletion();
-        // Refocus editor to keep keyboard open
-        view.focus();
+
+        // Clear the long-press timer
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+
+        if (isLongPress) {
+          // Long-press release: keep doc popup visible, don't apply completion
+          // User will close it via X button
+          isLongPress = false;
+        } else {
+          // Quick tap: apply completion
+          hideDocPopup(); // Hide any open doc popup first
+          window.completionIndex = index;
+          window.applyCompletion();
+          // Refocus editor to keep keyboard open
+          view.focus();
+        }
       };
+
+      el.ontouchcancel = (e) => {
+        // Touch was cancelled (e.g., scrolled away)
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+        isLongPress = false;
+        // Don't hide doc popup on cancel - let user close via X
+      };
+
+      // Desktop click support (simple click = apply completion)
       el.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -450,6 +901,7 @@ function setupEditor() {
   // Function to hide completion list
   window.hideCompletion = function () {
     completionListEl.style.display = 'none';
+    hideDocPopup(); // Also hide documentation popup
     window.completionActive = false;
     window.completionItems = [];
     window.completionIndex = 0;
@@ -654,7 +1106,16 @@ function setupEditor() {
     doc: "",
     extensions: [
       basicSetup,
-      oneDark,
+      themeCompartment.of(oneDark),
+      // Dynamic settings compartments
+      lineWrapCompartment.of(EditorView.lineWrapping), // Default: word wrap ON
+      lineNumbersCompartment.of([lineNumbers(), highlightActiveLineGutter()]), // Default: ON
+      highlightActiveLineCompartment.of(highlightActiveLine()), // Default: ON
+      bracketMatchingCompartment.of(bracketMatching()), // Default: ON
+      closeBracketsCompartment.of(closeBrackets()), // Default: ON
+      tabSizeCompartment.of([EditorState.tabSize.of(4), indentUnit.of('    ')]), // Default: 4
+      relativeLineNumbersCompartment.of([]), // Relative line numbers - off by default
+      indentGuidesCompartment.of([]), // Indent guides - off by default
       drawSelection(), // Ensure custom cursor drawing
       languageCompartment.of(cpp()), // Default
       lintGutter(), // Gutter for diagnostic markers
@@ -687,6 +1148,8 @@ function setupEditor() {
             // console.log('[LSP-JS] Content changed (user), calling onContentChanged');
             window.AndroidEditor.onContentChanged();
           }
+          // Trigger auto-save timer
+          triggerAutoSave();
 
           // Auto-hide completion if text no longer matches any suggestion
           if (window.completionActive && window.completionItems.length > 0) {
@@ -900,8 +1363,46 @@ function setupEditor() {
   window.editor = view; // Alias for compatibility
 
   window.isEditorReady = true
+  console.log('[Editor] CM6 ready, isEditorReady set to true');
+
+  // Notify Android that CM6 is ready so loading screen can be hidden
+  console.log('[Editor] Checking AndroidEditorReady interface...');
+  console.log('[Editor] window.AndroidEditorReady:', window.AndroidEditorReady);
+  if (window.AndroidEditorReady && window.AndroidEditorReady.onReady) {
+    console.log('[Editor] Calling AndroidEditorReady.onReady()...');
+    try {
+      window.AndroidEditorReady.onReady();
+      console.log('[Editor] AndroidEditorReady.onReady() called successfully');
+    } catch (e) {
+      console.error('[Editor] Error calling onReady:', e);
+    }
+  } else {
+    console.log('[Editor] AndroidEditorReady interface not available');
+  }
 
   const editorEl = document.querySelector('.cm-editor')
+
+  // Dismiss completion dropdown when clicking on the editor (not on completion list)
+  editorEl.addEventListener('mousedown', (e) => {
+    // Check if click is on completion list or doc popup
+    if (!completionListEl.contains(e.target) && !docPopupEl.contains(e.target)) {
+      if (window.completionActive) {
+        window.hideCompletion();
+        hideDocPopup();
+      }
+    }
+  });
+
+  editorEl.addEventListener('touchstart', (e) => {
+    // Check if touch is on completion list or doc popup
+    if (!completionListEl.contains(e.target) && !docPopupEl.contains(e.target)) {
+      if (window.completionActive) {
+        window.hideCompletion();
+        hideDocPopup();
+      }
+    }
+  }, { passive: true });
+
   // --- Custom Touch Handling REMOVED to allow native selection ---
   /*
   let lastTouchY = 0;
@@ -1038,6 +1539,328 @@ function setupEditor() {
 
   window.performRedo = function () {
     redo(view);
+  };
+
+  // ========================================
+  // CURSOR NAVIGATION FUNCTIONS
+  // ========================================
+
+  // Move cursor up one line
+  window.moveUp = function () {
+    const pos = view.state.selection.main.head;
+    const line = view.state.doc.lineAt(pos);
+
+    if (line.number === 1) return; // Already at first line
+
+    const prevLine = view.state.doc.line(line.number - 1);
+    const colInLine = pos - line.from;
+    const newPos = prevLine.from + Math.min(colInLine, prevLine.length);
+
+    view.dispatch({
+      selection: { anchor: newPos, head: newPos },
+      scrollIntoView: true
+    });
+    view.focus();
+  };
+
+  // Move cursor down one line
+  window.moveDown = function () {
+    const pos = view.state.selection.main.head;
+    const line = view.state.doc.lineAt(pos);
+
+    if (line.number === view.state.doc.lines) return; // Already at last line
+
+    const nextLine = view.state.doc.line(line.number + 1);
+    const colInLine = pos - line.from;
+    const newPos = nextLine.from + Math.min(colInLine, nextLine.length);
+
+    view.dispatch({
+      selection: { anchor: newPos, head: newPos },
+      scrollIntoView: true
+    });
+    view.focus();
+  };
+
+  // Move cursor left one character
+  window.moveLeft = function () {
+    const pos = view.state.selection.main.head;
+    if (pos === 0) return; // Already at start
+
+    view.dispatch({
+      selection: { anchor: pos - 1, head: pos - 1 },
+      scrollIntoView: true
+    });
+    view.focus();
+  };
+
+  // Move cursor right one character
+  window.moveRight = function () {
+    const pos = view.state.selection.main.head;
+    if (pos >= view.state.doc.length) return; // Already at end
+
+    view.dispatch({
+      selection: { anchor: pos + 1, head: pos + 1 },
+      scrollIntoView: true
+    });
+    view.focus();
+  };
+
+  // Move cursor to start of line (Home)
+  window.moveHome = function () {
+    const pos = view.state.selection.main.head;
+    const line = view.state.doc.lineAt(pos);
+
+    view.dispatch({
+      selection: { anchor: line.from, head: line.from },
+      scrollIntoView: true
+    });
+    view.focus();
+  };
+
+  // Move cursor to end of line (End)
+  window.moveEnd = function () {
+    const pos = view.state.selection.main.head;
+    const line = view.state.doc.lineAt(pos);
+
+    view.dispatch({
+      selection: { anchor: line.to, head: line.to },
+      scrollIntoView: true
+    });
+    view.focus();
+  };
+
+  // Page Up - scroll up by viewport height and move cursor
+  window.pageUp = function () {
+    const scrollInfo = view.scrollDOM;
+    const viewportHeight = scrollInfo.clientHeight;
+
+    // Calculate how many lines fit in viewport
+    const lineHeight = view.defaultLineHeight;
+    const linesPerPage = Math.floor(viewportHeight / lineHeight);
+
+    const pos = view.state.selection.main.head;
+    const currentLine = view.state.doc.lineAt(pos);
+    const targetLineNum = Math.max(1, currentLine.number - linesPerPage);
+    const targetLine = view.state.doc.line(targetLineNum);
+
+    const colInLine = pos - currentLine.from;
+    const newPos = targetLine.from + Math.min(colInLine, targetLine.length);
+
+    view.dispatch({
+      selection: { anchor: newPos, head: newPos },
+      scrollIntoView: true
+    });
+    view.focus();
+  };
+
+  // Page Down - scroll down by viewport height and move cursor
+  window.pageDown = function () {
+    const scrollInfo = view.scrollDOM;
+    const viewportHeight = scrollInfo.clientHeight;
+
+    // Calculate how many lines fit in viewport
+    const lineHeight = view.defaultLineHeight;
+    const linesPerPage = Math.floor(viewportHeight / lineHeight);
+
+    const pos = view.state.selection.main.head;
+    const currentLine = view.state.doc.lineAt(pos);
+    const targetLineNum = Math.min(view.state.doc.lines, currentLine.number + linesPerPage);
+    const targetLine = view.state.doc.line(targetLineNum);
+
+    const colInLine = pos - currentLine.from;
+    const newPos = targetLine.from + Math.min(colInLine, targetLine.length);
+
+    view.dispatch({
+      selection: { anchor: newPos, head: newPos },
+      scrollIntoView: true
+    });
+    view.focus();
+  };
+
+  // ========================================
+  // SEARCH & REPLACE FUNCTIONS
+  // ========================================
+
+  // Store search state
+  window.searchState = {
+    query: '',
+    matches: [],
+    currentIndex: -1,
+    caseSensitive: false,
+    wholeWord: false,
+    useRegex: false
+  };
+
+  // Search in document and highlight matches
+  window.searchInDocument = function (query, caseSensitive = false, wholeWord = false, useRegex = false) {
+    window.searchState.query = query;
+    window.searchState.caseSensitive = caseSensitive;
+    window.searchState.wholeWord = wholeWord;
+    window.searchState.useRegex = useRegex;
+    window.searchState.matches = [];
+    window.searchState.currentIndex = -1;
+
+    if (!query || query.length === 0) {
+      window.clearSearch();
+      return { count: 0, current: 0 };
+    }
+
+    const docText = view.state.doc.toString();
+    let matches = [];
+
+    try {
+      let searchRegex;
+      if (useRegex) {
+        searchRegex = new RegExp(query, caseSensitive ? 'g' : 'gi');
+      } else {
+        // Escape special regex characters
+        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const pattern = wholeWord ? `\\b${escaped}\\b` : escaped;
+        searchRegex = new RegExp(pattern, caseSensitive ? 'g' : 'gi');
+      }
+
+      let match;
+      while ((match = searchRegex.exec(docText)) !== null) {
+        matches.push({ from: match.index, to: match.index + match[0].length });
+      }
+    } catch (e) {
+      console.error('[Search] Invalid regex:', e);
+      return { count: 0, current: 0, error: e.message };
+    }
+
+    window.searchState.matches = matches;
+
+    // Highlight all matches by adding decorations
+    if (matches.length > 0) {
+      window.searchState.currentIndex = 0;
+      // Move to first match
+      view.dispatch({
+        selection: { anchor: matches[0].from, head: matches[0].to },
+        scrollIntoView: true
+      });
+    }
+
+    console.log(`[Search] Found ${matches.length} matches for "${query}"`);
+    return { count: matches.length, current: matches.length > 0 ? 1 : 0 };
+  };
+
+  // Go to next match
+  window.findNext = function () {
+    const { matches, currentIndex } = window.searchState;
+    if (matches.length === 0) return { count: 0, current: 0 };
+
+    const nextIndex = (currentIndex + 1) % matches.length;
+    window.searchState.currentIndex = nextIndex;
+
+    const match = matches[nextIndex];
+    view.dispatch({
+      selection: { anchor: match.from, head: match.to },
+      scrollIntoView: true
+    });
+
+    return { count: matches.length, current: nextIndex + 1 };
+  };
+
+  // Go to previous match
+  window.findPrevious = function () {
+    const { matches, currentIndex } = window.searchState;
+    if (matches.length === 0) return { count: 0, current: 0 };
+
+    const prevIndex = (currentIndex - 1 + matches.length) % matches.length;
+    window.searchState.currentIndex = prevIndex;
+
+    const match = matches[prevIndex];
+    view.dispatch({
+      selection: { anchor: match.from, head: match.to },
+      scrollIntoView: true
+    });
+
+    return { count: matches.length, current: prevIndex + 1 };
+  };
+
+  // Replace current match
+  window.replaceInDocument = function (replaceText) {
+    const { matches, currentIndex, query } = window.searchState;
+    if (matches.length === 0 || currentIndex < 0) return { count: 0, current: 0 };
+
+    const match = matches[currentIndex];
+
+    // Replace the current selection
+    view.dispatch({
+      changes: { from: match.from, to: match.to, insert: replaceText }
+    });
+
+    // Re-search to update matches after replacement
+    setTimeout(() => {
+      window.searchInDocument(query, window.searchState.caseSensitive, window.searchState.wholeWord, window.searchState.useRegex);
+    }, 50);
+
+    return { count: matches.length - 1, current: Math.min(currentIndex + 1, matches.length - 1) };
+  };
+
+  // Replace all matches
+  window.replaceAllInDocument = function (replaceText) {
+    const { matches, query } = window.searchState;
+    if (matches.length === 0) return { replaced: 0 };
+
+    // Build changes array in reverse order to maintain correct positions
+    const changes = matches.map(m => ({
+      from: m.from,
+      to: m.to,
+      insert: replaceText
+    })).reverse();
+
+    view.dispatch({ changes });
+
+    const replacedCount = matches.length;
+    window.clearSearch();
+
+    console.log(`[Search] Replaced ${replacedCount} occurrences`);
+    return { replaced: replacedCount };
+  };
+
+  // Clear search highlights
+  window.clearSearch = function () {
+    window.searchState = {
+      query: '',
+      matches: [],
+      currentIndex: -1,
+      caseSensitive: false,
+      wholeWord: false,
+      useRegex: false
+    };
+    console.log('[Search] Cleared');
+  };
+
+  // Get current match count (for UI updates)
+  window.getMatchCount = function () {
+    return {
+      count: window.searchState.matches.length,
+      current: window.searchState.currentIndex + 1
+    };
+  };
+
+  // ========================================
+  // CM6 BUILT-IN SEARCH PANEL (More Reliable)
+  // ========================================
+
+  // Toggle CM6's built-in search panel
+  window.toggleSearchPanel = function () {
+    console.log('[Editor] Toggling CM6 search panel');
+    openSearchPanel(view);
+    return true;
+  };
+
+  window.openSearch = function () {
+    console.log('[Editor] Opening CM6 search panel');
+    openSearchPanel(view);
+    return true;
+  };
+
+  window.closeSearch = function () {
+    console.log('[Editor] Closing CM6 search panel');
+    closeSearchPanel(view);
+    return true;
   };
 
   // --- Helper to send requests ---
@@ -1410,3 +2233,34 @@ window.setBottomPadding = function (paddingPx) {
   document.head.appendChild(paddingStyle);
   console.log('[Editor] Bottom padding set to:', paddingPx);
 };
+
+// Auto-save functionality
+let autoSaveTimer = null;
+let autoSaveEnabled = false;
+let autoSaveDelay = 3000; // Default 3 seconds
+
+window.setAutoSave = function (enabled, delaySeconds) {
+  console.log('[Editor] setAutoSave:', enabled, delaySeconds);
+  autoSaveEnabled = enabled;
+  if (delaySeconds) autoSaveDelay = delaySeconds * 1000;
+
+  if (!enabled && autoSaveTimer) {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = null;
+  }
+  return true;
+};
+
+function triggerAutoSave() {
+  if (!autoSaveEnabled || !window.view) return;
+
+  if (autoSaveTimer) clearTimeout(autoSaveTimer);
+
+  autoSaveTimer = setTimeout(() => {
+    console.log('[Editor] Auto-save triggered');
+    if (window.AndroidInterface && window.AndroidInterface.saveFile) {
+      window.AndroidInterface.saveFile();
+    }
+  }, autoSaveDelay);
+}
+

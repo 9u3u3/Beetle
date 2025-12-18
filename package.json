@@ -30,6 +30,7 @@
     "@codemirror/view": "^6.38.6",
     "@marimo-team/codemirror-languageserver": "^1.16.0",
     "@open-rpc/client-js": "^1.8.1",
+    "@replit/codemirror-indentation-markers": "^6.5.3",
     "codemirror": "^6.0.2"
   },
   "devDependencies": {

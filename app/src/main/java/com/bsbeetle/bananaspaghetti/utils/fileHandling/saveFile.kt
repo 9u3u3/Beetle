@@ -52,10 +52,9 @@ fun saveFile(
                     writer.flush()
                 }
 
-                // Clear dirty state after successful save
-                bufferViewModel.currentFile.value?.let { file ->
-                    bufferViewModel.markAsClean(file.uri.toString())
-                }
+                // Clear dirty state after successful save using the actual saved URI
+                bufferViewModel.markAsClean(uri.toString())
+                Log.d("Save", "Marked ${uri} as clean")
 
                 // Trigger live reload if server is running
                 if (com.bsbeetle.bananaspaghetti.liveserver.LiveServerManager.isRunning()) {

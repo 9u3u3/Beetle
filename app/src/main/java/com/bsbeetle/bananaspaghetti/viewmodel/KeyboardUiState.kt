@@ -26,5 +26,8 @@ data class KeyboardUiState(
     // Range: 0.3 to 0.7 (30% to 70% of screen height)
     val leftKeyboardHeight: Float = 0.5f,
     val rightKeyboardHeight: Float = 0.5f,
-    val linkedKeyboardHeight: Boolean = true // When true, both height sliders move together
+    val linkedKeyboardHeight: Boolean = true, // When true, both height sliders move together
+    // Landscape IME mode: if true, use system IME keyboard instead of custom split keyboard
+    // Default is false (use custom split keyboard)
+    val useLandscapeIme: Boolean = false
 )

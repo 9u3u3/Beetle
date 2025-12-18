@@ -24,6 +24,7 @@ class SessionViewModel : ViewModel() {
     fun captureAllSnapshots() {
         viewModelScope.launch {
             SessionList.sessions.forEach { session ->
+                // Capture snapshots for all session types including terminal
                 captureSessionSnapshot(session.id)
             }
         }
@@ -38,6 +39,22 @@ class SessionViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val session = SessionList.sessions.find { it.id == sessionId } ?: return@launch
+
+                // For terminal sessions, check if it's ready before capturing
+                if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession) {
+                    if (!session.isReady.value) {
+                        Log.d("SessionViewModel", "Terminal not ready for session $sessionId, skipping snapshot")
+                        return@launch
+                    }
+                }
+                
+                // For editor sessions, check if it's ready
+                if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
+                    if (!session.isReady.value) {
+                        Log.d("SessionViewModel", "Editor not ready for session $sessionId, skipping snapshot")
+                        return@launch
+                    }
+                }
 
                 val webView = session.getOrInitView()
 

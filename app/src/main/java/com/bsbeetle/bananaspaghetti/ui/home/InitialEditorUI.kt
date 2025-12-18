@@ -153,6 +153,7 @@ fun InitialEditorUI(navController: NavController) {
     var isCommitAndPush by remember { mutableStateOf(false) }
     var pendingCommitFiles by remember { mutableStateOf(listOf<String>()) }
     var missingLanguageExt by remember { mutableStateOf("") }
+    var showSearchBar by remember { mutableStateOf(false) }
 
     // 🚀 File Load (with LSP check & Performance fix)
     LaunchedEffect(fileViewModel.selectedUri) {
@@ -386,6 +387,10 @@ fun InitialEditorUI(navController: NavController) {
                                 "if(window.performRedo) performRedo();",
                                 null
                         )
+                    },
+                    onSearchClick = {
+                        // Toggle the custom search bar overlay
+                        showSearchBar = !showSearchBar
                     }
             )
 
@@ -447,7 +452,8 @@ fun InitialEditorUI(navController: NavController) {
                         onFolderOpened = onFolderOpened
                 )
 
-                if (uiState.isLeftKeyboardVisible) {
+                // Only show custom keyboards if NOT using landscape IME mode
+                if (uiState.isLeftKeyboardVisible && !uiState.useLandscapeIme) {
                     SplitKeyboardHalf(
                             layout = layout,
                             side = KeyboardSide.LEFT,
@@ -455,18 +461,19 @@ fun InitialEditorUI(navController: NavController) {
                             isShiftOn = uiState.isShiftOn,
                             isCtrlOn = uiState.isCtrlOn,
                             onKeyEvent = keyboardViewModel::onKeyEvent,
-                            modifier = Modifier.constrainAs(leftKb) {
-                                        start.linkTo(parent.start)
-                                        bottom.linkTo(parent.bottom)
-                                        width = Dimension.percent(uiState.leftKeyboardWidth)
-                                    }
-                                    .background(Color(0xFF212121)),
+                            modifier =
+                                    Modifier.constrainAs(leftKb) {
+                                                start.linkTo(parent.start)
+                                                bottom.linkTo(parent.bottom)
+                                                width = Dimension.percent(uiState.leftKeyboardWidth)
+                                            }
+                                            .background(Color(0xFF212121)),
                             leftPadding = uiState.leftKeyboardPadding,
                             keyboardHeightFraction = uiState.leftKeyboardHeight
                     )
                 }
 
-                if (uiState.isRightKeyboardVisible) {
+                if (uiState.isRightKeyboardVisible && !uiState.useLandscapeIme) {
                     SplitKeyboardHalf(
                             layout = layout,
                             side = KeyboardSide.RIGHT,
@@ -474,34 +481,78 @@ fun InitialEditorUI(navController: NavController) {
                             isShiftOn = uiState.isShiftOn,
                             isCtrlOn = uiState.isCtrlOn,
                             onKeyEvent = keyboardViewModel::onKeyEvent,
-                            modifier = Modifier.constrainAs(rightKb) {
-                                        end.linkTo(parent.end)
-                                        bottom.linkTo(parent.bottom)
-                                        width = Dimension.percent(uiState.rightKeyboardWidth)
-                                    }
-                                    .background(Color(0xFF212121)),
+                            modifier =
+                                    Modifier.constrainAs(rightKb) {
+                                                end.linkTo(parent.end)
+                                                bottom.linkTo(parent.bottom)
+                                                width =
+                                                        Dimension.percent(
+                                                                uiState.rightKeyboardWidth
+                                                        )
+                                            }
+                                            .background(Color(0xFF212121)),
                             keyboardHeightFraction = uiState.rightKeyboardHeight
                     )
                 }
             }
 
-            Editor(
-                    Modifier.constrainAs(editor) {
-                        top.linkTo(topMiddle.bottom)
-                        bottom.linkTo(parent.bottom)
-                        start.linkTo(
-                                if (isLandscape && uiState.isLeftKeyboardVisible) leftKb.end
-                                else parent.start
+            // Check if webView is available before rendering Editor
+            val webView = editorViewModel.webView
+            if (webView != null) {
+                Editor(
+                        Modifier.constrainAs(editor) {
+                            top.linkTo(topMiddle.bottom)
+                            bottom.linkTo(parent.bottom)
+                            // If using landscape IME mode, give full width to editor
+                            val showLeftKb = isLandscape && uiState.isLeftKeyboardVisible && !uiState.useLandscapeIme
+                            val showRightKb = isLandscape && uiState.isRightKeyboardVisible && !uiState.useLandscapeIme
+                            start.linkTo(
+                                    if (showLeftKb) leftKb.end
+                                    else parent.start
+                            )
+                            end.linkTo(
+                                    if (showRightKb) rightKb.start
+                                    else parent.end
+                            )
+                            width = Dimension.fillToConstraints
+                            height = Dimension.fillToConstraints
+                        },
+                        webView
+                )
+            } else {
+                // Fallback: Show loading state when webView is not ready
+                Box(
+                        modifier = Modifier
+                                .constrainAs(editor) {
+                                    top.linkTo(topMiddle.bottom)
+                                    bottom.linkTo(parent.bottom)
+                                    start.linkTo(parent.start)
+                                    end.linkTo(parent.end)
+                                    width = Dimension.fillToConstraints
+                                    height = Dimension.fillToConstraints
+                                }
+                                .fillMaxSize()
+                                .background(Color(0xFF1E1E1E)),
+                        contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                    ) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(32.dp),
+                                color = Color(0xFF007ACC),
+                                strokeWidth = 2.dp
                         )
-                        end.linkTo(
-                                if (isLandscape && uiState.isRightKeyboardVisible) rightKb.start
-                                else parent.end
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                                text = "Loading editor...",
+                                color = Color(0xFFAAAAAA),
+                                fontSize = 12.sp
                         )
-                        width = Dimension.fillToConstraints
-                        height = Dimension.fillToConstraints
-                    },
-                    editorViewModel.webView!!
-            )
+                    }
+                }
+            }
 
             BottomBar(
                     Modifier.constrainAs(bottomBarRef) {
@@ -526,10 +577,7 @@ fun InitialEditorUI(navController: NavController) {
                             showSidebar = false
                         },
                         fileViewModel.currentFilePath,
-                        listOf(
-                                SidebarTab.FILES,
-                                SidebarTab.GIT
-                        ), // Only Files and Git in sidebar
+                        listOf(SidebarTab.FILES, SidebarTab.GIT), // Only Files and Git in sidebar
                         onTabChanged = {
                             if (it == SidebarTab.GIT) {
                                 gitViewModel.initializeGit()
@@ -540,8 +588,9 @@ fun InitialEditorUI(navController: NavController) {
             }
         }
 
-        // Extra Keys Row for Portrait Mode (From Block 2)
-        if (!isLandscape) {
+        // Extra Keys Row - Shows in portrait mode OR in landscape mode when useLandscapeIme is enabled
+        val showExtraKeys = !isLandscape || uiState.useLandscapeIme
+        if (showExtraKeys) {
             val imeInsets = WindowInsets.ime
             val density = androidx.compose.ui.platform.LocalDensity.current
             val isKeyboardVisible = imeInsets.getBottom(density) > 0
@@ -564,6 +613,16 @@ fun InitialEditorUI(navController: NavController) {
                 )
             }
         }
+
+        // ---------------- SEARCH BAR OVERLAY ----------------
+        SearchReplaceBar(
+                visible = showSearchBar,
+                webView = editorViewModel.webView,
+                onClose = { showSearchBar = false },
+                modifier =
+                        Modifier.align(Alignment.TopCenter)
+                                .padding(top = if (isLandscape) 40.dp else 80.dp)
+        )
 
         // ---------------- POPUP OVERLAY ----------------
         SlideLanguagePopup(

@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -71,8 +73,32 @@ fun InitialTerminalUI(navController: NavController) {
         )
     }
 
-    Box {
-        ConstraintLayout(modifier = Modifier.fillMaxSize()) {
+    // Apply bottom padding when IME keyboard is visible (portrait mode)
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val imeInsets = WindowInsets.ime
+    val imeHeight = imeInsets.getBottom(density)
+
+    LaunchedEffect(imeHeight) {
+        val paddingPx = imeHeight
+        if (paddingPx > 0) {
+            terminalSession?.getOrInitView()?.evaluateJavascript(
+                "if(window.setBottomPadding) window.setBottomPadding($paddingPx);",
+                null
+            )
+        } else {
+            terminalSession?.getOrInitView()?.evaluateJavascript(
+                "if(window.setBottomPadding) window.setBottomPadding(0);",
+                null
+            )
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1B1B1B))) {
+        ConstraintLayout(
+                modifier = Modifier
+                        .fillMaxSize()
+                        .then(if (!isLandscape) Modifier.padding(top = 40.dp) else Modifier)
+        ) {
             val (topLeft, topRight, leftBox, rightBox, leftKb, editor, rightKb) = createRefs()
 
             if (isLandscape) {
@@ -136,7 +162,8 @@ fun InitialTerminalUI(navController: NavController) {
                         }
                 )
 
-                if (uiState.isLeftKeyboardVisible) {
+                // Only show custom keyboards if NOT using landscape IME mode
+                if (uiState.isLeftKeyboardVisible && !uiState.useLandscapeIme) {
                     SplitKeyboardHalf(
                             layout = layout,
                             side = KeyboardSide.LEFT,
@@ -155,7 +182,7 @@ fun InitialTerminalUI(navController: NavController) {
                     )
                 }
 
-                if (uiState.isRightKeyboardVisible) {
+                if (uiState.isRightKeyboardVisible && !uiState.useLandscapeIme) {
                     SplitKeyboardHalf(
                             layout = layout,
                             side = KeyboardSide.RIGHT,
@@ -186,13 +213,16 @@ fun InitialTerminalUI(navController: NavController) {
                                 bottom.linkTo(parent.bottom)
 
                                 // adapt constraints depending on keyboard visibility & orientation
-                                if (isLandscape && uiState.isLeftKeyboardVisible) {
+                                val showLeftKb = isLandscape && uiState.isLeftKeyboardVisible && !uiState.useLandscapeIme
+                                val showRightKb = isLandscape && uiState.isRightKeyboardVisible && !uiState.useLandscapeIme
+                                
+                                if (showLeftKb) {
                                     start.linkTo(leftKb.end)
                                 } else {
                                     start.linkTo(parent.start)
                                 }
 
-                                if (isLandscape && uiState.isRightKeyboardVisible) {
+                                if (showRightKb) {
                                     end.linkTo(rightKb.start)
                                 } else {
                                     end.linkTo(parent.end)
@@ -206,9 +236,9 @@ fun InitialTerminalUI(navController: NavController) {
             )
         }
 
-        if (!isLandscape) {
-            // Extra Keys Row for Portrait Mode
-            // We use WindowInsets.ime to detect keyboard visibility and position the row
+        // Extra Keys Row - Shows in portrait mode OR in landscape mode when useLandscapeIme is enabled
+        val showExtraKeys = !isLandscape || uiState.useLandscapeIme
+        if (showExtraKeys) {
             val imeInsets = androidx.compose.foundation.layout.WindowInsets.ime
             val density = androidx.compose.ui.platform.LocalDensity.current
             val isKeyboardVisible = imeInsets.getBottom(density) > 0

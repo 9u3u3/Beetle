@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -412,6 +413,7 @@ fun LeftTopBar(
         onFileClick: () -> Unit = {},
         onUndoClick: () -> Unit = {},
         onRedoClick: () -> Unit = {},
+        onSearchClick: () -> Unit = {},
         onBranchClick: () -> Unit = {},
         onMenuClick: () -> Unit = {},
         showMenuIcon: Boolean = false,
@@ -476,6 +478,27 @@ fun LeftTopBar(
 
                         // Redo button (icon only)
                         TopBarIconButton(icon = R.drawable.redo_icon, onClick = onRedoClick)
+
+                        VerticalDivider(
+                                modifier = Modifier.fillMaxHeight().width(1.dp),
+                                color = Color(0xFF3E3E42)
+                        )
+
+                        // Search button
+                        Box(
+                                modifier =
+                                        Modifier.clickable { onSearchClick() }
+                                                .fillMaxHeight()
+                                                .padding(horizontal = 4.dp),
+                                contentAlignment = Alignment.Center
+                        ) {
+                                Icon(
+                                        imageVector = Icons.Default.Search,
+                                        contentDescription = "Search",
+                                        tint = Color(0xFFCCCCCC),
+                                        modifier = Modifier.size(14.dp)
+                                )
+                        }
 
                         VerticalDivider(
                                 modifier = Modifier.fillMaxHeight().width(1.dp),
