@@ -9,6 +9,7 @@ import com.bsbeetle.bananaspaghetti.ui.home.BrowserScreen
 import com.bsbeetle.bananaspaghetti.ui.home.HomeScreen
 import com.bsbeetle.bananaspaghetti.ui.home.InitialEditorUI
 import com.bsbeetle.bananaspaghetti.ui.home.InitialTerminalUI
+import com.bsbeetle.bananaspaghetti.ui.home.NotificationScreen
 import com.bsbeetle.bananaspaghetti.ui.home.SettingsScreen
 import com.bsbeetle.bananaspaghetti.ui.keyboard.DemoEditorUi
 import com.bsbeetle.bananaspaghetti.ui.screens.sessions.ZoomOut
@@ -29,7 +30,7 @@ fun AppNavigation(startDestination: String = Screen.Home.route) {
         composable(Screen.Demo.route){DemoEditorUi(navController)} // Demo editor used settings
         composable(Screen.Browser.route){BrowserScreen(navController)} // Developer browser UI
         composable(Screen.ZoomOut.route){ZoomOut(navController)} // Zoom out preview (Session switching)
-
         composable(Screen.Extensions.route){ExtensionsScreen(navController)}
+        composable(Screen.Notifications.route){NotificationScreen(navController)} // Updates/Notifications
     }
 }

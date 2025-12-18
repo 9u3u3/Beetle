@@ -76,6 +76,11 @@ import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.rememberCoroutineScope
+import com.bsbeetle.bananaspaghetti.utils.NotificationManager
+import com.bsbeetle.bananaspaghetti.utils.UpdatesService
+import kotlinx.coroutines.launch
 
 @SuppressLint("RestrictedApi")
 @Composable
@@ -131,6 +136,23 @@ fun HomeScreen(navController: NavController) {
                 navController.navigate(com.bsbeetle.bananaspaghetti.ui.navigation.Screen.Terminal.route)
             }
         )
+    }
+    
+    // Notification state
+    var hasUnreadNotification by rememberSaveable { mutableStateOf(NotificationManager.hasUnread(context)) }
+    val scope = rememberCoroutineScope()
+    
+    // Fetch latest update on screen load
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        scope.launch {
+            val update = UpdatesService.fetchLatestUpdate()
+            if (update != null) {
+                val isNew = NotificationManager.saveUpdate(context, update.id, update.title, update.description)
+                if (isNew) {
+                    hasUnreadNotification = true
+                }
+            }
+        }
     }
 
     Box(
@@ -481,6 +503,35 @@ fun HomeScreen(navController: NavController) {
                                             }
                                     )
             )
+            
+            // Notification/Updates button with badge
+            Box(
+                    modifier = Modifier
+                            .constrainAs(createRef()) {
+                                top.linkTo(recents.bottom, margin = 100.dp)
+                                end.linkTo(parent.end, margin = 20.dp)
+                            }
+                            .clickable {
+                                hasUnreadNotification = false
+                                navController.navigate(Screen.Notifications.route)
+                            }
+            ) {
+                Image(
+                        painter = painterResource(R.drawable.notification),
+                        contentDescription = "Updates",
+                        modifier = Modifier.size(20.dp)
+                )
+                // Red badge for unread notification
+                if (hasUnreadNotification) {
+                    Box(
+                            modifier = Modifier
+                                    .size(8.dp)
+                                    .background(Color(0xFFFF4444), CircleShape)
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = 2.dp, y = (-2).dp)
+                    )
+                }
+            }
             
             // Alpha version text - bottom left
             Text(
