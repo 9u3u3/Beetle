@@ -900,6 +900,22 @@ function setupEditor() {
   window.editor = view; // Alias for compatibility
 
   window.isEditorReady = true
+  console.log('[Editor] CM6 ready, isEditorReady set to true');
+
+  // Notify Android that CM6 is ready so loading screen can be hidden
+  console.log('[Editor] Checking AndroidEditorReady interface...');
+  console.log('[Editor] window.AndroidEditorReady:', window.AndroidEditorReady);
+  if (window.AndroidEditorReady && window.AndroidEditorReady.onReady) {
+    console.log('[Editor] Calling AndroidEditorReady.onReady()...');
+    try {
+      window.AndroidEditorReady.onReady();
+      console.log('[Editor] AndroidEditorReady.onReady() called successfully');
+    } catch (e) {
+      console.error('[Editor] Error calling onReady:', e);
+    }
+  } else {
+    console.log('[Editor] AndroidEditorReady interface not available');
+  }
 
   const editorEl = document.querySelector('.cm-editor')
   // --- Custom Touch Handling REMOVED to allow native selection ---
