@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -71,8 +73,32 @@ fun InitialTerminalUI(navController: NavController) {
         )
     }
 
-    Box {
-        ConstraintLayout(modifier = Modifier.fillMaxSize()) {
+    // Apply bottom padding when IME keyboard is visible (portrait mode)
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val imeInsets = WindowInsets.ime
+    val imeHeight = imeInsets.getBottom(density)
+
+    LaunchedEffect(imeHeight) {
+        val paddingPx = imeHeight
+        if (paddingPx > 0) {
+            terminalSession?.getOrInitView()?.evaluateJavascript(
+                "if(window.setBottomPadding) window.setBottomPadding($paddingPx);",
+                null
+            )
+        } else {
+            terminalSession?.getOrInitView()?.evaluateJavascript(
+                "if(window.setBottomPadding) window.setBottomPadding(0);",
+                null
+            )
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1B1B1B))) {
+        ConstraintLayout(
+                modifier = Modifier
+                        .fillMaxSize()
+                        .then(if (!isLandscape) Modifier.padding(top = 40.dp) else Modifier)
+        ) {
             val (topLeft, topRight, leftBox, rightBox, leftKb, editor, rightKb) = createRefs()
 
             if (isLandscape) {

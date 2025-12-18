@@ -252,3 +252,22 @@ window.setFontSize = function (size) {
     window.fitTerminal();
   }, 50);
 };
+
+// Bottom padding for portrait mode IME keyboard
+window.setBottomPadding = function (paddingPx) {
+  const terminalEl = document.getElementById('terminal');
+  if (terminalEl) {
+    terminalEl.style.paddingBottom = paddingPx + 'px';
+    console.log('[Terminal] Bottom padding set to: ' + paddingPx);
+    // Re-fit terminal to recalculate with new available space
+    if (fitAddon) {
+      setTimeout(() => {
+        fitAddon.fit();
+        const dims = fitAddon.proposeDimensions();
+        if (dims && window.AndroidTerminalResize) {
+          AndroidTerminalResize.resizeTerminal(dims.rows, dims.cols);
+        }
+      }, 50);
+    }
+  }
+};

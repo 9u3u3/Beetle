@@ -10,6 +10,7 @@ import { insertNewlineAndIndent, deleteCharBackward, undo, redo } from "@codemir
 import { openSearchPanel, closeSearchPanel } from "@codemirror/search"
 import { bracketMatching } from "@codemirror/language"
 import { indentUnit } from "@codemirror/language"
+import { indentationMarkers } from "@replit/codemirror-indentation-markers"
 
 // Compartments for dynamic settings
 const languageCompartment = new Compartment()
@@ -20,6 +21,8 @@ const highlightActiveLineCompartment = new Compartment()
 const bracketMatchingCompartment = new Compartment()
 const closeBracketsCompartment = new Compartment()
 const tabSizeCompartment = new Compartment()
+const relativeLineNumbersCompartment = new Compartment()
+const indentGuidesCompartment = new Compartment()
 
 let currentLanguageId = 'cpp'; // Track current language for LSP
 window.currentTheme = 'oneDark';
@@ -100,6 +103,17 @@ window.setTheme = function (themeName) {
     });
     window.currentTheme = themeName;
     console.log('[Editor] Theme applied:', themeName);
+
+    // Extract and apply background color after theme change
+    setTimeout(() => {
+      const editorEl = document.querySelector('.cm-editor');
+      if (editorEl) {
+        const bg = window.getComputedStyle(editorEl).backgroundColor;
+        document.body.style.backgroundColor = bg;
+        console.log('[Editor] Background color updated to:', bg);
+      }
+    }, 50); // Small delay to ensure theme is fully applied
+
     return true;
   }
   console.warn('[Editor] Unknown theme or no view:', themeName);
@@ -160,6 +174,49 @@ window.setTabSize = function (size) {
   return true;
 };
 
+// Relative line numbers setting  
+let relativeLineNumbersEnabled = false;
+window.setRelativeLineNumbers = function (enabled) {
+  console.log('[Editor] setRelativeLineNumbers:', enabled);
+  if (!window.view) return false;
+
+  relativeLineNumbersEnabled = enabled;
+
+  if (enabled) {
+    window.view.dispatch({
+      effects: lineNumbersCompartment.reconfigure([
+        lineNumbers({
+          formatNumber: (lineNo, state) => {
+            const cursorLine = state.doc.lineAt(state.selection.main.head).number;
+            const distance = Math.abs(lineNo - cursorLine);
+            return distance === 0 ? String(lineNo) : String(distance);
+          }
+        }),
+        highlightActiveLineGutter()
+      ])
+    });
+  } else {
+    window.view.dispatch({
+      effects: lineNumbersCompartment.reconfigure([lineNumbers(), highlightActiveLineGutter()])
+    });
+  }
+
+  console.log('[Editor] Relative line numbers applied:', enabled);
+  return true;
+};
+
+// Indent guides setting
+window.setIndentGuides = function (enabled) {
+  console.log('[Editor] setIndentGuides:', enabled);
+  if (!window.view) return false;
+
+  window.view.dispatch({
+    effects: indentGuidesCompartment.reconfigure(enabled ? indentationMarkers() : [])
+  });
+  console.log('[Editor] Indent guides applied:', enabled);
+  return true;
+};
+
 // Highlight active line setting
 window.setHighlightActiveLine = function (enabled) {
   console.log('[Editor] setHighlightActiveLine:', enabled);
@@ -200,6 +257,8 @@ window.setCloseBrackets = function (enabled) {
 window.setMinimap = function (enabled) {
   console.log('[Editor] setMinimap:', enabled);
   // CM6 doesn't have built-in minimap - would need a third-party extension
+  // For now, we just store the preference and log it
+  console.log('[Editor] Minimap toggled to:', enabled, '(requires third-party extension for actual implementation)');
   return true;
 };
 
@@ -1055,6 +1114,8 @@ function setupEditor() {
       bracketMatchingCompartment.of(bracketMatching()), // Default: ON
       closeBracketsCompartment.of(closeBrackets()), // Default: ON
       tabSizeCompartment.of([EditorState.tabSize.of(4), indentUnit.of('    ')]), // Default: 4
+      relativeLineNumbersCompartment.of([]), // Relative line numbers - off by default
+      indentGuidesCompartment.of([]), // Indent guides - off by default
       drawSelection(), // Ensure custom cursor drawing
       languageCompartment.of(cpp()), // Default
       lintGutter(), // Gutter for diagnostic markers
@@ -1087,6 +1148,8 @@ function setupEditor() {
             // console.log('[LSP-JS] Content changed (user), calling onContentChanged');
             window.AndroidEditor.onContentChanged();
           }
+          // Trigger auto-save timer
+          triggerAutoSave();
 
           // Auto-hide completion if text no longer matches any suggestion
           if (window.completionActive && window.completionItems.length > 0) {
@@ -1476,6 +1539,142 @@ function setupEditor() {
 
   window.performRedo = function () {
     redo(view);
+  };
+
+  // ========================================
+  // CURSOR NAVIGATION FUNCTIONS
+  // ========================================
+
+  // Move cursor up one line
+  window.moveUp = function () {
+    const pos = view.state.selection.main.head;
+    const line = view.state.doc.lineAt(pos);
+
+    if (line.number === 1) return; // Already at first line
+
+    const prevLine = view.state.doc.line(line.number - 1);
+    const colInLine = pos - line.from;
+    const newPos = prevLine.from + Math.min(colInLine, prevLine.length);
+
+    view.dispatch({
+      selection: { anchor: newPos, head: newPos },
+      scrollIntoView: true
+    });
+    view.focus();
+  };
+
+  // Move cursor down one line
+  window.moveDown = function () {
+    const pos = view.state.selection.main.head;
+    const line = view.state.doc.lineAt(pos);
+
+    if (line.number === view.state.doc.lines) return; // Already at last line
+
+    const nextLine = view.state.doc.line(line.number + 1);
+    const colInLine = pos - line.from;
+    const newPos = nextLine.from + Math.min(colInLine, nextLine.length);
+
+    view.dispatch({
+      selection: { anchor: newPos, head: newPos },
+      scrollIntoView: true
+    });
+    view.focus();
+  };
+
+  // Move cursor left one character
+  window.moveLeft = function () {
+    const pos = view.state.selection.main.head;
+    if (pos === 0) return; // Already at start
+
+    view.dispatch({
+      selection: { anchor: pos - 1, head: pos - 1 },
+      scrollIntoView: true
+    });
+    view.focus();
+  };
+
+  // Move cursor right one character
+  window.moveRight = function () {
+    const pos = view.state.selection.main.head;
+    if (pos >= view.state.doc.length) return; // Already at end
+
+    view.dispatch({
+      selection: { anchor: pos + 1, head: pos + 1 },
+      scrollIntoView: true
+    });
+    view.focus();
+  };
+
+  // Move cursor to start of line (Home)
+  window.moveHome = function () {
+    const pos = view.state.selection.main.head;
+    const line = view.state.doc.lineAt(pos);
+
+    view.dispatch({
+      selection: { anchor: line.from, head: line.from },
+      scrollIntoView: true
+    });
+    view.focus();
+  };
+
+  // Move cursor to end of line (End)
+  window.moveEnd = function () {
+    const pos = view.state.selection.main.head;
+    const line = view.state.doc.lineAt(pos);
+
+    view.dispatch({
+      selection: { anchor: line.to, head: line.to },
+      scrollIntoView: true
+    });
+    view.focus();
+  };
+
+  // Page Up - scroll up by viewport height and move cursor
+  window.pageUp = function () {
+    const scrollInfo = view.scrollDOM;
+    const viewportHeight = scrollInfo.clientHeight;
+
+    // Calculate how many lines fit in viewport
+    const lineHeight = view.defaultLineHeight;
+    const linesPerPage = Math.floor(viewportHeight / lineHeight);
+
+    const pos = view.state.selection.main.head;
+    const currentLine = view.state.doc.lineAt(pos);
+    const targetLineNum = Math.max(1, currentLine.number - linesPerPage);
+    const targetLine = view.state.doc.line(targetLineNum);
+
+    const colInLine = pos - currentLine.from;
+    const newPos = targetLine.from + Math.min(colInLine, targetLine.length);
+
+    view.dispatch({
+      selection: { anchor: newPos, head: newPos },
+      scrollIntoView: true
+    });
+    view.focus();
+  };
+
+  // Page Down - scroll down by viewport height and move cursor
+  window.pageDown = function () {
+    const scrollInfo = view.scrollDOM;
+    const viewportHeight = scrollInfo.clientHeight;
+
+    // Calculate how many lines fit in viewport
+    const lineHeight = view.defaultLineHeight;
+    const linesPerPage = Math.floor(viewportHeight / lineHeight);
+
+    const pos = view.state.selection.main.head;
+    const currentLine = view.state.doc.lineAt(pos);
+    const targetLineNum = Math.min(view.state.doc.lines, currentLine.number + linesPerPage);
+    const targetLine = view.state.doc.line(targetLineNum);
+
+    const colInLine = pos - currentLine.from;
+    const newPos = targetLine.from + Math.min(colInLine, targetLine.length);
+
+    view.dispatch({
+      selection: { anchor: newPos, head: newPos },
+      scrollIntoView: true
+    });
+    view.focus();
   };
 
   // ========================================
@@ -2034,3 +2233,34 @@ window.setBottomPadding = function (paddingPx) {
   document.head.appendChild(paddingStyle);
   console.log('[Editor] Bottom padding set to:', paddingPx);
 };
+
+// Auto-save functionality
+let autoSaveTimer = null;
+let autoSaveEnabled = false;
+let autoSaveDelay = 3000; // Default 3 seconds
+
+window.setAutoSave = function (enabled, delaySeconds) {
+  console.log('[Editor] setAutoSave:', enabled, delaySeconds);
+  autoSaveEnabled = enabled;
+  if (delaySeconds) autoSaveDelay = delaySeconds * 1000;
+
+  if (!enabled && autoSaveTimer) {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = null;
+  }
+  return true;
+};
+
+function triggerAutoSave() {
+  if (!autoSaveEnabled || !window.view) return;
+
+  if (autoSaveTimer) clearTimeout(autoSaveTimer);
+
+  autoSaveTimer = setTimeout(() => {
+    console.log('[Editor] Auto-save triggered');
+    if (window.AndroidInterface && window.AndroidInterface.saveFile) {
+      window.AndroidInterface.saveFile();
+    }
+  }, autoSaveDelay);
+}
+

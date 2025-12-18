@@ -1,0 +1,19 @@
+@Composable
+private fun EditorSettingsContent() {
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val editorViewModel = com.bsbeetle.bananaspaghetti.Local EditorViewModel.current
+        val prefs = remember {
+                com.bsbeetle.bananaspaghetti.utils.preferences.EditorPreferences(context)
+        }
+
+        var tabSize by remember { mutableStateOf(prefs.tabSize) }
+        var indentWithTabs by remember { mutableStateOf(prefs.indentWithTabs) }
+        var wordWrap by remember { mutableStateOf(prefs.wordWrap) }
+        var showLineNumbers by remember { mutableStateOf(prefs.lineNumbers) }
+        var relativeLineNumbers by remember { mutableStateOf(prefs.relativeLineNumbers) }
+        var showIndentGuides by remember { mutableStateOf(prefs.indentGuides) }
+        var autoSave by remember { mutableStateOf(prefs.autoSave) }
+        var autoSaveDelay by remember { mutableStateOf(prefs.autoSaveDelay) }
+        var selectedTheme by remember { mutableStateOf(prefs.theme) }
+        var themeDropdownExpanded by remember { mutableStateOf(false) }
+}

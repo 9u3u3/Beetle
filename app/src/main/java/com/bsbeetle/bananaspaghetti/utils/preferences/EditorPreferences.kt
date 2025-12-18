@@ -25,9 +25,8 @@ class EditorPreferences(context: Context) {
         // Display
         private const val KEY_WORD_WRAP = "word_wrap"
         private const val KEY_LINE_NUMBERS = "line_numbers"
-        private const val KEY_HIGHLIGHT_ACTIVE_LINE = "highlight_active_line"
+        private const val KEY_RELATIVE_LINE_NUMBERS = "relative_line_numbers"
         private const val KEY_INDENT_GUIDES = "indent_guides"
-        private const val KEY_MINIMAP = "minimap"
 
         // Editing
         private const val KEY_BRACKET_MATCHING = "bracket_matching"
@@ -65,17 +64,13 @@ class EditorPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_LINE_NUMBERS, true)
         set(value) = prefs.edit().putBoolean(KEY_LINE_NUMBERS, value).apply()
 
-    var highlightActiveLine: Boolean
-        get() = prefs.getBoolean(KEY_HIGHLIGHT_ACTIVE_LINE, true)
-        set(value) = prefs.edit().putBoolean(KEY_HIGHLIGHT_ACTIVE_LINE, value).apply()
+    var relativeLineNumbers: Boolean
+        get() = prefs.getBoolean(KEY_RELATIVE_LINE_NUMBERS, false)
+        set(value) = prefs.edit().putBoolean(KEY_RELATIVE_LINE_NUMBERS, value).apply()
 
     var indentGuides: Boolean
-        get() = prefs.getBoolean(KEY_INDENT_GUIDES, true)
+        get() = prefs.getBoolean(KEY_INDENT_GUIDES, false)
         set(value) = prefs.edit().putBoolean(KEY_INDENT_GUIDES, value).apply()
-
-    var minimap: Boolean
-        get() = prefs.getBoolean(KEY_MINIMAP, false)
-        set(value) = prefs.edit().putBoolean(KEY_MINIMAP, value).apply()
 
     // Editing
     var bracketMatching: Boolean

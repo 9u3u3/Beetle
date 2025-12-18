@@ -496,26 +496,63 @@ fun InitialEditorUI(navController: NavController) {
                 }
             }
 
-            Editor(
-                    Modifier.constrainAs(editor) {
-                        top.linkTo(topMiddle.bottom)
-                        bottom.linkTo(parent.bottom)
-                        // If using landscape IME mode, give full width to editor
-                        val showLeftKb = isLandscape && uiState.isLeftKeyboardVisible && !uiState.useLandscapeIme
-                        val showRightKb = isLandscape && uiState.isRightKeyboardVisible && !uiState.useLandscapeIme
-                        start.linkTo(
-                                if (showLeftKb) leftKb.end
-                                else parent.start
+            // Check if webView is available before rendering Editor
+            val webView = editorViewModel.webView
+            if (webView != null) {
+                Editor(
+                        Modifier.constrainAs(editor) {
+                            top.linkTo(topMiddle.bottom)
+                            bottom.linkTo(parent.bottom)
+                            // If using landscape IME mode, give full width to editor
+                            val showLeftKb = isLandscape && uiState.isLeftKeyboardVisible && !uiState.useLandscapeIme
+                            val showRightKb = isLandscape && uiState.isRightKeyboardVisible && !uiState.useLandscapeIme
+                            start.linkTo(
+                                    if (showLeftKb) leftKb.end
+                                    else parent.start
+                            )
+                            end.linkTo(
+                                    if (showRightKb) rightKb.start
+                                    else parent.end
+                            )
+                            width = Dimension.fillToConstraints
+                            height = Dimension.fillToConstraints
+                        },
+                        webView
+                )
+            } else {
+                // Fallback: Show loading state when webView is not ready
+                Box(
+                        modifier = Modifier
+                                .constrainAs(editor) {
+                                    top.linkTo(topMiddle.bottom)
+                                    bottom.linkTo(parent.bottom)
+                                    start.linkTo(parent.start)
+                                    end.linkTo(parent.end)
+                                    width = Dimension.fillToConstraints
+                                    height = Dimension.fillToConstraints
+                                }
+                                .fillMaxSize()
+                                .background(Color(0xFF1E1E1E)),
+                        contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                    ) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(32.dp),
+                                color = Color(0xFF007ACC),
+                                strokeWidth = 2.dp
                         )
-                        end.linkTo(
-                                if (showRightKb) rightKb.start
-                                else parent.end
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                                text = "Loading editor...",
+                                color = Color(0xFFAAAAAA),
+                                fontSize = 12.sp
                         )
-                        width = Dimension.fillToConstraints
-                        height = Dimension.fillToConstraints
-                    },
-                    editorViewModel.webView!!
-            )
+                    }
+                }
+            }
 
             BottomBar(
                     Modifier.constrainAs(bottomBarRef) {

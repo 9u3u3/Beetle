@@ -274,6 +274,7 @@ private fun SettingsSidebar(
                                 .fillMaxHeight()
                                 .background(SidebarDark)
                                 .padding(16.dp)
+                                .verticalScroll(rememberScrollState())
         ) {
                 // Back button header for landscape
                 Row(
@@ -302,7 +303,6 @@ private fun SettingsSidebar(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Search bar
-                SearchBar()
 
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -355,36 +355,6 @@ private fun ProfileCard(userEmail: String) {
                         Text(text = "Local Account", color = TextSecondary, fontSize = 12.sp)
                 }
         }
-}
-
-@Composable
-private fun SearchBar() {
-        var searchText by remember { mutableStateOf("") }
-
-        OutlinedTextField(
-                value = searchText,
-                onValueChange = { searchText = it },
-                placeholder = { Text("Find a setting", color = TextSecondary, fontSize = 14.sp) },
-                leadingIcon = {
-                        Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Search",
-                                tint = TextSecondary,
-                                modifier = Modifier.size(20.dp)
-                        )
-                },
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors =
-                        OutlinedTextFieldDefaults.colors(
-                                unfocusedContainerColor = CardDark,
-                                focusedContainerColor = CardDark,
-                                unfocusedBorderColor = Color.Transparent,
-                                focusedBorderColor = AccentBlue,
-                                cursorColor = AccentBlue
-                        ),
-                singleLine = true
-        )
 }
 
 @Composable
@@ -1089,13 +1059,8 @@ private fun EditorSettingsContent() {
         var indentWithTabs by remember { mutableStateOf(prefs.indentWithTabs) }
         var wordWrap by remember { mutableStateOf(prefs.wordWrap) }
         var showLineNumbers by remember { mutableStateOf(prefs.lineNumbers) }
-        var highlightActiveLine by remember { mutableStateOf(prefs.highlightActiveLine) }
-        var bracketMatching by remember { mutableStateOf(prefs.bracketMatching) }
-        var autoCloseBrackets by remember { mutableStateOf(prefs.autoCloseBrackets) }
+        var relativeLineNumbers by remember { mutableStateOf(prefs.relativeLineNumbers) }
         var showIndentGuides by remember { mutableStateOf(prefs.indentGuides) }
-        var scrollPastEnd by remember { mutableStateOf(prefs.scrollPastEnd) }
-        var cursorBlinkRate by remember { mutableStateOf(prefs.cursorBlinkRate) }
-        var showMinimap by remember { mutableStateOf(prefs.minimap) }
         var autoSave by remember { mutableStateOf(prefs.autoSave) }
         var autoSaveDelay by remember { mutableStateOf(prefs.autoSaveDelay) }
         var selectedTheme by remember { mutableStateOf(prefs.theme) }
@@ -1291,14 +1256,14 @@ private fun EditorSettingsContent() {
                 Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
 
                 SettingRowWithCheckbox(
-                        title = "Highlight Active Line",
-                        description = "Highlight the line containing the cursor",
-                        isChecked = highlightActiveLine,
+                        title = "Relative Line Numbers",
+                        description = "Show line numbers relative to cursor position",
+                        isChecked = relativeLineNumbers,
                         onCheckedChange = {
-                                highlightActiveLine = it
-                                prefs.highlightActiveLine = it
+                                relativeLineNumbers = it
+                                prefs.relativeLineNumbers = it
                                 editorViewModel.webView?.evaluateJavascript(
-                                        "if(window.setHighlightActiveLine) window.setHighlightActiveLine($it);",
+                                        "if(window.setRelativeLineNumbers) window.setRelativeLineNumbers($it);",
                                         null
                                 )
                         }
@@ -1313,117 +1278,15 @@ private fun EditorSettingsContent() {
                         onCheckedChange = {
                                 showIndentGuides = it
                                 prefs.indentGuides = it
-                        }
-                )
-
-                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
-
-                SettingRowWithCheckbox(
-                        title = "Minimap",
-                        description = "Show a small preview of the code on the right",
-                        isChecked = showMinimap,
-                        onCheckedChange = {
-                                showMinimap = it
-                                prefs.minimap = it
-                        }
-                )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        SettingsCard(title = "Editing") {
-                SettingRowWithCheckbox(
-                        title = "Bracket Matching",
-                        description = "Highlight matching brackets when cursor is near",
-                        isChecked = bracketMatching,
-                        onCheckedChange = {
-                                bracketMatching = it
-                                prefs.bracketMatching = it
                                 editorViewModel.webView?.evaluateJavascript(
-                                        "if(window.setBracketMatching) window.setBracketMatching($it);",
+                                        "if(window.setIndentGuides) window.setIndentGuides($it);",
                                         null
                                 )
                         }
                 )
 
-                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
-
-                SettingRowWithCheckbox(
-                        title = "Auto Close Brackets",
-                        description = "Automatically insert closing brackets and quotes",
-                        isChecked = autoCloseBrackets,
-                        onCheckedChange = {
-                                autoCloseBrackets = it
-                                prefs.autoCloseBrackets = it
-                                editorViewModel.webView?.evaluateJavascript(
-                                        "if(window.setCloseBrackets) window.setCloseBrackets($it);",
-                                        null
-                                )
-                        }
-                )
-
-                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
-
-                SettingRowWithCheckbox(
-                        title = "Scroll Past End",
-                        description = "Allow scrolling beyond the last line",
-                        isChecked = scrollPastEnd,
-                        onCheckedChange = {
-                                scrollPastEnd = it
-                                prefs.scrollPastEnd = it
-                        }
-                )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        SettingsCard(title = "Cursor") {
-                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                        Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                        ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                        Text("Blink Rate", color = TextPrimary, fontSize = 16.sp)
-                                        Text(
-                                                "Cursor blink interval in milliseconds",
-                                                color = TextSecondary,
-                                                fontSize = 13.sp
-                                        )
-                                }
-                                Text(
-                                        "${cursorBlinkRate}ms",
-                                        color = AccentBlue,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Medium
-                                )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Slider(
-                                value = cursorBlinkRate.toFloat(),
-                                onValueChange = {
-                                        cursorBlinkRate = it.toInt()
-                                        prefs.cursorBlinkRate = cursorBlinkRate
-                                },
-                                valueRange = 0f..1000f,
-                                steps = 9,
-                                colors =
-                                        SliderDefaults.colors(
-                                                thumbColor = AccentBlue,
-                                                activeTrackColor = AccentBlue,
-                                                inactiveTrackColor = DividerColor
-                                        )
-                        )
-                        Text(
-                                "Set to 0 to disable cursor blink",
-                                color = TextSecondary,
-                                fontSize = 11.sp
-                        )
-                }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
 
         SettingsCard(title = "Auto Save") {
                 SettingRowWithCheckbox(
@@ -1490,13 +1353,8 @@ private fun EditorSettingsContent() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-                "Note: These settings will be applied to the editor in a future update.",
-                color = TextSecondary,
-                fontSize = 12.sp
-        )
-}
 
+}
 @Composable
 private fun GitSettingsContent() {
         val context = androidx.compose.ui.platform.LocalContext.current

@@ -174,14 +174,133 @@ class EditorSession(context: Context, name: String = "Editor") :
                                             "✓ JS: onReady called - CM6 initialized"
                                     )
                                     _isReady.value = true
-                                    // Make WebView visible on main thread
+                                    
+                                    // Apply saved editor settings
                                     view?.post {
+                                        // Load preferences
+                                        val prefs = com.bsbeetle.bananaspaghetti.utils.preferences.EditorPreferences(context)
+                                        
+                                        // Apply theme
+                                        view?.evaluateJavascript(
+                                            "if(window.setTheme) window.setTheme('${prefs.theme}');",
+                                            null
+                                        )
+                                        
+                                        // Apply word wrap
+                                        view?.evaluateJavascript(
+                                            "if(window.setWordWrap) window.setWordWrap(${prefs.wordWrap});",
+                                            null
+                                        )
+                                        
+                                        // Apply line numbers
+                                        view?.evaluateJavascript(
+                                            "if(window.setLineNumbers) window.setLineNumbers(${prefs.lineNumbers});",
+                                            null
+                                        )
+                                        
+                                        // Apply tab size
+                                        view?.evaluateJavascript(
+                                            "if(window.setTabSize) window.setTabSize(${prefs.tabSize});",
+                                            null
+                                        )
+                                        
+                                        // Apply relative line numbers
+                                        view?.evaluateJavascript(
+                                            "if(window.setRelativeLineNumbers) window.setRelativeLineNumbers(${prefs.relativeLineNumbers});",
+                                            null
+                                        )
+                                        
+                                        // Apply indent guides
+                                        view?.evaluateJavascript(
+                                            "if(window.setIndentGuides) window.setIndentGuides(${prefs.indentGuides});",
+                                            null
+                                        )
+                                        
+                                        // Apply auto save
+                                        view?.evaluateJavascript(
+                                            "if(window.setAutoSave) window.setAutoSave(${prefs.autoSave}, ${prefs.autoSaveDelay});",
+                                            null
+                                        )
+                                        
+                                        android.util.Log.d("EditorSession", "✓ Applied saved editor settings")
+                                        
+                                        // Make WebView visible
                                         view?.visibility = android.view.View.VISIBLE
                                         view?.alpha = 1f
                                     }
                                 }
                             },
                             "AndroidEditorReady"
+                    )
+
+                    // Add JavaScript interface for auto-save functionality
+                    addJavascriptInterface(
+                            object {
+                                @android.webkit.JavascriptInterface
+                                fun saveFile() {
+                                    android.util.Log.d(
+                                            "EditorSession",
+                                            "✓ JS: AndroidInterface.saveFile() called - auto-save triggered"
+                                    )
+                                    // Post to main thread and trigger save
+                                    view?.post {
+                                        val currentFile = bufferViewModel?.currentFile?.value
+                                        if (currentFile != null) {
+                                            val uri = currentFile.uri
+                                            // Get content from editor
+                                            view?.evaluateJavascript(
+                                                    "window.editor?.state?.doc?.toString() || window.code_ || ''"
+                                            ) { result ->
+                                                if (result != null && result != "null" && result != "\"\"") {
+                                                    try {
+                                                        var content = result.removeSurrounding("\"")
+                                                                .replace("\\n", "\n")
+                                                                .replace("\\t", "\t")
+                                                                .replace("\\r", "\r")
+                                                                .replace("\\\"", "\"")
+                                                                .replace("\\\\", "\\")
+                                                        
+                                                        // Unescape Unicode sequences
+                                                        val unicodePattern = Regex("\\\\u([0-9a-fA-F]{4})")
+                                                        content = unicodePattern.replace(content) { matchResult ->
+                                                            val hexCode = matchResult.groupValues[1]
+                                                            hexCode.toInt(16).toChar().toString()
+                                                        }
+                                                        
+                                                        // Save to file
+                                                        val resolver = context.contentResolver
+                                                        val out = resolver.openOutputStream(uri, "wt")
+                                                        if (out != null) {
+                                                            java.io.OutputStreamWriter(out, Charsets.UTF_8).use { writer ->
+                                                                writer.write(content)
+                                                                writer.flush()
+                                                            }
+                                                            // Clear dirty state
+                                                            bufferViewModel?.markAsClean(uri.toString())
+                                                            android.util.Log.d(
+                                                                    "EditorSession",
+                                                                    "✓ Auto-saved and marked clean: ${currentFile.name}"
+                                                            )
+                                                        }
+                                                    } catch (e: Exception) {
+                                                        android.util.Log.e(
+                                                                "EditorSession",
+                                                                "Auto-save failed",
+                                                                e
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            android.util.Log.w(
+                                                    "EditorSession",
+                                                    "Auto-save skipped - no current file"
+                                            )
+                                        }
+                                    }
+                                }
+                            },
+                            "AndroidInterface"
                     )
 
                     loadUrl(AppConfig.EDITOR_URL)
@@ -328,6 +447,23 @@ class EditorSession(context: Context, name: String = "Editor") :
                                             },
                                             1500
                                     ) // Check after 1.5s
+
+                                    // Ultimate fallback: Force ready state after 3 seconds
+                                    // This prevents the editor from being stuck on loading forever
+                                    view?.postDelayed(
+                                            {
+                                                if (!_isReady.value) {
+                                                    Log.w(
+                                                            "EditorSession",
+                                                            "Ultimate fallback: Forcing isReady after 3s timeout"
+                                                    )
+                                                    _isReady.value = true
+                                                    view?.visibility = android.view.View.VISIBLE
+                                                    view?.alpha = 1f
+                                                }
+                                            },
+                                            3000
+                                    ) // Force after 3s
                                 }
 
                                 override fun onRenderProcessGone(
@@ -435,6 +571,10 @@ class EditorSession(context: Context, name: String = "Editor") :
                     com.bsbeetle.bananaspaghetti.model.KeyType.ACTION_DOWN -> "moveDown"
                     com.bsbeetle.bananaspaghetti.model.KeyType.ACTION_LEFT -> "moveLeft"
                     com.bsbeetle.bananaspaghetti.model.KeyType.ACTION_RIGHT -> "moveRight"
+                    com.bsbeetle.bananaspaghetti.model.KeyType.ACTION_HOME -> "moveHome"
+                    com.bsbeetle.bananaspaghetti.model.KeyType.ACTION_END -> "moveEnd"
+                    com.bsbeetle.bananaspaghetti.model.KeyType.ACTION_PGUP -> "pageUp"
+                    com.bsbeetle.bananaspaghetti.model.KeyType.ACTION_PGDN -> "pageDown"
                     else -> return
                 }
         view?.evaluateJavascript("if(window.$action) window.$action();", null)
