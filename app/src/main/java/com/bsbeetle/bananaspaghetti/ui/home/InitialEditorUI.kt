@@ -153,6 +153,7 @@ fun InitialEditorUI(navController: NavController) {
     var isCommitAndPush by remember { mutableStateOf(false) }
     var pendingCommitFiles by remember { mutableStateOf(listOf<String>()) }
     var missingLanguageExt by remember { mutableStateOf("") }
+    var showSearchBar by remember { mutableStateOf(false) }
 
     // 🚀 File Load (with LSP check & Performance fix)
     LaunchedEffect(fileViewModel.selectedUri) {
@@ -386,6 +387,10 @@ fun InitialEditorUI(navController: NavController) {
                                 "if(window.performRedo) performRedo();",
                                 null
                         )
+                    },
+                    onSearchClick = {
+                        // Toggle the custom search bar overlay
+                        showSearchBar = !showSearchBar
                     }
             )
 
@@ -455,12 +460,13 @@ fun InitialEditorUI(navController: NavController) {
                             isShiftOn = uiState.isShiftOn,
                             isCtrlOn = uiState.isCtrlOn,
                             onKeyEvent = keyboardViewModel::onKeyEvent,
-                            modifier = Modifier.constrainAs(leftKb) {
-                                        start.linkTo(parent.start)
-                                        bottom.linkTo(parent.bottom)
-                                        width = Dimension.percent(uiState.leftKeyboardWidth)
-                                    }
-                                    .background(Color(0xFF212121)),
+                            modifier =
+                                    Modifier.constrainAs(leftKb) {
+                                                start.linkTo(parent.start)
+                                                bottom.linkTo(parent.bottom)
+                                                width = Dimension.percent(uiState.leftKeyboardWidth)
+                                            }
+                                            .background(Color(0xFF212121)),
                             leftPadding = uiState.leftKeyboardPadding,
                             keyboardHeightFraction = uiState.leftKeyboardHeight
                     )
@@ -474,12 +480,16 @@ fun InitialEditorUI(navController: NavController) {
                             isShiftOn = uiState.isShiftOn,
                             isCtrlOn = uiState.isCtrlOn,
                             onKeyEvent = keyboardViewModel::onKeyEvent,
-                            modifier = Modifier.constrainAs(rightKb) {
-                                        end.linkTo(parent.end)
-                                        bottom.linkTo(parent.bottom)
-                                        width = Dimension.percent(uiState.rightKeyboardWidth)
-                                    }
-                                    .background(Color(0xFF212121)),
+                            modifier =
+                                    Modifier.constrainAs(rightKb) {
+                                                end.linkTo(parent.end)
+                                                bottom.linkTo(parent.bottom)
+                                                width =
+                                                        Dimension.percent(
+                                                                uiState.rightKeyboardWidth
+                                                        )
+                                            }
+                                            .background(Color(0xFF212121)),
                             keyboardHeightFraction = uiState.rightKeyboardHeight
                     )
                 }
@@ -526,10 +536,7 @@ fun InitialEditorUI(navController: NavController) {
                             showSidebar = false
                         },
                         fileViewModel.currentFilePath,
-                        listOf(
-                                SidebarTab.FILES,
-                                SidebarTab.GIT
-                        ), // Only Files and Git in sidebar
+                        listOf(SidebarTab.FILES, SidebarTab.GIT), // Only Files and Git in sidebar
                         onTabChanged = {
                             if (it == SidebarTab.GIT) {
                                 gitViewModel.initializeGit()
@@ -564,6 +571,16 @@ fun InitialEditorUI(navController: NavController) {
                 )
             }
         }
+
+        // ---------------- SEARCH BAR OVERLAY ----------------
+        SearchReplaceBar(
+                visible = showSearchBar,
+                webView = editorViewModel.webView,
+                onClose = { showSearchBar = false },
+                modifier =
+                        Modifier.align(Alignment.TopCenter)
+                                .padding(top = if (isLandscape) 40.dp else 80.dp)
+        )
 
         // ---------------- POPUP OVERLAY ----------------
         SlideLanguagePopup(

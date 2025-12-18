@@ -10,8 +10,161 @@ import { insertNewlineAndIndent, deleteCharBackward, undo, redo } from "@codemir
 import { openSearchPanel, closeSearchPanel } from "@codemirror/search"
 
 const languageCompartment = new Compartment()
+const themeCompartment = new Compartment()
 let currentLanguageId = 'cpp'; // Track current language for LSP
+window.currentTheme = 'oneDark';
 
+// Theme definitions for dynamic switching
+const themes = {
+  'oneDark': oneDark,
+  'dark': EditorView.theme({
+    "&": { backgroundColor: "#1e1e1e", color: "#d4d4d4" },
+    ".cm-content": { caretColor: "#fff" },
+    ".cm-cursor": { borderLeftColor: "#fff" },
+    ".cm-gutters": { backgroundColor: "#252526", color: "#858585", border: "none" },
+    ".cm-activeLineGutter": { backgroundColor: "#2a2a2a" },
+    ".cm-activeLine": { backgroundColor: "#2a2a2a" },
+    ".cm-selectionBackground": { backgroundColor: "#264f78" },
+    "&.cm-focused .cm-selectionBackground": { backgroundColor: "#264f78" },
+    ".cm-line": { padding: "0 4px" }
+  }, { dark: true }),
+  'monokai': EditorView.theme({
+    "&": { backgroundColor: "#272822", color: "#f8f8f2" },
+    ".cm-content": { caretColor: "#f8f8f0" },
+    ".cm-cursor": { borderLeftColor: "#f8f8f0" },
+    ".cm-gutters": { backgroundColor: "#272822", color: "#75715e", border: "none" },
+    ".cm-activeLineGutter": { backgroundColor: "#3e3d32" },
+    ".cm-activeLine": { backgroundColor: "#3e3d32" },
+    ".cm-selectionBackground": { backgroundColor: "#49483e" },
+    "&.cm-focused .cm-selectionBackground": { backgroundColor: "#49483e" }
+  }, { dark: true }),
+  'github': EditorView.theme({
+    "&": { backgroundColor: "#0d1117", color: "#c9d1d9" },
+    ".cm-content": { caretColor: "#58a6ff" },
+    ".cm-cursor": { borderLeftColor: "#58a6ff" },
+    ".cm-gutters": { backgroundColor: "#0d1117", color: "#8b949e", border: "none" },
+    ".cm-activeLineGutter": { backgroundColor: "#161b22" },
+    ".cm-activeLine": { backgroundColor: "#161b22" },
+    ".cm-selectionBackground": { backgroundColor: "#264f78" },
+    "&.cm-focused .cm-selectionBackground": { backgroundColor: "#264f78" }
+  }, { dark: true }),
+  'dracula': EditorView.theme({
+    "&": { backgroundColor: "#282a36", color: "#f8f8f2" },
+    ".cm-content": { caretColor: "#f8f8f2" },
+    ".cm-cursor": { borderLeftColor: "#f8f8f2" },
+    ".cm-gutters": { backgroundColor: "#282a36", color: "#6272a4", border: "none" },
+    ".cm-activeLineGutter": { backgroundColor: "#44475a" },
+    ".cm-activeLine": { backgroundColor: "#44475a" },
+    ".cm-selectionBackground": { backgroundColor: "#44475a" },
+    "&.cm-focused .cm-selectionBackground": { backgroundColor: "#44475a" }
+  }, { dark: true }),
+  'solarizedDark': EditorView.theme({
+    "&": { backgroundColor: "#002b36", color: "#839496" },
+    ".cm-content": { caretColor: "#839496" },
+    ".cm-cursor": { borderLeftColor: "#839496" },
+    ".cm-gutters": { backgroundColor: "#073642", color: "#586e75", border: "none" },
+    ".cm-activeLineGutter": { backgroundColor: "#073642" },
+    ".cm-activeLine": { backgroundColor: "#073642" },
+    ".cm-selectionBackground": { backgroundColor: "#073642" },
+    "&.cm-focused .cm-selectionBackground": { backgroundColor: "#073642" }
+  }, { dark: true }),
+  'nord': EditorView.theme({
+    "&": { backgroundColor: "#2e3440", color: "#d8dee9" },
+    ".cm-content": { caretColor: "#d8dee9" },
+    ".cm-cursor": { borderLeftColor: "#d8dee9" },
+    ".cm-gutters": { backgroundColor: "#2e3440", color: "#4c566a", border: "none" },
+    ".cm-activeLineGutter": { backgroundColor: "#3b4252" },
+    ".cm-activeLine": { backgroundColor: "#3b4252" },
+    ".cm-selectionBackground": { backgroundColor: "#434c5e" },
+    "&.cm-focused .cm-selectionBackground": { backgroundColor: "#434c5e" }
+  }, { dark: true })
+};
+
+// Set editor theme function - exposed globally
+window.setTheme = function (themeName) {
+  console.log('[Editor] setTheme called with:', themeName);
+  const theme = themes[themeName];
+  if (theme && window.view) {
+    window.view.dispatch({
+      effects: themeCompartment.reconfigure(theme)
+    });
+    window.currentTheme = themeName;
+    console.log('[Editor] Theme applied:', themeName);
+    return true;
+  }
+  console.warn('[Editor] Unknown theme or no view:', themeName);
+  return false;
+};
+
+// Get available themes
+window.getAvailableThemes = function () {
+  return Object.keys(themes);
+};
+
+// Get current theme
+window.getCurrentTheme = function () {
+  return window.currentTheme;
+};
+
+// ========================================
+// EDITOR SETTINGS APPLICATION
+// ========================================
+
+// Word wrap setting
+window.setWordWrap = function (enabled) {
+  console.log('[Editor] setWordWrap:', enabled);
+  if (!window.view) return false;
+
+  // Word wrap in CM6 is controlled by lineWrapping extension
+  // We need to rebuild the editor with the extension - for now just log
+  // CM6 doesn't have a simple toggle for line wrapping at runtime
+  // Would need Compartment similar to theme switching
+  console.log('[Editor] Word wrap setting:', enabled);
+  return true;
+};
+
+// Line numbers setting
+window.setLineNumbers = function (enabled) {
+  console.log('[Editor] setLineNumbers:', enabled);
+  if (!window.view) return false;
+
+  // Line numbers are part of basicSetup - hiding them via CSS
+  const gutters = document.querySelectorAll('.cm-lineNumbers');
+  gutters.forEach(el => {
+    el.style.display = enabled ? '' : 'none';
+  });
+  return true;
+};
+
+// Tab size setting
+window.setTabSize = function (size) {
+  console.log('[Editor] setTabSize:', size);
+  if (!window.view) return false;
+
+  // Tab size is set via EditorState.tabSize
+  // For now, just log - would need Compartment for runtime changes
+  console.log('[Editor] Tab size setting:', size);
+  return true;
+};
+
+// Highlight active line
+window.setHighlightActiveLine = function (enabled) {
+  console.log('[Editor] setHighlightActiveLine:', enabled);
+  if (!window.view) return false;
+
+  const activeLine = document.querySelector('.cm-activeLine');
+  if (activeLine) {
+    activeLine.style.backgroundColor = enabled ? '' : 'transparent';
+  }
+  return true;
+};
+
+// Minimap (not natively supported in CM6, would need extension)
+window.setMinimap = function (enabled) {
+  console.log('[Editor] setMinimap:', enabled);
+  // CM6 doesn't have built-in minimap - would need a third-party extension
+  return true;
+};
 window.setLanguage = async function (slug, port = 8081) {
   console.log(`[LSP-JS] setLanguage called for ${slug} port: ${port}`);
   currentLanguageId = slug; // Update current language
@@ -654,7 +807,7 @@ function setupEditor() {
     doc: "",
     extensions: [
       basicSetup,
-      oneDark,
+      themeCompartment.of(oneDark),
       drawSelection(), // Ensure custom cursor drawing
       languageCompartment.of(cpp()), // Default
       lintGutter(), // Gutter for diagnostic markers
@@ -1054,6 +1207,192 @@ function setupEditor() {
 
   window.performRedo = function () {
     redo(view);
+  };
+
+  // ========================================
+  // SEARCH & REPLACE FUNCTIONS
+  // ========================================
+
+  // Store search state
+  window.searchState = {
+    query: '',
+    matches: [],
+    currentIndex: -1,
+    caseSensitive: false,
+    wholeWord: false,
+    useRegex: false
+  };
+
+  // Search in document and highlight matches
+  window.searchInDocument = function (query, caseSensitive = false, wholeWord = false, useRegex = false) {
+    window.searchState.query = query;
+    window.searchState.caseSensitive = caseSensitive;
+    window.searchState.wholeWord = wholeWord;
+    window.searchState.useRegex = useRegex;
+    window.searchState.matches = [];
+    window.searchState.currentIndex = -1;
+
+    if (!query || query.length === 0) {
+      window.clearSearch();
+      return { count: 0, current: 0 };
+    }
+
+    const docText = view.state.doc.toString();
+    let matches = [];
+
+    try {
+      let searchRegex;
+      if (useRegex) {
+        searchRegex = new RegExp(query, caseSensitive ? 'g' : 'gi');
+      } else {
+        // Escape special regex characters
+        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const pattern = wholeWord ? `\\b${escaped}\\b` : escaped;
+        searchRegex = new RegExp(pattern, caseSensitive ? 'g' : 'gi');
+      }
+
+      let match;
+      while ((match = searchRegex.exec(docText)) !== null) {
+        matches.push({ from: match.index, to: match.index + match[0].length });
+      }
+    } catch (e) {
+      console.error('[Search] Invalid regex:', e);
+      return { count: 0, current: 0, error: e.message };
+    }
+
+    window.searchState.matches = matches;
+
+    // Highlight all matches by adding decorations
+    if (matches.length > 0) {
+      window.searchState.currentIndex = 0;
+      // Move to first match
+      view.dispatch({
+        selection: { anchor: matches[0].from, head: matches[0].to },
+        scrollIntoView: true
+      });
+    }
+
+    console.log(`[Search] Found ${matches.length} matches for "${query}"`);
+    return { count: matches.length, current: matches.length > 0 ? 1 : 0 };
+  };
+
+  // Go to next match
+  window.findNext = function () {
+    const { matches, currentIndex } = window.searchState;
+    if (matches.length === 0) return { count: 0, current: 0 };
+
+    const nextIndex = (currentIndex + 1) % matches.length;
+    window.searchState.currentIndex = nextIndex;
+
+    const match = matches[nextIndex];
+    view.dispatch({
+      selection: { anchor: match.from, head: match.to },
+      scrollIntoView: true
+    });
+
+    return { count: matches.length, current: nextIndex + 1 };
+  };
+
+  // Go to previous match
+  window.findPrevious = function () {
+    const { matches, currentIndex } = window.searchState;
+    if (matches.length === 0) return { count: 0, current: 0 };
+
+    const prevIndex = (currentIndex - 1 + matches.length) % matches.length;
+    window.searchState.currentIndex = prevIndex;
+
+    const match = matches[prevIndex];
+    view.dispatch({
+      selection: { anchor: match.from, head: match.to },
+      scrollIntoView: true
+    });
+
+    return { count: matches.length, current: prevIndex + 1 };
+  };
+
+  // Replace current match
+  window.replaceInDocument = function (replaceText) {
+    const { matches, currentIndex, query } = window.searchState;
+    if (matches.length === 0 || currentIndex < 0) return { count: 0, current: 0 };
+
+    const match = matches[currentIndex];
+
+    // Replace the current selection
+    view.dispatch({
+      changes: { from: match.from, to: match.to, insert: replaceText }
+    });
+
+    // Re-search to update matches after replacement
+    setTimeout(() => {
+      window.searchInDocument(query, window.searchState.caseSensitive, window.searchState.wholeWord, window.searchState.useRegex);
+    }, 50);
+
+    return { count: matches.length - 1, current: Math.min(currentIndex + 1, matches.length - 1) };
+  };
+
+  // Replace all matches
+  window.replaceAllInDocument = function (replaceText) {
+    const { matches, query } = window.searchState;
+    if (matches.length === 0) return { replaced: 0 };
+
+    // Build changes array in reverse order to maintain correct positions
+    const changes = matches.map(m => ({
+      from: m.from,
+      to: m.to,
+      insert: replaceText
+    })).reverse();
+
+    view.dispatch({ changes });
+
+    const replacedCount = matches.length;
+    window.clearSearch();
+
+    console.log(`[Search] Replaced ${replacedCount} occurrences`);
+    return { replaced: replacedCount };
+  };
+
+  // Clear search highlights
+  window.clearSearch = function () {
+    window.searchState = {
+      query: '',
+      matches: [],
+      currentIndex: -1,
+      caseSensitive: false,
+      wholeWord: false,
+      useRegex: false
+    };
+    console.log('[Search] Cleared');
+  };
+
+  // Get current match count (for UI updates)
+  window.getMatchCount = function () {
+    return {
+      count: window.searchState.matches.length,
+      current: window.searchState.currentIndex + 1
+    };
+  };
+
+  // ========================================
+  // CM6 BUILT-IN SEARCH PANEL (More Reliable)
+  // ========================================
+
+  // Toggle CM6's built-in search panel
+  window.toggleSearchPanel = function () {
+    console.log('[Editor] Toggling CM6 search panel');
+    openSearchPanel(view);
+    return true;
+  };
+
+  window.openSearch = function () {
+    console.log('[Editor] Opening CM6 search panel');
+    openSearchPanel(view);
+    return true;
+  };
+
+  window.closeSearch = function () {
+    console.log('[Editor] Closing CM6 search panel');
+    closeSearchPanel(view);
+    return true;
   };
 
   // --- Helper to send requests ---
