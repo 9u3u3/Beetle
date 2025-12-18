@@ -87,7 +87,9 @@ fun InitialEditorUI(navController: NavController) {
     BackHandler {
         // Save content before navigating away
         currentSession?.saveContent()
-        navController.popBackStack()
+        navController.navigate(Screen.Home.route) {
+            popUpTo(Screen.Home.route) { inclusive = true }
+        }
     }
 
     // Pass LspViewModel and BufferViewModel to active session if it's an EditorSession

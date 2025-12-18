@@ -87,8 +87,15 @@ fun BottomBar(
         // Tab state
         var selectedTab by remember { mutableStateOf(BottomPanelTab.PROBLEMS) }
 
-        // Terminal sessions for bottom panel
-        val panelTerminals = remember { mutableStateListOf<TerminalSession>() }
+        // Get current editor session and use its linked terminals
+        val currentEditorSession = remember {
+                SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
+                        as? com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
+        }
+        
+        // Terminal sessions for bottom panel - use EditorSession's linked terminals if available
+        // This ensures terminals persist when navigating away and back
+        val panelTerminals = currentEditorSession?.linkedTerminals ?: remember { mutableStateListOf<TerminalSession>() }
         var activeTerminalIndex by remember { mutableIntStateOf(0) }
 
         // Coroutine scope for async terminal creation

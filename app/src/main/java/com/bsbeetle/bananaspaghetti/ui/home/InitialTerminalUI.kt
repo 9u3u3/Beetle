@@ -34,6 +34,7 @@ import com.bsbeetle.bananaspaghetti.ui.components.TopLeftTermBox
 import com.bsbeetle.bananaspaghetti.ui.components.TopRightBox
 import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
 import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboardHalf
+import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
@@ -59,7 +60,11 @@ fun InitialTerminalUI(navController: NavController) {
                 else -> KeyboardLayout.terminalLayout // Navigation
             }
 
-    BackHandler { navController.popBackStack() }
+    BackHandler {
+        navController.navigate(Screen.Home.route) {
+            popUpTo(Screen.Home.route) { inclusive = true }
+        }
+    }
 
     // Apply terminal font size when it changes
     val terminalSession = remember {

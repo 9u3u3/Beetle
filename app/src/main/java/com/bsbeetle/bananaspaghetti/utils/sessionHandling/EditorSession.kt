@@ -26,6 +26,10 @@ class EditorSession(context: Context, name: String = "Editor") :
 
     // Project root folder for the editor session
     var projectRoot: androidx.documentfile.provider.DocumentFile? = null
+    
+    // Terminal sessions linked to this editor session (bottom panel terminals)
+    // Using mutableStateListOf so Compose can observe changes
+    val linkedTerminals = androidx.compose.runtime.mutableStateListOf<TerminalSession>()
 
     // Track cursor position for backspace guard (updated by LSP-STATUS parsing)
     var cursorLine: Int = 1

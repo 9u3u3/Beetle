@@ -463,9 +463,37 @@ fun HomeScreen(navController: NavController) {
                                             }
                                     )
             )
+            
+            // Community/Telegram button
+            Image(
+                    painter = painterResource(R.drawable.groups),
+                    contentDescription = "Join Community",
+                    modifier =
+                            Modifier.size(20.dp)
+                                    .constrainAs(createRef()) {
+                                        top.linkTo(recents.bottom, margin = 60.dp)
+                                        end.linkTo(parent.end, margin = 20.dp)
+                                    }
+                                    .clickable(
+                                            onClick = {
+                                                val telegramIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/+1mcwtY2aNc1jMjdl"))
+                                                context.startActivity(telegramIntent)
+                                            }
+                                    )
+            )
+            
+            // Alpha version text - bottom left
+            Text(
+                    text = "Alpha version",
+                    color = Color(0xFF666666),
+                    fontSize = 10.sp,
+                    modifier = Modifier.constrainAs(createRef()) {
+                        bottom.linkTo(parent.bottom, margin = 16.dp)
+                        start.linkTo(parent.start, margin = 16.dp)
+                    }
+            )
         }
     }
 }
-
 
 // MainMenu component is now in MainMenu.kt

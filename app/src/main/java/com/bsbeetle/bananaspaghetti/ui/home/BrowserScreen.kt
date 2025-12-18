@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -51,7 +53,9 @@ fun BrowserScreen(navController: NavController) {
     Log.d("BrowserScreen", "Loading the Browser screen, Session type: ${SessionList.sessions[SessionList.activeSessionIndex!!].type}")
 
     BackHandler {
-        navController.popBackStack()
+        navController.navigate(Screen.Home.route) {
+            popUpTo(Screen.Home.route) { inclusive = true }
+        }
     }
 
     val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
@@ -74,8 +78,12 @@ fun BrowserScreen(navController: NavController) {
         else -> KeyboardLayout.terminalLayout // Navigation
     }
 
-    Box {
-        ConstraintLayout(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1B1B1B))) {
+        ConstraintLayout(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (!isLandscape) Modifier.padding(top = 40.dp) else Modifier)
+        ) {
 
             val (topLeft, topRight, leftBox, rightBox, leftKb, editor, rightKb) = createRefs()
 
