@@ -27,6 +27,8 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -65,372 +67,346 @@ private val DividerColor = Color(0xFF404040)
 
 @Composable
 fun SettingsScreen(navController: NavController) {
-    val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
-    val authViewModel = com.bsbeetle.bananaspaghetti.LocalAuthViewModel.current
-    val userEmail by authViewModel.userEmail.collectAsStateWithLifecycle()
-    var selectedCategory by remember { mutableStateOf<String?>(null) }
-    val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    
-    // Handle back navigation - in portrait mode, go back to list first if category is selected
-    BackHandler {
-        if (!isLandscape && selectedCategory != null) {
-            selectedCategory = null
+        val keyboardViewModel: KeyboardViewModel = LocalKeyboardViewModel.current
+        val authViewModel = com.bsbeetle.bananaspaghetti.LocalAuthViewModel.current
+        val userEmail by authViewModel.userEmail.collectAsStateWithLifecycle()
+        var selectedCategory by remember { mutableStateOf<String?>(null) }
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+        // Handle back navigation - in portrait mode, go back to list first if category is selected
+        BackHandler {
+                if (!isLandscape && selectedCategory != null) {
+                        selectedCategory = null
+                } else {
+                        navController.popBackStack()
+                }
+        }
+
+        if (isLandscape) {
+                // LANDSCAPE LAYOUT - Sidebar + Content
+                Row(modifier = Modifier.fillMaxSize().background(BackgroundDark)) {
+                        SettingsSidebar(
+                                selectedCategory = selectedCategory ?: "Keyboard",
+                                onCategorySelected = { selectedCategory = it },
+                                userEmail = userEmail,
+                                onBackClick = { navController.popBackStack() }
+                        )
+
+                        SettingsContent(
+                                selectedCategory = selectedCategory ?: "Keyboard",
+                                keyboardViewModel = keyboardViewModel
+                        )
+                }
         } else {
-            navController.popBackStack()
-        }
-    }
-    
-    if (isLandscape) {
-        // LANDSCAPE LAYOUT - Sidebar + Content
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(BackgroundDark)
-        ) {
-            SettingsSidebar(
-                selectedCategory = selectedCategory ?: "Keyboard",
-                onCategorySelected = { selectedCategory = it },
-                userEmail = userEmail,
-                onBackClick = { navController.popBackStack() }
-            )
-            
-            SettingsContent(
-                selectedCategory = selectedCategory ?: "Keyboard",
-                keyboardViewModel = keyboardViewModel
-            )
-        }
-    } else {
-        // PORTRAIT LAYOUT - Full screen list or content
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(BackgroundDark)
-        ) {
-            if (selectedCategory == null) {
-                // Category List View
-                // Header
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(SidebarDark)
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = { navController.popBackStack() },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = TextPrimary
-                        )
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "Settings",
-                        color = TextPrimary,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                // PORTRAIT LAYOUT - Full screen list or content
+                Column(modifier = Modifier.fillMaxSize().background(BackgroundDark)) {
+                        if (selectedCategory == null) {
+                                // Category List View
+                                // Header
+                                Row(
+                                        modifier =
+                                                Modifier.fillMaxWidth()
+                                                        .background(SidebarDark)
+                                                        .padding(
+                                                                horizontal = 16.dp,
+                                                                vertical = 12.dp
+                                                        ),
+                                        verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                        IconButton(
+                                                onClick = { navController.popBackStack() },
+                                                modifier = Modifier.size(32.dp)
+                                        ) {
+                                                Icon(
+                                                        imageVector =
+                                                                Icons.AutoMirrored.Filled.ArrowBack,
+                                                        contentDescription = "Back",
+                                                        tint = TextPrimary
+                                                )
+                                        }
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                                text = "Settings",
+                                                color = TextPrimary,
+                                                fontSize = 20.sp,
+                                                fontWeight = FontWeight.Bold
+                                        )
+                                }
+
+                                Column(
+                                        modifier =
+                                                Modifier.fillMaxSize()
+                                                        .verticalScroll(rememberScrollState())
+                                                        .padding(16.dp)
+                                ) {
+                                        // Profile Card
+                                        PortraitProfileCard(userEmail)
+
+                                        Spacer(Modifier.height(24.dp))
+
+                                        // Settings categories
+                                        val categories =
+                                                listOf(
+                                                        "Keyboard",
+                                                        "Appearance",
+                                                        "Editor",
+                                                        "Git",
+                                                        "General"
+                                                )
+                                        categories.forEach { name ->
+                                                PortraitSettingsItem(
+                                                        label = name,
+                                                        onClick = { selectedCategory = name }
+                                                )
+                                                Spacer(Modifier.height(8.dp))
+                                        }
+                                }
+                        } else {
+                                // Content View
+                                // Header with back button
+                                Row(
+                                        modifier =
+                                                Modifier.fillMaxWidth()
+                                                        .background(SidebarDark)
+                                                        .padding(
+                                                                horizontal = 16.dp,
+                                                                vertical = 12.dp
+                                                        ),
+                                        verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                        IconButton(
+                                                onClick = { selectedCategory = null },
+                                                modifier = Modifier.size(32.dp)
+                                        ) {
+                                                Icon(
+                                                        imageVector =
+                                                                Icons.AutoMirrored.Filled.ArrowBack,
+                                                        contentDescription = "Back",
+                                                        tint = TextPrimary
+                                                )
+                                        }
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                                text = selectedCategory!!,
+                                                color = TextPrimary,
+                                                fontSize = 20.sp,
+                                                fontWeight = FontWeight.Bold
+                                        )
+                                }
+
+                                SettingsContent(
+                                        selectedCategory = selectedCategory!!,
+                                        keyboardViewModel = keyboardViewModel
+                                )
+                        }
                 }
-                
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp)
-                ) {
-                    // Profile Card
-                    PortraitProfileCard(userEmail)
-                    
-                    Spacer(Modifier.height(24.dp))
-                    
-                    // Settings categories
-                    val categories = listOf("Keyboard", "Appearance", "Licenses")
-                    categories.forEach { name ->
-                        PortraitSettingsItem(
-                            label = name,
-                            onClick = { selectedCategory = name }
-                        )
-                        Spacer(Modifier.height(8.dp))
-                    }
-                }
-            } else {
-                // Content View
-                // Header with back button
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(SidebarDark)
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = { selectedCategory = null },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = TextPrimary
-                        )
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = selectedCategory!!,
-                        color = TextPrimary,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                
-                SettingsContent(
-                    selectedCategory = selectedCategory!!,
-                    keyboardViewModel = keyboardViewModel
-                )
-            }
         }
-    }
 }
 
 @Composable
 private fun PortraitProfileCard(userEmail: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CardDark)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(CircleShape)
-                .background(AccentBlue),
-            contentAlignment = Alignment.Center
+        Row(
+                modifier =
+                        Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(CardDark)
+                                .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.AccountCircle,
-                contentDescription = "Profile",
-                tint = TextPrimary,
-                modifier = Modifier.size(48.dp)
-            )
+                Box(
+                        modifier = Modifier.size(56.dp).clip(CircleShape).background(AccentBlue),
+                        contentAlignment = Alignment.Center
+                ) {
+                        Icon(
+                                imageVector = Icons.Default.AccountCircle,
+                                contentDescription = "Profile",
+                                tint = TextPrimary,
+                                modifier = Modifier.size(48.dp)
+                        )
+                }
+
+                Spacer(Modifier.width(16.dp))
+
+                Column {
+                        Text(
+                                text = if (userEmail.isNotBlank()) userEmail else "User",
+                                color = TextPrimary,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Medium
+                        )
+                        Text(text = "Local Account", color = TextSecondary, fontSize = 14.sp)
+                }
         }
-        
-        Spacer(Modifier.width(16.dp))
-        
-        Column {
-            Text(
-                text = if (userEmail.isNotBlank()) userEmail else "User",
-                color = TextPrimary,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = "Local Account",
-                color = TextSecondary,
-                fontSize = 14.sp
-            )
-        }
-    }
 }
 
 @Composable
-private fun PortraitSettingsItem(
-    label: String,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CardDark)
-            .clickable { onClick() }
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            color = TextPrimary,
-            fontSize = 16.sp
-        )
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = "Go",
-            tint = TextSecondary
-        )
-    }
+private fun PortraitSettingsItem(label: String, onClick: () -> Unit) {
+        Row(
+                modifier =
+                        Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(CardDark)
+                                .clickable { onClick() }
+                                .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+                Text(text = label, color = TextPrimary, fontSize = 16.sp)
+                Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = "Go",
+                        tint = TextSecondary
+                )
+        }
 }
 
 @Composable
 private fun SettingsSidebar(
-    selectedCategory: String,
-    onCategorySelected: (String) -> Unit,
-    userEmail: String,
-    onBackClick: () -> Unit = {}
+        selectedCategory: String,
+        onCategorySelected: (String) -> Unit,
+        userEmail: String,
+        onBackClick: () -> Unit = {}
 ) {
-    Column(
-        modifier = Modifier
-            .width(260.dp)
-            .fillMaxHeight()
-            .background(SidebarDark)
-            .padding(16.dp)
-    ) {
-        // Back button header for landscape
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+                modifier =
+                        Modifier.width(260.dp)
+                                .fillMaxHeight()
+                                .background(SidebarDark)
+                                .padding(16.dp)
         ) {
-            IconButton(
-                onClick = onBackClick,
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = TextPrimary
-                )
-            }
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = "Settings",
-                color = TextPrimary,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
+                // Back button header for landscape
+                Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                        IconButton(onClick = onBackClick, modifier = Modifier.size(32.dp)) {
+                                Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Back",
+                                        tint = TextPrimary
+                                )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                                text = "Settings",
+                                color = TextPrimary,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                        )
+                }
+
+                // Profile section
+                ProfileCard(userEmail)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Search bar
+                SearchBar()
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Navigation items
+                val categories = listOf("Keyboard", "Appearance", "Editor", "Git", "General")
+
+                categories.forEach { name ->
+                        SidebarItem(
+                                label = name,
+                                isSelected = selectedCategory == name,
+                                onClick = { onCategorySelected(name) }
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                }
         }
-        
-        // Profile section
-        ProfileCard(userEmail)
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Search bar
-        SearchBar()
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        // Navigation items
-        val categories = listOf("Keyboard", "Appearance", "Licenses")
-        
-        categories.forEach { name ->
-            SidebarItem(
-                label = name,
-                isSelected = selectedCategory == name,
-                onClick = { onCategorySelected(name) }
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-        }
-    }
 }
 
 @Composable
 private fun ProfileCard(userEmail: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CardDark)
-            .clickable { /* Profile action */ }
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .background(AccentBlue),
-            contentAlignment = Alignment.Center
+        Row(
+                modifier =
+                        Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(CardDark)
+                                .clickable { /* Profile action */}
+                                .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.AccountCircle,
-                contentDescription = "Profile",
-                tint = TextPrimary,
-                modifier = Modifier.size(40.dp)
-            )
+                Box(
+                        modifier = Modifier.size(48.dp).clip(CircleShape).background(AccentBlue),
+                        contentAlignment = Alignment.Center
+                ) {
+                        Icon(
+                                imageVector = Icons.Default.AccountCircle,
+                                contentDescription = "Profile",
+                                tint = TextPrimary,
+                                modifier = Modifier.size(40.dp)
+                        )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column {
+                        Text(
+                                text = if (userEmail.isNotBlank()) userEmail else "User",
+                                color = TextPrimary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium
+                        )
+                        Text(text = "Local Account", color = TextSecondary, fontSize = 12.sp)
+                }
         }
-        
-        Spacer(modifier = Modifier.width(12.dp))
-        
-        Column {
-            Text(
-                text = if (userEmail.isNotBlank()) userEmail else "User",
-                color = TextPrimary,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = "Local Account",
-                color = TextSecondary,
-                fontSize = 12.sp
-            )
-        }
-    }
 }
 
 @Composable
 private fun SearchBar() {
-    var searchText by remember { mutableStateOf("") }
-    
-    OutlinedTextField(
-        value = searchText,
-        onValueChange = { searchText = it },
-        placeholder = {
-            Text("Find a setting", color = TextSecondary, fontSize = 14.sp)
-        },
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = "Search",
-                tint = TextSecondary,
-                modifier = Modifier.size(20.dp)
-            )
-        },
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp),
-        shape = RoundedCornerShape(8.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            unfocusedContainerColor = CardDark,
-            focusedContainerColor = CardDark,
-            unfocusedBorderColor = Color.Transparent,
-            focusedBorderColor = AccentBlue,
-            cursorColor = AccentBlue
-        ),
-        singleLine = true
-    )
+        var searchText by remember { mutableStateOf("") }
+
+        OutlinedTextField(
+                value = searchText,
+                onValueChange = { searchText = it },
+                placeholder = { Text("Find a setting", color = TextSecondary, fontSize = 14.sp) },
+                leadingIcon = {
+                        Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(20.dp)
+                        )
+                },
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors =
+                        OutlinedTextFieldDefaults.colors(
+                                unfocusedContainerColor = CardDark,
+                                focusedContainerColor = CardDark,
+                                unfocusedBorderColor = Color.Transparent,
+                                focusedBorderColor = AccentBlue,
+                                cursorColor = AccentBlue
+                        ),
+                singleLine = true
+        )
 }
 
 @Composable
-private fun SidebarItem(
-    label: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val backgroundColor = if (isSelected) AccentBlue.copy(alpha = 0.15f) else Color.Transparent
-    
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(backgroundColor)
-            .clickable { onClick() }
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            color = if (isSelected) AccentBlue else TextPrimary,
-            fontSize = 14.sp,
-            fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
-        )
-    }
+private fun SidebarItem(label: String, isSelected: Boolean, onClick: () -> Unit) {
+        val backgroundColor = if (isSelected) AccentBlue.copy(alpha = 0.15f) else Color.Transparent
+
+        Row(
+                modifier =
+                        Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(backgroundColor)
+                                .clickable { onClick() }
+                                .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+        ) {
+                Text(
+                        text = label,
+                        color = if (isSelected) AccentBlue else TextPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
+                )
+        }
 }
 
 @Composable
@@ -487,108 +463,95 @@ private fun SettingsContent(
                 onEditorFontSizeChange = { keyboardViewModel.updateEditorFontSize(it) }
             )
             "Licenses" -> LicensesContent()
+            "Editor" -> EditorSettingsContent()
+            "Git" -> GitSettingsContent()
+            "General" -> GeneralSettingsContent()
         }
     }
 }
 
 @Composable
 private fun AppearanceSettingsContent(
-    terminalFontSize: Int,
-    editorFontSize: Int,
-    onTerminalFontSizeChange: (Int) -> Unit,
-    onEditorFontSizeChange: (Int) -> Unit
+        terminalFontSize: Int,
+        editorFontSize: Int,
+        onTerminalFontSizeChange: (Int) -> Unit,
+        onEditorFontSizeChange: (Int) -> Unit
 ) {
-    SettingsCard(title = "Font Size") {
-        // Terminal font size
-        FontSizeSliderRow(
-            title = "Terminal",
-            description = "Font size for terminal (xterm.js)",
-            value = terminalFontSize,
-            onValueChange = onTerminalFontSizeChange
-        )
-        
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(DividerColor)
-        )
-        
-        // Editor font size
-        FontSizeSliderRow(
-            title = "Editor",
-            description = "Font size for code editor (CodeMirror)",
-            value = editorFontSize,
-            onValueChange = onEditorFontSizeChange
-        )
-    }
+        SettingsCard(title = "Font Size") {
+                // Terminal font size
+                FontSizeSliderRow(
+                        title = "Terminal",
+                        description = "Font size for terminal (xterm.js)",
+                        value = terminalFontSize,
+                        onValueChange = onTerminalFontSizeChange
+                )
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+
+                // Editor font size
+                FontSizeSliderRow(
+                        title = "Editor",
+                        description = "Font size for code editor (CodeMirror)",
+                        value = editorFontSize,
+                        onValueChange = onEditorFontSizeChange
+                )
+        }
 }
 
 @Composable
 private fun FontSizeSliderRow(
-    title: String,
-    description: String,
-    value: Int,
-    onValueChange: (Int) -> Unit
+        title: String,
+        description: String,
+        value: Int,
+        onValueChange: (Int) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    color = TextPrimary,
-                    fontSize = 16.sp
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                                Text(text = title, color = TextPrimary, fontSize = 16.sp)
+                                Text(text = description, color = TextSecondary, fontSize = 13.sp)
+                        }
+                        Text(
+                                text = "${value}px",
+                                color = AccentBlue,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                        )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Slider(
+                        value = value.toFloat(),
+                        onValueChange = { onValueChange(it.toInt()) },
+                        valueRange = 8f..24f,
+                        steps = 15,
+                        colors =
+                                SliderDefaults.colors(
+                                        thumbColor = AccentBlue,
+                                        activeTrackColor = AccentBlue,
+                                        inactiveTrackColor = DividerColor
+                                )
                 )
-                Text(
-                    text = description,
-                    color = TextSecondary,
-                    fontSize = 13.sp
-                )
-            }
-            Text(
-                text = "${value}px",
-                color = AccentBlue,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
         }
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Slider(
-            value = value.toFloat(),
-            onValueChange = { onValueChange(it.toInt()) },
-            valueRange = 8f..24f,
-            steps = 15,
-            colors = SliderDefaults.colors(
-                thumbColor = AccentBlue,
-                activeTrackColor = AccentBlue,
-                inactiveTrackColor = DividerColor
-            )
-        )
-    }
 }
 
 @Composable
 private fun KeyboardSettingsContent(
-    isLeftVisible: Boolean,
-    isRightVisible: Boolean,
-    leftWidth: Float,
-    rightWidth: Float,
-    isLinked: Boolean,
-    leftPadding: Float = 0f,
-    leftHeight: Float = 0.5f,
-    rightHeight: Float = 0.5f,
-    isHeightLinked: Boolean = true,
-    useLandscapeIme: Boolean = false,
+        isLeftVisible: Boolean,
+        isRightVisible: Boolean,
+        leftWidth: Float,
+        rightWidth: Float,
+        isLinked: Boolean,
+        leftPadding: Float = 0f,
+        leftHeight: Float = 0.5f,
+        rightHeight: Float = 0.5f,
+        isHeightLinked: Boolean = true,
+        useLandscapeIme: Boolean = false,
     onLeftToggle: () -> Unit,
     onRightToggle: () -> Unit,
     onLeftWidthChange: (Float) -> Unit,
@@ -600,7 +563,7 @@ private fun KeyboardSettingsContent(
     onHeightLinkToggle: () -> Unit = {},
     onUseLandscapeImeToggle: () -> Unit = {}
 ) {
-    // Landscape IME Mode section (at the top)
+        // Landscape IME Mode section (at the top)
     SettingsCard(title = "Input Mode (Landscape)") {
         SettingRowWithCheckbox(
             title = "Use System Keyboard",
@@ -609,338 +572,298 @@ private fun KeyboardSettingsContent(
             onCheckedChange = { onUseLandscapeImeToggle() }
         )
     }
-    
+
     Spacer(modifier = Modifier.height(24.dp))
-    
+
     // Visibility section
-    SettingsCard(title = "Visibility") {
-        SettingRowWithCheckbox(
-            title = "Left Keyboard",
-            description = "Show the left split keyboard",
-            isChecked = isLeftVisible,
-            onCheckedChange = { onLeftToggle() }
-        )
-        
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(DividerColor)
-        )
-        
-        SettingRowWithCheckbox(
-            title = "Right Keyboard",
-            description = "Show the right split keyboard",
-            isChecked = isRightVisible,
-            onCheckedChange = { onRightToggle() }
-        )
-    }
-    
-    Spacer(modifier = Modifier.height(24.dp))
-    
-    // Size section
-    SettingsCard(title = "Keyboard Width") {
-        // Link sliders toggle
-        SettingRowWithCheckbox(
-            title = "Link Sliders",
-            description = "Adjust both keyboards together",
-            isChecked = isLinked,
-            onCheckedChange = { onLinkToggle() }
-        )
-        
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(DividerColor)
-        )
-        
-        // Left keyboard slider
-        SliderRow(
-            title = "Left Keyboard",
-            value = leftWidth,
-            onValueChange = onLeftWidthChange,
-            enabled = isLeftVisible
-        )
-        
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(DividerColor)
-        )
-        
-        // Right keyboard slider
-        SliderRow(
-            title = "Right Keyboard",
-            value = rightWidth,
-            onValueChange = onRightWidthChange,
-            enabled = isRightVisible
-        )
-    }
-    
-    Spacer(modifier = Modifier.height(24.dp))
-    
-    // Left Padding section (for camera avoidance)
-    SettingsCard(title = "Left Keyboard Padding") {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Camera Offset",
-                        color = if (isLeftVisible) TextPrimary else TextSecondary,
-                        fontSize = 16.sp
-                    )
-                    Text(
-                        text = "Add padding to avoid camera cutout",
-                        color = TextSecondary,
-                        fontSize = 13.sp
-                    )
-                }
-                Text(
-                    text = "${leftPadding.toInt()}dp",
-                    color = AccentBlue,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
+        SettingsCard(title = "Visibility") {
+                SettingRowWithCheckbox(
+                        title = "Left Keyboard",
+                        description = "Show the left split keyboard",
+                        isChecked = isLeftVisible,
+                        onCheckedChange = { onLeftToggle() }
                 )
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Slider(
-                value = leftPadding,
-                onValueChange = onLeftPaddingChange,
-                valueRange = 0f..50f,
-                enabled = isLeftVisible,
-                colors = SliderDefaults.colors(
-                    thumbColor = AccentBlue,
-                    activeTrackColor = AccentBlue,
-                    inactiveTrackColor = DividerColor,
-                    disabledThumbColor = TextSecondary,
-                    disabledActiveTrackColor = TextSecondary,
-                    disabledInactiveTrackColor = DividerColor
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+
+                SettingRowWithCheckbox(
+                        title = "Right Keyboard",
+                        description = "Show the right split keyboard",
+                        isChecked = isRightVisible,
+                        onCheckedChange = { onRightToggle() }
                 )
-            )
         }
-    }
-    
-    Spacer(modifier = Modifier.height(24.dp))
-    
-    // Keyboard Height section
-    SettingsCard(title = "Keyboard Height (Landscape)") {
-        // Link height sliders toggle
-        SettingRowWithCheckbox(
-            title = "Link Height Sliders",
-            description = "Adjust both keyboard heights together",
-            isChecked = isHeightLinked,
-            onCheckedChange = { onHeightLinkToggle() }
-        )
-        
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(DividerColor)
-        )
-        
-        // Left keyboard height slider
-        HeightSliderRow(
-            title = "Left Keyboard",
-            value = leftHeight,
-            onValueChange = onLeftHeightChange,
-            enabled = isLeftVisible
-        )
-        
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(DividerColor)
-        )
-        
-        // Right keyboard height slider
-        HeightSliderRow(
-            title = "Right Keyboard",
-            value = rightHeight,
-            onValueChange = onRightHeightChange,
-            enabled = isRightVisible
-        )
-    }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Size section
+        SettingsCard(title = "Keyboard Width") {
+                // Link sliders toggle
+                SettingRowWithCheckbox(
+                        title = "Link Sliders",
+                        description = "Adjust both keyboards together",
+                        isChecked = isLinked,
+                        onCheckedChange = { onLinkToggle() }
+                )
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+
+                // Left keyboard slider
+                SliderRow(
+                        title = "Left Keyboard",
+                        value = leftWidth,
+                        onValueChange = onLeftWidthChange,
+                        enabled = isLeftVisible
+                )
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+
+                // Right keyboard slider
+                SliderRow(
+                        title = "Right Keyboard",
+                        value = rightWidth,
+                        onValueChange = onRightWidthChange,
+                        enabled = isRightVisible
+                )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Left Padding section (for camera avoidance)
+        SettingsCard(title = "Left Keyboard Padding") {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                                text = "Camera Offset",
+                                                color =
+                                                        if (isLeftVisible) TextPrimary
+                                                        else TextSecondary,
+                                                fontSize = 16.sp
+                                        )
+                                        Text(
+                                                text = "Add padding to avoid camera cutout",
+                                                color = TextSecondary,
+                                                fontSize = 13.sp
+                                        )
+                                }
+                                Text(
+                                        text = "${leftPadding.toInt()}dp",
+                                        color = AccentBlue,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium
+                                )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Slider(
+                                value = leftPadding,
+                                onValueChange = onLeftPaddingChange,
+                                valueRange = 0f..50f,
+                                enabled = isLeftVisible,
+                                colors =
+                                        SliderDefaults.colors(
+                                                thumbColor = AccentBlue,
+                                                activeTrackColor = AccentBlue,
+                                                inactiveTrackColor = DividerColor,
+                                                disabledThumbColor = TextSecondary,
+                                                disabledActiveTrackColor = TextSecondary,
+                                                disabledInactiveTrackColor = DividerColor
+                                        )
+                        )
+                }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Keyboard Height section
+        SettingsCard(title = "Keyboard Height (Landscape)") {
+                // Link height sliders toggle
+                SettingRowWithCheckbox(
+                        title = "Link Height Sliders",
+                        description = "Adjust both keyboard heights together",
+                        isChecked = isHeightLinked,
+                        onCheckedChange = { onHeightLinkToggle() }
+                )
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+
+                // Left keyboard height slider
+                HeightSliderRow(
+                        title = "Left Keyboard",
+                        value = leftHeight,
+                        onValueChange = onLeftHeightChange,
+                        enabled = isLeftVisible
+                )
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+
+                // Right keyboard height slider
+                HeightSliderRow(
+                        title = "Right Keyboard",
+                        value = rightHeight,
+                        onValueChange = onRightHeightChange,
+                        enabled = isRightVisible
+                )
+        }
 }
 
 @Composable
 private fun HeightSliderRow(
-    title: String,
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    enabled: Boolean = true
+        title: String,
+        value: Float,
+        onValueChange: (Float) -> Unit,
+        enabled: Boolean = true
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = title,
-                color = if (enabled) TextPrimary else TextSecondary,
-                fontSize = 16.sp
-            )
-            Text(
-                text = "${(value * 100).toInt()}%",
-                color = AccentBlue,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                        Text(
+                                text = title,
+                                color = if (enabled) TextPrimary else TextSecondary,
+                                fontSize = 16.sp
+                        )
+                        Text(
+                                text = "${(value * 100).toInt()}%",
+                                color = AccentBlue,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                        )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Slider(
+                        value = value,
+                        onValueChange = onValueChange,
+                        valueRange = 0.3f..0.7f,
+                        enabled = enabled,
+                        colors =
+                                SliderDefaults.colors(
+                                        thumbColor = AccentBlue,
+                                        activeTrackColor = AccentBlue,
+                                        inactiveTrackColor = DividerColor,
+                                        disabledThumbColor = TextSecondary,
+                                        disabledActiveTrackColor = TextSecondary,
+                                        disabledInactiveTrackColor = DividerColor
+                                )
+                )
         }
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Slider(
-            value = value,
-            onValueChange = onValueChange,
-            valueRange = 0.3f..0.7f,
-            enabled = enabled,
-            colors = SliderDefaults.colors(
-                thumbColor = AccentBlue,
-                activeTrackColor = AccentBlue,
-                inactiveTrackColor = DividerColor,
-                disabledThumbColor = TextSecondary,
-                disabledActiveTrackColor = TextSecondary,
-                disabledInactiveTrackColor = DividerColor
-            )
-        )
-    }
 }
 
 @Composable
 private fun SliderRow(
-    title: String,
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    enabled: Boolean = true
+        title: String,
+        value: Float,
+        onValueChange: (Float) -> Unit,
+        enabled: Boolean = true
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = title,
-                color = if (enabled) TextPrimary else TextSecondary,
-                fontSize = 16.sp
-            )
-            Text(
-                text = "${(value * 100).toInt()}%",
-                color = AccentBlue,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                        Text(
+                                text = title,
+                                color = if (enabled) TextPrimary else TextSecondary,
+                                fontSize = 16.sp
+                        )
+                        Text(
+                                text = "${(value * 100).toInt()}%",
+                                color = AccentBlue,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                        )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Slider(
+                        value = value,
+                        onValueChange = onValueChange,
+                        valueRange = 0.0f..0.4f,
+                        enabled = enabled,
+                        colors =
+                                SliderDefaults.colors(
+                                        thumbColor = AccentBlue,
+                                        activeTrackColor = AccentBlue,
+                                        inactiveTrackColor = DividerColor,
+                                        disabledThumbColor = TextSecondary,
+                                        disabledActiveTrackColor = TextSecondary,
+                                        disabledInactiveTrackColor = DividerColor
+                                )
+                )
         }
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Slider(
-            value = value,
-            onValueChange = onValueChange,
-            valueRange = 0.0f..0.4f,
-            enabled = enabled,
-            colors = SliderDefaults.colors(
-                thumbColor = AccentBlue,
-                activeTrackColor = AccentBlue,
-                inactiveTrackColor = DividerColor,
-                disabledThumbColor = TextSecondary,
-                disabledActiveTrackColor = TextSecondary,
-                disabledInactiveTrackColor = DividerColor
-            )
-        )
-    }
 }
 
 @Composable
-private fun SettingsCard(
-    title: String,
-    content: @Composable () -> Unit
-) {
-    Column {
-        Text(
-            text = title,
-            color = TextSecondary,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
-        )
-        
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(CardDark)
-        ) {
-            content()
+private fun SettingsCard(title: String, content: @Composable () -> Unit) {
+        Column {
+                Text(
+                        text = title,
+                        color = TextSecondary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+                )
+
+                Column(
+                        modifier =
+                                Modifier.fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(CardDark)
+                ) { content() }
         }
-    }
 }
 
 @Composable
 private fun SettingRowWithCheckbox(
-    title: String,
-    description: String,
-    isChecked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+        title: String,
+        description: String,
+        isChecked: Boolean,
+        onCheckedChange: (Boolean) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onCheckedChange(!isChecked) }
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                color = TextPrimary,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Normal
-            )
-            
-            Spacer(modifier = Modifier.height(4.dp))
-            
-            Text(
-                text = description,
-                color = TextSecondary,
-                fontSize = 13.sp
-            )
+        Row(
+                modifier =
+                        Modifier.fillMaxWidth()
+                                .clickable { onCheckedChange(!isChecked) }
+                                .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+                Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                                text = title,
+                                color = TextPrimary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Normal
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(text = description, color = TextSecondary, fontSize = 13.sp)
+                }
+
+                Checkbox(
+                        checked = isChecked,
+                        onCheckedChange = onCheckedChange,
+                        colors =
+                                CheckboxDefaults.colors(
+                                        checkedColor = AccentBlue,
+                                        uncheckedColor = TextSecondary,
+                                        checkmarkColor = TextPrimary
+                                )
+                )
         }
-        
-        Checkbox(
-            checked = isChecked,
-            onCheckedChange = onCheckedChange,
-            colors = CheckboxDefaults.colors(
-                checkedColor = AccentBlue,
-                uncheckedColor = TextSecondary,
-                checkmarkColor = TextPrimary
-            )
-        )
-    }
 }
 
 @Composable
@@ -954,7 +877,7 @@ private fun LicensesContent() {
             fontSize = 14.sp,
             modifier = Modifier.padding(bottom = 16.dp)
         )
-        
+
         // PRoot - GPL License
         LicenseSection(
             libraryName = "PRoot",
@@ -979,9 +902,9 @@ private fun LicensesContent() {
                 Full license: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
             """.trimIndent()
         )
-        
+
         Spacer(Modifier.height(24.dp))
-        
+
         // CodeMirror - MIT License
         LicenseSection(
             libraryName = "CodeMirror",
@@ -1000,9 +923,9 @@ private fun LicensesContent() {
                 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             """.trimIndent()
         )
-        
+
         Spacer(Modifier.height(24.dp))
-        
+
         // xterm.js - MIT License
         LicenseSection(
             libraryName = "xterm.js",
@@ -1021,9 +944,9 @@ private fun LicensesContent() {
                 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             """.trimIndent()
         )
-        
+
         Spacer(Modifier.height(24.dp))
-        
+
         // Additional Libraries Summary
         Text(
             text = "Additional Libraries",
@@ -1032,7 +955,7 @@ private fun LicensesContent() {
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(bottom = 12.dp)
         )
-        
+
         AdditionalLibraryItem("JGit", "EDL (Eclipse Distribution License)")
         AdditionalLibraryItem("Ktor", "Apache License 2.0")
         AdditionalLibraryItem("NanoHTTPD", "BSD License")
@@ -1049,7 +972,7 @@ private fun LicenseSection(
     licenseText: String
 ) {
     var isExpanded by remember { mutableStateOf(false) }
-    
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1077,17 +1000,17 @@ private fun LicenseSection(
                 )
             }
         }
-        
+
         Spacer(Modifier.height(8.dp))
-        
+
         Text(
             text = description,
             color = TextSecondary,
             fontSize = 14.sp
         )
-        
+
         Spacer(Modifier.height(12.dp))
-        
+
         Text(
             text = "Source Code:",
             color = TextPrimary,
@@ -1100,9 +1023,9 @@ private fun LicenseSection(
             fontSize = 12.sp,
             modifier = Modifier.padding(top = 4.dp)
         )
-        
+
         Spacer(Modifier.height(12.dp))
-        
+
         // Expand/Collapse License Text
         Box(
             modifier = Modifier
@@ -1119,7 +1042,7 @@ private fun LicenseSection(
                 fontWeight = FontWeight.Medium
             )
         }
-        
+
         if (isExpanded) {
             Spacer(Modifier.height(12.dp))
             Text(
@@ -1152,4 +1075,686 @@ private fun AdditionalLibraryItem(name: String, license: String) {
             fontSize = 13.sp
         )
     }
+}
+
+@Composable
+private fun EditorSettingsContent() {
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val editorViewModel = com.bsbeetle.bananaspaghetti.LocalEditorViewModel.current
+        val prefs = remember {
+                com.bsbeetle.bananaspaghetti.utils.preferences.EditorPreferences(context)
+        }
+
+        var tabSize by remember { mutableStateOf(prefs.tabSize) }
+        var indentWithTabs by remember { mutableStateOf(prefs.indentWithTabs) }
+        var wordWrap by remember { mutableStateOf(prefs.wordWrap) }
+        var showLineNumbers by remember { mutableStateOf(prefs.lineNumbers) }
+        var highlightActiveLine by remember { mutableStateOf(prefs.highlightActiveLine) }
+        var bracketMatching by remember { mutableStateOf(prefs.bracketMatching) }
+        var autoCloseBrackets by remember { mutableStateOf(prefs.autoCloseBrackets) }
+        var showIndentGuides by remember { mutableStateOf(prefs.indentGuides) }
+        var scrollPastEnd by remember { mutableStateOf(prefs.scrollPastEnd) }
+        var cursorBlinkRate by remember { mutableStateOf(prefs.cursorBlinkRate) }
+        var showMinimap by remember { mutableStateOf(prefs.minimap) }
+        var autoSave by remember { mutableStateOf(prefs.autoSave) }
+        var autoSaveDelay by remember { mutableStateOf(prefs.autoSaveDelay) }
+        var selectedTheme by remember { mutableStateOf(prefs.theme) }
+        var themeDropdownExpanded by remember { mutableStateOf(false) }
+
+        // Theme Selection Card
+        SettingsCard(title = "Editor Theme") {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        Text("Color Theme", color = TextPrimary, fontSize = 16.sp)
+                        Text(
+                                "Choose the editor color scheme",
+                                color = TextSecondary,
+                                fontSize = 13.sp
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Theme Dropdown
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                        modifier =
+                                                Modifier.fillMaxWidth()
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .background(Color(0xFF3C3C3C))
+                                                        .clickable { themeDropdownExpanded = true }
+                                                        .padding(
+                                                                horizontal = 16.dp,
+                                                                vertical = 14.dp
+                                                        ),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                        Text(
+                                                prefs.getThemeDisplayName(selectedTheme),
+                                                color = TextPrimary,
+                                                fontSize = 14.sp
+                                        )
+                                        Icon(
+                                                imageVector =
+                                                        Icons.AutoMirrored.Filled
+                                                                .KeyboardArrowRight,
+                                                contentDescription = "Expand",
+                                                tint = TextSecondary,
+                                                modifier = Modifier.size(20.dp)
+                                        )
+                                }
+
+                                DropdownMenu(
+                                        expanded = themeDropdownExpanded,
+                                        onDismissRequest = { themeDropdownExpanded = false },
+                                        modifier = Modifier.background(Color(0xFF2D2D2D))
+                                ) {
+                                        prefs.availableThemes.forEach { (themeId, themeName) ->
+                                                DropdownMenuItem(
+                                                        text = {
+                                                                Row(
+                                                                        modifier =
+                                                                                Modifier.fillMaxWidth(),
+                                                                        horizontalArrangement =
+                                                                                Arrangement
+                                                                                        .SpaceBetween,
+                                                                        verticalAlignment =
+                                                                                Alignment
+                                                                                        .CenterVertically
+                                                                ) {
+                                                                        Text(
+                                                                                themeName,
+                                                                                color = TextPrimary
+                                                                        )
+                                                                        if (selectedTheme == themeId
+                                                                        ) {
+                                                                                Text(
+                                                                                        "✓",
+                                                                                        color =
+                                                                                                AccentBlue,
+                                                                                        fontWeight =
+                                                                                                FontWeight
+                                                                                                        .Bold
+                                                                                )
+                                                                        }
+                                                                }
+                                                        },
+                                                        onClick = {
+                                                                selectedTheme = themeId
+                                                                prefs.theme = themeId
+                                                                themeDropdownExpanded = false
+                                                                // Apply immediately
+                                                                editorViewModel.webView
+                                                                        ?.evaluateJavascript(
+                                                                                "if(window.setTheme) window.setTheme('$themeId');",
+                                                                                null
+                                                                        )
+                                                        }
+                                                )
+                                        }
+                                }
+                        }
+                }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        SettingsCard(title = "Indentation") {
+                // Tab Size
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                        Text("Tab Size", color = TextPrimary, fontSize = 16.sp)
+                                        Text(
+                                                "Number of spaces per indentation level",
+                                                color = TextSecondary,
+                                                fontSize = 13.sp
+                                        )
+                                }
+                                Text(
+                                        "$tabSize",
+                                        color = AccentBlue,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium
+                                )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Slider(
+                                value = tabSize.toFloat(),
+                                onValueChange = {
+                                        tabSize = it.toInt()
+                                        prefs.tabSize = tabSize
+                                        editorViewModel.webView?.evaluateJavascript(
+                                                "if(window.setTabSize) window.setTabSize($tabSize);",
+                                                null
+                                        )
+                                },
+                                valueRange = 2f..8f,
+                                steps = 5,
+                                colors =
+                                        SliderDefaults.colors(
+                                                thumbColor = AccentBlue,
+                                                activeTrackColor = AccentBlue,
+                                                inactiveTrackColor = DividerColor
+                                        )
+                        )
+                }
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+
+                SettingRowWithCheckbox(
+                        title = "Indent with Tabs",
+                        description = "Use tabs instead of spaces for indentation",
+                        isChecked = indentWithTabs,
+                        onCheckedChange = {
+                                indentWithTabs = it
+                                prefs.indentWithTabs = it
+                        }
+                )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        SettingsCard(title = "Display") {
+                SettingRowWithCheckbox(
+                        title = "Word Wrap",
+                        description = "Wrap long lines to fit the viewport",
+                        isChecked = wordWrap,
+                        onCheckedChange = {
+                                wordWrap = it
+                                prefs.wordWrap = it
+                                editorViewModel.webView?.evaluateJavascript(
+                                        "if(window.setWordWrap) window.setWordWrap($it);",
+                                        null
+                                )
+                        }
+                )
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+
+                SettingRowWithCheckbox(
+                        title = "Line Numbers",
+                        description = "Show line numbers in the gutter",
+                        isChecked = showLineNumbers,
+                        onCheckedChange = {
+                                showLineNumbers = it
+                                prefs.lineNumbers = it
+                                editorViewModel.webView?.evaluateJavascript(
+                                        "if(window.setLineNumbers) window.setLineNumbers($it);",
+                                        null
+                                )
+                        }
+                )
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+
+                SettingRowWithCheckbox(
+                        title = "Highlight Active Line",
+                        description = "Highlight the line containing the cursor",
+                        isChecked = highlightActiveLine,
+                        onCheckedChange = {
+                                highlightActiveLine = it
+                                prefs.highlightActiveLine = it
+                                editorViewModel.webView?.evaluateJavascript(
+                                        "if(window.setHighlightActiveLine) window.setHighlightActiveLine($it);",
+                                        null
+                                )
+                        }
+                )
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+
+                SettingRowWithCheckbox(
+                        title = "Indent Guides",
+                        description = "Show vertical lines at each indent level",
+                        isChecked = showIndentGuides,
+                        onCheckedChange = {
+                                showIndentGuides = it
+                                prefs.indentGuides = it
+                        }
+                )
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+
+                SettingRowWithCheckbox(
+                        title = "Minimap",
+                        description = "Show a small preview of the code on the right",
+                        isChecked = showMinimap,
+                        onCheckedChange = {
+                                showMinimap = it
+                                prefs.minimap = it
+                        }
+                )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        SettingsCard(title = "Editing") {
+                SettingRowWithCheckbox(
+                        title = "Bracket Matching",
+                        description = "Highlight matching brackets when cursor is near",
+                        isChecked = bracketMatching,
+                        onCheckedChange = {
+                                bracketMatching = it
+                                prefs.bracketMatching = it
+                                editorViewModel.webView?.evaluateJavascript(
+                                        "if(window.setBracketMatching) window.setBracketMatching($it);",
+                                        null
+                                )
+                        }
+                )
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+
+                SettingRowWithCheckbox(
+                        title = "Auto Close Brackets",
+                        description = "Automatically insert closing brackets and quotes",
+                        isChecked = autoCloseBrackets,
+                        onCheckedChange = {
+                                autoCloseBrackets = it
+                                prefs.autoCloseBrackets = it
+                                editorViewModel.webView?.evaluateJavascript(
+                                        "if(window.setCloseBrackets) window.setCloseBrackets($it);",
+                                        null
+                                )
+                        }
+                )
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+
+                SettingRowWithCheckbox(
+                        title = "Scroll Past End",
+                        description = "Allow scrolling beyond the last line",
+                        isChecked = scrollPastEnd,
+                        onCheckedChange = {
+                                scrollPastEnd = it
+                                prefs.scrollPastEnd = it
+                        }
+                )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        SettingsCard(title = "Cursor") {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                        Text("Blink Rate", color = TextPrimary, fontSize = 16.sp)
+                                        Text(
+                                                "Cursor blink interval in milliseconds",
+                                                color = TextSecondary,
+                                                fontSize = 13.sp
+                                        )
+                                }
+                                Text(
+                                        "${cursorBlinkRate}ms",
+                                        color = AccentBlue,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium
+                                )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Slider(
+                                value = cursorBlinkRate.toFloat(),
+                                onValueChange = {
+                                        cursorBlinkRate = it.toInt()
+                                        prefs.cursorBlinkRate = cursorBlinkRate
+                                },
+                                valueRange = 0f..1000f,
+                                steps = 9,
+                                colors =
+                                        SliderDefaults.colors(
+                                                thumbColor = AccentBlue,
+                                                activeTrackColor = AccentBlue,
+                                                inactiveTrackColor = DividerColor
+                                        )
+                        )
+                        Text(
+                                "Set to 0 to disable cursor blink",
+                                color = TextSecondary,
+                                fontSize = 11.sp
+                        )
+                }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        SettingsCard(title = "Auto Save") {
+                SettingRowWithCheckbox(
+                        title = "Enable Auto Save",
+                        description = "Automatically save files after changes",
+                        isChecked = autoSave,
+                        onCheckedChange = {
+                                autoSave = it
+                                prefs.autoSave = it
+                        }
+                )
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                                "Auto Save Delay",
+                                                color =
+                                                        if (autoSave) TextPrimary
+                                                        else TextSecondary,
+                                                fontSize = 16.sp
+                                        )
+                                        Text(
+                                                "Seconds to wait after last keystroke",
+                                                color = TextSecondary,
+                                                fontSize = 13.sp
+                                        )
+                                }
+                                Text(
+                                        "${autoSaveDelay}s",
+                                        color = AccentBlue,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium
+                                )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Slider(
+                                value = autoSaveDelay.toFloat(),
+                                onValueChange = {
+                                        autoSaveDelay = it.toInt()
+                                        prefs.autoSaveDelay = autoSaveDelay
+                                },
+                                valueRange = 1f..30f,
+                                steps = 28,
+                                enabled = autoSave,
+                                colors =
+                                        SliderDefaults.colors(
+                                                thumbColor = AccentBlue,
+                                                activeTrackColor = AccentBlue,
+                                                inactiveTrackColor = DividerColor,
+                                                disabledThumbColor = TextSecondary,
+                                                disabledActiveTrackColor = TextSecondary,
+                                                disabledInactiveTrackColor = DividerColor
+                                        )
+                        )
+                }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+                "Note: These settings will be applied to the editor in a future update.",
+                color = TextSecondary,
+                fontSize = 12.sp
+        )
+}
+
+@Composable
+private fun GitSettingsContent() {
+        val context = androidx.compose.ui.platform.LocalContext.current
+        var userName by remember { mutableStateOf("") }
+        var userEmail by remember { mutableStateOf("") }
+        var showPublicKey by remember { mutableStateOf(false) }
+        var publicKey by remember { mutableStateOf("") }
+
+        // Load public key
+        androidx.compose.runtime.LaunchedEffect(showPublicKey) {
+                if (showPublicKey) {
+                        try {
+                                val alpinePath =
+                                        "${context.filesDir.absolutePath}/alpine/home/.ssh/id_ed25519.pub"
+                                val file = java.io.File(alpinePath)
+                                publicKey =
+                                        if (file.exists()) file.readText() else "No SSH key found"
+                        } catch (e: Exception) {
+                                publicKey = "Error reading key: ${e.message}"
+                        }
+                }
+        }
+
+        SettingsCard(title = "Git User Configuration") {
+                // User Name
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        Text("User Name", color = TextPrimary, fontSize = 16.sp)
+                        Text("Used for commit author name", color = TextSecondary, fontSize = 13.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                                value = userName,
+                                onValueChange = { userName = it },
+                                placeholder = { Text("Your Name", color = TextSecondary) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp),
+                                colors =
+                                        OutlinedTextFieldDefaults.colors(
+                                                unfocusedContainerColor = CardDark,
+                                                focusedContainerColor = CardDark,
+                                                unfocusedBorderColor = DividerColor,
+                                                focusedBorderColor = AccentBlue,
+                                                cursorColor = AccentBlue,
+                                                focusedTextColor = TextPrimary,
+                                                unfocusedTextColor = TextPrimary
+                                        ),
+                                singleLine = true
+                        )
+                }
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+
+                // User Email
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        Text("User Email", color = TextPrimary, fontSize = 16.sp)
+                        Text(
+                                "Used for commit author email",
+                                color = TextSecondary,
+                                fontSize = 13.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                                value = userEmail,
+                                onValueChange = { userEmail = it },
+                                placeholder = { Text("you@example.com", color = TextSecondary) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp),
+                                colors =
+                                        OutlinedTextFieldDefaults.colors(
+                                                unfocusedContainerColor = CardDark,
+                                                focusedContainerColor = CardDark,
+                                                unfocusedBorderColor = DividerColor,
+                                                focusedBorderColor = AccentBlue,
+                                                cursorColor = AccentBlue,
+                                                focusedTextColor = TextPrimary,
+                                                unfocusedTextColor = TextPrimary
+                                        ),
+                                singleLine = true
+                        )
+                }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        SettingsCard(title = "SSH Key") {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                                "View Public Key",
+                                                color = TextPrimary,
+                                                fontSize = 16.sp
+                                        )
+                                        Text(
+                                                "Copy to add to GitHub/GitLab",
+                                                color = TextSecondary,
+                                                fontSize = 13.sp
+                                        )
+                                }
+                                Box(
+                                        modifier =
+                                                Modifier.clip(RoundedCornerShape(8.dp))
+                                                        .background(AccentBlue)
+                                                        .clickable {
+                                                                showPublicKey = !showPublicKey
+                                                        }
+                                                        .padding(
+                                                                horizontal = 16.dp,
+                                                                vertical = 8.dp
+                                                        )
+                                ) {
+                                        Text(
+                                                if (showPublicKey) "Hide" else "Show",
+                                                color = TextPrimary,
+                                                fontSize = 14.sp
+                                        )
+                                }
+                        }
+
+                        if (showPublicKey) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                        publicKey,
+                                        color = TextSecondary,
+                                        fontSize = 11.sp,
+                                        modifier =
+                                                Modifier.fillMaxWidth()
+                                                        .background(
+                                                                Color(0xFF1E1E1E),
+                                                                RoundedCornerShape(4.dp)
+                                                        )
+                                                        .padding(8.dp)
+                                )
+                        }
+                }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+                "Note: Git user config will be applied when saved in a future update.",
+                color = TextSecondary,
+                fontSize = 12.sp
+        )
+}
+
+@Composable
+private fun GeneralSettingsContent() {
+        val context = androidx.compose.ui.platform.LocalContext.current
+        var showClearCacheConfirm by remember { mutableStateOf(false) }
+
+        SettingsCard(title = "About") {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                                Text("App Name", color = TextPrimary, fontSize = 16.sp)
+                                Text("BananaSpaghetti", color = TextSecondary, fontSize = 16.sp)
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                                Text("Version", color = TextPrimary, fontSize = 16.sp)
+                                Text("1.0.0", color = TextSecondary, fontSize = 16.sp)
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                                Text("Package", color = TextPrimary, fontSize = 16.sp)
+                                Text(
+                                        "com.bsbeetle.bananaspaghetti",
+                                        color = TextSecondary,
+                                        fontSize = 12.sp
+                                )
+                        }
+                }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        SettingsCard(title = "Storage") {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                        Text("Clear Cache", color = TextPrimary, fontSize = 16.sp)
+                                        Text(
+                                                "Remove temporary files and cached data",
+                                                color = TextSecondary,
+                                                fontSize = 13.sp
+                                        )
+                                }
+                                Box(
+                                        modifier =
+                                                Modifier.clip(RoundedCornerShape(8.dp))
+                                                        .background(Color(0xFFDC3545))
+                                                        .clickable { showClearCacheConfirm = true }
+                                                        .padding(
+                                                                horizontal = 16.dp,
+                                                                vertical = 8.dp
+                                                        )
+                                ) { Text("Clear", color = TextPrimary, fontSize = 14.sp) }
+                        }
+                }
+        }
+
+        if (showClearCacheConfirm) {
+                androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { showClearCacheConfirm = false },
+                        title = { Text("Clear Cache", color = TextPrimary) },
+                        text = {
+                                Text(
+                                        "This will clear all cached data. Continue?",
+                                        color = TextSecondary
+                                )
+                        },
+                        confirmButton = {
+                                androidx.compose.material3.TextButton(
+                                        onClick = {
+                                                try {
+                                                        context.cacheDir.deleteRecursively()
+                                                        android.widget.Toast.makeText(
+                                                                        context,
+                                                                        "Cache cleared",
+                                                                        android.widget.Toast
+                                                                                .LENGTH_SHORT
+                                                                )
+                                                                .show()
+                                                } catch (e: Exception) {
+                                                        android.widget.Toast.makeText(
+                                                                        context,
+                                                                        "Error: ${e.message}",
+                                                                        android.widget.Toast
+                                                                                .LENGTH_SHORT
+                                                                )
+                                                                .show()
+                                                }
+                                                showClearCacheConfirm = false
+                                        }
+                                ) { Text("Clear", color = Color(0xFFDC3545)) }
+                        },
+                        dismissButton = {
+                                androidx.compose.material3.TextButton(
+                                        onClick = { showClearCacheConfirm = false }
+                                ) { Text("Cancel", color = TextSecondary) }
+                        },
+                        containerColor = CardDark
+                )
+        }
 }

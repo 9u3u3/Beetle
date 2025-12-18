@@ -9,10 +9,10 @@ import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import com.bsbeetle.bananaspaghetti.services.TerminalService
 import com.bsbeetle.bananaspaghetti.tenebrio.pty.Tenebrio
 import com.bsbeetle.bananaspaghetti.utils.AppConfig
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
-import com.bsbeetle.bananaspaghetti.services.TerminalService
 import java.io.FileOutputStream
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
@@ -72,13 +72,19 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
                                                 "TerminalSession",
                                                 "Creating symlink: $symlinkPath -> $dir"
                                         )
-                                        // Export HOME=/home so that /home/project shows as ~/project
+                                        // Export HOME=/home so that /home/project shows as
+                                        // ~/project
                                         insertText(
                                                 "rm -f \"$symlinkPath\" 2>/dev/null; ln -sf \"$dir\" \"$symlinkPath\" && export HOME=/home && cd \"$symlinkPath\" && clear\n"
                                         )
                                         null // Already handled
                                     }
-                                    // Alpine internal storage (e.g.,
+                                    // Alpine internal storage - exact home directory
+                                    // (e.g., /data/user/0/.../alpine/home)
+                                    dir.endsWith("/alpine/home") -> {
+                                        "/home"
+                                    }
+                                    // Alpine internal storage with subpath (e.g.,
                                     // /data/user/0/.../alpine/home/Test)
                                     dir.contains("/alpine/home/") -> {
                                         // Extract the path after "alpine/home/" to get the relative
@@ -258,4 +264,3 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
         writeToTerminal(text.toByteArray())
     }
 }
-

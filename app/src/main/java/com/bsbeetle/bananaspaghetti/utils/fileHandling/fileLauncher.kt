@@ -50,6 +50,9 @@ fun fileLauncher(context: Context, navController: NavController): ActivityResult
                                                 )
 
                                                 fileViewModel.selectedUri = uri
+                                                // Clear folder selection when opening a single file
+                                                // so sidebar shows "No folder selected"
+                                                fileViewModel.selectedFolderUri = null
 
                                                 // Adding to the newly created session here
                                                 EditorSession(context.applicationContext)
