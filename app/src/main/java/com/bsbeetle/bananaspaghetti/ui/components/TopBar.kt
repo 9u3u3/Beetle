@@ -45,6 +45,7 @@ import com.bsbeetle.bananaspaghetti.LocalFileViewModel
 import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.readFromFile
+import com.bsbeetle.bananaspaghetti.utils.fileHandling.saveFile
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.BrowserSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
@@ -544,18 +545,17 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
         val context = LocalContext.current
         val browserViewModel = LocalBrowserViewModel.current
         val fileViewModel = LocalFileViewModel.current
-
-        // State for live server
-        var isServerRunning by remember {
-                mutableStateOf(
-                        com.bsbeetle.bananaspaghetti.liveserver.LiveServerManager.isRunning()
-                )
-        }
+        val bufferViewModel = LocalBufferViewModel.current
 
         // Helper to save content before navigation
         val currentEditorSession =
                 SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as?
                         EditorSession
+
+        // Package install dialog state
+        var showPackageDialog by remember { mutableStateOf(false) }
+        var missingPackage by remember { mutableStateOf("") }
+        var pendingFilePath by remember { mutableStateOf<String?>(null) }
 
         Box(
                 modifier =
@@ -587,238 +587,312 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
                                 color = Color(0xFF3E3E42)
                         )
 
-                        // Play button - Live Server
+                        // Play button - Unified Code Runner
                         TopBarIconButton(
                                 icon = R.drawable.play_arrow,
                                 onClick = {
-                                        currentEditorSession?.saveContent()
+                                        android.util.Log.d("CodeRunner", "Play button clicked")
+
+                                        // Get active editor session dynamically (not cached)
+                                        val activeEditorSession =
+                                                SessionList.sessions.getOrNull(
+                                                        SessionList.activeSessionIndex ?: -1
+                                                ) as?
+                                                        EditorSession
+
+                                        // Save file to disk before running (not just memory)
+                                        saveFile(fileViewModel, bufferViewModel, context)
 
                                         // Get current file info
                                         val currentFileUri = fileViewModel.selectedUri
-                                        val currentFilePath =
-                                                currentFileUri?.let { uri ->
-                                                        com.bsbeetle.bananaspaghetti.liveserver
-                                                                .LiveServerManager.getPathFromUri(
-                                                                context,
-                                                                uri
-                                                        )
-                                                }
-
-                                        // Get file name from path
-                                        val currentFileName =
-                                                currentFilePath?.substringAfterLast("/")
-
-                                        // Get parent directory of current file
-                                        val fileParentDir =
-                                                currentFilePath?.substringBeforeLast("/")
-
-                                        // Get project root - try multiple methods
-                                        val projectRoot = run {
-                                                // Method 1: Use the open folder from sidebar
-                                                fileViewModel.selectedFolderUri?.let { folderUri ->
-                                                        com.bsbeetle.bananaspaghetti.liveserver
-                                                                .LiveServerManager.getPathFromUri(
-                                                                context,
-                                                                folderUri
-                                                        )
-                                                }
-                                                // Method 2: Editor session project root
-                                                ?: currentEditorSession?.projectRoot?.uri?.let { uri
-                                                                ->
-                                                                com.bsbeetle.bananaspaghetti
-                                                                        .liveserver
-                                                                        .LiveServerManager
-                                                                        .getPathFromUri(
-                                                                                context,
-                                                                                uri
-                                                                        )
-                                                        }
-                                                        // Method 3: Use parent directory of current
-                                                        // file
-                                                        ?: fileParentDir
-                                        }
-
-                                        if (projectRoot == null) {
+                                        if (currentFileUri == null) {
                                                 android.widget.Toast.makeText(
                                                                 context,
-                                                                "Could not find file location",
+                                                                "No file selected",
+                                                                android.widget.Toast.LENGTH_SHORT
+                                                        )
+                                                        .show()
+                                                android.util.Log.d("CodeRunner", "No file selected")
+                                                return@TopBarIconButton
+                                        }
+
+                                        // Convert URI to file path
+                                        val currentFilePath =
+                                                getPathFromUri(context, currentFileUri)
+                                        if (currentFilePath == null) {
+                                                android.widget.Toast.makeText(
+                                                                context,
+                                                                "Could not resolve file path",
                                                                 android.widget.Toast.LENGTH_LONG
+                                                        )
+                                                        .show()
+                                                android.util.Log.e(
+                                                        "CodeRunner",
+                                                        "Could not resolve path for: $currentFileUri"
+                                                )
+                                                return@TopBarIconButton
+                                        }
+
+                                        android.util.Log.d(
+                                                "CodeRunner",
+                                                "Running file: $currentFilePath"
+                                        )
+
+                                        // Get file extension
+                                        val fileName = currentFilePath.substringAfterLast("/")
+                                        val extension = fileName.substringAfterLast(".").lowercase()
+                                        android.util.Log.d("CodeRunner", "Extension: $extension")
+
+                                        if (activeEditorSession == null) {
+                                                android.widget.Toast.makeText(
+                                                                context,
+                                                                "No active editor session",
+                                                                android.widget.Toast.LENGTH_SHORT
                                                         )
                                                         .show()
                                                 return@TopBarIconButton
                                         }
 
-                                        // Find actual project root by searching upward for
-                                        // package.json or index.html
-                                        val actualProjectRoot =
-                                                com.bsbeetle.bananaspaghetti.liveserver
-                                                        .LiveServerManager.findProjectRoot(
-                                                        projectRoot
+                                        // Get or create runner terminal (returns Pair with wasNew
+                                        // flag)
+                                        val (runnerTerminal, wasNew) =
+                                                activeEditorSession.getOrCreateRunnerTerminal(
+                                                        context
                                                 )
+                                        val isRerun = !wasNew
 
-                                        // Determine entry file - use current file if it's HTML,
-                                        // otherwise null
-                                        val entryFile =
-                                                if (currentFileName?.endsWith(".html", true) ==
-                                                                true ||
-                                                                currentFileName?.endsWith(
-                                                                        ".htm",
-                                                                        true
-                                                                ) == true
-                                                ) {
-                                                        currentFileName
-                                                } else {
-                                                        null // Will use index.html
-                                                }
-
-                                        // Start live server
-                                        val result =
-                                                com.bsbeetle.bananaspaghetti.liveserver
-                                                        .LiveServerManager.startServer(
+                                        // Show toast
+                                        android.widget.Toast.makeText(
                                                         context,
-                                                        actualProjectRoot,
-                                                        entryFile
+                                                        "Running $fileName...",
+                                                        android.widget.Toast.LENGTH_SHORT
                                                 )
+                                                .show()
 
-                                        if (result.success) {
-                                                isServerRunning = true
+                                        // First run needs longer delay for terminal to init; rerun
+                                        // is quick
+                                        val initDelay = if (isRerun) 100L else 1500L
 
-                                                // For React projects, automatically run the dev
-                                                // server
-                                                if (result.reactDevPort != null) {
-                                                        val devPort = result.reactDevPort
-                                                        val devCommand =
-                                                                if (devPort == 5173) "npm run dev"
-                                                                else "npm start"
-
-                                                        // Show starting message
-                                                        android.widget.Toast.makeText(
-                                                                        context,
-                                                                        "Starting dev server...",
-                                                                        android.widget.Toast
-                                                                                .LENGTH_SHORT
-                                                                )
-                                                                .show()
-
-                                                        // Create a terminal session in the project
-                                                        // directory
-                                                        val termSession =
-                                                                com.bsbeetle.bananaspaghetti.utils
-                                                                        .sessionHandling
-                                                                        .TerminalSession(
-                                                                                context,
-                                                                                "Dev Server",
-                                                                                actualProjectRoot
-                                                                        )
-                                                        termSession.createView()
-
-                                                        // Wait a bit for terminal to initialize,
-                                                        // then run npm command
-                                                        android.os.Handler(
-                                                                        android.os.Looper
-                                                                                .getMainLooper()
-                                                                )
-                                                                .postDelayed(
-                                                                        {
-                                                                                // Send cd command
-                                                                                // first (in case
-                                                                                // initialDir didn't
-                                                                                // work)
-                                                                                termSession
-                                                                                        .insertText(
-                                                                                                "cd \"$actualProjectRoot\" && $devCommand\n"
+                                        // Wait for terminal to initialize (or short delay for
+                                        // rerun)
+                                        android.os.Handler(android.os.Looper.getMainLooper())
+                                                .postDelayed(
+                                                        {
+                                                                // Set up output listener to detect
+                                                                // missing packages
+                                                                runnerTerminal.onOutput =
+                                                                        { output ->
+                                                                                if (output.contains(
+                                                                                                "MISSING_PKG:"
                                                                                         )
-
-                                                                                // Wait for server
-                                                                                // to start, then
-                                                                                // open browser
-                                                                                android.os.Handler(
-                                                                                                android.os
-                                                                                                        .Looper
-                                                                                                        .getMainLooper()
-                                                                                        )
-                                                                                        .postDelayed(
-                                                                                                {
-                                                                                                        android.widget
-                                                                                                                .Toast
-                                                                                                                .makeText(
-                                                                                                                        context,
-                                                                                                                        "Dev server started! Opening browser...",
-                                                                                                                        android.widget
-                                                                                                                                .Toast
-                                                                                                                                .LENGTH_SHORT
-                                                                                                                )
-                                                                                                                .show()
-
-                                                                                                        // Open browser to dev server
-                                                                                                        val urlToOpen =
-                                                                                                                "http://localhost:$devPort"
-                                                                                                        BrowserSession(
-                                                                                                                context
+                                                                                ) {
+                                                                                        val pkg =
+                                                                                                output.substringAfter(
+                                                                                                                "MISSING_PKG:"
                                                                                                         )
-                                                                                                        browserViewModel
-                                                                                                                .setDevWebView(
-                                                                                                                        SessionList
-                                                                                                                                        .sessions[
-                                                                                                                                        SessionList
-                                                                                                                                                .activeSessionIndex!!]
-                                                                                                                                .view!!
+                                                                                                        .substringBefore(
+                                                                                                                "\n"
+                                                                                                        )
+                                                                                                        .trim()
+                                                                                        android.util
+                                                                                                .Log
+                                                                                                .d(
+                                                                                                        "CodeRunner",
+                                                                                                        "Missing package detected: $pkg"
+                                                                                                )
+                                                                                        if (pkg.isNotEmpty()
+                                                                                        ) {
+                                                                                                android.os
+                                                                                                        .Handler(
+                                                                                                                android.os
+                                                                                                                        .Looper
+                                                                                                                        .getMainLooper()
+                                                                                                        )
+                                                                                                        .post {
+                                                                                                                missingPackage =
+                                                                                                                        pkg
+                                                                                                                pendingFilePath =
+                                                                                                                        currentFilePath
+                                                                                                                showPackageDialog =
+                                                                                                                        true
+                                                                                                        }
+                                                                                        }
+                                                                                }
+                                                                        }
+
+                                                                // For reruns: send multiple Ctrl+C
+                                                                // to ensure process is killed
+                                                                // and reset terminal state
+                                                                if (isRerun) {
+                                                                        // Send Ctrl+C 3 times with
+                                                                        // newlines to ensure we
+                                                                        // break out of any state
+                                                                        runnerTerminal.insertText(
+                                                                                "\u0003\n\u0003\n\u0003\n"
+                                                                        )
+                                                                }
+
+                                                                // Delay then send command
+                                                                val cmdDelay =
+                                                                        if (isRerun) 500L else 100L
+                                                                android.os.Handler(
+                                                                                android.os.Looper
+                                                                                        .getMainLooper()
+                                                                        )
+                                                                        .postDelayed(
+                                                                                {
+                                                                                        // For
+                                                                                        // rerun,
+                                                                                        // reset
+                                                                                        // terminal
+                                                                                        // state
+                                                                                        // first
+                                                                                        val command =
+                                                                                                if (isRerun
+                                                                                                ) {
+                                                                                                        "stty sane; clear; bash \$PREFIX/code-runner.sh \"$currentFilePath\"\n"
+                                                                                                } else {
+                                                                                                        "clear; bash \$PREFIX/code-runner.sh \"$currentFilePath\"\n"
+                                                                                                }
+                                                                                        runnerTerminal
+                                                                                                .insertText(
+                                                                                                        command
+                                                                                                )
+                                                                                },
+                                                                                cmdDelay
+                                                                        )
+
+                                                                // For web files (html, jsx, tsx),
+                                                                // open browser after delay
+                                                                val webExtensions =
+                                                                        setOf(
+                                                                                "html",
+                                                                                "htm",
+                                                                                "jsx",
+                                                                                "tsx"
+                                                                        )
+                                                                if (extension in webExtensions) {
+                                                                        android.os.Handler(
+                                                                                        android.os
+                                                                                                .Looper
+                                                                                                .getMainLooper()
+                                                                                )
+                                                                                .postDelayed(
+                                                                                        {
+                                                                                                // Detect if HTML is in a React/Vite project by checking for package.json
+                                                                                                val port =
+                                                                                                        if (extension in
+                                                                                                                        setOf(
+                                                                                                                                "jsx",
+                                                                                                                                "tsx"
+                                                                                                                        )
+                                                                                                        ) {
+                                                                                                                // JSX/TSX always use dev server
+                                                                                                                5173
+                                                                                                        } else {
+                                                                                                                // For HTML, check if it's in a React/Vite project
+                                                                                                                val fileDir =
+                                                                                                                        java.io
+                                                                                                                                .File(
+                                                                                                                                        currentFilePath
+                                                                                                                                )
+                                                                                                                                .parentFile
+                                                                                                                var checkDir =
+                                                                                                                        fileDir
+                                                                                                                var isReactProject =
+                                                                                                                        false
+
+                                                                                                                // Look up to 5 directories for package.json
+                                                                                                                repeat(
+                                                                                                                        5
+                                                                                                                ) {
+                                                                                                                        if (checkDir !=
+                                                                                                                                        null
+                                                                                                                        ) {
+                                                                                                                                val pkgJson =
+                                                                                                                                        java.io
+                                                                                                                                                .File(
+                                                                                                                                                        checkDir,
+                                                                                                                                                        "package.json"
+                                                                                                                                                )
+                                                                                                                                if (pkgJson.exists()
+                                                                                                                                ) {
+                                                                                                                                        val content =
+                                                                                                                                                try {
+                                                                                                                                                        pkgJson.readText()
+                                                                                                                                                } catch (
+                                                                                                                                                        e:
+                                                                                                                                                                Exception) {
+                                                                                                                                                        ""
+                                                                                                                                                }
+                                                                                                                                        if (content.contains(
+                                                                                                                                                        "\"react\""
+                                                                                                                                                ) ||
+                                                                                                                                                        content.contains(
+                                                                                                                                                                "\"vite\""
+                                                                                                                                                        ) ||
+                                                                                                                                                        content.contains(
+                                                                                                                                                                "\"next\""
+                                                                                                                                                        )
+                                                                                                                                        ) {
+                                                                                                                                                isReactProject =
+                                                                                                                                                        true
+                                                                                                                                                android.util
+                                                                                                                                                        .Log
+                                                                                                                                                        .d(
+                                                                                                                                                                "CodeRunner",
+                                                                                                                                                                "Detected React project for browser"
+                                                                                                                                                        )
+                                                                                                                                        }
+                                                                                                                                }
+                                                                                                                                checkDir =
+                                                                                                                                        checkDir.parentFile
+                                                                                                                        }
+                                                                                                                }
+
+                                                                                                                if (isReactProject
                                                                                                                 )
-                                                                                                        browserViewModel
-                                                                                                                .loadUrl(
-                                                                                                                        urlToOpen
-                                                                                                                )
-                                                                                                        navController
-                                                                                                                .navigate(
-                                                                                                                        Screen.Browser
-                                                                                                                                .route
-                                                                                                                )
-                                                                                                },
-                                                                                                5000
-                                                                                        ) // Wait 5
-                                                                                // seconds
-                                                                                // for dev
-                                                                                // server
-                                                                                // to
-                                                                                // start
-                                                                        },
-                                                                        2000
-                                                                ) // Wait 2 seconds for terminal to
-                                                        // initialize
+                                                                                                                        5173
+                                                                                                                else
+                                                                                                                        5500
+                                                                                                        }
+                                                                                                val urlToOpen =
+                                                                                                        "http://localhost:$port"
+                                                                                                android.util
+                                                                                                        .Log
+                                                                                                        .d(
+                                                                                                                "CodeRunner",
+                                                                                                                "Opening browser: $urlToOpen"
+                                                                                                        )
 
-                                                        return@TopBarIconButton
-                                                }
-
-                                                // Show message for vanilla HTML
-                                                android.widget.Toast.makeText(
-                                                                context,
-                                                                result.message,
-                                                                android.widget.Toast.LENGTH_SHORT
-                                                        )
-                                                        .show()
-
-                                                // Get URL to open (only for vanilla HTML)
-                                                val urlToOpen =
-                                                        result.serverUrl ?: "http://localhost:5500"
-
-                                                // Create browser session and navigate
-                                                BrowserSession(context)
-                                                browserViewModel.setDevWebView(
-                                                        SessionList.sessions[
-                                                                        SessionList
-                                                                                .activeSessionIndex!!]
-                                                                .view!!
-                                                )
-                                                browserViewModel.loadUrl(urlToOpen)
-                                                navController.navigate(Screen.Browser.route)
-                                        } else {
-                                                android.widget.Toast.makeText(
-                                                                context,
-                                                                result.message,
-                                                                android.widget.Toast.LENGTH_LONG
-                                                        )
-                                                        .show()
-                                        }
+                                                                                                BrowserSession(
+                                                                                                        context
+                                                                                                )
+                                                                                                browserViewModel
+                                                                                                        .setDevWebView(
+                                                                                                                SessionList
+                                                                                                                                .sessions[
+                                                                                                                                SessionList
+                                                                                                                                        .activeSessionIndex!!]
+                                                                                                                        .view!!
+                                                                                                        )
+                                                                                                browserViewModel
+                                                                                                        .loadUrl(
+                                                                                                                urlToOpen
+                                                                                                        )
+                                                                                                navController
+                                                                                                        .navigate(
+                                                                                                                Screen.Browser
+                                                                                                                        .route
+                                                                                                        )
+                                                                                        },
+                                                                                        3000
+                                                                                ) // Wait 3s for
+                                                                        // server to start
+                                                                }
+                                                        },
+                                                        1500
+                                                ) // Wait 1.5s for terminal initialization
                                 }
                         )
 
@@ -876,6 +950,71 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
                         )
                 }
         }
+
+        // Package Install Dialog
+        if (showPackageDialog) {
+                androidx.compose.material3.AlertDialog(
+                        onDismissRequest = {
+                                showPackageDialog = false
+                                missingPackage = ""
+                                pendingFilePath = null
+                        },
+                        title = { Text("Missing Package", color = Color.White) },
+                        text = {
+                                Text(
+                                        "Would you like to install '$missingPackage'? It is needed to run this code.",
+                                        color = Color(0xFFCCCCCC)
+                                )
+                        },
+                        confirmButton = {
+                                androidx.compose.material3.TextButton(
+                                        onClick = {
+                                                showPackageDialog = false
+                                                val pkgToInstall = missingPackage
+                                                val fileToRun = pendingFilePath
+                                                missingPackage = ""
+                                                pendingFilePath = null
+
+                                                // Install package and re-run
+                                                currentEditorSession?.let { session ->
+                                                        val (terminal, _) =
+                                                                session.getOrCreateRunnerTerminal(
+                                                                        context
+                                                                )
+                                                        android.util.Log.d(
+                                                                "CodeRunner",
+                                                                "Installing package: $pkgToInstall"
+                                                        )
+
+                                                        // Install then re-run
+                                                        val installCmd =
+                                                                "apk add $pkgToInstall && clear && bash \$PREFIX/code-runner.sh \"$fileToRun\"\n"
+                                                        terminal.insertText(installCmd)
+
+                                                        android.widget.Toast.makeText(
+                                                                        context,
+                                                                        "Installing $pkgToInstall...",
+                                                                        android.widget.Toast
+                                                                                .LENGTH_SHORT
+                                                                )
+                                                                .show()
+                                                }
+                                        }
+                                ) { Text("Install", color = Color(0xFF4CAF50)) }
+                        },
+                        dismissButton = {
+                                androidx.compose.material3.TextButton(
+                                        onClick = {
+                                                showPackageDialog = false
+                                                missingPackage = ""
+                                                pendingFilePath = null
+                                        }
+                                ) { Text("Cancel", color = Color(0xFFFF5252)) }
+                        },
+                        containerColor = Color(0xFF2D2D2D),
+                        tonalElevation = 8.dp
+                )
+        }
 }
 
 @Composable
@@ -896,4 +1035,61 @@ fun LeftTermTopBar(modifier: Modifier = Modifier) {
                         verticalAlignment = Alignment.CenterVertically
                 ) {}
         }
+}
+
+/** Convert a content URI to a real file path. Works with SAF (Storage Access Framework) URIs. */
+private fun getPathFromUri(context: Context, uri: android.net.Uri): String? {
+        android.util.Log.d("CodeRunner", "getPathFromUri: $uri")
+
+        // If it's already a file path
+        if (uri.scheme == "file") {
+                return uri.path
+        }
+
+        // For content URIs, try to extract the path from the document ID
+        if (uri.scheme == "content") {
+                // Check if it's a document URI
+                val docId =
+                        try {
+                                android.provider.DocumentsContract.getDocumentId(uri)
+                        } catch (e: Exception) {
+                                try {
+                                        android.provider.DocumentsContract.getTreeDocumentId(uri)
+                                } catch (e2: Exception) {
+                                        null
+                                }
+                        }
+
+                android.util.Log.d("CodeRunner", "Document ID: $docId")
+
+                if (docId != null) {
+                        // Common format: "primary:path/to/folder" or "raw:/storage/emulated/0/path"
+                        val split = docId.split(":")
+                        if (split.size >= 2) {
+                                val type = split[0]
+                                val path = split.subList(1, split.size).joinToString(":")
+
+                                return when {
+                                        type == "primary" -> "/storage/emulated/0/$path"
+                                        type == "raw" -> path
+                                        type.startsWith("/") -> docId // Already a path
+                                        else -> "/storage/$type/$path" // Try volume path
+                                }
+                        } else if (docId.startsWith("/")) {
+                                return docId
+                        }
+                }
+
+                // Fallback: try to get the path directly
+                uri.path?.let { path ->
+                        // SAF URIs often have format: /tree/primary:xxx/document/primary:xxx
+                        val primaryMatch = Regex("primary:(.+)").find(path)
+                        if (primaryMatch != null) {
+                                return "/storage/emulated/0/${primaryMatch.groupValues[1]}"
+                        }
+                }
+        }
+
+        android.util.Log.w("CodeRunner", "Could not extract path from URI: $uri")
+        return null
 }

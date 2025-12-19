@@ -24,7 +24,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
@@ -46,14 +45,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
-import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 
 // Windows 11 color palette
@@ -380,64 +377,87 @@ private fun SidebarItem(label: String, isSelected: Boolean, onClick: () -> Unit)
 }
 
 @Composable
-private fun SettingsContent(
-    selectedCategory: String,
-    keyboardViewModel: KeyboardViewModel
-) {
-    val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
-    val scrollState = rememberScrollState()
-    
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(BackgroundDark)
-            .padding(32.dp)
-            .verticalScroll(scrollState)
-    ) {
-        Text(
-            text = selectedCategory,
-            color = TextPrimary,
-            fontSize = 32.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        when (selectedCategory) {
-            "Keyboard" -> KeyboardSettingsContent(
-                isLeftVisible = uiState.isLeftKeyboardVisible,
-                isRightVisible = uiState.isRightKeyboardVisible,
-                leftWidth = uiState.leftKeyboardWidth,
-                rightWidth = uiState.rightKeyboardWidth,
-                isLinked = uiState.linkedKeyboardSliders,
-                leftPadding = uiState.leftKeyboardPadding,
-                leftHeight = uiState.leftKeyboardHeight,
-                rightHeight = uiState.rightKeyboardHeight,
-                isHeightLinked = uiState.linkedKeyboardHeight,
-                useLandscapeIme = uiState.useLandscapeIme,
-                onLeftToggle = { keyboardViewModel.toggleLeftKeyboardVisibility() },
-                onRightToggle = { keyboardViewModel.toggleRightKeyboardVisibility() },
-                onLeftWidthChange = { keyboardViewModel.updateLeftKeyboardWidth(it) },
-                onRightWidthChange = { keyboardViewModel.updateRightKeyboardWidth(it) },
-                onLinkToggle = { keyboardViewModel.toggleLinkedKeyboardSliders() },
-                onLeftPaddingChange = { keyboardViewModel.updateLeftKeyboardPadding(it) },
-                onLeftHeightChange = { keyboardViewModel.updateLeftKeyboardHeight(it) },
-                onRightHeightChange = { keyboardViewModel.updateRightKeyboardHeight(it) },
-                onHeightLinkToggle = { keyboardViewModel.toggleLinkedKeyboardHeight() },
-                onUseLandscapeImeToggle = { keyboardViewModel.toggleUseLandscapeIme() }
-            )
-            "Appearance" -> AppearanceSettingsContent(
-                terminalFontSize = uiState.terminalFontSize,
-                editorFontSize = uiState.editorFontSize,
-                onTerminalFontSizeChange = { keyboardViewModel.updateTerminalFontSize(it) },
-                onEditorFontSizeChange = { keyboardViewModel.updateEditorFontSize(it) }
-            )
-            "Licenses" -> LicensesContent()
-            "Editor" -> EditorSettingsContent()
-            "Git" -> GitSettingsContent()
-            "General" -> GeneralSettingsContent()
+private fun SettingsContent(selectedCategory: String, keyboardViewModel: KeyboardViewModel) {
+        val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
+        val scrollState = rememberScrollState()
+
+        Column(
+                modifier =
+                        Modifier.fillMaxSize()
+                                .background(BackgroundDark)
+                                .padding(32.dp)
+                                .verticalScroll(scrollState)
+        ) {
+                Text(
+                        text = selectedCategory,
+                        color = TextPrimary,
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.SemiBold
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                when (selectedCategory) {
+                        "Keyboard" ->
+                                KeyboardSettingsContent(
+                                        isLeftVisible = uiState.isLeftKeyboardVisible,
+                                        isRightVisible = uiState.isRightKeyboardVisible,
+                                        leftWidth = uiState.leftKeyboardWidth,
+                                        rightWidth = uiState.rightKeyboardWidth,
+                                        isLinked = uiState.linkedKeyboardSliders,
+                                        leftPadding = uiState.leftKeyboardPadding,
+                                        leftHeight = uiState.leftKeyboardHeight,
+                                        rightHeight = uiState.rightKeyboardHeight,
+                                        isHeightLinked = uiState.linkedKeyboardHeight,
+                                        useLandscapeIme = uiState.useLandscapeIme,
+                                        onLeftToggle = {
+                                                keyboardViewModel.toggleLeftKeyboardVisibility()
+                                        },
+                                        onRightToggle = {
+                                                keyboardViewModel.toggleRightKeyboardVisibility()
+                                        },
+                                        onLeftWidthChange = {
+                                                keyboardViewModel.updateLeftKeyboardWidth(it)
+                                        },
+                                        onRightWidthChange = {
+                                                keyboardViewModel.updateRightKeyboardWidth(it)
+                                        },
+                                        onLinkToggle = {
+                                                keyboardViewModel.toggleLinkedKeyboardSliders()
+                                        },
+                                        onLeftPaddingChange = {
+                                                keyboardViewModel.updateLeftKeyboardPadding(it)
+                                        },
+                                        onLeftHeightChange = {
+                                                keyboardViewModel.updateLeftKeyboardHeight(it)
+                                        },
+                                        onRightHeightChange = {
+                                                keyboardViewModel.updateRightKeyboardHeight(it)
+                                        },
+                                        onHeightLinkToggle = {
+                                                keyboardViewModel.toggleLinkedKeyboardHeight()
+                                        },
+                                        onUseLandscapeImeToggle = {
+                                                keyboardViewModel.toggleUseLandscapeIme()
+                                        }
+                                )
+                        "Appearance" ->
+                                AppearanceSettingsContent(
+                                        terminalFontSize = uiState.terminalFontSize,
+                                        editorFontSize = uiState.editorFontSize,
+                                        onTerminalFontSizeChange = {
+                                                keyboardViewModel.updateTerminalFontSize(it)
+                                        },
+                                        onEditorFontSizeChange = {
+                                                keyboardViewModel.updateEditorFontSize(it)
+                                        }
+                                )
+                        "Licenses" -> LicensesContent()
+                        "Editor" -> EditorSettingsContent()
+                        "Git" -> GitSettingsContent()
+                        "General" -> GeneralSettingsContent()
+                }
         }
-    }
 }
 
 @Composable
@@ -522,30 +542,31 @@ private fun KeyboardSettingsContent(
         rightHeight: Float = 0.5f,
         isHeightLinked: Boolean = true,
         useLandscapeIme: Boolean = false,
-    onLeftToggle: () -> Unit,
-    onRightToggle: () -> Unit,
-    onLeftWidthChange: (Float) -> Unit,
-    onRightWidthChange: (Float) -> Unit,
-    onLinkToggle: () -> Unit,
-    onLeftPaddingChange: (Float) -> Unit = {},
-    onLeftHeightChange: (Float) -> Unit = {},
-    onRightHeightChange: (Float) -> Unit = {},
-    onHeightLinkToggle: () -> Unit = {},
-    onUseLandscapeImeToggle: () -> Unit = {}
+        onLeftToggle: () -> Unit,
+        onRightToggle: () -> Unit,
+        onLeftWidthChange: (Float) -> Unit,
+        onRightWidthChange: (Float) -> Unit,
+        onLinkToggle: () -> Unit,
+        onLeftPaddingChange: (Float) -> Unit = {},
+        onLeftHeightChange: (Float) -> Unit = {},
+        onRightHeightChange: (Float) -> Unit = {},
+        onHeightLinkToggle: () -> Unit = {},
+        onUseLandscapeImeToggle: () -> Unit = {}
 ) {
         // Landscape IME Mode section (at the top)
-    SettingsCard(title = "Input Mode (Landscape)") {
-        SettingRowWithCheckbox(
-            title = "Use System Keyboard",
-            description = "Use the system IME keyboard instead of custom split keyboard in landscape mode",
-            isChecked = useLandscapeIme,
-            onCheckedChange = { onUseLandscapeImeToggle() }
-        )
-    }
+        SettingsCard(title = "Input Mode (Landscape)") {
+                SettingRowWithCheckbox(
+                        title = "Use System Keyboard",
+                        description =
+                                "Use the system IME keyboard instead of custom split keyboard in landscape mode",
+                        isChecked = useLandscapeIme,
+                        onCheckedChange = { onUseLandscapeImeToggle() }
+                )
+        }
 
-    Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-    // Visibility section
+        // Visibility section
         SettingsCard(title = "Visibility") {
                 SettingRowWithCheckbox(
                         title = "Left Keyboard",
@@ -838,23 +859,22 @@ private fun SettingRowWithCheckbox(
 
 @Composable
 private fun LicensesContent() {
-    Column(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Text(
-            text = "Open Source Licenses",
-            color = TextSecondary,
-            fontSize = 14.sp,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+        Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                        text = "Open Source Licenses",
+                        color = TextSecondary,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                )
 
-        // PRoot - GPL License
-        LicenseSection(
-            libraryName = "PRoot",
-            license = "GPLv2",
-            description = "PRoot is used to provide Linux environment emulation.",
-            sourceCodeUrl = "https://github.com/proot-me/proot",
-            licenseText = """
+                // PRoot - GPL License
+                LicenseSection(
+                        libraryName = "PRoot",
+                        license = "GPLv2",
+                        description = "PRoot is used to provide Linux environment emulation.",
+                        sourceCodeUrl = "https://github.com/proot-me/proot",
+                        licenseText =
+                                """
                 GNU GENERAL PUBLIC LICENSE
                 Version 2, June 1991
                 
@@ -871,17 +891,18 @@ private fun LicensesContent() {
                 
                 Full license: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
             """.trimIndent()
-        )
+                )
 
-        Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(24.dp))
 
-        // CodeMirror - MIT License
-        LicenseSection(
-            libraryName = "CodeMirror",
-            license = "MIT License",
-            description = "CodeMirror is used for the code editor component.",
-            sourceCodeUrl = "https://github.com/codemirror/codemirror",
-            licenseText = """
+                // CodeMirror - MIT License
+                LicenseSection(
+                        libraryName = "CodeMirror",
+                        license = "MIT License",
+                        description = "CodeMirror is used for the code editor component.",
+                        sourceCodeUrl = "https://github.com/codemirror/codemirror",
+                        licenseText =
+                                """
                 MIT License
                 
                 Copyright (C) 2017 by Marijn Haverbeke <marijn@haverbeke.berlin> and others
@@ -892,17 +913,18 @@ private fun LicensesContent() {
                 
                 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             """.trimIndent()
-        )
+                )
 
-        Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(24.dp))
 
-        // xterm.js - MIT License
-        LicenseSection(
-            libraryName = "xterm.js",
-            license = "MIT License",
-            description = "xterm.js is used for the terminal emulator.",
-            sourceCodeUrl = "https://github.com/xtermjs/xterm.js",
-            licenseText = """
+                // xterm.js - MIT License
+                LicenseSection(
+                        libraryName = "xterm.js",
+                        license = "MIT License",
+                        description = "xterm.js is used for the terminal emulator.",
+                        sourceCodeUrl = "https://github.com/xtermjs/xterm.js",
+                        licenseText =
+                                """
                 MIT License
                 
                 Copyright (c) 2017-present, The xterm.js authors
@@ -913,138 +935,120 @@ private fun LicensesContent() {
                 
                 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             """.trimIndent()
-        )
+                )
 
-        Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(24.dp))
 
-        // Additional Libraries Summary
-        Text(
-            text = "Additional Libraries",
-            color = TextPrimary,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
+                // Additional Libraries Summary
+                Text(
+                        text = "Additional Libraries",
+                        color = TextPrimary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                )
 
-        AdditionalLibraryItem("JGit", "EDL (Eclipse Distribution License)")
-        AdditionalLibraryItem("Ktor", "Apache License 2.0")
-        AdditionalLibraryItem("NanoHTTPD", "BSD License")
-        AdditionalLibraryItem("Android Libraries", "Apache License 2.0")
-    }
+                AdditionalLibraryItem("JGit", "EDL (Eclipse Distribution License)")
+                AdditionalLibraryItem("Ktor", "Apache License 2.0")
+                AdditionalLibraryItem("NanoHTTPD", "BSD License")
+                AdditionalLibraryItem("Android Libraries", "Apache License 2.0")
+        }
 }
 
 @Composable
 private fun LicenseSection(
-    libraryName: String,
-    license: String,
-    description: String,
-    sourceCodeUrl: String,
-    licenseText: String
+        libraryName: String,
+        license: String,
+        description: String,
+        sourceCodeUrl: String,
+        licenseText: String
 ) {
-    var isExpanded by remember { mutableStateOf(false) }
+        var isExpanded by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CardDark)
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+                modifier =
+                        Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(CardDark)
+                                .padding(16.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                        text = libraryName,
+                                        color = TextPrimary,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(text = license, color = AccentBlue, fontSize = 14.sp)
+                        }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                Text(text = description, color = TextSecondary, fontSize = 14.sp)
+
+                Spacer(Modifier.height(12.dp))
+
                 Text(
-                    text = libraryName,
-                    color = TextPrimary,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
+                        text = "Source Code:",
+                        color = TextPrimary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
                 )
-                Spacer(Modifier.height(4.dp))
                 Text(
-                    text = license,
-                    color = AccentBlue,
-                    fontSize = 14.sp
+                        text = sourceCodeUrl,
+                        color = AccentBlue,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 4.dp)
                 )
-            }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Expand/Collapse License Text
+                Box(
+                        modifier =
+                                Modifier.fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(BackgroundDark)
+                                        .clickable { isExpanded = !isExpanded }
+                                        .padding(12.dp)
+                ) {
+                        Text(
+                                text = if (isExpanded) "Hide License Text" else "Show License Text",
+                                color = AccentBlue,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                        )
+                }
+
+                if (isExpanded) {
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                                text = licenseText,
+                                color = TextSecondary,
+                                fontSize = 11.sp,
+                                lineHeight = 16.sp,
+                                modifier = Modifier.padding(8.dp)
+                        )
+                }
         }
-
-        Spacer(Modifier.height(8.dp))
-
-        Text(
-            text = description,
-            color = TextSecondary,
-            fontSize = 14.sp
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        Text(
-            text = "Source Code:",
-            color = TextPrimary,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium
-        )
-        Text(
-            text = sourceCodeUrl,
-            color = AccentBlue,
-            fontSize = 12.sp,
-            modifier = Modifier.padding(top = 4.dp)
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        // Expand/Collapse License Text
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(BackgroundDark)
-                .clickable { isExpanded = !isExpanded }
-                .padding(12.dp)
-        ) {
-            Text(
-                text = if (isExpanded) "Hide License Text" else "Show License Text",
-                color = AccentBlue,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
-        }
-
-        if (isExpanded) {
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = licenseText,
-                color = TextSecondary,
-                fontSize = 11.sp,
-                lineHeight = 16.sp,
-                modifier = Modifier.padding(8.dp)
-            )
-        }
-    }
 }
 
 @Composable
 private fun AdditionalLibraryItem(name: String, license: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = name,
-            color = TextPrimary,
-            fontSize = 14.sp
-        )
-        Text(
-            text = license,
-            color = TextSecondary,
-            fontSize = 13.sp
-        )
-    }
+        Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+                Text(text = name, color = TextPrimary, fontSize = 14.sp)
+                Text(text = license, color = TextSecondary, fontSize = 13.sp)
+        }
 }
 
 @Composable
@@ -1285,9 +1289,7 @@ private fun EditorSettingsContent() {
                                 )
                         }
                 )
-
         }
-
 
         SettingsCard(title = "Auto Save") {
                 SettingRowWithCheckbox(
@@ -1369,6 +1371,7 @@ private fun EditorSettingsContent() {
 
         Spacer(modifier = Modifier.height(16.dp))
 }
+
 @Composable
 private fun GitSettingsContent() {
         val context = androidx.compose.ui.platform.LocalContext.current

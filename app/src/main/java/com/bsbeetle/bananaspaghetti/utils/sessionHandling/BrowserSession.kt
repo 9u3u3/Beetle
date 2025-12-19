@@ -17,14 +17,14 @@ import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.WebViewPool
 
 class BrowserSession(
-    context: Context,
-    val onPageFinished: () -> Unit = {},
-    val onProgressChanged: (Int) -> Unit = {},
-    val onFrameworkDetected: (String, String) -> Unit = { _, _ -> },
-    val onNetworkRequest: () -> Unit = {},
-    val onConsoleLog: () -> Unit = {},
-    val onUrlChanged: (String) -> Unit = {},
-    name: String = "Browser"
+        context: Context,
+        val onPageFinished: () -> Unit = {},
+        val onProgressChanged: (Int) -> Unit = {},
+        val onFrameworkDetected: (String, String) -> Unit = { _, _ -> },
+        val onNetworkRequest: () -> Unit = {},
+        val onConsoleLog: () -> Unit = {},
+        val onUrlChanged: (String) -> Unit = {},
+        name: String = "Browser"
 ) : Session(context.applicationContext, SessionType.BROWSER, name) {
 
     init {
@@ -34,70 +34,81 @@ class BrowserSession(
     @SuppressLint("SetJavaScriptEnabled")
     override fun createView(): CustomWebView {
         if (view != null) return view!!
-        view = WebViewPool.get(context.applicationContext).apply {
-            session = this@BrowserSession
-            settings.apply {
-                javaScriptEnabled = true
-                domStorageEnabled = true
-                databaseEnabled = true
-                allowFileAccess = true
-                allowContentAccess = true
-                setSupportZoom(true)
-                builtInZoomControls = true
-                displayZoomControls = false
-                loadWithOverviewMode = true
-                useWideViewPort = true
-                mediaPlaybackRequiresUserGesture = false
-                javaScriptCanOpenWindowsAutomatically = true
-                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                setRenderPriority(WebSettings.RenderPriority.HIGH)
-                cacheMode = WebSettings.LOAD_DEFAULT
-                userAgentString = AppConfig.USER_AGENT
-                minimumFontSize = 1
-                minimumLogicalFontSize = 1
-                textZoom = 100
-            }
-
-            isVerticalScrollBarEnabled = true
-            isHorizontalScrollBarEnabled = true
-            WebView.setWebContentsDebuggingEnabled(true)
-
-            addJavascriptInterface(
-                DevBridge(onFrameworkDetected, onNetworkRequest, onConsoleLog),
-                "DevBridge"
-            )
-
-            webChromeClient = object : WebChromeClient() {
-                override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                    super.onProgressChanged(view, newProgress)
-                    onProgressChanged(newProgress)
-                }
-
-                override fun onConsoleMessage(message: ConsoleMessage?): Boolean {
-                    message?.let {
-                        val logMessage = "[${it.messageLevel()}] ${it.message()} (${it.sourceId()}:${it.lineNumber()})"
-                        when (it.messageLevel()) {
-                            ConsoleMessage.MessageLevel.ERROR -> Log.e("WebConsole", logMessage)
-                            ConsoleMessage.MessageLevel.WARNING -> Log.w("WebConsole", logMessage)
-                            ConsoleMessage.MessageLevel.LOG -> Log.i("WebConsole", logMessage)
-                            else -> Log.d("WebConsole", logMessage)
-                        }
+        view =
+                WebViewPool.get(context.applicationContext).apply {
+                    session = this@BrowserSession
+                    settings.apply {
+                        javaScriptEnabled = true
+                        domStorageEnabled = true
+                        databaseEnabled = true
+                        allowFileAccess = true
+                        allowContentAccess = true
+                        setSupportZoom(true)
+                        builtInZoomControls = true
+                        displayZoomControls = false
+                        loadWithOverviewMode = true
+                        useWideViewPort = true
+                        mediaPlaybackRequiresUserGesture = false
+                        javaScriptCanOpenWindowsAutomatically = true
+                        mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        setRenderPriority(WebSettings.RenderPriority.HIGH)
+                        cacheMode = WebSettings.LOAD_DEFAULT
+                        userAgentString = AppConfig.USER_AGENT
+                        minimumFontSize = 1
+                        minimumLogicalFontSize = 1
+                        textZoom = 100
                     }
-                    return true
-                }
-            }
 
-            webViewClient = object : WebViewClient() {
-                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                    super.onPageStarted(view, url, favicon)
-                    url?.let { onUrlChanged(it) }
-                    view?.evaluateJavascript(DevToolsInjector.EARLY_INJECTION, null)
-                }
+                    isVerticalScrollBarEnabled = true
+                    isHorizontalScrollBarEnabled = true
+                    WebView.setWebContentsDebuggingEnabled(true)
 
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    super.onPageFinished(view, url)
-                    view?.evaluateJavascript(
-                        """
+                    addJavascriptInterface(
+                            DevBridge(onFrameworkDetected, onNetworkRequest, onConsoleLog),
+                            "DevBridge"
+                    )
+
+                    webChromeClient =
+                            object : WebChromeClient() {
+                                override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                                    super.onProgressChanged(view, newProgress)
+                                    onProgressChanged(newProgress)
+                                }
+
+                                override fun onConsoleMessage(message: ConsoleMessage?): Boolean {
+                                    message?.let {
+                                        val logMessage =
+                                                "[${it.messageLevel()}] ${it.message()} (${it.sourceId()}:${it.lineNumber()})"
+                                        when (it.messageLevel()) {
+                                            ConsoleMessage.MessageLevel.ERROR ->
+                                                    Log.e("WebConsole", logMessage)
+                                            ConsoleMessage.MessageLevel.WARNING ->
+                                                    Log.w("WebConsole", logMessage)
+                                            ConsoleMessage.MessageLevel.LOG ->
+                                                    Log.i("WebConsole", logMessage)
+                                            else -> Log.d("WebConsole", logMessage)
+                                        }
+                                    }
+                                    return true
+                                }
+                            }
+
+                    webViewClient =
+                            object : WebViewClient() {
+                                override fun onPageStarted(
+                                        view: WebView?,
+                                        url: String?,
+                                        favicon: Bitmap?
+                                ) {
+                                    super.onPageStarted(view, url, favicon)
+                                    url?.let { onUrlChanged(it) }
+                                    view?.evaluateJavascript(DevToolsInjector.EARLY_INJECTION, null)
+                                }
+
+                                override fun onPageFinished(view: WebView?, url: String?) {
+                                    super.onPageFinished(view, url)
+                                    view?.evaluateJavascript(
+                                            """
                         (function() {
                             function forceDesktop() {
                                 var meta = document.querySelector('meta[name=viewport]');
@@ -116,25 +127,62 @@ class BrowserSession(
                             }, 500);
                         })();
                         """.trimIndent(),
-                        null
-                    )
-                    url?.let { onUrlChanged(it) }
-                    view?.evaluateJavascript(DevToolsInjector.LATE_INJECTION, null)
-                    onPageFinished()
-                }
+                                            null
+                                    )
+                                    url?.let { onUrlChanged(it) }
+                                    view?.evaluateJavascript(DevToolsInjector.LATE_INJECTION, null)
+                                    onPageFinished()
+                                }
 
-                override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
-                    super.doUpdateVisitedHistory(view, url, isReload)
-                    url?.let { onUrlChanged(it) }
-                }
+                                override fun doUpdateVisitedHistory(
+                                        view: WebView?,
+                                        url: String?,
+                                        isReload: Boolean
+                                ) {
+                                    super.doUpdateVisitedHistory(view, url, isReload)
+                                    url?.let { onUrlChanged(it) }
+                                }
 
-                override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
-                    Log.d("BrowserSession", "WebView Crashed")
-                    destroy()
-                    return true
+                                override fun onReceivedError(
+                                        view: WebView?,
+                                        errorCode: Int,
+                                        description: String?,
+                                        failingUrl: String?
+                                ) {
+                                    Log.e(
+                                            "BrowserSession",
+                                            "WebView error: $description (code: $errorCode) for $failingUrl"
+                                    )
+                                    // Show error page for connection failures (dev server stopped)
+                                    if (errorCode == ERROR_CONNECT ||
+                                                    errorCode == ERROR_HOST_LOOKUP ||
+                                                    errorCode == ERROR_TIMEOUT ||
+                                                    errorCode == ERROR_UNKNOWN
+                                    ) {
+                                        view?.loadData(
+                                                """
+                            <html><body style="background:#1e1e2e;color:#cdd6f4;font-family:sans-serif;padding:40px;text-align:center;">
+                            <h2>Connection Failed</h2>
+                            <p style="color:#f38ba8;">$description</p>
+                            <p style="color:#a6adc8;">The dev server may have stopped. Try running your code again.</p>
+                            </body></html>
+                            """.trimIndent(),
+                                                "text/html",
+                                                "UTF-8"
+                                        )
+                                    }
+                                }
+
+                                override fun onRenderProcessGone(
+                                        view: WebView?,
+                                        detail: RenderProcessGoneDetail?
+                                ): Boolean {
+                                    Log.d("BrowserSession", "WebView Crashed")
+                                    destroy()
+                                    return true
+                                }
+                            }
                 }
-            }
-        }
         return view!!
     }
 
