@@ -24,9 +24,8 @@ class EditorSession(context: Context, name: String = "Editor") :
     private val _isReady = MutableStateFlow(false)
     val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
 
-    // Project root folder for the editor session
-    var projectRoot: androidx.documentfile.provider.DocumentFile? = null
-    
+    // projectRoot is inherited from Session base class
+
     // Terminal sessions linked to this editor session (bottom panel terminals)
     // Using mutableStateListOf so Compose can observe changes
     val linkedTerminals = androidx.compose.runtime.mutableStateListOf<TerminalSession>()

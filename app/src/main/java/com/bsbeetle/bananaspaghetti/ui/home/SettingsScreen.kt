@@ -1065,6 +1065,7 @@ private fun EditorSettingsContent() {
         var autoSaveDelay by remember { mutableStateOf(prefs.autoSaveDelay) }
         var selectedTheme by remember { mutableStateOf(prefs.theme) }
         var themeDropdownExpanded by remember { mutableStateOf(false) }
+        var pythonReplEnabled by remember { mutableStateOf(prefs.pythonRepl) }
 
         // Theme Selection Card
         SettingsCard(title = "Editor Theme") {
@@ -1351,9 +1352,22 @@ private fun EditorSettingsContent() {
                 }
         }
 
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Python REPL Settings Card
+        SettingsCard(title = "Python Notebook") {
+                SettingRowWithCheckbox(
+                        title = "Python REPL Mode",
+                        description = "Enable notebook-like editing for .py files with cell execution (requires Python installed)",
+                        isChecked = pythonReplEnabled,
+                        onCheckedChange = {
+                                pythonReplEnabled = it
+                                prefs.pythonRepl = it
+                        }
+                )
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
-
-
 }
 @Composable
 private fun GitSettingsContent() {

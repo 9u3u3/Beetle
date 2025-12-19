@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Python Notebook</title>
+    <link href="./notebook.css" rel="stylesheet">
+    <script>
+        // Define setBottomPadding early so it's available before bundle loads
+        // Apply as margin-bottom on last element to prevent layout shift
+        window.setBottomPadding = function (paddingPx) {
+            var existingStyle = document.getElementById('notebook-bottom-padding-style');
+            if (existingStyle) {
+                existingStyle.remove();
+            }
+
+            var paddingStyle = document.createElement('style');
+            paddingStyle.id = 'notebook-bottom-padding-style';
+            // Apply margin to last cell and as a pseudo-element spacer in the container
+            paddingStyle.textContent = '#notebook-container::after { content: ""; display: block; height: ' + paddingPx + 'px; }';
+            document.head.appendChild(paddingStyle);
+            console.log('[Notebook] Bottom padding set to: ' + paddingPx);
+        };
+    </script>
+</head>
+
+<body>
+    <!-- Toolbar -->
+    <div id="notebook-toolbar">
+        <button id="btn-add-cell" title="Add Cell">
+            <span class="toolbar-icon">+</span>
+            <span class="toolbar-label">Cell</span>
+        </button>
+        <button id="btn-run-all" title="Run All Cells">
+            <span class="toolbar-icon">▶▶</span>
+            <span class="toolbar-label">Run All</span>
+        </button>
+        <button id="btn-refresh" title="Reload File">
+            <span class="toolbar-icon">↻</span>
+            <span class="toolbar-label">Refresh</span>
+        </button>
+        <div class="toolbar-spacer"></div>
+        <span id="notebook-status">Ready</span>
+    </div>
+
+    <!-- Notebook Container -->
+    <div id="notebook-container">
+        <!-- Cells will be rendered here -->
+    </div>
+
+    <script src="./notebook.bundle.js"></script>
+</body>
+
+</html>

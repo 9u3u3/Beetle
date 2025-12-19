@@ -42,6 +42,7 @@ import com.bsbeetle.bananaspaghetti.utils.fileHandling.readFromFile
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.saveFile
 import com.bsbeetle.bananaspaghetti.utils.languageHandling.LanguageRegistry
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.viewmodel.*
@@ -159,6 +160,13 @@ fun InitialEditorUI(navController: NavController) {
 
     // 🚀 File Load (with LSP check & Performance fix)
     LaunchedEffect(fileViewModel.selectedUri) {
+        // Check if this is a NotebookSession - they handle their own content loading
+        val activeSession = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
+        val isNotebookSession = activeSession is NotebookSession
+        if (isNotebookSession) {
+            Log.d("Buffer", "NotebookSession detected - will skip loadContentWhenReady")
+        }
+        
         // delay(50) removed to speed up LSP startup
         fileViewModel.selectedUri?.let { uri ->
             DocumentFile.fromSingleUri(context, uri)?.let documentFile@{ documentFile ->
@@ -221,7 +229,15 @@ fun InitialEditorUI(navController: NavController) {
                         }
 
                 bufferViewModel.currentFile.value = documentFile // Track current file
-                loadContentWhenReady(editorViewModel.webView, content)
+                
+                // Only load content via loadContentWhenReady for non-notebook sessions
+                // NotebookSession handles its own content loading via setFilePath
+                if (!isNotebookSession) {
+                    loadContentWhenReady(editorViewModel.webView, content)
+                } else {
+                    Log.d("Buffer", "Skipping loadContentWhenReady for NotebookSession")
+                }
+                
                 fileViewModel.currentFilePath = uri.toString()
 
                 // Re-inject LspViewModel when file changes/session might change

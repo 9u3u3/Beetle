@@ -55,9 +55,11 @@ fun RecentFileItem(
                 
                 // Create new session for the file to prevent NPE in InitialEditorUI
                 // Note: Session constructor already adds itself to SessionList
-                val session = com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession(
+                // Uses SessionFactory to route .py files to NotebookSession when Python REPL mode is enabled
+                val session = com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionFactory.createSession(
                     context, 
-                    file.name
+                    file.name,
+                    file.uri
                 )
                 
                 // Set project root from the file's parent folder for proper LSP initialization

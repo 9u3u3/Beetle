@@ -2,6 +2,7 @@ package com.bsbeetle.bananaspaghetti.utils.fileHandling
 
 import android.content.Context
 import android.util.Log
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.Session
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
@@ -28,50 +29,67 @@ fun saveFile(
 
     Log.d("Save", "Save clicked for ${fileViewModel.selectedUri}")
 
-    // Get the code from code mirror, override that with the opened file
-    webView.evaluateJavascript("window.editor?.state?.doc?.toString() || window.code_ || ''") {
-            result ->
-        val newCode =
-                result.removeSurrounding("\"")
-                        .replace("\\n", "\n")
-                        .replace("\\u003C", "<")
-                        .replace("\\u003E", ">")
-                        .replace("\\\"", "\"")
+    // Check if this is a NotebookSession
+    if (session is NotebookSession) {
+        // Use notebook's getContent() to get cells with # %% separators
+        session.getContent { notebookContent ->
+            saveContentToFile(notebookContent, fileViewModel, bufferViewModel, context)
+        }
+    } else {
+        // Regular editor - get content from CodeMirror
+        webView.evaluateJavascript("window.editor?.state?.doc?.toString() || window.code_ || ''") {
+                result ->
+            val newCode =
+                    result.removeSurrounding("\"")
+                            .replace("\\n", "\n")
+                            .replace("\\u003C", "<")
+                            .replace("\\u003E", ">")
+                            .replace("\\\"", "\"")
 
-        Log.d("Save", "$newCode")
+            saveContentToFile(newCode, fileViewModel, bufferViewModel, context)
+        }
+    }
+}
 
-        val resolver = context.contentResolver
-        fileViewModel.selectedUri?.let { uri ->
-            try {
-                val out =
-                        resolver.openOutputStream(uri, "wt") // truncate mode
-                         ?: throw FileNotFoundException("Unable to open output stream for $uri")
+private fun saveContentToFile(
+    content: String,
+    fileViewModel: FileViewModel,
+    bufferViewModel: BufferViewModel,
+    context: Context
+) {
+    Log.d("Save", "Saving ${content.length} chars")
 
-                OutputStreamWriter(out, Charsets.UTF_8).use { writer ->
-                    writer.write(newCode)
-                    writer.flush()
-                }
+    val resolver = context.contentResolver
+    fileViewModel.selectedUri?.let { uri ->
+        try {
+            val out =
+                    resolver.openOutputStream(uri, "wt") // truncate mode
+                     ?: throw FileNotFoundException("Unable to open output stream for $uri")
 
-                // Clear dirty state after successful save using the actual saved URI
-                bufferViewModel.markAsClean(uri.toString())
-                Log.d("Save", "Marked ${uri} as clean")
-
-                // Trigger live reload if server is running
-                if (com.bsbeetle.bananaspaghetti.liveserver.LiveServerManager.isRunning()) {
-                    com.bsbeetle.bananaspaghetti.liveserver.LiveServerManager.triggerReload()
-                    Log.d("Save", "Triggered live reload")
-                }
-
-                Log.d("Save", "File saved successfully and marked clean")
-                android.widget.Toast.makeText(
-                                context,
-                                "File saved",
-                                android.widget.Toast.LENGTH_SHORT
-                        )
-                        .show()
-            } catch (e: Exception) {
-                Log.e("Save", "Failed to save file", e)
+            OutputStreamWriter(out, Charsets.UTF_8).use { writer ->
+                writer.write(content)
+                writer.flush()
             }
+
+            // Clear dirty state after successful save using the actual saved URI
+            bufferViewModel.markAsClean(uri.toString())
+            Log.d("Save", "Marked ${uri} as clean")
+
+            // Trigger live reload if server is running
+            if (com.bsbeetle.bananaspaghetti.liveserver.LiveServerManager.isRunning()) {
+                com.bsbeetle.bananaspaghetti.liveserver.LiveServerManager.triggerReload()
+                Log.d("Save", "Triggered live reload")
+            }
+
+            Log.d("Save", "File saved successfully and marked clean")
+            android.widget.Toast.makeText(
+                            context,
+                            "File saved",
+                            android.widget.Toast.LENGTH_SHORT
+                    )
+                    .show()
+        } catch (e: Exception) {
+            Log.e("Save", "Failed to save file", e)
         }
     }
 }

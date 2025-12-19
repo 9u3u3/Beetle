@@ -70,6 +70,7 @@ class CustomWebView(context: Context, var session: Session?) : WebView(context) 
             (function() {
                 if (window.editor) { window.editor.focus(); } 
                 else if (window.term) { window.term.focus(); }
+                else if (window.focusSelectedCell) { window.focusSelectedCell(); }
             })();
         """.trimIndent(), null)
     }

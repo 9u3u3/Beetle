@@ -39,6 +39,9 @@ class EditorPreferences(context: Context) {
         // Auto Save
         private const val KEY_AUTO_SAVE = "auto_save"
         private const val KEY_AUTO_SAVE_DELAY = "auto_save_delay"
+
+        // Python REPL
+        private const val KEY_PYTHON_REPL = "python_repl"
     }
 
     // Theme
@@ -98,6 +101,11 @@ class EditorPreferences(context: Context) {
     var autoSaveDelay: Int
         get() = prefs.getInt(KEY_AUTO_SAVE_DELAY, 5)
         set(value) = prefs.edit().putInt(KEY_AUTO_SAVE_DELAY, value).apply()
+
+    // Python REPL
+    var pythonRepl: Boolean
+        get() = prefs.getBoolean(KEY_PYTHON_REPL, false)
+        set(value) = prefs.edit().putBoolean(KEY_PYTHON_REPL, value).apply()
 
     /** Available themes with display names */
     val availableThemes =

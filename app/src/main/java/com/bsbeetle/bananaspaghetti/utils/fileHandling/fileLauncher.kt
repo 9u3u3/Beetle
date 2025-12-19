@@ -16,6 +16,7 @@ import com.bsbeetle.bananaspaghetti.data.FileData
 import com.bsbeetle.bananaspaghetti.data.OpenedFiles
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionFactory
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
@@ -55,13 +56,16 @@ fun fileLauncher(context: Context, navController: NavController): ActivityResult
                                                 fileViewModel.selectedFolderUri = null
 
                                                 // Adding to the newly created session here
-                                                EditorSession(context.applicationContext)
-                                                editorViewModel.setEditorWebView(
-                                                        SessionList.sessions[
-                                                                        SessionList
-                                                                                .activeSessionIndex!!]
-                                                                .view!!
+                                                // Uses SessionFactory to route .py files to NotebookSession
+                                                val fileName = getFileName(context, uri)
+                                                val session = SessionFactory.createSession(
+                                                    context.applicationContext, 
+                                                    fileName, 
+                                                    uri.toString()  // Pass URI so NotebookSession can load content
                                                 )
+                                                // Ensure view is created before accessing it
+                                                val view = session.getOrInitView()
+                                                editorViewModel.setEditorWebView(view)
 
                                                 navController.navigate(Screen.OpenFile.route)
                                         } else {
