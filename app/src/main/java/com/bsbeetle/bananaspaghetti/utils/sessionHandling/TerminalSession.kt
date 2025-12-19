@@ -253,14 +253,30 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
     private fun writeToTerminal(data: ByteArray) {
         if (data.isEmpty()) return
         try {
+            if (outputFd == null) {
+                Log.e(
+                        "TerminalSession",
+                        "writeToTerminal: outputFd is NULL! Cannot write ${data.size} bytes"
+                )
+                return
+            }
+            Log.d("TerminalSession", "writeToTerminal: Writing ${data.size} bytes to PTY")
             outputFd?.write(data)
             outputFd?.flush()
+            Log.d(
+                    "TerminalSession",
+                    "writeToTerminal: Wrote and flushed ${data.size} bytes successfully"
+            )
         } catch (e: Exception) {
             Log.e("TerminalSession", "Failed to write to terminal", e)
         }
     }
 
     fun insertText(text: String) {
+        Log.d(
+                "TerminalSession",
+                "insertText called for session '$name': ${text.take(50).replace("\n", "\\n").replace("\u0003", "^C")}..."
+        )
         writeToTerminal(text.toByteArray())
     }
 }

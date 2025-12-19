@@ -26,10 +26,36 @@ class EditorSession(context: Context, name: String = "Editor") :
 
     // Project root folder for the editor session
     var projectRoot: androidx.documentfile.provider.DocumentFile? = null
-    
+
     // Terminal sessions linked to this editor session (bottom panel terminals)
     // Using mutableStateListOf so Compose can observe changes
     val linkedTerminals = androidx.compose.runtime.mutableStateListOf<TerminalSession>()
+
+    // Runner terminal for code execution - lazy initialized on first run
+    private var _runnerTerminal: TerminalSession? = null
+
+    /**
+     * Get or create the runner terminal for this editor session. The runner terminal persists
+     * across multiple runs. Automatically added to linkedTerminals for visibility in bottom panel.
+     * Returns Pair(terminal, wasNewlyCreated) - wasNewlyCreated is true only if terminal was just
+     * created
+     */
+    fun getOrCreateRunnerTerminal(ctx: Context): Pair<TerminalSession, Boolean> {
+        val wasNew = _runnerTerminal == null || _runnerTerminal?.view == null
+        if (wasNew) {
+            Log.d("EditorSession", "Creating new runner terminal for session: $id")
+            _runnerTerminal = TerminalSession(ctx.applicationContext, "Runner-${name}")
+            _runnerTerminal!!.createView()
+            // Add to linkedTerminals so it shows in bottom panel
+            if (!linkedTerminals.contains(_runnerTerminal)) {
+                linkedTerminals.add(_runnerTerminal!!)
+            }
+        }
+        return Pair(_runnerTerminal!!, wasNew)
+    }
+
+    /** Check if this session has a runner terminal. */
+    fun hasRunnerTerminal(): Boolean = _runnerTerminal != null
 
     // Track cursor position for backspace guard (updated by LSP-STATUS parsing)
     var cursorLine: Int = 1
@@ -178,56 +204,61 @@ class EditorSession(context: Context, name: String = "Editor") :
                                             "✓ JS: onReady called - CM6 initialized"
                                     )
                                     _isReady.value = true
-                                    
+
                                     // Apply saved editor settings
                                     view?.post {
                                         // Load preferences
-                                        val prefs = com.bsbeetle.bananaspaghetti.utils.preferences.EditorPreferences(context)
-                                        
+                                        val prefs =
+                                                com.bsbeetle.bananaspaghetti.utils.preferences
+                                                        .EditorPreferences(context)
+
                                         // Apply theme
                                         view?.evaluateJavascript(
-                                            "if(window.setTheme) window.setTheme('${prefs.theme}');",
-                                            null
+                                                "if(window.setTheme) window.setTheme('${prefs.theme}');",
+                                                null
                                         )
-                                        
+
                                         // Apply word wrap
                                         view?.evaluateJavascript(
-                                            "if(window.setWordWrap) window.setWordWrap(${prefs.wordWrap});",
-                                            null
+                                                "if(window.setWordWrap) window.setWordWrap(${prefs.wordWrap});",
+                                                null
                                         )
-                                        
+
                                         // Apply line numbers
                                         view?.evaluateJavascript(
-                                            "if(window.setLineNumbers) window.setLineNumbers(${prefs.lineNumbers});",
-                                            null
+                                                "if(window.setLineNumbers) window.setLineNumbers(${prefs.lineNumbers});",
+                                                null
                                         )
-                                        
+
                                         // Apply tab size
                                         view?.evaluateJavascript(
-                                            "if(window.setTabSize) window.setTabSize(${prefs.tabSize});",
-                                            null
+                                                "if(window.setTabSize) window.setTabSize(${prefs.tabSize});",
+                                                null
                                         )
-                                        
+
                                         // Apply relative line numbers
                                         view?.evaluateJavascript(
-                                            "if(window.setRelativeLineNumbers) window.setRelativeLineNumbers(${prefs.relativeLineNumbers});",
-                                            null
+                                                "if(window.setRelativeLineNumbers) window.setRelativeLineNumbers(${prefs.relativeLineNumbers});",
+                                                null
                                         )
-                                        
+
                                         // Apply indent guides
                                         view?.evaluateJavascript(
-                                            "if(window.setIndentGuides) window.setIndentGuides(${prefs.indentGuides});",
-                                            null
+                                                "if(window.setIndentGuides) window.setIndentGuides(${prefs.indentGuides});",
+                                                null
                                         )
-                                        
+
                                         // Apply auto save
                                         view?.evaluateJavascript(
-                                            "if(window.setAutoSave) window.setAutoSave(${prefs.autoSave}, ${prefs.autoSaveDelay});",
-                                            null
+                                                "if(window.setAutoSave) window.setAutoSave(${prefs.autoSave}, ${prefs.autoSaveDelay});",
+                                                null
                                         )
-                                        
-                                        android.util.Log.d("EditorSession", "✓ Applied saved editor settings")
-                                        
+
+                                        android.util.Log.d(
+                                                "EditorSession",
+                                                "✓ Applied saved editor settings"
+                                        )
+
                                         // Make WebView visible
                                         view?.visibility = android.view.View.VISIBLE
                                         view?.alpha = 1f
@@ -255,32 +286,50 @@ class EditorSession(context: Context, name: String = "Editor") :
                                             view?.evaluateJavascript(
                                                     "window.editor?.state?.doc?.toString() || window.code_ || ''"
                                             ) { result ->
-                                                if (result != null && result != "null" && result != "\"\"") {
+                                                if (result != null &&
+                                                                result != "null" &&
+                                                                result != "\"\""
+                                                ) {
                                                     try {
-                                                        var content = result.removeSurrounding("\"")
-                                                                .replace("\\n", "\n")
-                                                                .replace("\\t", "\t")
-                                                                .replace("\\r", "\r")
-                                                                .replace("\\\"", "\"")
-                                                                .replace("\\\\", "\\")
-                                                        
+                                                        var content =
+                                                                result.removeSurrounding("\"")
+                                                                        .replace("\\n", "\n")
+                                                                        .replace("\\t", "\t")
+                                                                        .replace("\\r", "\r")
+                                                                        .replace("\\\"", "\"")
+                                                                        .replace("\\\\", "\\")
+
                                                         // Unescape Unicode sequences
-                                                        val unicodePattern = Regex("\\\\u([0-9a-fA-F]{4})")
-                                                        content = unicodePattern.replace(content) { matchResult ->
-                                                            val hexCode = matchResult.groupValues[1]
-                                                            hexCode.toInt(16).toChar().toString()
-                                                        }
-                                                        
+                                                        val unicodePattern =
+                                                                Regex("\\\\u([0-9a-fA-F]{4})")
+                                                        content =
+                                                                unicodePattern.replace(content) {
+                                                                        matchResult ->
+                                                                    val hexCode =
+                                                                            matchResult.groupValues[
+                                                                                    1]
+                                                                    hexCode.toInt(16)
+                                                                            .toChar()
+                                                                            .toString()
+                                                                }
+
                                                         // Save to file
                                                         val resolver = context.contentResolver
-                                                        val out = resolver.openOutputStream(uri, "wt")
+                                                        val out =
+                                                                resolver.openOutputStream(uri, "wt")
                                                         if (out != null) {
-                                                            java.io.OutputStreamWriter(out, Charsets.UTF_8).use { writer ->
-                                                                writer.write(content)
-                                                                writer.flush()
-                                                            }
+                                                            java.io.OutputStreamWriter(
+                                                                            out,
+                                                                            Charsets.UTF_8
+                                                                    )
+                                                                    .use { writer ->
+                                                                        writer.write(content)
+                                                                        writer.flush()
+                                                                    }
                                                             // Clear dirty state
-                                                            bufferViewModel?.markAsClean(uri.toString())
+                                                            bufferViewModel?.markAsClean(
+                                                                    uri.toString()
+                                                            )
                                                             android.util.Log.d(
                                                                     "EditorSession",
                                                                     "✓ Auto-saved and marked clean: ${currentFile.name}"
