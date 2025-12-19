@@ -661,11 +661,6 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
                                                 )
                                         val isRerun = !wasNew
 
-                                        android.util.Log.d(
-                                                "CodeRunner",
-                                                "Runner terminal: ${runnerTerminal.name}, wasNew: $wasNew, isRerun: $isRerun"
-                                        )
-
                                         // Show toast
                                         android.widget.Toast.makeText(
                                                         context,
@@ -677,11 +672,6 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
                                         // First run needs longer delay for terminal to init; rerun
                                         // is quick
                                         val initDelay = if (isRerun) 100L else 1500L
-
-                                        android.util.Log.d(
-                                                "CodeRunner",
-                                                "Is rerun: $isRerun, delay: $initDelay"
-                                        )
 
                                         // Wait for terminal to initialize (or short delay for
                                         // rerun)
@@ -734,10 +724,6 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
                                                                 // to ensure process is killed
                                                                 // and reset terminal state
                                                                 if (isRerun) {
-                                                                        android.util.Log.d(
-                                                                                "CodeRunner",
-                                                                                "Sending multiple Ctrl+C for rerun"
-                                                                        )
                                                                         // Send Ctrl+C 3 times with
                                                                         // newlines to ensure we
                                                                         // break out of any state
@@ -768,12 +754,6 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
                                                                                                 } else {
                                                                                                         "clear; bash \$PREFIX/code-runner.sh \"$currentFilePath\"\n"
                                                                                                 }
-                                                                                        android.util
-                                                                                                .Log
-                                                                                                .d(
-                                                                                                        "CodeRunner",
-                                                                                                        "Sending command: $command"
-                                                                                                )
                                                                                         runnerTerminal
                                                                                                 .insertText(
                                                                                                         command

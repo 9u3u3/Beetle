@@ -371,43 +371,30 @@ class Tenebrio(private val context: Context, private val session: Session) {
             terminalSession.outputFd = output
 
             thread {
-                Log.d("Tenebrio", "PTY read thread started for session ${terminalSession.name}")
                 try {
                     val buffer = ByteArray(1024)
                     while (true) {
                         val bytesRead = input!!.read(buffer)
                         if (bytesRead > 0) {
                             val text = String(buffer, 0, bytesRead)
-                            Log.d(
-                                    "Tenebrio",
-                                    "PTY read: ${bytesRead} bytes from session ${terminalSession.name}"
-                            )
                             // Access view lazily - it may be created after init()
                             val terminalWebView = terminalSession.view
                             if (terminalWebView != null) {
                                 terminalWebView.post {
                                     val jsCommand = "term.write(${JSONObject.quote(text)});"
-                                    Log.d(
-                                            "Tenebrio",
-                                            "Sending to xterm: ${text.take(50).replace("\n", "\\n")}..."
-                                    )
                                     terminalWebView.evaluateJavascript(jsCommand, null)
                                 }
-                            } else {
-                                Log.w("Tenebrio", "terminalWebView is null, cannot write output!")
                             }
                             // Always invoke onOutput callback if set (for code runner to detect
                             // MISSING_PKG)
                             terminalSession.onOutput?.invoke(text)
                         } else if (bytesRead < 0) {
-                            Log.d("Tenebrio", "PTY read: EOF or error, breaking loop")
                             break // EOF or error
                         }
                     }
                 } catch (e: Exception) {
                     Log.e("TenebrioShell", "Error reading", e)
                 }
-                Log.d("Tenebrio", "PTY read thread ended for session ${terminalSession.name}")
             }
         }
     }
