@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * Uses notebook.html instead of editor.html and provides Python execution capabilities.
  */
 class NotebookSession(context: Context, name: String = "Notebook") :
-        Session(context.applicationContext, SessionType.EDITOR, name) {
+        Session(context.applicationContext, SessionType.NOTEBOOK, name) {
 
     companion object {
         private const val TAG = "NotebookSession"
@@ -33,8 +33,20 @@ class NotebookSession(context: Context, name: String = "Notebook") :
     // Observable state for UI
     private val _isReady = MutableStateFlow(false)
     val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
+    
+    // Unsaved changes indicator (save dot)
+    private val _hasUnsavedChanges = MutableStateFlow(false)
+    val hasUnsavedChanges: StateFlow<Boolean> = _hasUnsavedChanges.asStateFlow()
 
     // projectRoot is inherited from Session base class
+    
+    // Reference to BufferViewModel for dirty state tracking
+    private var bufferViewModel: com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel? = null
+
+    fun setBufferViewModel(viewModel: com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel) {
+        this.bufferViewModel = viewModel
+        Log.d(TAG, "BufferViewModel set for notebook")
+    }
 
     init {
         // Initialize Python executor
@@ -122,16 +134,68 @@ class NotebookSession(context: Context, name: String = "Notebook") :
                 "AndroidNotebookReady"
             )
             
-            // Add JavaScript interface for notebook operations (save, etc.)
+            // Add JavaScript interface for notebook operations (save, content changes)
             addJavascriptInterface(
                 object {
                     @JavascriptInterface
                     fun saveContent(content: String) {
                         Log.d(TAG, "saveContent called with ${content.length} chars")
                         saveNotebookContent(content)
+                        // Mark as saved (clean state) in BufferViewModel - use URI format to match BufferCard
+                        _hasUnsavedChanges.value = false
+                        view?.post {
+                            bufferViewModel?.currentFile?.value?.let { file ->
+                                bufferViewModel?.markAsClean(file.uri.toString())
+                                Log.d(TAG, "Marked as clean in BufferViewModel: ${file.name}")
+                            }
+                        }
+                    }
+                    
+                    @JavascriptInterface
+                    fun onContentChanged() {
+                        Log.d(TAG, "onContentChanged called - marking as dirty")
+                        _hasUnsavedChanges.value = true
+                        // Mark as dirty in BufferViewModel (must run on main thread) - use URI format
+                        view?.post {
+                            bufferViewModel?.currentFile?.value?.let { file ->
+                                bufferViewModel?.markAsDirty(file.uri.toString())
+                                Log.d(TAG, "Marked as dirty in BufferViewModel: ${file.name}")
+                            }
+                        }
                     }
                 },
                 "AndroidNotebook"
+            )
+            
+            // Add JavaScript interface for auto-save functionality (matches editor)
+            addJavascriptInterface(
+                object {
+                    @android.webkit.JavascriptInterface
+                    fun saveFile() {
+                        Log.d(TAG, "AndroidInterface.saveFile() called - auto-save triggered")
+                        // Get content from notebook and save
+                        view?.post {
+                            view?.evaluateJavascript("window.getContent ? window.getContent() : ''") { result ->
+                                if (result != null && result != "null" && result != "\"\"") {
+                                    val content = result
+                                        .removeSurrounding("\"")
+                                        .replace("\\n", "\n")
+                                        .replace("\\r", "\r")
+                                        .replace("\\'", "'")
+                                        .replace("\\\\", "\\")
+                                    saveNotebookContent(content)
+                                    _hasUnsavedChanges.value = false
+                                    // Use URI format to match BufferCard
+                                    bufferViewModel?.currentFile?.value?.let { file ->
+                                        bufferViewModel?.markAsClean(file.uri.toString())
+                                        Log.d(TAG, "Auto-saved and marked clean: ${file.name}")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "AndroidInterface"
             )
 
             loadUrl(NOTEBOOK_URL)
@@ -153,6 +217,14 @@ class NotebookSession(context: Context, name: String = "Notebook") :
                             null
                         )
                     }
+                    
+                    // Enable auto-save using editor preferences
+                    val prefs = com.bsbeetle.bananaspaghetti.utils.preferences.EditorPreferences(context)
+                    view?.evaluateJavascript(
+                        "if(window.setAutoSave) window.setAutoSave(${prefs.autoSave}, ${prefs.autoSaveDelay});",
+                        null
+                    )
+                    Log.d(TAG, "Auto-save enabled: ${prefs.autoSave}, delay: ${prefs.autoSaveDelay}s")
                     
                     // Mark as ready immediately
                     _isReady.value = true

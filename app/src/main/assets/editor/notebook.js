@@ -269,6 +269,12 @@ function createCellElement(cell) {
                 EditorView.updateListener.of((update) => {
                     if (update.docChanged) {
                         cell.code = update.state.doc.toString();
+                        // Signal content change to Android for BufferCard save indicator
+                        if (window.AndroidNotebook && window.AndroidNotebook.onContentChanged) {
+                            window.AndroidNotebook.onContentChanged();
+                        }
+                        // Trigger auto-save timer
+                        triggerAutoSave();
                     }
                     if (update.focusChanged && update.view.hasFocus) {
                         selectCell(cell.id);
@@ -479,13 +485,15 @@ function runCellsSequentially(index) {
     }
 }
 
-function refreshFile() {
-    if (currentFilePath) {
-        updateStatus('Refreshing...');
-        if (window.AndroidPython && window.AndroidPython.requestFileContent) {
-            window.AndroidPython.requestFileContent(currentFilePath);
-        }
-    }
+function clearAllOutputs() {
+    cells.forEach(cell => {
+        cell.output = null;
+        cell.outputType = 'stdout';
+        cell.executionTime = null;
+        cell.textOutput = null;
+        updateCellUI(cell);
+    });
+    updateStatus('All outputs cleared');
 }
 
 // =========================================
@@ -667,13 +675,13 @@ function initNotebook() {
     // Attach toolbar event listeners
     const btnAddCell = document.getElementById('btn-add-cell');
     const btnRunAll = document.getElementById('btn-run-all');
-    const btnRefresh = document.getElementById('btn-refresh');
+    const btnClearAll = document.getElementById('btn-clear-all');
     const btnSave = document.getElementById('btn-save');
 
     console.log('[Notebook] Toolbar buttons:',
         btnAddCell ? 'add✓' : 'add✗',
         btnRunAll ? 'run✓' : 'run✗',
-        btnRefresh ? 'refresh✓' : 'refresh✗',
+        btnClearAll ? 'clear✓' : 'clear✗',
         btnSave ? 'save✓' : 'save✗'
     );
 
@@ -689,13 +697,9 @@ function initNotebook() {
         });
     }
 
-    if (btnRefresh) {
-        btnRefresh.addEventListener('click', () => {
-            if (window.AndroidPython && window.AndroidPython.requestFileContent) {
-                // We need the file path to refresh
-                // For now, just reload the page which will trigger onReady again
-                location.reload();
-            }
+    if (btnClearAll) {
+        btnClearAll.addEventListener('click', () => {
+            clearAllOutputs();
         });
     }
 
@@ -950,6 +954,39 @@ function updateInputModeForOrientation() {
 
 // Listen for orientation/resize changes
 window.addEventListener('resize', updateInputModeForOrientation);
+
+// =========================================
+// AUTO-SAVE FUNCTIONALITY
+// =========================================
+
+let autoSaveTimer = null;
+let autoSaveEnabled = false;
+let autoSaveDelay = 3000; // Default 3 seconds
+
+window.setAutoSave = function (enabled, delaySeconds) {
+    console.log('[Notebook] setAutoSave:', enabled, delaySeconds);
+    autoSaveEnabled = enabled;
+    if (delaySeconds) autoSaveDelay = delaySeconds * 1000;
+
+    if (!enabled && autoSaveTimer) {
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = null;
+    }
+    return true;
+};
+
+function triggerAutoSave() {
+    if (!autoSaveEnabled) return;
+
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+
+    autoSaveTimer = setTimeout(() => {
+        console.log('[Notebook] Auto-save triggered');
+        if (window.AndroidInterface && window.AndroidInterface.saveFile) {
+            window.AndroidInterface.saveFile();
+        }
+    }, autoSaveDelay);
+}
 
 // Start initialization
 console.log('[Notebook] Script loaded, waiting for DOM...');

@@ -7,7 +7,9 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -156,10 +158,12 @@ fun TopBar(modifier: Modifier = Modifier, context: Context) {
                                                                         "TopBar",
                                                                         "  First 50 chars: ${bufferedContent.take(50)}"
                                                                 )
-                                                                loadContentWhenReady(
-                                                                        webView!!,
-                                                                        bufferedContent
-                                                                )
+                                                                webView?.let { wv ->
+                                                                    loadContentWhenReady(
+                                                                            wv,
+                                                                            bufferedContent
+                                                                    )
+                                                                }
                                                         } else {
                                                                 android.util.Log.d(
                                                                         "TopBar",
@@ -174,10 +178,12 @@ fun TopBar(modifier: Modifier = Modifier, context: Context) {
                                                                         "TopBar",
                                                                         "  Read from disk: ${content.length} chars"
                                                                 )
-                                                                loadContentWhenReady(
-                                                                        webView!!,
-                                                                        content
-                                                                )
+                                                                webView?.let { wv ->
+                                                                    loadContentWhenReady(
+                                                                            wv,
+                                                                            content
+                                                                    )
+                                                                }
                                                                 bufferViewModel.bufferLine[
                                                                         fileUri] =
                                                                         content // Use URI as key
@@ -230,20 +236,24 @@ fun TopBar(modifier: Modifier = Modifier, context: Context) {
                                                                                         nextFile.uri
                                                                                                 .toString()]
                                                                                         ?: ""
-                                                                        loadContentWhenReady(
-                                                                                webView!!,
-                                                                                content
-                                                                        )
+                                                                        webView?.let { wv ->
+                                                                            loadContentWhenReady(
+                                                                                    wv,
+                                                                                    content
+                                                                            )
+                                                                        }
                                                                 } else {
                                                                         fileViewModel.selectedUri =
                                                                                 null
                                                                         fileViewModel
                                                                                 .currentFilePath =
                                                                                 null
-                                                                        loadContentWhenReady(
-                                                                                webView!!,
-                                                                                ""
-                                                                        )
+                                                                        webView?.let { wv ->
+                                                                            loadContentWhenReady(
+                                                                                    wv,
+                                                                                    ""
+                                                                            )
+                                                                        }
                                                                 }
                                                         }
                                                 }
@@ -306,20 +316,24 @@ fun TopBar(modifier: Modifier = Modifier, context: Context) {
                                                                                         nextFile.uri
                                                                                                 .toString()]
                                                                                         ?: ""
-                                                                        loadContentWhenReady(
-                                                                                webView!!,
-                                                                                content
-                                                                        )
+                                                                        webView?.let { wv ->
+                                                                            loadContentWhenReady(
+                                                                                    wv,
+                                                                                    content
+                                                                            )
+                                                                        }
                                                                 } else {
                                                                         fileViewModel.selectedUri =
                                                                                 null
                                                                         fileViewModel
                                                                                 .currentFilePath =
                                                                                 null
-                                                                        loadContentWhenReady(
-                                                                                webView!!,
-                                                                                ""
-                                                                        )
+                                                                        webView?.let { wv ->
+                                                                            loadContentWhenReady(
+                                                                                    wv,
+                                                                                    ""
+                                                                            )
+                                                                        }
                                                                 }
                                                         }
                                                 }
@@ -365,10 +379,12 @@ fun TopBar(modifier: Modifier = Modifier, context: Context) {
                                                                                                 nextFile.uri
                                                                                                         .toString()]
                                                                                                 ?: ""
-                                                                                loadContentWhenReady(
-                                                                                        webView!!,
-                                                                                        content
-                                                                                )
+                                                                                                webView?.let { wv ->
+                                                                                    loadContentWhenReady(
+                                                                                            wv,
+                                                                                            content
+                                                                                    )
+                                                                                }
                                                                         } else {
                                                                                 fileViewModel
                                                                                         .selectedUri =
@@ -376,10 +392,12 @@ fun TopBar(modifier: Modifier = Modifier, context: Context) {
                                                                                 fileViewModel
                                                                                         .currentFilePath =
                                                                                         null
-                                                                                loadContentWhenReady(
-                                                                                        webView!!,
-                                                                                        ""
-                                                                                )
+                                                                                webView?.let { wv ->
+                                                                                    loadContentWhenReady(
+                                                                                            wv,
+                                                                                            ""
+                                                                                    )
+                                                                                }
                                                                         }
                                                                 }
                                                         }
@@ -444,10 +462,6 @@ fun LeftTopBar(
                                         )
                                 }
 
-                                VerticalDivider(
-                                        modifier = Modifier.fillMaxHeight().width(1.dp),
-                                        color = Color(0xFF3E3E42)
-                                )
                         }
 
                         VerticalDivider(
@@ -462,17 +476,18 @@ fun LeftTopBar(
                                 color = Color(0xFF3E3E42)
                         )
 
-                        // File button
-                        TopBarIconButton(
-                                // title = "File",
-                                icon = R.drawable.article_icon,
-                                onClick = onFileClick
-                        )
+                        // File button - only show in landscape (in portrait, it's in the sidebar)
+                        if (isLandscape) {
+                                TopBarIconButton(
+                                        icon = R.drawable.article_icon,
+                                        onClick = onFileClick
+                                )
 
-                        VerticalDivider(
-                                modifier = Modifier.fillMaxHeight().width(1.dp),
-                                color = Color(0xFF3E3E42)
-                        )
+                                VerticalDivider(
+                                        modifier = Modifier.fillMaxHeight().width(1.dp),
+                                        color = Color(0xFF3E3E42)
+                                )
+                        }
 
                         // Undo button (icon only)
                         TopBarIconButton(icon = R.drawable.undo_icon, onClick = onUndoClick)
@@ -485,26 +500,28 @@ fun LeftTopBar(
                                 color = Color(0xFF3E3E42)
                         )
 
-                        // Search button
-                        Box(
-                                modifier =
-                                        Modifier.clickable { onSearchClick() }
-                                                .fillMaxHeight()
-                                                .padding(horizontal = 4.dp),
-                                contentAlignment = Alignment.Center
-                        ) {
-                                Icon(
-                                        imageVector = Icons.Default.Search,
-                                        contentDescription = "Search",
-                                        tint = Color(0xFFCCCCCC),
-                                        modifier = Modifier.size(14.dp)
+                        // Search button - only show in landscape (in portrait, it's in the sidebar)
+                        if (isLandscape) {
+                                Box(
+                                        modifier =
+                                                Modifier.clickable { onSearchClick() }
+                                                        .fillMaxHeight()
+                                                        .padding(horizontal = 4.dp),
+                                        contentAlignment = Alignment.Center
+                                ) {
+                                        Icon(
+                                                imageVector = Icons.Default.Search,
+                                                contentDescription = "Search",
+                                                tint = Color(0xFFCCCCCC),
+                                                modifier = Modifier.size(14.dp)
+                                        )
+                                }
+
+                                VerticalDivider(
+                                        modifier = Modifier.fillMaxHeight().width(1.dp),
+                                        color = Color(0xFF3E3E42)
                                 )
                         }
-
-                        VerticalDivider(
-                                modifier = Modifier.fillMaxHeight().width(1.dp),
-                                color = Color(0xFF3E3E42)
-                        )
 
                         // Branch button (conditional)
                         if (showBranchButton) {
@@ -561,360 +578,51 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
                 modifier =
                         modifier.background(Color(0xFF1B1B1B))
                                 .height(if (isLandscape) 18.dp else 28.dp)
-                                .padding(end = 4.dp)
+                                .padding(end = 4.dp),
+                contentAlignment = Alignment.CenterEnd
         ) {
                 Row(
                         modifier = Modifier.fillMaxHeight().wrapContentWidth(),
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                 ) {
-                        VerticalDivider(
-                                modifier = Modifier.fillMaxHeight().width(1.dp),
-                                color = Color(0xFF3E3E42)
-                        )
+                        // Session/ZoomOut button - only show in landscape (in portrait, it's in the sidebar)
+                        if (isLandscape) {
+                                VerticalDivider(
+                                        modifier = Modifier.fillMaxHeight().width(1.dp),
+                                        color = Color(0xFF3E3E42)
+                                )
 
-                        // Session/Fullscreen button
-                        TopBarIconButton(
-                                icon = R.drawable.zoom_in,
-                                onClick = {
-                                        currentEditorSession?.saveContent()
-                                        navController.navigate(Screen.ZoomOut.route)
-                                }
-                        )
-
-                        VerticalDivider(
-                                modifier = Modifier.fillMaxHeight().width(1.dp),
-                                color = Color(0xFF3E3E42)
-                        )
-
-                        // Play button - Unified Code Runner
-                        TopBarIconButton(
-                                icon = R.drawable.play_arrow,
-                                onClick = {
-                                        android.util.Log.d("CodeRunner", "Play button clicked")
-
-                                        // Get active editor session dynamically (not cached)
-                                        val activeEditorSession =
-                                                SessionList.sessions.getOrNull(
-                                                        SessionList.activeSessionIndex ?: -1
-                                                ) as?
-                                                        EditorSession
-
-                                        // Save file to disk before running (not just memory)
-                                        saveFile(fileViewModel, bufferViewModel, context)
-
-                                        // Get current file info
-                                        val currentFileUri = fileViewModel.selectedUri
-                                        if (currentFileUri == null) {
-                                                android.widget.Toast.makeText(
-                                                                context,
-                                                                "No file selected",
-                                                                android.widget.Toast.LENGTH_SHORT
-                                                        )
-                                                        .show()
-                                                android.util.Log.d("CodeRunner", "No file selected")
-                                                return@TopBarIconButton
+                                TopBarIconButton(
+                                        icon = R.drawable.zoom_in,
+                                        onClick = {
+                                                currentEditorSession?.saveContent()
+                                                navController.navigate(Screen.ZoomOut.route)
                                         }
+                                )
+                        }
 
-                                        // Convert URI to file path
-                                        val currentFilePath =
-                                                getPathFromUri(context, currentFileUri)
-                                        if (currentFilePath == null) {
-                                                android.widget.Toast.makeText(
-                                                                context,
-                                                                "Could not resolve file path",
-                                                                android.widget.Toast.LENGTH_LONG
-                                                        )
-                                                        .show()
-                                                android.util.Log.e(
-                                                        "CodeRunner",
-                                                        "Could not resolve path for: $currentFileUri"
+                        // Browser button - only show in landscape (in portrait, it's in the sidebar)
+                        if (isLandscape) {
+                                VerticalDivider(
+                                        modifier = Modifier.fillMaxHeight().width(1.dp),
+                                        color = Color(0xFF3E3E42)
+                                )
+
+                                TopBarIconButton(
+                                        icon = R.drawable.web_icon,
+                                        onClick = {
+                                                currentEditorSession?.saveContent()
+                                                BrowserSession(context)
+                                                browserViewModel.setDevWebView(
+                                                        SessionList.sessions[
+                                                                        SessionList.activeSessionIndex!!]
+                                                                .view!!
                                                 )
-                                                return@TopBarIconButton
+                                                navController.navigate(Screen.Browser.route)
                                         }
-
-                                        android.util.Log.d(
-                                                "CodeRunner",
-                                                "Running file: $currentFilePath"
-                                        )
-
-                                        // Get file extension
-                                        val fileName = currentFilePath.substringAfterLast("/")
-                                        val extension = fileName.substringAfterLast(".").lowercase()
-                                        android.util.Log.d("CodeRunner", "Extension: $extension")
-
-                                        if (activeEditorSession == null) {
-                                                android.widget.Toast.makeText(
-                                                                context,
-                                                                "No active editor session",
-                                                                android.widget.Toast.LENGTH_SHORT
-                                                        )
-                                                        .show()
-                                                return@TopBarIconButton
-                                        }
-
-                                        // Get or create runner terminal (returns Pair with wasNew
-                                        // flag)
-                                        val (runnerTerminal, wasNew) =
-                                                activeEditorSession.getOrCreateRunnerTerminal(
-                                                        context
-                                                )
-                                        val isRerun = !wasNew
-
-                                        // Show toast
-                                        android.widget.Toast.makeText(
-                                                        context,
-                                                        "Running $fileName...",
-                                                        android.widget.Toast.LENGTH_SHORT
-                                                )
-                                                .show()
-
-                                        // First run needs longer delay for terminal to init; rerun
-                                        // is quick
-                                        val initDelay = if (isRerun) 100L else 1500L
-
-                                        // Wait for terminal to initialize (or short delay for
-                                        // rerun)
-                                        android.os.Handler(android.os.Looper.getMainLooper())
-                                                .postDelayed(
-                                                        {
-                                                                // Set up output listener to detect
-                                                                // missing packages
-                                                                runnerTerminal.onOutput =
-                                                                        { output ->
-                                                                                if (output.contains(
-                                                                                                "MISSING_PKG:"
-                                                                                        )
-                                                                                ) {
-                                                                                        val pkg =
-                                                                                                output.substringAfter(
-                                                                                                                "MISSING_PKG:"
-                                                                                                        )
-                                                                                                        .substringBefore(
-                                                                                                                "\n"
-                                                                                                        )
-                                                                                                        .trim()
-                                                                                        android.util
-                                                                                                .Log
-                                                                                                .d(
-                                                                                                        "CodeRunner",
-                                                                                                        "Missing package detected: $pkg"
-                                                                                                )
-                                                                                        if (pkg.isNotEmpty()
-                                                                                        ) {
-                                                                                                android.os
-                                                                                                        .Handler(
-                                                                                                                android.os
-                                                                                                                        .Looper
-                                                                                                                        .getMainLooper()
-                                                                                                        )
-                                                                                                        .post {
-                                                                                                                missingPackage =
-                                                                                                                        pkg
-                                                                                                                pendingFilePath =
-                                                                                                                        currentFilePath
-                                                                                                                showPackageDialog =
-                                                                                                                        true
-                                                                                                        }
-                                                                                        }
-                                                                                }
-                                                                        }
-
-                                                                // For reruns: send multiple Ctrl+C
-                                                                // to ensure process is killed
-                                                                // and reset terminal state
-                                                                if (isRerun) {
-                                                                        // Send Ctrl+C 3 times with
-                                                                        // newlines to ensure we
-                                                                        // break out of any state
-                                                                        runnerTerminal.insertText(
-                                                                                "\u0003\n\u0003\n\u0003\n"
-                                                                        )
-                                                                }
-
-                                                                // Delay then send command
-                                                                val cmdDelay =
-                                                                        if (isRerun) 500L else 100L
-                                                                android.os.Handler(
-                                                                                android.os.Looper
-                                                                                        .getMainLooper()
-                                                                        )
-                                                                        .postDelayed(
-                                                                                {
-                                                                                        // For
-                                                                                        // rerun,
-                                                                                        // reset
-                                                                                        // terminal
-                                                                                        // state
-                                                                                        // first
-                                                                                        val command =
-                                                                                                if (isRerun
-                                                                                                ) {
-                                                                                                        "stty sane; clear; bash \$PREFIX/code-runner.sh \"$currentFilePath\"\n"
-                                                                                                } else {
-                                                                                                        "clear; bash \$PREFIX/code-runner.sh \"$currentFilePath\"\n"
-                                                                                                }
-                                                                                        runnerTerminal
-                                                                                                .insertText(
-                                                                                                        command
-                                                                                                )
-                                                                                },
-                                                                                cmdDelay
-                                                                        )
-
-                                                                // For web files (html, jsx, tsx),
-                                                                // open browser after delay
-                                                                val webExtensions =
-                                                                        setOf(
-                                                                                "html",
-                                                                                "htm",
-                                                                                "jsx",
-                                                                                "tsx"
-                                                                        )
-                                                                if (extension in webExtensions) {
-                                                                        android.os.Handler(
-                                                                                        android.os
-                                                                                                .Looper
-                                                                                                .getMainLooper()
-                                                                                )
-                                                                                .postDelayed(
-                                                                                        {
-                                                                                                // Detect if HTML is in a React/Vite project by checking for package.json
-                                                                                                val port =
-                                                                                                        if (extension in
-                                                                                                                        setOf(
-                                                                                                                                "jsx",
-                                                                                                                                "tsx"
-                                                                                                                        )
-                                                                                                        ) {
-                                                                                                                // JSX/TSX always use dev server
-                                                                                                                5173
-                                                                                                        } else {
-                                                                                                                // For HTML, check if it's in a React/Vite project
-                                                                                                                val fileDir =
-                                                                                                                        java.io
-                                                                                                                                .File(
-                                                                                                                                        currentFilePath
-                                                                                                                                )
-                                                                                                                                .parentFile
-                                                                                                                var checkDir =
-                                                                                                                        fileDir
-                                                                                                                var isReactProject =
-                                                                                                                        false
-
-                                                                                                                // Look up to 5 directories for package.json
-                                                                                                                repeat(
-                                                                                                                        5
-                                                                                                                ) {
-                                                                                                                        if (checkDir !=
-                                                                                                                                        null
-                                                                                                                        ) {
-                                                                                                                                val pkgJson =
-                                                                                                                                        java.io
-                                                                                                                                                .File(
-                                                                                                                                                        checkDir,
-                                                                                                                                                        "package.json"
-                                                                                                                                                )
-                                                                                                                                if (pkgJson.exists()
-                                                                                                                                ) {
-                                                                                                                                        val content =
-                                                                                                                                                try {
-                                                                                                                                                        pkgJson.readText()
-                                                                                                                                                } catch (
-                                                                                                                                                        e:
-                                                                                                                                                                Exception) {
-                                                                                                                                                        ""
-                                                                                                                                                }
-                                                                                                                                        if (content.contains(
-                                                                                                                                                        "\"react\""
-                                                                                                                                                ) ||
-                                                                                                                                                        content.contains(
-                                                                                                                                                                "\"vite\""
-                                                                                                                                                        ) ||
-                                                                                                                                                        content.contains(
-                                                                                                                                                                "\"next\""
-                                                                                                                                                        )
-                                                                                                                                        ) {
-                                                                                                                                                isReactProject =
-                                                                                                                                                        true
-                                                                                                                                                android.util
-                                                                                                                                                        .Log
-                                                                                                                                                        .d(
-                                                                                                                                                                "CodeRunner",
-                                                                                                                                                                "Detected React project for browser"
-                                                                                                                                                        )
-                                                                                                                                        }
-                                                                                                                                }
-                                                                                                                                checkDir =
-                                                                                                                                        checkDir.parentFile
-                                                                                                                        }
-                                                                                                                }
-
-                                                                                                                if (isReactProject
-                                                                                                                )
-                                                                                                                        5173
-                                                                                                                else
-                                                                                                                        5500
-                                                                                                        }
-                                                                                                val urlToOpen =
-                                                                                                        "http://localhost:$port"
-                                                                                                android.util
-                                                                                                        .Log
-                                                                                                        .d(
-                                                                                                                "CodeRunner",
-                                                                                                                "Opening browser: $urlToOpen"
-                                                                                                        )
-
-                                                                                                BrowserSession(
-                                                                                                        context
-                                                                                                )
-                                                                                                browserViewModel
-                                                                                                        .setDevWebView(
-                                                                                                                SessionList
-                                                                                                                                .sessions[
-                                                                                                                                SessionList
-                                                                                                                                        .activeSessionIndex!!]
-                                                                                                                        .view!!
-                                                                                                        )
-                                                                                                browserViewModel
-                                                                                                        .loadUrl(
-                                                                                                                urlToOpen
-                                                                                                        )
-                                                                                                navController
-                                                                                                        .navigate(
-                                                                                                                Screen.Browser
-                                                                                                                        .route
-                                                                                                        )
-                                                                                        },
-                                                                                        3000
-                                                                                ) // Wait 3s for
-                                                                        // server to start
-                                                                }
-                                                        },
-                                                        1500
-                                                ) // Wait 1.5s for terminal initialization
-                                }
-                        )
-
-                        VerticalDivider(
-                                modifier = Modifier.fillMaxHeight().width(1.dp),
-                                color = Color(0xFF3E3E42)
-                        )
-
-                        // Browser button
-                        TopBarIconButton(
-                                icon = R.drawable.web_icon,
-                                onClick = {
-                                        currentEditorSession?.saveContent()
-                                        BrowserSession(context)
-                                        browserViewModel.setDevWebView(
-                                                SessionList.sessions[
-                                                                SessionList.activeSessionIndex!!]
-                                                        .view!!
-                                        )
-                                        navController.navigate(Screen.Browser.route)
-                                }
-                        )
+                                )
+                        }
 
                         VerticalDivider(
                                 modifier = Modifier.fillMaxHeight().width(1.dp),
@@ -930,24 +638,21 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
                                 }
                         )
 
-                        VerticalDivider(
-                                modifier = Modifier.fillMaxHeight().width(1.dp),
-                                color = Color(0xFF3E3E42)
-                        )
+                        // Settings button - only show in landscape (in portrait, it's in the sidebar)
+                        if (isLandscape) {
+                                VerticalDivider(
+                                        modifier = Modifier.fillMaxHeight().width(1.dp),
+                                        color = Color(0xFF3E3E42)
+                                )
 
-                        // Settings button
-                        TopBarIconButton(
-                                icon = R.drawable.settings_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
-                                onClick = {
-                                        currentEditorSession?.saveContent()
-                                        navController.navigate(Screen.Settings.route)
-                                }
-                        )
-
-                        VerticalDivider(
-                                modifier = Modifier.fillMaxHeight().width(1.dp),
-                                color = Color(0xFF3E3E42)
-                        )
+                                TopBarIconButton(
+                                        icon = R.drawable.settings_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
+                                        onClick = {
+                                                currentEditorSession?.saveContent()
+                                                navController.navigate(Screen.Settings.route)
+                                        }
+                                )
+                        }
                 }
         }
 
@@ -1034,6 +739,185 @@ fun LeftTermTopBar(modifier: Modifier = Modifier) {
                         horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                 ) {}
+        }
+}
+
+/**
+ * Terminal Sidebar - Simplified sidebar for terminal portrait mode
+ * Only contains ZoomOut, Browser, and Settings buttons
+ */
+@Composable
+fun TerminalSidebar(
+        isVisible: Boolean,
+        onDismiss: () -> Unit,
+        onZoomOutClick: () -> Unit,
+        onSettingsClick: () -> Unit
+) {
+        val configuration = LocalConfiguration.current
+        val screenWidth = configuration.screenWidthDp.dp
+        val sidebarWidth = screenWidth * 0.75f
+
+        // Animated offset for slide-in effect
+        val offsetX by androidx.compose.animation.core.animateDpAsState(
+                targetValue = if (isVisible) 0.dp else -sidebarWidth,
+                animationSpec = androidx.compose.animation.core.tween(
+                        durationMillis = 300,
+                        easing = androidx.compose.animation.core.FastOutSlowInEasing
+                ),
+                label = "sidebarOffset"
+        )
+
+        // Only render when visible or animating
+        if (isVisible || offsetX > -sidebarWidth) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                        // Scrim (background overlay)
+                        if (isVisible) {
+                                Box(
+                                        modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(Color.Black.copy(alpha = 0.5f))
+                                                .clickable { onDismiss() }
+                                )
+                        }
+
+                        // Sidebar panel
+                        Column(
+                                modifier = Modifier
+                                        .offset(x = offsetX)
+                                        .width(sidebarWidth)
+                                        .fillMaxHeight()
+                                        .background(Color(0xFF1E1E1E))
+                                        .padding(top = 40.dp) // Account for status bar
+                        ) {
+                                // Header
+                                Box(
+                                        modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(Color(0xFF2D2D30))
+                                                .padding(16.dp)
+                                ) {
+                                        Text(
+                                                "Quick Actions",
+                                                color = Color.White,
+                                                style = androidx.compose.material3.MaterialTheme.typography.titleMedium
+                                        )
+                                }
+
+                                androidx.compose.material3.HorizontalDivider(
+                                        thickness = 1.dp,
+                                        color = Color(0xFF2D2D2D)
+                                )
+
+                                // Action buttons
+                                Column(
+                                        modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                        // ZoomOut / Sessions button
+                                        TerminalSidebarButton(
+                                                icon = R.drawable.zoom_in,
+                                                label = "Sessions",
+                                                onClick = {
+                                                        onZoomOutClick()
+                                                        onDismiss()
+                                                }
+                                        )
+
+                                        // Settings button
+                                        TerminalSidebarButton(
+                                                icon = R.drawable.settings_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
+                                                label = "Settings",
+                                                onClick = {
+                                                        onSettingsClick()
+                                                        onDismiss()
+                                                }
+                                        )
+                                }
+                        }
+                }
+        }
+}
+
+@Composable
+private fun TerminalSidebarButton(
+        icon: Int,
+        label: String,
+        onClick: () -> Unit
+) {
+        Row(
+                modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF2D2D30))
+                        .clickable { onClick() }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start
+        ) {
+                Icon(
+                        painter = painterResource(icon),
+                        contentDescription = label,
+                        tint = Color(0xFFCCCCCC),
+                        modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                        text = label,
+                        color = Color.White,
+                        style = androidx.compose.material3.MaterialTheme.typography.bodyLarge
+                )
+        }
+}
+
+/**
+ * Terminal Portrait Top Bar - Simplified top bar for terminal in portrait mode
+ * Has menu button on left and exit button on right
+ */
+@Composable
+fun TerminalPortraitTopBar(
+        modifier: Modifier = Modifier, 
+        onMenuClick: () -> Unit,
+        navController: NavController
+) {
+        Box(
+                modifier =
+                        modifier.background(Color(0xFF1B1B1B))
+                                .fillMaxWidth()
+                                .height(28.dp)
+                                .padding(horizontal = 4.dp)
+        ) {
+                Row(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                        // Menu button (left side)
+                        Row(
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                                IconButton(onClick = onMenuClick) {
+                                        Icon(
+                                                imageVector = Icons.Default.Menu,
+                                                contentDescription = "Toggle Sidebar",
+                                                tint = Color(0xFF858585)
+                                        )
+                                }
+                        }
+                        
+                        // Exit button (right side)
+                        Row(
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                                TopBarIconButton(
+                                        icon = R.drawable.back_logout,
+                                        onClick = {
+                                                navController.popBackStack()
+                                        }
+                                )
+                        }
+                }
         }
 }
 

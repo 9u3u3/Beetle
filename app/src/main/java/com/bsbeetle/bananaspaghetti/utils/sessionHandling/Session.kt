@@ -8,6 +8,7 @@ enum class SessionType {
     EDITOR,
     BROWSER,
     TERMINAL,
+    NOTEBOOK,
     DEMO
 }
 

@@ -35,6 +35,8 @@ import com.bsbeetle.bananaspaghetti.ui.browser.DevBrowserScreen
 import com.bsbeetle.bananaspaghetti.ui.components.ExtraKeysRow
 import com.bsbeetle.bananaspaghetti.ui.components.LeftTermTopBar
 import com.bsbeetle.bananaspaghetti.ui.components.RightTopBar
+import com.bsbeetle.bananaspaghetti.ui.components.TerminalPortraitTopBar
+import com.bsbeetle.bananaspaghetti.ui.components.TerminalSidebar
 import com.bsbeetle.bananaspaghetti.ui.components.TopLeftTermBox
 import com.bsbeetle.bananaspaghetti.ui.components.TopRightBox
 import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
@@ -135,8 +137,8 @@ fun BrowserScreen(navController: NavController) {
                         navController = navController
                 )
             } else {
-                // Portrait Top Bar
-                RightTopBar(
+                // Portrait Top Bar - Custom top bar with menu and exit buttons
+                TerminalPortraitTopBar(
                         modifier =
                                 Modifier.constrainAs(topLeft) {
                                     top.linkTo(parent.top)
@@ -145,6 +147,7 @@ fun BrowserScreen(navController: NavController) {
                                     width = Dimension.fillToConstraints
                                     height = Dimension.wrapContent
                                 },
+                        onMenuClick = { showSidebar = !showSidebar },
                         navController = navController
                 )
             }
@@ -255,6 +258,20 @@ fun BrowserScreen(navController: NavController) {
                     // Use the validated currentSession from earlier
                     webView = currentSession.view!!,
                     viewModel = devWebViewModel
+            )
+        }
+
+        // Browser Sidebar for portrait mode (simplified with only quick actions)
+        if (!isLandscape) {
+            TerminalSidebar(
+                    isVisible = showSidebar,
+                    onDismiss = { showSidebar = false },
+                    onZoomOutClick = {
+                        navController.navigate(Screen.ZoomOut.route)
+                    },
+                    onSettingsClick = {
+                        navController.navigate(Screen.Settings.route)
+                    }
             )
         }
 

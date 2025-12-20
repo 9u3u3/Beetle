@@ -6,18 +6,16 @@ package com.bsbeetle.bananaspaghetti.viewmodel
 import android.annotation.SuppressLint
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import com.bsbeetle.bananaspaghetti.utils.assetHandling.AssetServer
-import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
-
-/*TODO*/
-// Implementation of the sessions
-// Write functions to swap the webViews on call
-
 import androidx.lifecycle.viewModelScope
+import com.bsbeetle.bananaspaghetti.utils.assetHandling.AssetServer
 import com.bsbeetle.bananaspaghetti.utils.languageHandling.LspServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import android.util.Log
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 
 class EditorViewModel(app: Application) : AndroidViewModel(app) {
     // Map of slug -> LspServer
@@ -87,9 +85,20 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
         
         return port
     }
-    @SuppressLint("StaticFieldLeak")
-    var webView: CustomWebView? = null
+    // IMPORTANT: Using StateFlow so UI recomposes when webView changes
+    // StateFlow is the recommended pattern for ViewModels
+    @Suppress("StaticFieldLeak")
+    private val _webView = MutableStateFlow<CustomWebView?>(null)
+    val webViewFlow: StateFlow<CustomWebView?> = _webView.asStateFlow()
+    
+    // Direct access for compatibility (non-reactive)
+    val webView: CustomWebView? get() = _webView.value
 
     // Call this value explicitly as there can be any type of session in the active session
-    fun setEditorWebView(webView: CustomWebView) {this.webView = webView}
+    fun setEditorWebView(webView: CustomWebView) {
+        Log.d("EditorViewModel", "setEditorWebView called with webView for session: ${webView.session?.name}")
+        Log.d("EditorViewModel", "Previous webView was for session: ${_webView.value?.session?.name}")
+        _webView.value = webView
+        Log.d("EditorViewModel", "webViewFlow updated. New value: ${_webView.value?.session?.name}")
+    }
 }

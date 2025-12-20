@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.*
@@ -18,11 +19,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.bsbeetle.bananaspaghetti.LocalFileViewModel
+import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.directGit.ui.GitTab
 import com.bsbeetle.bananaspaghetti.directGit.viewmodel.GitViewModel
 import com.bsbeetle.bananaspaghetti.ui.components.MultiSelectActionsPopup
@@ -36,7 +39,12 @@ fun Sidebar(
         enabledTabs: List<SidebarTab> = SidebarTab.values().toList(),
         modifier: Modifier = Modifier,
         onTabChanged: (SidebarTab) -> Unit = {},
-        gitViewModel: GitViewModel? = null
+        gitViewModel: GitViewModel? = null,
+        // Quick action callbacks (for portrait mode - buttons moved from top bar)
+        onFileOptionsClick: () -> Unit = {},
+        onSearchClick: () -> Unit = {},
+        onZoomOutClick: () -> Unit = {},
+        onSettingsClick: () -> Unit = {}
 ) {
         // Get FileViewModel for multi-select state
         val fileViewModel = LocalFileViewModel.current
@@ -142,10 +150,10 @@ fun Sidebar(
 
                                         HorizontalDivider(thickness = 1.dp, color = Color(0xFF2D2D2D))
 
-                                        // Content Area with transition
+                                        // Content Area with transition - use weight(1f) to leave room for QuickActionsRow
                                         Box(
                                                 modifier =
-                                                        Modifier.fillMaxSize().background(Color(0xFF121212)) // Black like landscape boxes
+                                                        Modifier.weight(1f).fillMaxWidth().background(Color(0xFF121212)) // Black like landscape boxes
                                         ) {
                                                 Crossfade(
                                                         targetState = selectedTab,
@@ -173,6 +181,26 @@ fun Sidebar(
                                                         }
                                                 }
                                         }
+                                        
+                                        // Quick Actions Row (buttons moved from top bar in portrait mode)
+                                        QuickActionsRow(
+                                                onFileOptionsClick = {
+                                                        onFileOptionsClick()
+                                                        onDismiss() // Close sidebar after action
+                                                },
+                                                onSearchClick = {
+                                                        onSearchClick()
+                                                        onDismiss() // Close sidebar after action
+                                                },
+                                                onZoomOutClick = {
+                                                        onZoomOutClick()
+                                                        onDismiss()
+                                                },
+                                                onSettingsClick = {
+                                                        onSettingsClick()
+                                                        onDismiss()
+                                                }
+                                        )
                                 }
                                 
                                 // Floating action bar when in multi-select mode
@@ -245,6 +273,99 @@ fun Sidebar(
                                 onDismiss = { showActionsPopup = false }
                         )
                 }
+        }
+}
+
+
+/**
+ * Quick Actions Row - Displays key action buttons that were moved from the top bar
+ * to give more space for the editor buffer in portrait mode.
+ */
+@Composable
+private fun QuickActionsRow(
+        onFileOptionsClick: () -> Unit,
+        onSearchClick: () -> Unit,
+        onZoomOutClick: () -> Unit,
+        onSettingsClick: () -> Unit
+) {
+        HorizontalDivider(thickness = 1.dp, color = Color(0xFF2D2D2D))
+        
+        Row(
+                modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF2D2D30))
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+        ) {
+                // File options button
+                QuickActionButton(
+                        icon = { 
+                                Icon(
+                                        painter = painterResource(R.drawable.article_icon),
+                                        contentDescription = "File Options",
+                                        tint = Color(0xFFCCCCCC),
+                                        modifier = Modifier.size(22.dp)
+                                )
+                        },
+                        onClick = onFileOptionsClick
+                )
+                
+                // Search button
+                QuickActionButton(
+                        icon = { 
+                                Icon(
+                                        Icons.Default.Search,
+                                        contentDescription = "Find & Replace",
+                                        tint = Color(0xFFCCCCCC),
+                                        modifier = Modifier.size(22.dp)
+                                )
+                        },
+                        onClick = onSearchClick
+                )
+                
+                // ZoomOut/Sessions button
+                QuickActionButton(
+                        icon = {
+                                Icon(
+                                        painter = painterResource(R.drawable.zoom_in),
+                                        contentDescription = "Sessions",
+                                        tint = Color(0xFFCCCCCC),
+                                        modifier = Modifier.size(22.dp)
+                                )
+                        },
+                        onClick = onZoomOutClick
+                )
+                
+                // Settings button
+                QuickActionButton(
+                        icon = {
+                                Icon(
+                                        painter = painterResource(R.drawable.settings_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
+                                        contentDescription = "Settings",
+                                        tint = Color(0xFFCCCCCC),
+                                        modifier = Modifier.size(22.dp)
+                                )
+                        },
+                        onClick = onSettingsClick
+                )
+        }
+}
+
+@Composable
+private fun QuickActionButton(
+        icon: @Composable () -> Unit,
+        onClick: () -> Unit
+) {
+        Box(
+                modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF3E3E42))
+                        .clickable(onClick = onClick),
+                contentAlignment = Alignment.Center
+        ) {
+                icon()
         }
 }
 

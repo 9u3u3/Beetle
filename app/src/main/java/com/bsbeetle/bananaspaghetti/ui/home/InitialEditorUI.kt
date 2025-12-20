@@ -64,6 +64,7 @@ fun InitialEditorUI(navController: NavController) {
     val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
     val editorViewModel: EditorViewModel = LocalEditorViewModel.current
     val bufferViewModel: BufferViewModel = LocalBufferViewModel.current
+    val browserViewModel = LocalBrowserViewModel.current
     val lspViewModel: LspViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
     val gitViewModel: com.bsbeetle.bananaspaghetti.directGit.viewmodel.GitViewModel =
             androidx.lifecycle.viewmodel.compose.viewModel()
@@ -99,6 +100,12 @@ fun InitialEditorUI(navController: NavController) {
         if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
             session.setLspViewModel(lspViewModel)
             session.setBufferViewModel(bufferViewModel)
+            // Switch to this session's buffer
+            session.id?.let { id -> bufferViewModel.setSessionId(id) }
+        } else if (session is NotebookSession) {
+            session.setBufferViewModel(bufferViewModel)
+            // Switch to this session's buffer
+            session.id?.let { id -> bufferViewModel.setSessionId(id) }
         }
     }
 
@@ -515,7 +522,24 @@ fun InitialEditorUI(navController: NavController) {
             }
 
             // Check if webView is available before rendering Editor
-            val webView = editorViewModel.webView
+            // Collect from StateFlow for reactive updates when session changes
+            val currentWebView by editorViewModel.webViewFlow.collectAsStateWithLifecycle()
+            val webView = currentWebView // Local copy for smart cast
+            
+            // Debug logging for session switching
+            LaunchedEffect(webView) {
+                Log.d("InitialEditorUI", "webView changed! New webView for session: ${webView?.session?.name}")
+                Log.d("InitialEditorUI", "webView is ${if (webView != null) "NOT NULL" else "NULL"}")
+                if (webView != null) {
+                    val session = webView.session
+                    when (session) {
+                        is NotebookSession -> Log.d("InitialEditorUI", "Session isReady: ${session.isReady.value}")
+                        is EditorSession -> Log.d("InitialEditorUI", "Session isReady: ${session.isReady.value}")
+                        else -> Log.d("InitialEditorUI", "Unknown session type")
+                    }
+                }
+            }
+            
             if (webView != null) {
                 Editor(
                         Modifier.constrainAs(editor) {
@@ -601,7 +625,22 @@ fun InitialEditorUI(navController: NavController) {
                                 gitViewModel.initializeGit()
                             }
                         },
-                        gitViewModel = gitViewModel
+                        gitViewModel = gitViewModel,
+                        // Quick action callbacks (buttons moved from top bar in portrait mode)
+                        onFileOptionsClick = {
+                            showFileMenu = true
+                        },
+                        onSearchClick = {
+                            showSearchBar = !showSearchBar
+                        },
+                        onZoomOutClick = {
+                            currentSession?.saveContent()
+                            navController.navigate(Screen.ZoomOut.route)
+                        },
+                        onSettingsClick = {
+                            currentSession?.saveContent()
+                            navController.navigate(Screen.Settings.route)
+                        }
                 )
             }
         }

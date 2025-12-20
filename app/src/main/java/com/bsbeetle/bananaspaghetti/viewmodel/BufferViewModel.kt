@@ -10,8 +10,22 @@ import com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 
 class BufferViewModel : ViewModel() {
-    // Use URI string as key instead of DocumentFile to avoid duplicate entries
-    val bufferLine = mutableStateMapOf<String, String>()
+    // Track which session this buffer belongs to
+    private var currentSessionId: Int? = null
+    
+    // Per-session buffers: Map<SessionId, Map<URI, Content>>
+    private val sessionBuffers = mutableStateMapOf<Int, MutableMap<String, String>>()
+    
+    // Per-session file lists: Map<SessionId, List<DocumentFile>>
+    private val sessionFiles = mutableStateMapOf<Int, MutableList<DocumentFile>>()
+    
+    // Per-session dirty files: Map<SessionId, Set<URI>>
+    private val sessionDirtyFiles = mutableStateMapOf<Int, MutableSet<String>>()
+    
+    // Current session's buffer (for backward compatibility)
+    val bufferLine: MutableMap<String, String>
+        get() = sessionBuffers.getOrPut(currentSessionId ?: -1) { mutableMapOf() }
+    
     val filesOpenedList = mutableStateListOf<DocumentFile>()
     
     // Track currently active file
@@ -20,15 +34,54 @@ class BufferViewModel : ViewModel() {
     // Track files with unsaved changes (dirty state) - Store URIs as Strings
     val dirtyFiles = mutableStateListOf<String>()
     
+    /**
+     * Set the current session ID. This loads that session's buffer state.
+     */
+    fun setSessionId(sessionId: Int) {
+        if (currentSessionId != sessionId) {
+            Log.d("Buffer", "Switching session from $currentSessionId to $sessionId")
+            
+            // Save current state to old session
+            currentSessionId?.let { oldId ->
+                sessionFiles[oldId] = filesOpenedList.toMutableList()
+                sessionDirtyFiles[oldId] = dirtyFiles.toMutableSet()
+            }
+            
+            // Clear current state
+            filesOpenedList.clear()
+            dirtyFiles.clear()
+            currentFile.value = null
+            
+            // Load new session's state
+            currentSessionId = sessionId
+            sessionFiles[sessionId]?.let { files ->
+                filesOpenedList.addAll(files)
+            }
+            sessionDirtyFiles[sessionId]?.let { dirty ->
+                dirtyFiles.addAll(dirty)
+            }
+            
+            Log.d("Buffer", "Session $sessionId loaded: ${filesOpenedList.size} files, ${dirtyFiles.size} dirty")
+        }
+    }
+    
     fun markAsDirty(fileUri: String) {
         if (!dirtyFiles.contains(fileUri)) {
             dirtyFiles.add(fileUri)
+            // Also track in session-specific storage
+            currentSessionId?.let { id ->
+                sessionDirtyFiles.getOrPut(id) { mutableSetOf() }.add(fileUri)
+            }
             Log.d("Buffer", "Marked dirty: $fileUri")
         }
     }
     
     fun markAsClean(fileUri: String) {
         dirtyFiles.remove(fileUri)
+        // Also remove from session-specific storage
+        currentSessionId?.let { id ->
+            sessionDirtyFiles[id]?.remove(fileUri)
+        }
         Log.d("Buffer", "Marked clean: $fileUri")
     }
     
@@ -89,11 +142,26 @@ class BufferViewModel : ViewModel() {
             }
         }
     }
+    
     fun clear() {
         bufferLine.clear()
         filesOpenedList.clear()
         currentFile.value = null
         dirtyFiles.clear()
-        Log.d("Buffer", "BufferViewModel cleared")
+        Log.d("Buffer", "BufferViewModel cleared for session $currentSessionId")
+    }
+    
+    /**
+     * Clear all session data (for app reset)
+     */
+    fun clearAll() {
+        sessionBuffers.clear()
+        sessionFiles.clear()
+        sessionDirtyFiles.clear()
+        currentSessionId = null
+        filesOpenedList.clear()
+        currentFile.value = null
+        dirtyFiles.clear()
+        Log.d("Buffer", "BufferViewModel fully cleared")
     }
 }

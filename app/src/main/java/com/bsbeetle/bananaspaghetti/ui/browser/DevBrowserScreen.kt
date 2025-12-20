@@ -118,7 +118,11 @@ fun DevBrowserScreen(
         // WebView
         AndroidView(
                 modifier = Modifier.fillMaxWidth().weight(1f).background(Color.White),
-                factory = { webView },
+                factory = { 
+                    // Remove from existing parent if any (prevents crash)
+                    (webView.parent as? android.view.ViewGroup)?.removeView(webView)
+                    webView 
+                },
                 update = { viewModel.updateNavigation() }
         )
     }

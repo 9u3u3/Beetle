@@ -73,8 +73,8 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
         _installationError.value = false
         _installingExtensionName.value = ""
         
-        // Clear installation notification
-        TerminalService.setInstallationInProgress(null)
+        // Clear installation notification - DISABLED
+        // TerminalService.setInstallationInProgress(null)
     }
     
     private fun addInstallOutput(line: String) {
@@ -141,9 +141,9 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
             try {
                 val context = getApplication<Application>()
                 
-                // Start foreground service for background installation support
-                TerminalService.startService(context)
-                TerminalService.setInstallationInProgress(extension.name)
+                // Start foreground service for background installation support - DISABLED
+                // TerminalService.startService(context)
+                // TerminalService.setInstallationInProgress(extension.name)
                 
                 addInstallOutput("$ Starting installation of ${extension.name}...")
                 addInstallOutput("$ Downloading extension files...")
@@ -244,9 +244,9 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                     _installationComplete.value = true
                 }
                 
-                // Clear installation notification
-                TerminalService.setInstallationInProgress(null)
-                TerminalService.stopServiceIfNoSessions(context)
+                // Clear installation notification - DISABLED
+                // TerminalService.setInstallationInProgress(null)
+                // TerminalService.stopServiceIfNoSessions(context)
                 
                 Log.d("ExtensionsViewModel", "Installed ${extension.name}")
                 
@@ -268,9 +268,9 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                 // Revert installing state
                 updateExtensionState(extension.id) { it.copy(isInstalling = false) }
                 
-                // Clear installation notification
-                TerminalService.setInstallationInProgress(null)
-                TerminalService.stopServiceIfNoSessions(getApplication())
+                // Clear installation notification - DISABLED
+                // TerminalService.setInstallationInProgress(null)
+                // TerminalService.stopServiceIfNoSessions(getApplication())
             }
         }
     }

@@ -39,7 +39,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -1069,7 +1071,6 @@ private fun EditorSettingsContent() {
         var autoSaveDelay by remember { mutableStateOf(prefs.autoSaveDelay) }
         var selectedTheme by remember { mutableStateOf(prefs.theme) }
         var themeDropdownExpanded by remember { mutableStateOf(false) }
-        var pythonReplEnabled by remember { mutableStateOf(prefs.pythonRepl) }
 
         // Theme Selection Card
         SettingsCard(title = "Editor Theme") {
@@ -1354,41 +1355,45 @@ private fun EditorSettingsContent() {
                 }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Python REPL Settings Card
-        SettingsCard(title = "Python Notebook") {
-                SettingRowWithCheckbox(
-                        title = "Python REPL Mode",
-                        description = "Enable notebook-like editing for .py files with cell execution (requires Python installed)",
-                        isChecked = pythonReplEnabled,
-                        onCheckedChange = {
-                                pythonReplEnabled = it
-                                prefs.pythonRepl = it
-                        }
-                )
-        }
-
         Spacer(modifier = Modifier.height(16.dp))
 }
 
 @Composable
 private fun GitSettingsContent() {
         val context = androidx.compose.ui.platform.LocalContext.current
-        var userName by remember { mutableStateOf("") }
-        var userEmail by remember { mutableStateOf("") }
+        val prefs = remember { com.bsbeetle.bananaspaghetti.utils.preferences.EditorPreferences(context) }
+        val scope = rememberCoroutineScope()
+        
+        var userName by remember { mutableStateOf(prefs.gitUserName) }
+        var userEmail by remember { mutableStateOf(prefs.gitUserEmail) }
         var showPublicKey by remember { mutableStateOf(false) }
         var publicKey by remember { mutableStateOf("") }
+        var isGenerating by remember { mutableStateOf(false) }
+        var sshKeyExists by remember { mutableStateOf(false) }
+        var errorMessage by remember { mutableStateOf<String?>(null) }
+        
+        // Check if SSH key already exists
+        val sshKeyManager = remember { com.bsbeetle.bananaspaghetti.directGit.utils.AlpineSshKeyManager(context) }
+        
+        // Check key status on load
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+                val alpinePath = "${context.filesDir.absolutePath}/alpine/home/.ssh/id_ed25519.pub"
+                val file = java.io.File(alpinePath)
+                sshKeyExists = file.exists() || sshKeyManager.hasKeys()
+                if (sshKeyExists && file.exists()) {
+                        publicKey = file.readText()
+                }
+        }
 
-        // Load public key
+        // Load public key when showing
         androidx.compose.runtime.LaunchedEffect(showPublicKey) {
-                if (showPublicKey) {
+                if (showPublicKey && sshKeyExists) {
                         try {
                                 val alpinePath =
                                         "${context.filesDir.absolutePath}/alpine/home/.ssh/id_ed25519.pub"
                                 val file = java.io.File(alpinePath)
                                 publicKey =
-                                        if (file.exists()) file.readText() else "No SSH key found"
+                                        if (file.exists()) file.readText() else sshKeyManager.getPublicKey() ?: "No SSH key found"
                         } catch (e: Exception) {
                                 publicKey = "Error reading key: ${e.message}"
                         }
@@ -1399,11 +1404,11 @@ private fun GitSettingsContent() {
                 // User Name
                 Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                         Text("User Name", color = TextPrimary, fontSize = 16.sp)
-                        Text("Used for commit author name", color = TextSecondary, fontSize = 13.sp)
+                        Text("Used for commit author and SSH key", color = TextSecondary, fontSize = 13.sp)
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
                                 value = userName,
-                                onValueChange = { userName = it },
+                                onValueChange = { userName = it; prefs.gitUserName = it },
                                 placeholder = { Text("Your Name", color = TextSecondary) },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(8.dp),
@@ -1427,14 +1432,14 @@ private fun GitSettingsContent() {
                 Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                         Text("User Email", color = TextPrimary, fontSize = 16.sp)
                         Text(
-                                "Used for commit author email",
+                                "Used for commit author and SSH key",
                                 color = TextSecondary,
                                 fontSize = 13.sp
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
                                 value = userEmail,
-                                onValueChange = { userEmail = it },
+                                onValueChange = { userEmail = it; prefs.gitUserEmail = it },
                                 placeholder = { Text("you@example.com", color = TextSecondary) },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(8.dp),
@@ -1456,6 +1461,7 @@ private fun GitSettingsContent() {
         Spacer(modifier = Modifier.height(24.dp))
 
         SettingsCard(title = "SSH Key") {
+                // Generate SSH Key button
                 Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                         Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -1464,12 +1470,12 @@ private fun GitSettingsContent() {
                         ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                                "View Public Key",
-                                                color = TextPrimary,
+                                                if (sshKeyExists) "SSH Key Generated ✓" else "Generate SSH Key",
+                                                color = if (sshKeyExists) Color(0xFF4CAF50) else TextPrimary,
                                                 fontSize = 16.sp
                                         )
                                         Text(
-                                                "Copy to add to GitHub/GitLab",
+                                                if (sshKeyExists) "Key ready for GitHub/GitLab" else "Required for Git push/pull",
                                                 color = TextSecondary,
                                                 fontSize = 13.sp
                                         )
@@ -1477,48 +1483,166 @@ private fun GitSettingsContent() {
                                 Box(
                                         modifier =
                                                 Modifier.clip(RoundedCornerShape(8.dp))
-                                                        .background(AccentBlue)
-                                                        .clickable {
-                                                                showPublicKey = !showPublicKey
+                                                        .background(
+                                                                if (isGenerating) Color(0xFF555555)
+                                                                else if (sshKeyExists) Color(0xFF4CAF50)
+                                                                else AccentBlue
+                                                        )
+                                                        .clickable(enabled = !isGenerating) {
+                                                                if (userName.isBlank() || userEmail.isBlank()) {
+                                                                        errorMessage = "Please enter name and email first"
+                                                                        return@clickable
+                                                                }
+                                                                
+                                                                errorMessage = null
+                                                                isGenerating = true
+                                                                
+                                                                scope.launch {
+                                                                        try {
+                                                                                val success = sshKeyManager.generateKeyPair()
+                                                                                if (success) {
+                                                                                        sshKeyExists = true
+                                                                                        val alpinePath = "${context.filesDir.absolutePath}/alpine/home/.ssh/id_ed25519.pub"
+                                                                                        val file = java.io.File(alpinePath)
+                                                                                        if (file.exists()) {
+                                                                                                publicKey = file.readText()
+                                                                                        }
+                                                                                        android.widget.Toast.makeText(context, "SSH key generated!", android.widget.Toast.LENGTH_SHORT).show()
+                                                                                } else {
+                                                                                        errorMessage = "Failed to generate key. Make sure Terminal is initialized."
+                                                                                }
+                                                                        } catch (e: Exception) {
+                                                                                errorMessage = e.message ?: "Error generating SSH key"
+                                                                        } finally {
+                                                                                isGenerating = false
+                                                                        }
+                                                                }
                                                         }
                                                         .padding(
                                                                 horizontal = 16.dp,
                                                                 vertical = 8.dp
                                                         )
                                 ) {
-                                        Text(
-                                                if (showPublicKey) "Hide" else "Show",
-                                                color = TextPrimary,
-                                                fontSize = 14.sp
-                                        )
+                                        if (isGenerating) {
+                                                Text("Generating...", color = TextPrimary, fontSize = 14.sp)
+                                        } else {
+                                                Text(
+                                                        if (sshKeyExists) "Regenerate" else "Generate",
+                                                        color = TextPrimary,
+                                                        fontSize = 14.sp
+                                                )
+                                        }
                                 }
                         }
-
-                        if (showPublicKey) {
-                                Spacer(modifier = Modifier.height(12.dp))
+                        
+                        // Error message
+                        if (errorMessage != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                        publicKey,
-                                        color = TextSecondary,
-                                        fontSize = 11.sp,
-                                        modifier =
-                                                Modifier.fillMaxWidth()
-                                                        .background(
-                                                                Color(0xFF1E1E1E),
-                                                                RoundedCornerShape(4.dp)
-                                                        )
-                                                        .padding(8.dp)
+                                        errorMessage!!,
+                                        color = Color(0xFFFF5252),
+                                        fontSize = 13.sp
                                 )
+                        }
+                }
+                
+                if (sshKeyExists) {
+                        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+                        
+                        // View Public Key
+                        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                                Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                        "View Public Key",
+                                                        color = TextPrimary,
+                                                        fontSize = 16.sp
+                                                )
+                                                Text(
+                                                        "Copy to add to GitHub/GitLab",
+                                                        color = TextSecondary,
+                                                        fontSize = 13.sp
+                                                )
+                                        }
+                                        Box(
+                                                modifier =
+                                                        Modifier.clip(RoundedCornerShape(8.dp))
+                                                                .background(CardDark)
+                                                                .clickable {
+                                                                        showPublicKey = !showPublicKey
+                                                                }
+                                                                .padding(
+                                                                        horizontal = 16.dp,
+                                                                        vertical = 8.dp
+                                                                )
+                                        ) {
+                                                Text(
+                                                        if (showPublicKey) "Hide" else "Show",
+                                                        color = TextPrimary,
+                                                        fontSize = 14.sp
+                                                )
+                                        }
+                                }
+
+                                if (showPublicKey) {
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                                Text(
+                                                        publicKey,
+                                                        color = TextSecondary,
+                                                        fontSize = 11.sp,
+                                                        modifier =
+                                                                Modifier.weight(1f)
+                                                                        .background(
+                                                                                Color(0xFF1E1E1E),
+                                                                                RoundedCornerShape(4.dp)
+                                                                        )
+                                                                        .padding(8.dp)
+                                                )
+                                                // Copy button
+                                                Box(
+                                                        modifier = Modifier
+                                                                .clip(RoundedCornerShape(4.dp))
+                                                                .background(AccentBlue)
+                                                                .clickable {
+                                                                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                                                        val clip = android.content.ClipData.newPlainText("SSH Public Key", publicKey)
+                                                                        clipboard.setPrimaryClip(clip)
+                                                                        android.widget.Toast.makeText(context, "Public key copied!", android.widget.Toast.LENGTH_SHORT).show()
+                                                                }
+                                                                .padding(8.dp)
+                                                ) {
+                                                        Text("Copy", color = TextPrimary, fontSize = 12.sp)
+                                                }
+                                        }
+                                }
                         }
                 }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-                "Note: Git user config will be applied when saved in a future update.",
-                color = TextSecondary,
-                fontSize = 12.sp
-        )
+        // Status message
+        if (!sshKeyExists) {
+                Text(
+                        "Generate an SSH key to enable Git push/pull features.",
+                        color = TextSecondary,
+                        fontSize = 12.sp
+                )
+        } else {
+                Text(
+                        "Git is configured! Add your public key to GitHub/GitLab to use push/pull.",
+                        color = Color(0xFF4CAF50),
+                        fontSize = 12.sp
+                )
+        }
 }
 
 @Composable

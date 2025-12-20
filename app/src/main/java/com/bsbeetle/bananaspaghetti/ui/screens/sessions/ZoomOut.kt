@@ -2,6 +2,8 @@ package com.bsbeetle.bananaspaghetti.ui.screens.sessions
 
 import android.content.Intent
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -53,11 +55,65 @@ fun ZoomOut(
 ) {
     val fileViewModel: FileViewModel = LocalFileViewModel.current
     val bufferViewModel: com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel = com.bsbeetle.bananaspaghetti.LocalBufferViewModel.current
+    val editorViewModel: com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel = com.bsbeetle.bananaspaghetti.LocalEditorViewModel.current
     var showNewSessionDialog by remember { mutableStateOf(false) }
     var showEditorMenu by remember { mutableStateOf(false) }
+    var showNotebookMenu by remember { mutableStateOf(false) }
     var pendingEditorName by remember { mutableStateOf("Editor") }
+    var pendingNotebookName by remember { mutableStateOf("Notebook") }
     val context = LocalContext.current
     val launcher = fileLauncher(context, navController)
+    
+    // Notebook file launcher - creates NotebookSession instead of EditorSession
+    val notebookLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val uri: android.net.Uri? = result.data?.data
+            if (uri != null) {
+                val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                context.contentResolver.takePersistableUriPermission(uri, flags)
+                
+                // Clear buffer state
+                bufferViewModel.clear()
+                fileViewModel.selectedUri = null
+                fileViewModel.currentFilePath = ""
+                
+                if (android.provider.DocumentsContract.isDocumentUri(context, uri)) {
+                    // File selected - create notebook session with file
+                    val fileName = com.bsbeetle.bananaspaghetti.utils.fileHandling.getFileName(context, uri)
+                    fileViewModel.selectedUri = uri
+                    fileViewModel.selectedFolderUri = null
+                    
+                    val session = com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession(
+                        context.applicationContext, 
+                        fileName
+                    )
+                    session.setFilePath(uri.toString())
+                    session.id?.let { id -> bufferViewModel.setSessionId(id) }
+                    
+                    navController.navigate(Screen.Notebook.route) {
+                        popUpTo(Screen.ZoomOut.route) { inclusive = true }
+                    }
+                } else {
+                    // Folder selected - create notebook session with folder
+                    fileViewModel.selectedFolderUri = uri
+                    val folderDoc = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, uri)
+                    
+                    val session = com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession(
+                        context.applicationContext, 
+                        folderDoc?.name ?: "Notebook"
+                    )
+                    session.projectRoot = folderDoc
+                    session.id?.let { id -> bufferViewModel.setSessionId(id) }
+                    
+                    navController.navigate(Screen.Notebook.route) {
+                        popUpTo(Screen.ZoomOut.route) { inclusive = true }
+                    }
+                }
+            }
+        }
+    }
 
     // Capture snapshots when screen is shown
     LaunchedEffect(Unit) {
@@ -65,21 +121,9 @@ fun ZoomOut(
     }
 
     BackHandler {
-        if (SessionList.activeSessionIndex != null && SessionList.sessions.isNotEmpty()) {
-            val activeSession = SessionList.sessions.getOrNull(SessionList.activeSessionIndex!!)
-            if (activeSession != null) {
-                navigateToSession(navController, activeSession)
-            } else {
-                // No valid active session, go Home
-                navController.navigate(Screen.Home.route) {
-                    popUpTo(Screen.Home.route) { inclusive = true }
-                }
-            }
-        } else {
-            // No sessions left, go Home
-            navController.navigate(Screen.Home.route) {
-                popUpTo(Screen.Home.route) { inclusive = true }
-            }
+        // Always go to Home when pressing back from ZoomOut
+        navController.navigate(Screen.Home.route) {
+            popUpTo(Screen.Home.route) { inclusive = true }
         }
     }
 
@@ -120,12 +164,27 @@ fun ZoomOut(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(SessionList.sessions) { session ->
+                // Filter out internal sessions like PythonREPL-Headless
+                val visibleSessions = SessionList.sessions.filter { session ->
+                    !session.name.contains("Headless", ignoreCase = true) &&
+                    !session.name.contains("Runner-", ignoreCase = true)
+                }
+                items(visibleSessions) { session ->
                     SessionCard(
                         session = session,
                         snapshot = viewModel.sessionSnapshots[session.id],
                         onClick = {
-                            SessionList.activeSessionIndex = session.id
+                            // Switch to this session's buffer (each session has its own file list)
+                            if (session is EditorSession || session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession) {
+                                session.id?.let { bufferViewModel.setSessionId(it) }
+                                fileViewModel.selectedUri = null
+                                fileViewModel.currentFilePath = ""
+                                
+                                // CRITICAL: Update editorViewModel's webView to this session's webView
+                                // This fixes the issue where only the latest session would work
+                                editorViewModel.setEditorWebView(session.getOrInitView())
+                            }
+                            SessionList.activeSessionIndex = SessionList.sessions.indexOf(session)
                             // Sync file tree with session's folder when switching to EditorSession
                             if (session is EditorSession) {
                                 session.projectRoot?.let { projectRoot ->
@@ -171,6 +230,12 @@ fun ZoomOut(
                             showEditorMenu = true
                             pendingEditorName = finalName
                         }
+                        SessionType.NOTEBOOK -> {
+                            // Show file options menu for Notebook (like Editor)
+                            showNewSessionDialog = false
+                            showNotebookMenu = true
+                            pendingNotebookName = finalName
+                        }
                         SessionType.BROWSER -> {
                             BrowserSession(appContext, name = finalName)
                             showNewSessionDialog = false
@@ -209,6 +274,35 @@ fun ZoomOut(
                         type = "*/*"
                     }
                     launcher.launch(intent)
+                }
+            )
+        }
+        
+        // Notebook Menu (same as Editor Menu but creates NotebookSession)
+        if (showNotebookMenu) {
+            NotebookMenu(
+                onDismiss = { showNotebookMenu = false },
+                onOpenFolder = {
+                    showNotebookMenu = false
+                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+                    notebookLauncher.launch(intent)
+                },
+                onCreateNewFile = {
+                    showNotebookMenu = false
+                    val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "*/*"
+                        putExtra(Intent.EXTRA_TITLE, "notebook.py")
+                    }
+                    notebookLauncher.launch(intent)
+                },
+                onOpenFile = {
+                    showNotebookMenu = false
+                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "*/*"
+                    }
+                    notebookLauncher.launch(intent)
                 }
             )
         }
@@ -254,7 +348,18 @@ fun EditorMenu(
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3A3A3A)),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("📁 Open a Folder", color = Color.White)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(id = com.bsbeetle.bananaspaghetti.R.drawable.folder_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text("Open a Folder", color = Color.White)
+                }
             }
             
             // Open File button
@@ -264,7 +369,18 @@ fun EditorMenu(
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3A3A3A)),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("📂 Open a File", color = Color.White)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(id = com.bsbeetle.bananaspaghetti.R.drawable.file_open_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text("Open a File", color = Color.White)
+                }
             }
             
             // Create New File button
@@ -274,7 +390,122 @@ fun EditorMenu(
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3A3A3A)),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("📄 Create a New File", color = Color.White)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(id = com.bsbeetle.bananaspaghetti.R.drawable.article_icon),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text("Create a New File", color = Color.White)
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color(0xFF888888))
+            }
+        }
+    }
+}
+
+@Composable
+fun NotebookMenu(
+    onDismiss: () -> Unit,
+    onOpenFolder: () -> Unit,
+    onOpenFile: () -> Unit,
+    onCreateNewFile: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0x99000000))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .width(300.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFF2A2A2A))
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Open Notebook",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Open Folder button
+            Button(
+                onClick = onOpenFolder,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3A3A3A)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(id = com.bsbeetle.bananaspaghetti.R.drawable.folder_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text("Open a Folder", color = Color.White)
+                }
+            }
+            
+            // Open File button
+            Button(
+                onClick = onOpenFile,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3A3A3A)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(id = com.bsbeetle.bananaspaghetti.R.drawable.file_open_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text("Open a File", color = Color.White)
+                }
+            }
+            
+            // Create New File button
+            Button(
+                onClick = onCreateNewFile,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3A3A3A)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(id = com.bsbeetle.bananaspaghetti.R.drawable.note_add_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text("Create a New Notebook", color = Color.White)
+                }
             }
             
             Spacer(modifier = Modifier.height(4.dp))
@@ -348,9 +579,11 @@ fun SessionCard(
                         verticalArrangement = Arrangement.Center
                     ) {
                         when (session.type) {
-                            SessionType.EDITOR -> Text(
-                                text = "📝",
-                                fontSize = 48.sp
+                            SessionType.EDITOR -> Icon(
+                                painter = androidx.compose.ui.res.painterResource(id = com.bsbeetle.bananaspaghetti.R.drawable.article_icon),
+                                contentDescription = "Editor",
+                                tint = Color(0xFFAAAAAA),
+                                modifier = Modifier.size(48.dp)
                             )
                             SessionType.BROWSER -> Icon(
                                 painter = androidx.compose.ui.res.painterResource(id = com.bsbeetle.bananaspaghetti.R.drawable.web_icon),
@@ -364,9 +597,17 @@ fun SessionCard(
                                 tint = Color(0xFFAAAAAA),
                                 modifier = Modifier.size(48.dp)
                             )
-                            SessionType.DEMO -> Text(
-                                text = "🎨",
-                                fontSize = 48.sp
+                            SessionType.NOTEBOOK -> Icon(
+                                painter = androidx.compose.ui.res.painterResource(id = com.bsbeetle.bananaspaghetti.R.drawable.note_add_24dp_e3e3e3_fill0_wght400_grad0_opsz24),
+                                contentDescription = "Notebook",
+                                tint = Color(0xFFAAAAAA),
+                                modifier = Modifier.size(48.dp)
+                            )
+                            SessionType.DEMO -> Icon(
+                                painter = androidx.compose.ui.res.painterResource(id = com.bsbeetle.bananaspaghetti.R.drawable.extension),
+                                contentDescription = "Demo",
+                                tint = Color(0xFFAAAAAA),
+                                modifier = Modifier.size(48.dp)
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
@@ -585,6 +826,9 @@ private fun navigateToSession(navController: NavController, session: Session) {
             popUpTo(Screen.ZoomOut.route) { inclusive = true }
         }
         SessionType.TERMINAL -> navController.navigate(Screen.Terminal.route) {
+            popUpTo(Screen.ZoomOut.route) { inclusive = true }
+        }
+        SessionType.NOTEBOOK -> navController.navigate(Screen.Notebook.route) {
             popUpTo(Screen.ZoomOut.route) { inclusive = true }
         }
         SessionType.DEMO -> navController.navigate(Screen.Demo.route) {

@@ -81,8 +81,12 @@ fun Editor(modifier: Modifier = Modifier, webView: CustomWebView) {
             }
         }
 
-        // Editor WebView - invisible until ready
-        AndroidView(
+        // CRITICAL: Use key() to force AndroidView recreation when webView changes
+        // Without this, Compose reuses the old AndroidView with the old session's webView
+        androidx.compose.runtime.key(webView) {
+            android.util.Log.d("Editor", "Creating AndroidView for session: ${webView.session?.name}")
+            
+            AndroidView(
                 factory = { ctx ->
                     // Remove from existing parent if any (prevents crash)
                     (webView.parent as? ViewGroup)?.removeView(webView)
@@ -127,5 +131,6 @@ fun Editor(modifier: Modifier = Modifier, webView: CustomWebView) {
                     }
                 }
         )
+    }
     }
 }

@@ -24,12 +24,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
 import com.bsbeetle.bananaspaghetti.LocalSliderViewModel
+import com.bsbeetle.bananaspaghetti.LocalBrowserViewModel
 import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
-import com.bsbeetle.bananaspaghetti.data.sidebar.Sidebar
-import com.bsbeetle.bananaspaghetti.data.sidebar.SidebarTab
 import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
 import com.bsbeetle.bananaspaghetti.ui.components.LeftTermTopBar
 import com.bsbeetle.bananaspaghetti.ui.components.RightTopBar
+import com.bsbeetle.bananaspaghetti.ui.components.TerminalPortraitTopBar
+import com.bsbeetle.bananaspaghetti.ui.components.TerminalSidebar
 import com.bsbeetle.bananaspaghetti.ui.components.TopLeftTermBox
 import com.bsbeetle.bananaspaghetti.ui.components.TopRightBox
 import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
@@ -130,8 +131,8 @@ fun InitialTerminalUI(navController: NavController) {
                         navController = navController
                 )
             } else {
-                // Portrait Top Bar - Use RightTopBar as it contains the relevant actions
-                RightTopBar(
+                // Portrait Top Bar - Custom terminal top bar with menu and exit buttons
+                TerminalPortraitTopBar(
                         modifier =
                                 Modifier.constrainAs(topLeft) {
                                     top.linkTo(parent.top)
@@ -140,6 +141,7 @@ fun InitialTerminalUI(navController: NavController) {
                                     width = Dimension.fillToConstraints
                                     height = Dimension.wrapContent
                                 },
+                        onMenuClick = { showSidebar = !showSidebar },
                         navController = navController
                 )
             }
@@ -241,6 +243,19 @@ fun InitialTerminalUI(navController: NavController) {
             )
         }
 
+        // Terminal Sidebar for portrait mode (simplified with only quick actions)
+        if (!isLandscape) {
+            TerminalSidebar(
+                    isVisible = showSidebar,
+                    onDismiss = { showSidebar = false },
+                    onZoomOutClick = {
+                        navController.navigate(Screen.ZoomOut.route)
+                    },
+                    onSettingsClick = {
+                        navController.navigate(Screen.Settings.route)
+                    }
+            )
+        }
         // Extra Keys Row - Shows in portrait mode OR in landscape mode when useLandscapeIme is enabled
         val showExtraKeys = !isLandscape || uiState.useLandscapeIme
         if (showExtraKeys) {
