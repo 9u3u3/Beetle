@@ -952,3 +952,428 @@
 12-21 06:58:05.385 21409 21409 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
 12-21 06:58:05.385 21409 21409 D Buffer  : setSessionId called with same key: NOTEBOOK_0 (no-op)
 12-21 06:58:07.734 21409 21652 D EditorSession: ✓ JS: AndroidInterface.saveFile() called - auto-save triggered
+12-21 07:03:04.618 29002 29002 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 07:03:04.618 29002 29002 D NotebookSession: ║ setFilePath called
+12-21 07:03:04.619 29002 29002 D NotebookSession: ║ Old path: null
+12-21 07:03:04.619 29002 29002 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 07:03:04.619 29002 29002 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 07:03:04.619 29002 29002 D NotebookSession: Clearing notebook before loading new content...
+12-21 07:03:04.620 29002 29002 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 07:03:04.620 29002 29002 D NotebookSession: Reading from content:// URI
+12-21 07:03:04.622 29002 29002 D NotebookSession: Content read successfully: 62 chars
+12-21 07:03:04.622 29002 29002 D NotebookSession: First 100 chars: print("Hello from Python!")
+12-21 07:03:04.622 29002 29002 D NotebookSession: a = 92
+12-21 07:03:04.622 29002 29002 D NotebookSession: b = 3
+12-21 07:03:04.622 29002 29002 D NotebookSession: print("Sum =", a + b)
+12-21 07:03:04.623 29002 29002 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py (62 chars)
+12-21 07:03:04.623 29002 29002 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:03:04.623 29002 29002 D Buffer  : ║ setSessionId(LEGACY) called
+12-21 07:03:04.623 29002 29002 D Buffer  : ║ Caller: MainMenuKt.MainMenu$lambda$24$0:158
+12-21 07:03:04.623 29002 29002 D Buffer  : ║ ID: 0 → detected type: NOTEBOOK
+12-21 07:03:04.623 29002 29002 D Buffer  : ║ SessionList.sessions.size: 2
+12-21 07:03:04.623 29002 29002 D Buffer  : ║ SessionList.activeSessionIndex: 1
+12-21 07:03:04.623 29002 29002 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:03:04.623 29002 29002 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:03:04.623 29002 29002 D Buffer  : ║ setSessionId CALLED
+12-21 07:03:04.623 29002 29002 D Buffer  : ║ Caller: BufferViewModel.setSessionId:165
+12-21 07:03:04.623 29002 29002 D Buffer  : ║ Request: type=NOTEBOOK, id=0 → key=NOTEBOOK_0
+12-21 07:03:04.624 29002 29002 D Buffer  : ║ Current: key=null, type=null, id=null
+12-21 07:03:04.624 29002 29002 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:03:04.624 29002 29002 D Buffer  : [BEFORE] filesOpenedList: []
+12-21 07:03:04.624 29002 29002 D Buffer  : [BEFORE] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@dfa200a
+12-21 07:03:04.624 29002 29002 D Buffer  : >>> SWITCHING from null to NOTEBOOK_0
+12-21 07:03:04.624 29002 29002 D Buffer  : >>> No old session to save (currentSessionKey was null)
+12-21 07:03:04.625 29002 29002 D Buffer  : >>> CLEARED current filesOpenedList
+12-21 07:03:04.625 29002 29002 D Buffer  : >>> No saved files for NOTEBOOK_0 (new session)
+12-21 07:03:04.625 29002 29002 D Buffer  : >>> Session switch COMPLETE: NOTEBOOK_0 with 0 files
+12-21 07:03:04.625 29002 29002 D Buffer  : [AFTER] filesOpenedList: []
+12-21 07:03:04.625 29002 29002 D Buffer  : [AFTER] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@dfa200a
+12-21 07:03:05.267 29002 29465 D NotebookSession: Notebook JS reported ready
+12-21 07:03:05.267 29002 29465 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 07:03:05.267 29002 29465 D NotebookSession: Reading from content:// URI
+12-21 07:03:05.268 29002 29465 D NotebookSession: Content read successfully: 62 chars
+12-21 07:03:05.268 29002 29465 D NotebookSession: First 100 chars: print("Hello from Python!")
+12-21 07:03:05.268 29002 29465 D NotebookSession: a = 92
+12-21 07:03:05.268 29002 29465 D NotebookSession: b = 3
+12-21 07:03:05.268 29002 29465 D NotebookSession: print("Sum =", a + b)
+12-21 07:03:05.268 29002 29465 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py (62 chars)
+12-21 07:03:05.377 29002 29002 D NotebookSession: BufferViewModel set for notebook
+12-21 07:03:05.378 29002 29002 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:03:05.378 29002 29002 D Buffer  : ║ setSessionId(LEGACY) called
+12-21 07:03:05.378 29002 29002 D Buffer  : ║ Caller: NotebookUIKt$NotebookUI$5$1.invokeSuspend:120
+12-21 07:03:05.378 29002 29002 D Buffer  : ║ ID: 0 → detected type: NOTEBOOK
+12-21 07:03:05.378 29002 29002 D Buffer  : ║ SessionList.sessions.size: 2
+12-21 07:03:05.378 29002 29002 D Buffer  : ║ SessionList.activeSessionIndex: 0
+12-21 07:03:05.378 29002 29002 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:03:05.378 29002 29002 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:03:05.378 29002 29002 D Buffer  : ║ setSessionId CALLED
+12-21 07:03:05.378 29002 29002 D Buffer  : ║ Caller: BufferViewModel.setSessionId:165
+12-21 07:03:05.378 29002 29002 D Buffer  : ║ Request: type=NOTEBOOK, id=0 → key=NOTEBOOK_0
+12-21 07:03:05.378 29002 29002 D Buffer  : ║ Current: key=NOTEBOOK_0, type=NOTEBOOK, id=0
+12-21 07:03:05.378 29002 29002 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:03:05.378 29002 29002 D Buffer  : [BEFORE] filesOpenedList: []
+12-21 07:03:05.378 29002 29002 D Buffer  : [BEFORE] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@dfa200a
+12-21 07:03:05.378 29002 29002 D Buffer  : >>> SAME SESSION KEY: NOTEBOOK_0 (no switch needed)
+12-21 07:03:05.378 29002 29002 D Buffer  : [AFTER] filesOpenedList: []
+12-21 07:03:05.378 29002 29002 D Buffer  : [AFTER] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@dfa200a
+12-21 07:03:05.384 29002 29002 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 07:03:05.384 29002 29002 D NotebookSession: ║ setFilePath called
+12-21 07:03:05.384 29002 29002 D NotebookSession: ║ Old path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 07:03:05.384 29002 29002 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 07:03:05.384 29002 29002 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 07:03:05.384 29002 29002 D NotebookSession: Same path, skipping reload
+12-21 07:03:05.599 29002 29002 D NotebookSession: Notebook page finished loading
+12-21 07:03:05.599 29002 29002 D NotebookSession: WebView made visible
+12-21 07:03:05.605 29002 29002 D NotebookSession: Auto-save enabled: true, delay: 5s
+12-21 07:03:05.647 29002 29002 D NotebookSession: Calling JS loadContent with 65 chars
+12-21 07:03:05.648 29002 29002 D NotebookSession: Calling JS loadContent with 65 chars
+12-21 07:03:13.356 29002 29002 D Buffer  : BufferViewModel cleared for session NOTEBOOK_0
+12-21 07:03:20.947 29002 29002 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:03:20.947 29002 29002 D Buffer  : ║ setSessionId(LEGACY) called
+12-21 07:03:20.947 29002 29002 D Buffer  : ║ Caller: FileLauncherKt.fileLauncher$lambda$0$0:70
+12-21 07:03:20.947 29002 29002 D Buffer  : ║ ID: 2 → detected type: EDITOR
+12-21 07:03:20.947 29002 29002 D Buffer  : ║ SessionList.sessions.size: 3
+12-21 07:03:20.947 29002 29002 D Buffer  : ║ SessionList.activeSessionIndex: 2
+12-21 07:03:20.947 29002 29002 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:03:20.948 29002 29002 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:03:20.948 29002 29002 D Buffer  : ║ setSessionId CALLED
+12-21 07:03:20.948 29002 29002 D Buffer  : ║ Caller: BufferViewModel.setSessionId:165
+12-21 07:03:20.948 29002 29002 D Buffer  : ║ Request: type=EDITOR, id=2 → key=EDITOR_2
+12-21 07:03:20.948 29002 29002 D Buffer  : ║ Current: key=NOTEBOOK_0, type=NOTEBOOK, id=0
+12-21 07:03:20.948 29002 29002 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:03:20.948 29002 29002 D Buffer  : [BEFORE] filesOpenedList: []
+12-21 07:03:20.948 29002 29002 D Buffer  : [BEFORE] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@dfa200a
+12-21 07:03:20.948 29002 29002 D Buffer  : >>> SWITCHING from NOTEBOOK_0 to EDITOR_2
+12-21 07:03:20.948 29002 29002 D Buffer  : >>> SAVED state for NOTEBOOK_0: []
+12-21 07:03:20.949 29002 29002 D Buffer  : >>> CLEARED current filesOpenedList
+12-21 07:03:20.949 29002 29002 D Buffer  : >>> No saved files for EDITOR_2 (new session)
+12-21 07:03:20.949 29002 29002 D Buffer  : >>> Session switch COMPLETE: EDITOR_2 with 0 files
+12-21 07:03:20.949 29002 29002 D Buffer  : [AFTER] filesOpenedList: []
+12-21 07:03:20.949 29002 29002 D Buffer  : [AFTER] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@dfa200a
+12-21 07:03:20.949 29002 29002 D Buffer  : [AFTER]   NOTEBOOK_0 → []
+12-21 07:03:21.270 29002 29465 D EditorSession: ✓ JS: onReady called - CM6 initialized
+12-21 07:03:21.482 29002 29002 D EditorSession: BufferViewModel set
+12-21 07:03:21.483 29002 29002 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:03:21.483 29002 29002 D Buffer  : ║ setSessionId(LEGACY) called
+12-21 07:03:21.483 29002 29002 D Buffer  : ║ Caller: InitialEditorUIKt$InitialEditorUI$4$1.invokeSuspend:104
+12-21 07:03:21.483 29002 29002 D Buffer  : ║ ID: 2 → detected type: EDITOR
+12-21 07:03:21.483 29002 29002 D Buffer  : ║ SessionList.sessions.size: 3
+12-21 07:03:21.483 29002 29002 D Buffer  : ║ SessionList.activeSessionIndex: 2
+12-21 07:03:21.483 29002 29002 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:03:21.483 29002 29002 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:03:21.483 29002 29002 D Buffer  : ║ setSessionId CALLED
+12-21 07:03:21.483 29002 29002 D Buffer  : ║ Caller: BufferViewModel.setSessionId:165
+12-21 07:03:21.483 29002 29002 D Buffer  : ║ Request: type=EDITOR, id=2 → key=EDITOR_2
+12-21 07:03:21.483 29002 29002 D Buffer  : ║ Current: key=EDITOR_2, type=EDITOR, id=2
+12-21 07:03:21.483 29002 29002 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:03:21.483 29002 29002 D Buffer  : [BEFORE] filesOpenedList: []
+12-21 07:03:21.483 29002 29002 D Buffer  : [BEFORE] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@dfa200a
+12-21 07:03:21.483 29002 29002 D Buffer  : [BEFORE]   NOTEBOOK_0 → []
+12-21 07:03:21.483 29002 29002 D Buffer  : >>> SAME SESSION KEY: EDITOR_2 (no switch needed)
+12-21 07:03:21.483 29002 29002 D Buffer  : [AFTER] filesOpenedList: []
+12-21 07:03:21.483 29002 29002 D Buffer  : [AFTER] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@dfa200a
+12-21 07:03:21.483 29002 29002 D Buffer  : [AFTER]   NOTEBOOK_0 → []
+12-21 07:03:21.487 29002 29002 D Buffer  : Added: test.cpp
+12-21 07:03:21.494 29002 29002 D Buffer  : saveCurrentContentToBuffer: currentFile is null, skipping
+12-21 07:03:21.495 29002 29002 D Buffer  : Reading from disk for test.cpp
+12-21 07:03:21.501 29002 29002 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 07:03:21.501 29002 29002 D EditorSession: ║ setFilePath called
+12-21 07:03:21.501 29002 29002 D EditorSession: ║ Old path: null
+12-21 07:03:21.501 29002 29002 D EditorSession: ║ New path: /home/test.cpp
+12-21 07:03:21.501 29002 29002 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 07:03:21.530 29002 29002 D Buffer  : Opened: test.cpp, total: 1
+12-21 07:03:21.747 29002 29002 D EditorSession: ✓ Applied saved editor settings
+12-21 07:03:21.749 29002 29002 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 07:03:21.749 29002 29002 D EditorSession: ║ setFilePath called
+12-21 07:03:21.749 29002 29002 D EditorSession: ║ Old path: /home/test.cpp
+12-21 07:03:21.749 29002 29002 D EditorSession: ║ New path: /home/test.cpp
+12-21 07:03:21.749 29002 29002 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 07:03:23.746 29002 29002 D EditorSession: Content saved (174 chars)
+12-21 07:03:23.842 29002 29002 D EditorSession: Injecting MutationObserver for content changes...
+12-21 07:03:25.209 29002 29002 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:03:25.209 29002 29002 D Buffer  : ║ setSessionId(LEGACY) called
+12-21 07:03:25.209 29002 29002 D Buffer  : ║ Caller: ZoomOutKt$ZoomOut$3$1$2$1$1$1$1.invoke:179
+12-21 07:03:25.209 29002 29002 D Buffer  : ║ ID: 0 → detected type: NOTEBOOK
+12-21 07:03:25.209 29002 29002 D Buffer  : ║ SessionList.sessions.size: 3
+12-21 07:03:25.209 29002 29002 D Buffer  : ║ SessionList.activeSessionIndex: 2
+12-21 07:03:25.209 29002 29002 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:03:25.209 29002 29002 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:03:25.209 29002 29002 D Buffer  : ║ setSessionId CALLED
+12-21 07:03:25.209 29002 29002 D Buffer  : ║ Caller: BufferViewModel.setSessionId:165
+12-21 07:03:25.209 29002 29002 D Buffer  : ║ Request: type=NOTEBOOK, id=0 → key=NOTEBOOK_0
+12-21 07:03:25.209 29002 29002 D Buffer  : ║ Current: key=EDITOR_2, type=EDITOR, id=2
+12-21 07:03:25.209 29002 29002 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:03:25.210 29002 29002 D Buffer  : [BEFORE] filesOpenedList: [test.cpp]
+12-21 07:03:25.210 29002 29002 D Buffer  : [BEFORE] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@dfa200a
+12-21 07:03:25.210 29002 29002 D Buffer  : [BEFORE]   NOTEBOOK_0 → []
+12-21 07:03:25.210 29002 29002 D Buffer  : >>> SWITCHING from EDITOR_2 to NOTEBOOK_0
+12-21 07:03:25.212 29002 29002 D Buffer  : >>> SAVED state for EDITOR_2: [test.cpp]
+12-21 07:03:25.212 29002 29002 D Buffer  : >>> CLEARED current filesOpenedList
+12-21 07:03:25.212 29002 29002 D Buffer  : >>> LOADED 0 files for NOTEBOOK_0: []
+12-21 07:03:25.212 29002 29002 D Buffer  : >>> LOADED 0 dirty files for NOTEBOOK_0
+12-21 07:03:25.212 29002 29002 D Buffer  : >>> Session switch COMPLETE: NOTEBOOK_0 with 0 files
+12-21 07:03:25.212 29002 29002 D Buffer  : [AFTER] filesOpenedList: []
+12-21 07:03:25.212 29002 29002 D Buffer  : [AFTER] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@dfa200a
+12-21 07:03:25.213 29002 29002 D Buffer  : [AFTER]   EDITOR_2 → [test.cpp]
+12-21 07:03:25.213 29002 29002 D Buffer  : [AFTER]   NOTEBOOK_0 → []
+12-21 07:03:25.489 29002 29002 D NotebookSession: BufferViewModel set for notebook
+12-21 07:03:25.489 29002 29002 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:03:25.489 29002 29002 D Buffer  : ║ setSessionId(LEGACY) called
+12-21 07:03:25.489 29002 29002 D Buffer  : ║ Caller: NotebookUIKt$NotebookUI$5$1.invokeSuspend:120
+12-21 07:03:25.490 29002 29002 D Buffer  : ║ ID: 0 → detected type: NOTEBOOK
+12-21 07:03:25.490 29002 29002 D Buffer  : ║ SessionList.sessions.size: 3
+12-21 07:03:25.490 29002 29002 D Buffer  : ║ SessionList.activeSessionIndex: 0
+12-21 07:03:25.490 29002 29002 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:03:25.490 29002 29002 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:03:25.490 29002 29002 D Buffer  : ║ setSessionId CALLED
+12-21 07:03:25.490 29002 29002 D Buffer  : ║ Caller: BufferViewModel.setSessionId:165
+12-21 07:03:25.490 29002 29002 D Buffer  : ║ Request: type=NOTEBOOK, id=0 → key=NOTEBOOK_0
+12-21 07:03:25.490 29002 29002 D Buffer  : ║ Current: key=NOTEBOOK_0, type=NOTEBOOK, id=0
+12-21 07:03:25.490 29002 29002 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:03:25.490 29002 29002 D Buffer  : [BEFORE] filesOpenedList: []
+12-21 07:03:25.490 29002 29002 D Buffer  : [BEFORE] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@dfa200a
+12-21 07:03:25.491 29002 29002 D Buffer  : [BEFORE]   EDITOR_2 → [test.cpp]
+12-21 07:03:25.491 29002 29002 D Buffer  : [BEFORE]   NOTEBOOK_0 → []
+12-21 07:03:25.491 29002 29002 D Buffer  : >>> SAME SESSION KEY: NOTEBOOK_0 (no switch needed)
+12-21 07:03:25.491 29002 29002 D Buffer  : [AFTER] filesOpenedList: []
+12-21 07:03:25.491 29002 29002 D Buffer  : [AFTER] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@dfa200a
+12-21 07:03:25.492 29002 29002 D Buffer  : [AFTER]   EDITOR_2 → [test.cpp]
+12-21 07:03:25.492 29002 29002 D Buffer  : [AFTER]   NOTEBOOK_0 → []
+12-21 07:03:27.734 29002 29465 D EditorSession: ✓ JS: AndroidInterface.saveFile() called - auto-save triggered
+12-21 07:07:24.026 31711 31711 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 07:07:24.026 31711 31711 D NotebookSession: ║ setFilePath called
+12-21 07:07:24.026 31711 31711 D NotebookSession: ║ Old path: null
+12-21 07:07:24.026 31711 31711 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 07:07:24.026 31711 31711 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 07:07:24.026 31711 31711 D NotebookSession: Clearing notebook before loading new content...
+12-21 07:07:24.027 31711 31711 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 07:07:24.027 31711 31711 D NotebookSession: Reading from content:// URI
+12-21 07:07:24.029 31711 31711 D NotebookSession: Content read successfully: 62 chars
+12-21 07:07:24.029 31711 31711 D NotebookSession: First 100 chars: print("Hello from Python!")
+12-21 07:07:24.029 31711 31711 D NotebookSession: a = 92
+12-21 07:07:24.029 31711 31711 D NotebookSession: b = 3
+12-21 07:07:24.029 31711 31711 D NotebookSession: print("Sum =", a + b)
+12-21 07:07:24.029 31711 31711 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py (62 chars)
+12-21 07:07:24.029 31711 31711 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:07:24.029 31711 31711 D Buffer  : ║ setSessionId(LEGACY) called
+12-21 07:07:24.029 31711 31711 D Buffer  : ║ Caller: MainMenuKt.MainMenu$lambda$24$0:158
+12-21 07:07:24.029 31711 31711 D Buffer  : ║ ID: 0 → detected type: NOTEBOOK
+12-21 07:07:24.029 31711 31711 D Buffer  : ║ SessionList.sessions.size: 2
+12-21 07:07:24.030 31711 31711 D Buffer  : ║ SessionList.activeSessionIndex: 1
+12-21 07:07:24.030 31711 31711 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:07:24.030 31711 31711 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:07:24.030 31711 31711 D Buffer  : ║ setSessionId CALLED
+12-21 07:07:24.030 31711 31711 D Buffer  : ║ Caller: BufferViewModel.setSessionId:165
+12-21 07:07:24.030 31711 31711 D Buffer  : ║ Request: type=NOTEBOOK, id=0 → key=NOTEBOOK_0
+12-21 07:07:24.030 31711 31711 D Buffer  : ║ Current: key=null, type=null, id=null
+12-21 07:07:24.030 31711 31711 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:07:24.030 31711 31711 D Buffer  : [BEFORE] filesOpenedList: []
+12-21 07:07:24.030 31711 31711 D Buffer  : [BEFORE] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@a217518
+12-21 07:07:24.031 31711 31711 D Buffer  : >>> SWITCHING from null to NOTEBOOK_0
+12-21 07:07:24.031 31711 31711 D Buffer  : >>> No old session to save (currentSessionKey was null)
+12-21 07:07:24.031 31711 31711 D Buffer  : >>> CLEARED current filesOpenedList
+12-21 07:07:24.031 31711 31711 D Buffer  : >>> No saved files for NOTEBOOK_0 (new session)
+12-21 07:07:24.032 31711 31711 D Buffer  : >>> Session switch COMPLETE: NOTEBOOK_0 with 0 files
+12-21 07:07:24.032 31711 31711 D Buffer  : [AFTER] filesOpenedList: []
+12-21 07:07:24.032 31711 31711 D Buffer  : [AFTER] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@a217518
+12-21 07:07:24.653 31711 31981 D NotebookSession: Notebook JS reported ready
+12-21 07:07:24.654 31711 31981 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 07:07:24.654 31711 31981 D NotebookSession: Reading from content:// URI
+12-21 07:07:24.657 31711 31981 D NotebookSession: Content read successfully: 62 chars
+12-21 07:07:24.657 31711 31981 D NotebookSession: First 100 chars: print("Hello from Python!")
+12-21 07:07:24.657 31711 31981 D NotebookSession: a = 92
+12-21 07:07:24.657 31711 31981 D NotebookSession: b = 3
+12-21 07:07:24.657 31711 31981 D NotebookSession: print("Sum =", a + b)
+12-21 07:07:24.657 31711 31981 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py (62 chars)
+12-21 07:07:24.969 31711 31711 D NotebookSession: BufferViewModel set for notebook
+12-21 07:07:24.970 31711 31711 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:07:24.970 31711 31711 D Buffer  : ║ setSessionId(LEGACY) called
+12-21 07:07:24.970 31711 31711 D Buffer  : ║ Caller: NotebookUIKt$NotebookUI$5$1.invokeSuspend:120
+12-21 07:07:24.970 31711 31711 D Buffer  : ║ ID: 0 → detected type: NOTEBOOK
+12-21 07:07:24.970 31711 31711 D Buffer  : ║ SessionList.sessions.size: 2
+12-21 07:07:24.970 31711 31711 D Buffer  : ║ SessionList.activeSessionIndex: 0
+12-21 07:07:24.970 31711 31711 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:07:24.970 31711 31711 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:07:24.970 31711 31711 D Buffer  : ║ setSessionId CALLED
+12-21 07:07:24.970 31711 31711 D Buffer  : ║ Caller: BufferViewModel.setSessionId:165
+12-21 07:07:24.970 31711 31711 D Buffer  : ║ Request: type=NOTEBOOK, id=0 → key=NOTEBOOK_0
+12-21 07:07:24.971 31711 31711 D Buffer  : ║ Current: key=NOTEBOOK_0, type=NOTEBOOK, id=0
+12-21 07:07:24.971 31711 31711 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:07:24.971 31711 31711 D Buffer  : [BEFORE] filesOpenedList: []
+12-21 07:07:24.971 31711 31711 D Buffer  : [BEFORE] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@a217518
+12-21 07:07:24.971 31711 31711 D Buffer  : >>> SAME SESSION KEY: NOTEBOOK_0 (no switch needed)
+12-21 07:07:24.971 31711 31711 D Buffer  : [AFTER] filesOpenedList: []
+12-21 07:07:24.971 31711 31711 D Buffer  : [AFTER] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@a217518
+12-21 07:07:24.978 31711 31711 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 07:07:24.978 31711 31711 D NotebookSession: ║ setFilePath called
+12-21 07:07:24.978 31711 31711 D NotebookSession: ║ Old path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 07:07:24.978 31711 31711 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 07:07:24.978 31711 31711 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 07:07:24.978 31711 31711 D NotebookSession: Same path, skipping reload
+12-21 07:07:25.375 31711 31711 D NotebookSession: Notebook page finished loading
+12-21 07:07:25.375 31711 31711 D NotebookSession: WebView made visible
+12-21 07:07:25.380 31711 31711 D NotebookSession: Auto-save enabled: true, delay: 5s
+12-21 07:07:25.454 31711 31711 D NotebookSession: Calling JS loadContent with 65 chars
+12-21 07:07:25.454 31711 31711 D NotebookSession: Calling JS loadContent with 65 chars
+12-21 07:07:34.649 31711 31711 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:07:34.649 31711 31711 D Buffer  : ║ setSessionId(LEGACY) called
+12-21 07:07:34.649 31711 31711 D Buffer  : ║ Caller: FileLauncherKt.fileLauncher$lambda$0$0:70
+12-21 07:07:34.649 31711 31711 D Buffer  : ║ ID: 2 → detected type: EDITOR
+12-21 07:07:34.649 31711 31711 D Buffer  : ║ SessionList.sessions.size: 3
+12-21 07:07:34.649 31711 31711 D Buffer  : ║ SessionList.activeSessionIndex: 2
+12-21 07:07:34.649 31711 31711 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:07:34.649 31711 31711 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:07:34.649 31711 31711 D Buffer  : ║ setSessionId CALLED
+12-21 07:07:34.649 31711 31711 D Buffer  : ║ Caller: BufferViewModel.setSessionId:165
+12-21 07:07:34.649 31711 31711 D Buffer  : ║ Request: type=EDITOR, id=2 → key=EDITOR_2
+12-21 07:07:34.649 31711 31711 D Buffer  : ║ Current: key=NOTEBOOK_0, type=NOTEBOOK, id=0
+12-21 07:07:34.649 31711 31711 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:07:34.650 31711 31711 D Buffer  : [BEFORE] filesOpenedList: [test.py]
+12-21 07:07:34.650 31711 31711 D Buffer  : [BEFORE] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@a217518
+12-21 07:07:34.650 31711 31711 D Buffer  : >>> SWITCHING from NOTEBOOK_0 to EDITOR_2
+12-21 07:07:34.651 31711 31711 D Buffer  : >>> SAVED state for NOTEBOOK_0: [test.py]
+12-21 07:07:34.651 31711 31711 D Buffer  : >>> CLEARED current filesOpenedList
+12-21 07:07:34.651 31711 31711 D Buffer  : >>> No saved files for EDITOR_2 (new session)
+12-21 07:07:34.651 31711 31711 D Buffer  : >>> Session switch COMPLETE: EDITOR_2 with 0 files
+12-21 07:07:34.651 31711 31711 D Buffer  : [AFTER] filesOpenedList: []
+12-21 07:07:34.651 31711 31711 D Buffer  : [AFTER] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@a217518
+12-21 07:07:34.652 31711 31711 D Buffer  : [AFTER]   NOTEBOOK_0 → [test.py]
+12-21 07:07:34.866 31711 31981 D EditorSession: ✓ JS: onReady called - CM6 initialized
+12-21 07:07:35.288 31711 31711 D EditorSession: BufferViewModel set
+12-21 07:07:35.288 31711 31711 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:07:35.288 31711 31711 D Buffer  : ║ setSessionId(LEGACY) called
+12-21 07:07:35.288 31711 31711 D Buffer  : ║ Caller: InitialEditorUIKt$InitialEditorUI$4$1.invokeSuspend:104
+12-21 07:07:35.288 31711 31711 D Buffer  : ║ ID: 2 → detected type: EDITOR
+12-21 07:07:35.288 31711 31711 D Buffer  : ║ SessionList.sessions.size: 3
+12-21 07:07:35.288 31711 31711 D Buffer  : ║ SessionList.activeSessionIndex: 2
+12-21 07:07:35.288 31711 31711 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:07:35.288 31711 31711 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:07:35.288 31711 31711 D Buffer  : ║ setSessionId CALLED
+12-21 07:07:35.288 31711 31711 D Buffer  : ║ Caller: BufferViewModel.setSessionId:165
+12-21 07:07:35.288 31711 31711 D Buffer  : ║ Request: type=EDITOR, id=2 → key=EDITOR_2
+12-21 07:07:35.288 31711 31711 D Buffer  : ║ Current: key=EDITOR_2, type=EDITOR, id=2
+12-21 07:07:35.288 31711 31711 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:07:35.288 31711 31711 D Buffer  : [BEFORE] filesOpenedList: []
+12-21 07:07:35.289 31711 31711 D Buffer  : [BEFORE] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@a217518
+12-21 07:07:35.289 31711 31711 D Buffer  : [BEFORE]   NOTEBOOK_0 → [test.py]
+12-21 07:07:35.289 31711 31711 D Buffer  : >>> SAME SESSION KEY: EDITOR_2 (no switch needed)
+12-21 07:07:35.290 31711 31711 D Buffer  : [AFTER] filesOpenedList: []
+12-21 07:07:35.290 31711 31711 D Buffer  : [AFTER] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@a217518
+12-21 07:07:35.290 31711 31711 D Buffer  : [AFTER]   NOTEBOOK_0 → [test.py]
+12-21 07:07:35.294 31711 31711 D Buffer  : Added: test.cpp
+12-21 07:07:35.301 31711 31711 D Buffer  : saveCurrentContentToBuffer: currentFile is null, skipping
+12-21 07:07:35.302 31711 31711 D Buffer  : Reading from disk for test.cpp
+12-21 07:07:35.306 31711 31711 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 07:07:35.306 31711 31711 D EditorSession: ║ setFilePath called
+12-21 07:07:35.306 31711 31711 D EditorSession: ║ Old path: null
+12-21 07:07:35.306 31711 31711 D EditorSession: ║ New path: /home/test.cpp
+12-21 07:07:35.307 31711 31711 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 07:07:35.307 31711 31711 D Buffer  : Opened: test.cpp, total: 1
+12-21 07:07:35.690 31711 31711 D EditorSession: ✓ Applied saved editor settings
+12-21 07:07:35.701 31711 31711 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 07:07:35.701 31711 31711 D EditorSession: ║ setFilePath called
+12-21 07:07:35.702 31711 31711 D EditorSession: ║ Old path: /home/test.cpp
+12-21 07:07:35.702 31711 31711 D EditorSession: ║ New path: /home/test.cpp
+12-21 07:07:35.702 31711 31711 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 07:07:37.366 31711 31711 D EditorSession: Content saved (174 chars)
+12-21 07:07:37.689 31711 31711 D EditorSession: Injecting MutationObserver for content changes...
+12-21 07:07:37.943 31711 31711 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:07:37.943 31711 31711 D Buffer  : ║ setSessionId(LEGACY) called
+12-21 07:07:37.943 31711 31711 D Buffer  : ║ Caller: ZoomOutKt$ZoomOut$3$1$2$1$1$1$1.invoke:185
+12-21 07:07:37.943 31711 31711 D Buffer  : ║ ID: 0 → detected type: NOTEBOOK
+12-21 07:07:37.943 31711 31711 D Buffer  : ║ SessionList.sessions.size: 3
+12-21 07:07:37.943 31711 31711 D Buffer  : ║ SessionList.activeSessionIndex: 2
+12-21 07:07:37.944 31711 31711 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:07:37.944 31711 31711 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:07:37.944 31711 31711 D Buffer  : ║ setSessionId CALLED
+12-21 07:07:37.944 31711 31711 D Buffer  : ║ Caller: BufferViewModel.setSessionId:165
+12-21 07:07:37.944 31711 31711 D Buffer  : ║ Request: type=NOTEBOOK, id=0 → key=NOTEBOOK_0
+12-21 07:07:37.944 31711 31711 D Buffer  : ║ Current: key=EDITOR_2, type=EDITOR, id=2
+12-21 07:07:37.944 31711 31711 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:07:37.945 31711 31711 D Buffer  : [BEFORE] filesOpenedList: [test.cpp]
+12-21 07:07:37.945 31711 31711 D Buffer  : [BEFORE] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@a217518
+12-21 07:07:37.945 31711 31711 D Buffer  : [BEFORE]   NOTEBOOK_0 → [test.py]
+12-21 07:07:37.945 31711 31711 D Buffer  : >>> SWITCHING from EDITOR_2 to NOTEBOOK_0
+12-21 07:07:37.946 31711 31711 D Buffer  : >>> SAVED state for EDITOR_2: [test.cpp]
+12-21 07:07:37.946 31711 31711 D Buffer  : >>> CLEARED current filesOpenedList
+12-21 07:07:37.947 31711 31711 D Buffer  : >>> LOADED 1 files for NOTEBOOK_0: [test.py]
+12-21 07:07:37.947 31711 31711 D Buffer  : >>> LOADED 0 dirty files for NOTEBOOK_0
+12-21 07:07:37.947 31711 31711 D Buffer  : >>> Session switch COMPLETE: NOTEBOOK_0 with 1 files
+12-21 07:07:37.947 31711 31711 D Buffer  : [AFTER] filesOpenedList: [test.py]
+12-21 07:07:37.948 31711 31711 D Buffer  : [AFTER] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@a217518
+12-21 07:07:37.948 31711 31711 D Buffer  : [AFTER]   EDITOR_2 → [test.cpp]
+12-21 07:07:37.948 31711 31711 D Buffer  : [AFTER]   NOTEBOOK_0 → [test.py]
+12-21 07:07:38.141 31711 31711 D Buffer  : NotebookSession detected - will skip loadContentWhenReady
+12-21 07:07:38.662 31711 31711 D NotebookSession: BufferViewModel set for notebook
+12-21 07:07:38.662 31711 31711 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:07:38.662 31711 31711 D Buffer  : ║ setSessionId(LEGACY) called
+12-21 07:07:38.662 31711 31711 D Buffer  : ║ Caller: NotebookUIKt$NotebookUI$5$1.invokeSuspend:120
+12-21 07:07:38.662 31711 31711 D Buffer  : ║ ID: 0 → detected type: NOTEBOOK
+12-21 07:07:38.662 31711 31711 D Buffer  : ║ SessionList.sessions.size: 3
+12-21 07:07:38.662 31711 31711 D Buffer  : ║ SessionList.activeSessionIndex: 0
+12-21 07:07:38.662 31711 31711 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:07:38.662 31711 31711 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:07:38.662 31711 31711 D Buffer  : ║ setSessionId CALLED
+12-21 07:07:38.662 31711 31711 D Buffer  : ║ Caller: BufferViewModel.setSessionId:165
+12-21 07:07:38.662 31711 31711 D Buffer  : ║ Request: type=NOTEBOOK, id=0 → key=NOTEBOOK_0
+12-21 07:07:38.662 31711 31711 D Buffer  : ║ Current: key=NOTEBOOK_0, type=NOTEBOOK, id=0
+12-21 07:07:38.662 31711 31711 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:07:38.663 31711 31711 D Buffer  : [BEFORE] filesOpenedList: [test.py]
+12-21 07:07:38.663 31711 31711 D Buffer  : [BEFORE] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@a217518
+12-21 07:07:38.664 31711 31711 D Buffer  : [BEFORE]   EDITOR_2 → [test.cpp]
+12-21 07:07:38.664 31711 31711 D Buffer  : [BEFORE]   NOTEBOOK_0 → [test.py]
+12-21 07:07:38.664 31711 31711 D Buffer  : >>> SAME SESSION KEY: NOTEBOOK_0 (no switch needed)
+12-21 07:07:38.665 31711 31711 D Buffer  : [AFTER] filesOpenedList: [test.py]
+12-21 07:07:38.665 31711 31711 D Buffer  : [AFTER] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@a217518
+12-21 07:07:38.666 31711 31711 D Buffer  : [AFTER]   EDITOR_2 → [test.cpp]
+12-21 07:07:38.666 31711 31711 D Buffer  : [AFTER]   NOTEBOOK_0 → [test.py]
+12-21 07:07:41.734 31711 31981 D EditorSession: ✓ JS: AndroidInterface.saveFile() called - auto-save triggered
+12-21 07:07:55.313 31711 31711 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:07:55.313 31711 31711 D Buffer  : ║ setSessionId(LEGACY) called
+12-21 07:07:55.313 31711 31711 D Buffer  : ║ Caller: ZoomOutKt.ZoomOut$lambda$15$0:117
+12-21 07:07:55.313 31711 31711 D Buffer  : ║ ID: 3 → detected type: NOTEBOOK
+12-21 07:07:55.313 31711 31711 D Buffer  : ║ SessionList.sessions.size: 5
+12-21 07:07:55.313 31711 31711 D Buffer  : ║ SessionList.activeSessionIndex: 4
+12-21 07:07:55.313 31711 31711 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:07:55.313 31711 31711 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:07:55.313 31711 31711 D Buffer  : ║ setSessionId CALLED
+12-21 07:07:55.313 31711 31711 D Buffer  : ║ Caller: BufferViewModel.setSessionId:165
+12-21 07:07:55.313 31711 31711 D Buffer  : ║ Request: type=NOTEBOOK, id=3 → key=NOTEBOOK_3
+12-21 07:07:55.313 31711 31711 D Buffer  : ║ Current: key=NOTEBOOK_0, type=NOTEBOOK, id=0
+12-21 07:07:55.313 31711 31711 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:07:55.316 31711 31711 D Buffer  : [BEFORE] filesOpenedList: [test.py]
+12-21 07:07:55.316 31711 31711 D Buffer  : [BEFORE] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@a217518
+12-21 07:07:55.318 31711 31711 D Buffer  : [BEFORE]   EDITOR_2 → [test.cpp]
+12-21 07:07:55.318 31711 31711 D Buffer  : [BEFORE]   NOTEBOOK_0 → [test.py]
+12-21 07:07:55.318 31711 31711 D Buffer  : >>> SWITCHING from NOTEBOOK_0 to NOTEBOOK_3
+12-21 07:07:55.319 31711 31711 D Buffer  : >>> SAVED state for NOTEBOOK_0: [test.py]
+12-21 07:07:55.320 31711 31711 D Buffer  : >>> CLEARED current filesOpenedList
+12-21 07:07:55.320 31711 31711 D Buffer  : >>> No saved files for NOTEBOOK_3 (new session)
+12-21 07:07:55.320 31711 31711 D Buffer  : >>> Session switch COMPLETE: NOTEBOOK_3 with 0 files
+12-21 07:07:55.320 31711 31711 D Buffer  : [AFTER] filesOpenedList: []
+12-21 07:07:55.320 31711 31711 D Buffer  : [AFTER] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@a217518
+12-21 07:07:55.320 31711 31711 D Buffer  : [AFTER]   EDITOR_2 → [test.cpp]
+12-21 07:07:55.321 31711 31711 D Buffer  : [AFTER]   NOTEBOOK_0 → [test.py]
+12-21 07:07:55.920 31711 31711 D NotebookSession: BufferViewModel set for notebook
+12-21 07:07:55.920 31711 31711 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:07:55.920 31711 31711 D Buffer  : ║ setSessionId(LEGACY) called
+12-21 07:07:55.920 31711 31711 D Buffer  : ║ Caller: NotebookUIKt$NotebookUI$5$1.invokeSuspend:120
+12-21 07:07:55.920 31711 31711 D Buffer  : ║ ID: 3 → detected type: NOTEBOOK
+12-21 07:07:55.920 31711 31711 D Buffer  : ║ SessionList.sessions.size: 5
+12-21 07:07:55.920 31711 31711 D Buffer  : ║ SessionList.activeSessionIndex: 3
+12-21 07:07:55.920 31711 31711 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:07:55.920 31711 31711 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 07:07:55.920 31711 31711 D Buffer  : ║ setSessionId CALLED
+12-21 07:07:55.920 31711 31711 D Buffer  : ║ Caller: BufferViewModel.setSessionId:165
+12-21 07:07:55.920 31711 31711 D Buffer  : ║ Request: type=NOTEBOOK, id=3 → key=NOTEBOOK_3
+12-21 07:07:55.920 31711 31711 D Buffer  : ║ Current: key=NOTEBOOK_3, type=NOTEBOOK, id=3
+12-21 07:07:55.920 31711 31711 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 07:07:55.920 31711 31711 D Buffer  : [BEFORE] filesOpenedList: []
+12-21 07:07:55.920 31711 31711 D Buffer  : [BEFORE] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@a217518
+12-21 07:07:55.921 31711 31711 D Buffer  : [BEFORE]   EDITOR_2 → [test.cpp]
+12-21 07:07:55.921 31711 31711 D Buffer  : [BEFORE]   NOTEBOOK_0 → [test.py]
+12-21 07:07:55.921 31711 31711 D Buffer  : >>> SAME SESSION KEY: NOTEBOOK_3 (no switch needed)
+12-21 07:07:55.922 31711 31711 D Buffer  : [AFTER] filesOpenedList: []
+12-21 07:07:55.922 31711 31711 D Buffer  : [AFTER] sessionFiles keys: androidx.compose.runtime.snapshots.SnapshotMapKeySet@a217518
+12-21 07:07:55.922 31711 31711 D Buffer  : [AFTER]   EDITOR_2 → [test.cpp]
+12-21 07:07:55.922 31711 31711 D Buffer  : [AFTER]   NOTEBOOK_0 → [test.py]
