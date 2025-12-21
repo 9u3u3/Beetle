@@ -173,7 +173,7 @@ fun InitialEditorUI(navController: NavController) {
         if (isNotebookSession) {
             Log.d("Buffer", "NotebookSession detected - will skip loadContentWhenReady")
         }
-        
+
         // delay(50) removed to speed up LSP startup
         fileViewModel.selectedUri?.let { uri ->
             DocumentFile.fromSingleUri(context, uri)?.let documentFile@{ documentFile ->
@@ -236,7 +236,7 @@ fun InitialEditorUI(navController: NavController) {
                         }
 
                 bufferViewModel.currentFile.value = documentFile // Track current file
-                
+
                 // Only load content via loadContentWhenReady for non-notebook sessions
                 // NotebookSession handles its own content loading via setFilePath
                 if (!isNotebookSession) {
@@ -244,7 +244,7 @@ fun InitialEditorUI(navController: NavController) {
                 } else {
                     Log.d("Buffer", "Skipping loadContentWhenReady for NotebookSession")
                 }
-                
+
                 fileViewModel.currentFilePath = uri.toString()
 
                 // Re-inject LspViewModel when file changes/session might change
@@ -525,56 +525,98 @@ fun InitialEditorUI(navController: NavController) {
             // Collect from StateFlow for reactive updates when session changes
             val currentWebView by editorViewModel.webViewFlow.collectAsStateWithLifecycle()
             val webView = currentWebView // Local copy for smart cast
-            
+
+            // Observe isReady state from the session
+            val session = webView?.session as? EditorSession
+            val isReadyFlow = session?.isReady
+            val isReady by isReadyFlow?.collectAsStateWithLifecycle() ?: mutableStateOf(false)
+
             // Debug logging for session switching
             LaunchedEffect(webView) {
-                Log.d("InitialEditorUI", "webView changed! New webView for session: ${webView?.session?.name}")
-                Log.d("InitialEditorUI", "webView is ${if (webView != null) "NOT NULL" else "NULL"}")
+                Log.d(
+                        "InitialEditorUI",
+                        "webView changed! New webView for session: ${webView?.session?.name}"
+                )
+                Log.d(
+                        "InitialEditorUI",
+                        "webView is ${if (webView != null) "NOT NULL" else "NULL"}"
+                )
                 if (webView != null) {
-                    val session = webView.session
-                    when (session) {
-                        is NotebookSession -> Log.d("InitialEditorUI", "Session isReady: ${session.isReady.value}")
-                        is EditorSession -> Log.d("InitialEditorUI", "Session isReady: ${session.isReady.value}")
+                    val sess = webView.session
+                    when (sess) {
+                        is NotebookSession ->
+                                Log.d("InitialEditorUI", "Session isReady: ${sess.isReady.value}")
+                        is EditorSession ->
+                                Log.d("InitialEditorUI", "Session isReady: ${sess.isReady.value}")
                         else -> Log.d("InitialEditorUI", "Unknown session type")
                     }
                 }
             }
-            
+
+            // Main Editor Area - Show WebView immediately, with loading overlay if not ready
             if (webView != null) {
-                Editor(
-                        Modifier.constrainAs(editor) {
-                            top.linkTo(topMiddle.bottom)
-                            bottom.linkTo(parent.bottom)
-                            // If using landscape IME mode, give full width to editor
-                            val showLeftKb = isLandscape && uiState.isLeftKeyboardVisible && !uiState.useLandscapeIme
-                            val showRightKb = isLandscape && uiState.isRightKeyboardVisible && !uiState.useLandscapeIme
-                            start.linkTo(
-                                    if (showLeftKb) leftKb.end
-                                    else parent.start
-                            )
-                            end.linkTo(
-                                    if (showRightKb) rightKb.start
-                                    else parent.end
-                            )
-                            width = Dimension.fillToConstraints
-                            height = Dimension.fillToConstraints
-                        },
-                        webView
-                )
-            } else {
-                // Fallback: Show loading state when webView is not ready
                 Box(
-                        modifier = Modifier
-                                .constrainAs(editor) {
+                        modifier =
+                                Modifier.constrainAs(editor) {
                                     top.linkTo(topMiddle.bottom)
                                     bottom.linkTo(parent.bottom)
-                                    start.linkTo(parent.start)
-                                    end.linkTo(parent.end)
+                                    // If using landscape IME mode, give full width to editor
+                                    val showLeftKb =
+                                            isLandscape &&
+                                                    uiState.isLeftKeyboardVisible &&
+                                                    !uiState.useLandscapeIme
+                                    val showRightKb =
+                                            isLandscape &&
+                                                    uiState.isRightKeyboardVisible &&
+                                                    !uiState.useLandscapeIme
+                                    start.linkTo(if (showLeftKb) leftKb.end else parent.start)
+                                    end.linkTo(if (showRightKb) rightKb.start else parent.end)
                                     width = Dimension.fillToConstraints
                                     height = Dimension.fillToConstraints
                                 }
-                                .fillMaxSize()
-                                .background(Color(0xFF1E1E1E)),
+                ) {
+                    // Show WebView immediately - it will load in the background
+                    Editor(Modifier.fillMaxSize(), webView)
+
+                    // Loading overlay - fades out when ready
+                    if (!isReady) {
+                        Box(
+                                modifier = Modifier.fillMaxSize().background(Color(0xFF1E1E1E)),
+                                contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                            ) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                        modifier = Modifier.size(32.dp),
+                                        color = Color(0xFF007ACC),
+                                        strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                        text = "Loading editor...",
+                                        color = Color(0xFFAAAAAA),
+                                        fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Fallback: Show loading state when WebView doesn't exist yet
+                Box(
+                        modifier =
+                                Modifier.constrainAs(editor) {
+                                            top.linkTo(topMiddle.bottom)
+                                            bottom.linkTo(parent.bottom)
+                                            start.linkTo(parent.start)
+                                            end.linkTo(parent.end)
+                                            width = Dimension.fillToConstraints
+                                            height = Dimension.fillToConstraints
+                                        }
+                                        .fillMaxSize()
+                                        .background(Color(0xFF1E1E1E)),
                         contentAlignment = Alignment.Center
                 ) {
                     Column(
@@ -588,7 +630,7 @@ fun InitialEditorUI(navController: NavController) {
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                                text = "Loading editor...",
+                                text = "Initializing editor...",
                                 color = Color(0xFFAAAAAA),
                                 fontSize = 12.sp
                         )
@@ -627,12 +669,8 @@ fun InitialEditorUI(navController: NavController) {
                         },
                         gitViewModel = gitViewModel,
                         // Quick action callbacks (buttons moved from top bar in portrait mode)
-                        onFileOptionsClick = {
-                            showFileMenu = true
-                        },
-                        onSearchClick = {
-                            showSearchBar = !showSearchBar
-                        },
+                        onFileOptionsClick = { showFileMenu = true },
+                        onSearchClick = { showSearchBar = !showSearchBar },
                         onZoomOutClick = {
                             currentSession?.saveContent()
                             navController.navigate(Screen.ZoomOut.route)
@@ -645,7 +683,8 @@ fun InitialEditorUI(navController: NavController) {
             }
         }
 
-        // Extra Keys Row - Shows in portrait mode OR in landscape mode when useLandscapeIme is enabled
+        // Extra Keys Row - Shows in portrait mode OR in landscape mode when useLandscapeIme is
+        // enabled
         val showExtraKeys = !isLandscape || uiState.useLandscapeIme
         if (showExtraKeys) {
             val imeInsets = WindowInsets.ime

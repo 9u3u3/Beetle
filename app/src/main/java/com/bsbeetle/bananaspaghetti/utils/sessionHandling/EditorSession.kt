@@ -125,7 +125,17 @@ class EditorSession(context: Context, name: String = "Editor") :
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun createView(): CustomWebView {
-        if (view != null) return view!!
+        android.util.Log.d(
+                "EditorSession",
+                "📍 createView() called for session: $name, view is null: ${view == null}"
+        )
+        if (view != null) {
+            android.util.Log.d(
+                    "EditorSession",
+                    "⚠️ createView() returning early - view already exists!"
+            )
+            return view!!
+        }
         // Disable WebViewPool to prevent recycling crashed views
         // view = WebViewPool.get(context.applicationContext).apply {
         view =
@@ -354,7 +364,62 @@ class EditorSession(context: Context, name: String = "Editor") :
                             "AndroidInterface"
                     )
 
-                    loadUrl(AppConfig.EDITOR_URL)
+                    // Add unique session ID to URL to bypass WebView's connection pooling
+                    // This makes each session appear as a unique URL, preventing connection
+                    // blocking
+                    val uniqueUrl =
+                            "${AppConfig.EDITOR_URL}?session=${System.currentTimeMillis()}_${id ?: 0}"
+
+                    // CRITICAL: Defer loadUrl() until WebView is attached to window hierarchy
+                    // Android WebView may block network requests if not attached to a window
+                    var urlLoaded = false
+                    addOnAttachStateChangeListener(
+                            object : android.view.View.OnAttachStateChangeListener {
+                                override fun onViewAttachedToWindow(v: android.view.View) {
+                                    if (!urlLoaded) {
+                                        urlLoaded = true
+                                        android.util.Log.d(
+                                                "EditorSession",
+                                                "📍 loadUrl on attach for session: $name, URL: $uniqueUrl"
+                                        )
+                                        loadUrl(uniqueUrl)
+                                    }
+                                }
+                                override fun onViewDetachedFromWindow(v: android.view.View) {}
+                            }
+                    )
+
+                    // Also try loading immediately via post{} in case view is already attached
+                    post {
+                        if (!urlLoaded) {
+                            urlLoaded = true
+                            android.util.Log.d(
+                                    "EditorSession",
+                                    "📍 loadUrl via post for session: $name, URL: $uniqueUrl"
+                            )
+                            loadUrl(uniqueUrl)
+                        }
+                    }
+
+                    // CRITICAL: 5-second fallback timeout to force isReady
+                    // This runs regardless of page load status, ensuring the editor
+                    // doesn't get stuck on loading forever even if bundle.js hangs
+                    post {
+                        postDelayed(
+                                {
+                                    if (!_isReady.value) {
+                                        android.util.Log.w(
+                                                "EditorSession",
+                                                "⚠️ Fallback: Forcing isReady after 5s timeout (bundle may not have loaded)"
+                                        )
+                                        _isReady.value = true
+                                        visibility = android.view.View.VISIBLE
+                                        alpha = 1f
+                                    }
+                                },
+                                5000
+                        ) // Force ready after 5s
+                    }
 
                     // Inject listener immediately after load
                     post {
@@ -576,8 +641,15 @@ class EditorSession(context: Context, name: String = "Editor") :
     }
 
     override fun destroy() {
-        // view?.let { WebViewPool.recycle(it) }
-        view?.destroy()
+        // Properly clean up WebView to release network connections
+        // This is critical to prevent bundle.js from hanging for new sessions
+        view?.let { webView ->
+            webView.stopLoading()
+            webView.clearCache(false)
+            webView.clearHistory()
+            webView.loadUrl("about:blank") // Clear the page
+            webView.destroy()
+        }
         view = null
         super.destroy()
     }
