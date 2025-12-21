@@ -1,0 +1,954 @@
+--------- beginning of main
+12-21 06:30:10.713 25538 25538 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:30:10.713 25538 25538 D NotebookSession: ║ setFilePath called
+12-21 06:30:10.713 25538 25538 D NotebookSession: ║ Old path: null
+12-21 06:30:10.713 25538 25538 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:30:10.713 25538 25538 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:30:10.713 25538 25538 D NotebookSession: Clearing notebook before loading new content...
+12-21 06:30:10.715 25538 25538 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:30:10.715 25538 25538 D NotebookSession: Reading from content:// URI
+12-21 06:30:10.717 25538 25538 D NotebookSession: Content read successfully: 9 chars
+12-21 06:30:10.717 25538 25538 D NotebookSession: First 100 chars: # %%
+12-21 06:30:10.717 25538 25538 D NotebookSession: jfif
+12-21 06:30:10.717 25538 25538 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py (9 chars)
+12-21 06:30:10.717 25538 25538 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:30:10.717 25538 25538 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:30:10.717 25538 25538 D Buffer  : ║ SESSION SWITCH: null → NOTEBOOK_0
+12-21 06:30:10.717 25538 25538 D Buffer  : ║ Old: type=null, id=null
+12-21 06:30:10.717 25538 25538 D Buffer  : ║ New: type=NOTEBOOK, id=0
+12-21 06:30:10.717 25538 25538 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:30:10.717 25538 25538 D Buffer  :   Cleared current state
+12-21 06:30:10.718 25538 25538 D Buffer  :   No saved files for NOTEBOOK_0 (new session)
+12-21 06:30:10.718 25538 25538 D Buffer  :   No dirty files for NOTEBOOK_0
+12-21 06:30:10.718 25538 25538 D Buffer  : Session NOTEBOOK_0 initialized: 0 files, 0 dirty
+12-21 06:30:11.495 25538 25538 D NotebookSession: BufferViewModel set for notebook
+12-21 06:30:11.495 25538 25538 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:30:11.495 25538 25538 D Buffer  : setSessionId called with same key: NOTEBOOK_0 (no-op)
+12-21 06:30:11.500 25538 25538 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:30:11.500 25538 25538 D NotebookSession: ║ setFilePath called
+12-21 06:30:11.501 25538 25538 D NotebookSession: ║ Old path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:30:11.501 25538 25538 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:30:11.501 25538 25538 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:30:11.501 25538 25538 D NotebookSession: Same path, skipping reload
+12-21 06:30:11.781 25538 25900 D NotebookSession: Notebook JS reported ready
+12-21 06:30:11.781 25538 25900 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:30:11.781 25538 25900 D NotebookSession: Reading from content:// URI
+12-21 06:30:11.782 25538 25900 D NotebookSession: Content read successfully: 9 chars
+12-21 06:30:11.782 25538 25900 D NotebookSession: First 100 chars: # %%
+12-21 06:30:11.782 25538 25900 D NotebookSession: jfif
+12-21 06:30:11.782 25538 25900 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py (9 chars)
+12-21 06:30:11.862 25538 25538 D NotebookSession: Notebook page finished loading
+12-21 06:30:11.862 25538 25538 D NotebookSession: WebView made visible
+12-21 06:30:11.866 25538 25538 D NotebookSession: Auto-save enabled: true, delay: 5s
+12-21 06:30:11.886 25538 25538 D NotebookSession: Calling JS loadContent with 10 chars
+12-21 06:30:11.887 25538 25538 D NotebookSession: Calling JS loadContent with 10 chars
+12-21 06:30:13.794 25538 25900 D NotebookSession: onContentChanged called - marking as dirty
+12-21 06:30:13.796 25538 25538 D Buffer  : Marked dirty: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py (session: NOTEBOOK_0)
+12-21 06:30:13.797 25538 25538 D NotebookSession: Marked as dirty in BufferViewModel: temp.py
+12-21 06:30:13.908 25538 25900 D NotebookSession: onContentChanged called - marking as dirty
+12-21 06:30:13.909 25538 25538 D NotebookSession: Marked as dirty in BufferViewModel: temp.py
+12-21 06:30:14.045 25538 25900 D NotebookSession: onContentChanged called - marking as dirty
+12-21 06:30:14.046 25538 25538 D NotebookSession: Marked as dirty in BufferViewModel: temp.py
+12-21 06:30:14.171 25538 25900 D NotebookSession: onContentChanged called - marking as dirty
+12-21 06:30:14.172 25538 25538 D NotebookSession: Marked as dirty in BufferViewModel: temp.py
+12-21 06:30:14.745 25538 25900 D NotebookSession: onContentChanged called - marking as dirty
+12-21 06:30:14.746 25538 25538 D NotebookSession: Marked as dirty in BufferViewModel: temp.py
+12-21 06:30:14.981 25538 25900 D NotebookSession: onContentChanged called - marking as dirty
+12-21 06:30:14.982 25538 25538 D NotebookSession: Marked as dirty in BufferViewModel: temp.py
+12-21 06:30:15.027 25538 25900 D NotebookSession: onContentChanged called - marking as dirty
+12-21 06:30:15.029 25538 25538 D NotebookSession: Marked as dirty in BufferViewModel: temp.py
+12-21 06:30:15.208 25538 25900 D NotebookSession: onContentChanged called - marking as dirty
+12-21 06:30:15.209 25538 25538 D NotebookSession: Marked as dirty in BufferViewModel: temp.py
+12-21 06:30:15.279 25538 25900 D NotebookSession: onContentChanged called - marking as dirty
+12-21 06:30:15.280 25538 25538 D NotebookSession: Marked as dirty in BufferViewModel: temp.py
+12-21 06:30:16.134 25538 25900 D NotebookSession: onContentChanged called - marking as dirty
+12-21 06:30:16.135 25538 25538 D NotebookSession: Marked as dirty in BufferViewModel: temp.py
+12-21 06:30:17.197 25538 25900 D NotebookSession: onContentChanged called - marking as dirty
+12-21 06:30:17.198 25538 25538 D NotebookSession: Marked as dirty in BufferViewModel: temp.py
+12-21 06:30:17.358 25538 25900 D NotebookSession: onContentChanged called - marking as dirty
+12-21 06:30:17.359 25538 25538 D NotebookSession: Marked as dirty in BufferViewModel: temp.py
+12-21 06:30:20.378 25538 25900 D NotebookSession: onContentChanged called - marking as dirty
+12-21 06:30:20.380 25538 25538 D NotebookSession: Marked as dirty in BufferViewModel: temp.py
+12-21 06:30:20.504 25538 25900 D NotebookSession: onContentChanged called - marking as dirty
+12-21 06:30:20.505 25538 25538 D NotebookSession: Marked as dirty in BufferViewModel: temp.py
+12-21 06:30:22.433 25538 25900 D NotebookSession: onContentChanged called - marking as dirty
+12-21 06:30:22.434 25538 25538 D NotebookSession: Marked as dirty in BufferViewModel: temp.py
+12-21 06:30:22.589 25538 25900 D NotebookSession: onContentChanged called - marking as dirty
+12-21 06:30:22.590 25538 25538 D NotebookSession: Marked as dirty in BufferViewModel: temp.py
+12-21 06:30:24.196 25538 25900 D NotebookSession: runCode called for cell cell-2
+12-21 06:30:27.590 25538 25900 D NotebookSession: AndroidInterface.saveFile() called - auto-save triggered
+12-21 06:30:27.593 25538 25538 D NotebookSession: Saved notebook content to content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py (18 chars)
+12-21 06:30:27.594 25538 25538 D Buffer  : Marked clean: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py (session: NOTEBOOK_0)
+12-21 06:30:27.594 25538 25538 D NotebookSession: Auto-saved and marked clean: temp.py
+12-21 06:30:41.977 25538 25538 D Buffer  : setSessionId(legacy): id=2, detected type=EDITOR
+12-21 06:30:41.977 25538 25538 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:30:41.977 25538 25538 D Buffer  : ║ SESSION SWITCH: NOTEBOOK_0 → EDITOR_2
+12-21 06:30:41.977 25538 25538 D Buffer  : ║ Old: type=NOTEBOOK, id=0
+12-21 06:30:41.977 25538 25538 D Buffer  : ║ New: type=EDITOR, id=2
+12-21 06:30:41.978 25538 25538 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:30:41.978 25538 25538 D Buffer  :   Saved state for NOTEBOOK_0: 1 files, 0 dirty
+12-21 06:30:41.978 25538 25538 D Buffer  :   Cleared current state
+12-21 06:30:41.978 25538 25538 D Buffer  :   No saved files for EDITOR_2 (new session)
+12-21 06:30:41.978 25538 25538 D Buffer  :   No dirty files for EDITOR_2
+12-21 06:30:41.978 25538 25538 D Buffer  : Session EDITOR_2 initialized: 0 files, 0 dirty
+12-21 06:30:42.325 25538 25538 D EditorSession: BufferViewModel set
+12-21 06:30:42.325 25538 25538 D Buffer  : setSessionId(legacy): id=2, detected type=EDITOR
+12-21 06:30:42.325 25538 25538 D Buffer  : setSessionId called with same key: EDITOR_2 (no-op)
+12-21 06:30:42.328 25538 25538 D Buffer  : Added: temp.py
+12-21 06:30:42.329 25538 25538 D Buffer  : saveCurrentContentToBuffer: currentFile is null, skipping
+12-21 06:30:42.329 25538 25538 D Buffer  : Reading from disk for temp.py
+12-21 06:30:42.332 25538 25538 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:30:42.332 25538 25538 D EditorSession: ║ setFilePath called
+12-21 06:30:42.332 25538 25538 D EditorSession: ║ Old path: null
+12-21 06:30:42.332 25538 25538 D EditorSession: ║ New path: /home/temp.py
+12-21 06:30:42.332 25538 25538 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:30:42.333 25538 25538 D Buffer  : Opened: temp.py, total: 1
+12-21 06:30:42.463 25538 25538 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:30:42.463 25538 25538 D EditorSession: ║ setFilePath called
+12-21 06:30:42.463 25538 25538 D EditorSession: ║ Old path: /home/temp.py
+12-21 06:30:42.463 25538 25538 D EditorSession: ║ New path: /home/temp.py
+12-21 06:30:42.463 25538 25538 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:30:43.967 25538 25538 D EditorSession: Fallback: Checking window.isEditorReady...
+12-21 06:30:43.969 25538 25538 D EditorSession: Fallback: isEditorReady = false
+12-21 06:30:44.462 25538 25538 D EditorSession: Injecting MutationObserver for content changes...
+12-21 06:30:45.465 25538 25538 W EditorSession: Ultimate fallback: Forcing isReady after 3s timeout
+12-21 06:30:47.555 25538 25538 D Buffer  : saveCurrentContentToBuffer: Attempting to save temp.py
+12-21 06:30:47.555 25538 25538 D Buffer  :   Session: EDITOR_2
+12-21 06:30:47.555 25538 25538 D Buffer  :   URI: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:30:47.561 25538 25538 D Buffer  : saveCurrentContentToBuffer: JS returned for temp.py, result length=2
+12-21 06:30:47.561 25538 25538 E Buffer  : ✗ Failed to save temp.py: result was null or empty
+12-21 06:30:48.049 25538 25538 D Buffer  : saveCurrentContentToBuffer: Attempting to save temp.py
+12-21 06:30:48.049 25538 25538 D Buffer  :   Session: EDITOR_2
+12-21 06:30:48.049 25538 25538 D Buffer  :   URI: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:30:48.059 25538 25538 D Buffer  : saveCurrentContentToBuffer: JS returned for temp.py, result length=2
+12-21 06:30:48.059 25538 25538 E Buffer  : ✗ Failed to save temp.py: result was null or empty
+12-21 06:30:53.197 25538 25538 D Buffer  : Added: index.html
+12-21 06:30:53.204 25538 25538 D Buffer  : saveCurrentContentToBuffer: Attempting to save temp.py
+12-21 06:30:53.204 25538 25538 D Buffer  :   Session: EDITOR_2
+12-21 06:30:53.204 25538 25538 D Buffer  :   URI: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:30:53.205 25538 25538 D Buffer  : Reading from disk for index.html
+12-21 06:30:53.230 25538 25538 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:30:53.230 25538 25538 D EditorSession: ║ setFilePath called
+12-21 06:30:53.230 25538 25538 D EditorSession: ║ Old path: /home/temp.py
+12-21 06:30:53.230 25538 25538 D EditorSession: ║ New path: /home/index.html
+12-21 06:30:53.230 25538 25538 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:30:53.232 25538 25538 D Buffer  : Opened: index.html, total: 2
+12-21 06:30:53.290 25538 25538 D Buffer  : saveCurrentContentToBuffer: JS returned for temp.py, result length=2
+12-21 06:30:53.290 25538 25538 E Buffer  : ✗ Failed to save temp.py: result was null or empty
+12-21 06:30:54.174 25538 25538 D Buffer  : saveCurrentContentToBuffer: Attempting to save index.html
+12-21 06:30:54.174 25538 25538 D Buffer  :   Session: EDITOR_2
+12-21 06:30:54.174 25538 25538 D Buffer  :   URI: content://com.bsbeetle.bananaspaghetti.documents/tree/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2FTest%2Fmy-react-app/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2FTest%2Fmy-react-app%2Findex.html
+12-21 06:30:54.182 25538 25538 D Buffer  : saveCurrentContentToBuffer: JS returned for index.html, result length=2
+12-21 06:30:54.182 25538 25538 E Buffer  : ✗ Failed to save index.html: result was null or empty
+12-21 06:30:54.293 25538 25538 D Buffer  : saveCurrentContentToBuffer: Attempting to save temp.py
+12-21 06:30:54.293 25538 25538 D Buffer  :   Session: EDITOR_2
+12-21 06:30:54.293 25538 25538 D Buffer  :   URI: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:30:54.293 25538 25538 D Buffer  : Using buffered content for temp.py: 18 chars
+12-21 06:30:54.295 25538 25538 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:30:54.295 25538 25538 D EditorSession: ║ setFilePath called
+12-21 06:30:54.295 25538 25538 D EditorSession: ║ Old path: /home/index.html
+12-21 06:30:54.295 25538 25538 D EditorSession: ║ New path: /home/temp.py
+12-21 06:30:54.295 25538 25538 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:30:54.296 25538 25538 D Buffer  : Opened: temp.py, total: 2
+12-21 06:30:54.349 25538 25538 D Buffer  : saveCurrentContentToBuffer: JS returned for temp.py, result length=2
+12-21 06:30:54.349 25538 25538 E Buffer  : ✗ Failed to save temp.py: result was null or empty
+12-21 06:30:54.765 25538 25538 D Buffer  : saveCurrentContentToBuffer: Attempting to save temp.py
+12-21 06:30:54.765 25538 25538 D Buffer  :   Session: EDITOR_2
+12-21 06:30:54.765 25538 25538 D Buffer  :   URI: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:30:54.766 25538 25538 D Buffer  : Using buffered content for index.html: 361 chars
+12-21 06:30:54.768 25538 25538 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:30:54.768 25538 25538 D EditorSession: ║ setFilePath called
+12-21 06:30:54.768 25538 25538 D EditorSession: ║ Old path: /home/temp.py
+12-21 06:30:54.768 25538 25538 D EditorSession: ║ New path: /home/index.html
+12-21 06:30:54.768 25538 25538 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:30:54.769 25538 25538 D Buffer  : Opened: index.html, total: 1
+12-21 06:30:54.780 25538 25538 D Buffer  : saveCurrentContentToBuffer: JS returned for temp.py, result length=2
+12-21 06:30:54.780 25538 25538 E Buffer  : ✗ Failed to save temp.py: result was null or empty
+12-21 06:37:24.024 27869 27869 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:37:24.024 27869 27869 D NotebookSession: ║ setFilePath called
+12-21 06:37:24.024 27869 27869 D NotebookSession: ║ Old path: null
+12-21 06:37:24.024 27869 27869 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:37:24.024 27869 27869 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:37:24.024 27869 27869 D NotebookSession: Clearing notebook before loading new content...
+12-21 06:37:24.026 27869 27869 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:37:24.026 27869 27869 D NotebookSession: Reading from content:// URI
+12-21 06:37:24.028 27869 27869 D NotebookSession: Content read successfully: 62 chars
+12-21 06:37:24.028 27869 27869 D NotebookSession: First 100 chars: print("Hello from Python!")
+12-21 06:37:24.028 27869 27869 D NotebookSession: a = 92
+12-21 06:37:24.028 27869 27869 D NotebookSession: b = 3
+12-21 06:37:24.028 27869 27869 D NotebookSession: print("Sum =", a + b)
+12-21 06:37:24.028 27869 27869 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py (62 chars)
+12-21 06:37:24.028 27869 27869 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:37:24.028 27869 27869 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:37:24.028 27869 27869 D Buffer  : ║ SESSION SWITCH: null → NOTEBOOK_0
+12-21 06:37:24.028 27869 27869 D Buffer  : ║ Old: type=null, id=null
+12-21 06:37:24.028 27869 27869 D Buffer  : ║ New: type=NOTEBOOK, id=0
+12-21 06:37:24.028 27869 27869 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:37:24.029 27869 27869 D Buffer  :   Cleared current state
+12-21 06:37:24.029 27869 27869 D Buffer  :   No saved files for NOTEBOOK_0 (new session)
+12-21 06:37:24.029 27869 27869 D Buffer  :   No dirty files for NOTEBOOK_0
+12-21 06:37:24.029 27869 27869 D Buffer  : Session NOTEBOOK_0 initialized: 0 files, 0 dirty
+12-21 06:37:24.675 27869 28086 D NotebookSession: Notebook JS reported ready
+12-21 06:37:24.675 27869 28086 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:37:24.675 27869 28086 D NotebookSession: Reading from content:// URI
+12-21 06:37:24.676 27869 28086 D NotebookSession: Content read successfully: 62 chars
+12-21 06:37:24.676 27869 28086 D NotebookSession: First 100 chars: print("Hello from Python!")
+12-21 06:37:24.676 27869 28086 D NotebookSession: a = 92
+12-21 06:37:24.676 27869 28086 D NotebookSession: b = 3
+12-21 06:37:24.676 27869 28086 D NotebookSession: print("Sum =", a + b)
+12-21 06:37:24.676 27869 28086 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py (62 chars)
+12-21 06:37:24.915 27869 27869 D NotebookSession: BufferViewModel set for notebook
+12-21 06:37:24.915 27869 27869 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:37:24.915 27869 27869 D Buffer  : setSessionId called with same key: NOTEBOOK_0 (no-op)
+12-21 06:37:24.920 27869 27869 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:37:24.920 27869 27869 D NotebookSession: ║ setFilePath called
+12-21 06:37:24.920 27869 27869 D NotebookSession: ║ Old path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:37:24.920 27869 27869 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:37:24.920 27869 27869 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:37:24.920 27869 27869 D NotebookSession: Same path, skipping reload
+12-21 06:37:25.243 27869 27869 D NotebookSession: Notebook page finished loading
+12-21 06:37:25.243 27869 27869 D NotebookSession: WebView made visible
+12-21 06:37:25.247 27869 27869 D NotebookSession: Auto-save enabled: true, delay: 5s
+12-21 06:37:25.305 27869 27869 D NotebookSession: Calling JS loadContent with 65 chars
+12-21 06:37:25.306 27869 27869 D NotebookSession: Calling JS loadContent with 65 chars
+12-21 06:37:30.027 27869 28086 D NotebookSession: runCode called for cell cell-2
+12-21 06:37:37.451 27869 27869 D Buffer  : setSessionId(legacy): id=2, detected type=EDITOR
+12-21 06:37:37.451 27869 27869 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:37:37.451 27869 27869 D Buffer  : ║ SESSION SWITCH: NOTEBOOK_0 → EDITOR_2
+12-21 06:37:37.451 27869 27869 D Buffer  : ║ Old: type=NOTEBOOK, id=0
+12-21 06:37:37.451 27869 27869 D Buffer  : ║ New: type=EDITOR, id=2
+12-21 06:37:37.451 27869 27869 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:37:37.452 27869 27869 D Buffer  :   Saved state for NOTEBOOK_0: 1 files, 0 dirty
+12-21 06:37:37.452 27869 27869 D Buffer  :   Cleared current state
+12-21 06:37:37.452 27869 27869 D Buffer  :   No saved files for EDITOR_2 (new session)
+12-21 06:37:37.452 27869 27869 D Buffer  :   No dirty files for EDITOR_2
+12-21 06:37:37.452 27869 27869 D Buffer  : Session EDITOR_2 initialized: 0 files, 0 dirty
+12-21 06:37:37.717 27869 28086 D EditorSession: ✓ JS: onReady called - CM6 initialized
+12-21 06:37:38.024 27869 27869 D EditorSession: BufferViewModel set
+12-21 06:37:38.024 27869 27869 D Buffer  : setSessionId(legacy): id=2, detected type=EDITOR
+12-21 06:37:38.024 27869 27869 D Buffer  : setSessionId called with same key: EDITOR_2 (no-op)
+12-21 06:37:38.027 27869 27869 D Buffer  : Added: test.py
+12-21 06:37:38.028 27869 27869 D Buffer  : saveCurrentContentToBuffer: currentFile is null, skipping
+12-21 06:37:38.029 27869 27869 D Buffer  : Reading from disk for test.py
+12-21 06:37:38.032 27869 27869 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:37:38.032 27869 27869 D EditorSession: ║ setFilePath called
+12-21 06:37:38.032 27869 27869 D EditorSession: ║ Old path: null
+12-21 06:37:38.032 27869 27869 D EditorSession: ║ New path: /home/test.py
+12-21 06:37:38.032 27869 27869 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:37:38.033 27869 27869 D Buffer  : Opened: test.py, total: 1
+12-21 06:37:38.293 27869 27869 D EditorSession: ✓ Applied saved editor settings
+12-21 06:37:38.294 27869 27869 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:37:38.294 27869 27869 D EditorSession: ║ setFilePath called
+12-21 06:37:38.294 27869 27869 D EditorSession: ║ Old path: /home/test.py
+12-21 06:37:38.294 27869 27869 D EditorSession: ║ New path: /home/test.py
+12-21 06:37:38.294 27869 27869 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:37:40.293 27869 27869 D EditorSession: Injecting MutationObserver for content changes...
+12-21 06:37:43.330 27869 28086 D EditorSession: ✓ JS: AndroidInterface.saveFile() called - auto-save triggered
+12-21 06:37:43.411 27869 27869 D Buffer  : Marked clean: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py (session: EDITOR_2)
+12-21 06:37:43.412 27869 27869 D EditorSession: ✓ Auto-saved and marked clean: test.py
+12-21 06:37:50.770 27869 27869 D EditorSession: Content saved (62 chars)
+12-21 06:38:04.945 27869 27869 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:38:04.945 27869 27869 D NotebookSession: ║ setFilePath called
+12-21 06:38:04.946 27869 27869 D NotebookSession: ║ Old path: null
+12-21 06:38:04.946 27869 27869 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.cpp
+12-21 06:38:04.946 27869 27869 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:38:04.946 27869 27869 D NotebookSession: Clearing notebook before loading new content...
+12-21 06:38:04.946 27869 27869 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.cpp
+12-21 06:38:04.946 27869 27869 D NotebookSession: Reading from content:// URI
+12-21 06:38:04.947 27869 27869 D NotebookSession: Content read successfully: 174 chars
+12-21 06:38:04.947 27869 27869 D NotebookSession: First 100 chars: #include <iostream>
+12-21 06:38:04.947 27869 27869 D NotebookSession: using namespace std;
+12-21 06:38:04.947 27869 27869 D NotebookSession: 
+12-21 06:38:04.947 27869 27869 D NotebookSession: int main() {
+12-21 06:38:04.947 27869 27869 D NotebookSession:     cout << "Hello" << endl;
+12-21 06:38:04.947 27869 27869 D NotebookSession:     int a = 6788
+12-21 06:38:04.947 27869 27869 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.cpp (174 chars)
+12-21 06:38:04.948 27869 27869 D Buffer  : setSessionId(legacy): id=3, detected type=NOTEBOOK
+12-21 06:38:04.948 27869 27869 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:38:04.948 27869 27869 D Buffer  : ║ SESSION SWITCH: EDITOR_2 → NOTEBOOK_3
+12-21 06:38:04.948 27869 27869 D Buffer  : ║ Old: type=EDITOR, id=2
+12-21 06:38:04.948 27869 27869 D Buffer  : ║ New: type=NOTEBOOK, id=3
+12-21 06:38:04.948 27869 27869 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:38:04.948 27869 27869 D Buffer  :   Saved state for EDITOR_2: 1 files, 0 dirty
+12-21 06:38:04.948 27869 27869 D Buffer  :   Cleared current state
+12-21 06:38:04.948 27869 27869 D Buffer  :   No saved files for NOTEBOOK_3 (new session)
+12-21 06:38:04.948 27869 27869 D Buffer  :   No dirty files for NOTEBOOK_3
+12-21 06:38:04.948 27869 27869 D Buffer  : Session NOTEBOOK_3 initialized: 0 files, 0 dirty
+12-21 06:38:05.145 27869 28086 D NotebookSession: Notebook JS reported ready
+12-21 06:38:05.146 27869 28086 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.cpp
+12-21 06:38:05.146 27869 28086 D NotebookSession: Reading from content:// URI
+12-21 06:38:05.147 27869 28086 D NotebookSession: Content read successfully: 174 chars
+12-21 06:38:05.147 27869 28086 D NotebookSession: First 100 chars: #include <iostream>
+12-21 06:38:05.147 27869 28086 D NotebookSession: using namespace std;
+12-21 06:38:05.147 27869 28086 D NotebookSession: 
+12-21 06:38:05.147 27869 28086 D NotebookSession: int main() {
+12-21 06:38:05.147 27869 28086 D NotebookSession:     cout << "Hello" << endl;
+12-21 06:38:05.147 27869 28086 D NotebookSession:     int a = 6788
+12-21 06:38:05.147 27869 28086 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.cpp (174 chars)
+12-21 06:38:05.412 27869 27869 D NotebookSession: BufferViewModel set for notebook
+12-21 06:38:05.412 27869 27869 D Buffer  : setSessionId(legacy): id=3, detected type=NOTEBOOK
+12-21 06:38:05.413 27869 27869 D Buffer  : setSessionId called with same key: NOTEBOOK_3 (no-op)
+12-21 06:38:05.416 27869 27869 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:38:05.416 27869 27869 D NotebookSession: ║ setFilePath called
+12-21 06:38:05.416 27869 27869 D NotebookSession: ║ Old path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.cpp
+12-21 06:38:05.416 27869 27869 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.cpp
+12-21 06:38:05.416 27869 27869 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:38:05.416 27869 27869 D NotebookSession: Same path, skipping reload
+12-21 06:38:05.666 27869 27869 D NotebookSession: Notebook page finished loading
+12-21 06:38:05.666 27869 27869 D NotebookSession: WebView made visible
+12-21 06:38:05.666 27869 27869 D NotebookSession: Auto-save enabled: true, delay: 5s
+12-21 06:38:05.690 27869 27869 D NotebookSession: Calling JS loadContent with 182 chars
+12-21 06:38:05.690 27869 27869 D NotebookSession: Calling JS loadContent with 182 chars
+12-21 06:38:07.849 27869 28086 D NotebookSession: runCode called for cell cell-2
+12-21 06:41:58.978  6593  6593 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:41:58.978  6593  6593 D NotebookSession: ║ setFilePath called
+12-21 06:41:58.978  6593  6593 D NotebookSession: ║ Old path: null
+12-21 06:41:58.978  6593  6593 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.cpp
+12-21 06:41:58.978  6593  6593 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:41:58.978  6593  6593 D NotebookSession: Clearing notebook before loading new content...
+12-21 06:41:58.980  6593  6593 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.cpp
+12-21 06:41:58.980  6593  6593 D NotebookSession: Reading from content:// URI
+12-21 06:41:58.982  6593  6593 D NotebookSession: Content read successfully: 174 chars
+12-21 06:41:58.983  6593  6593 D NotebookSession: First 100 chars: #include <iostream>
+12-21 06:41:58.983  6593  6593 D NotebookSession: using namespace std;
+12-21 06:41:58.983  6593  6593 D NotebookSession: 
+12-21 06:41:58.983  6593  6593 D NotebookSession: int main() {
+12-21 06:41:58.983  6593  6593 D NotebookSession:     cout << "Hello" << endl;
+12-21 06:41:58.983  6593  6593 D NotebookSession:     int a = 6788
+12-21 06:41:58.983  6593  6593 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.cpp (174 chars)
+12-21 06:41:58.983  6593  6593 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:41:58.983  6593  6593 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:41:58.983  6593  6593 D Buffer  : ║ SESSION SWITCH: null → NOTEBOOK_0
+12-21 06:41:58.983  6593  6593 D Buffer  : ║ Old: type=null, id=null
+12-21 06:41:58.983  6593  6593 D Buffer  : ║ New: type=NOTEBOOK, id=0
+12-21 06:41:58.983  6593  6593 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:41:58.983  6593  6593 D Buffer  :   Cleared current state
+12-21 06:41:58.983  6593  6593 D Buffer  :   No saved files for NOTEBOOK_0 (new session)
+12-21 06:41:58.983  6593  6593 D Buffer  :   No dirty files for NOTEBOOK_0
+12-21 06:41:58.983  6593  6593 D Buffer  : Session NOTEBOOK_0 initialized: 0 files, 0 dirty
+12-21 06:42:00.215  6593  6885 D NotebookSession: Notebook JS reported ready
+12-21 06:42:00.215  6593  6885 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.cpp
+12-21 06:42:00.215  6593  6885 D NotebookSession: Reading from content:// URI
+12-21 06:42:00.217  6593  6885 D NotebookSession: Content read successfully: 174 chars
+12-21 06:42:00.218  6593  6885 D NotebookSession: First 100 chars: #include <iostream>
+12-21 06:42:00.218  6593  6885 D NotebookSession: using namespace std;
+12-21 06:42:00.218  6593  6885 D NotebookSession: 
+12-21 06:42:00.218  6593  6885 D NotebookSession: int main() {
+12-21 06:42:00.218  6593  6885 D NotebookSession:     cout << "Hello" << endl;
+12-21 06:42:00.218  6593  6885 D NotebookSession:     int a = 6788
+12-21 06:42:00.219  6593  6885 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.cpp (174 chars)
+12-21 06:42:00.265  6593  6593 D NotebookSession: BufferViewModel set for notebook
+12-21 06:42:00.265  6593  6593 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:42:00.266  6593  6593 D Buffer  : setSessionId called with same key: NOTEBOOK_0 (no-op)
+12-21 06:42:00.717  6593  6593 D NotebookSession: Notebook page finished loading
+12-21 06:42:00.717  6593  6593 D NotebookSession: WebView made visible
+12-21 06:42:00.750  6593  6593 D NotebookSession: Auto-save enabled: true, delay: 5s
+12-21 06:42:00.987  6593  6593 D NotebookSession: Calling JS loadContent with 182 chars
+12-21 06:42:00.988  6593  6593 D NotebookSession: Calling JS loadContent with 182 chars
+12-21 06:43:19.159  6593  6593 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:43:19.159  6593  6593 D NotebookSession: ║ setFilePath called
+12-21 06:43:19.159  6593  6593 D NotebookSession: ║ Old path: null
+12-21 06:43:19.159  6593  6593 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.cpp
+12-21 06:43:19.159  6593  6593 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:43:19.159  6593  6593 D NotebookSession: Clearing notebook before loading new content...
+12-21 06:43:19.163  6593  6593 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.cpp
+12-21 06:43:19.163  6593  6593 D NotebookSession: Reading from content:// URI
+12-21 06:43:19.166  6593  6593 D NotebookSession: Content read successfully: 174 chars
+12-21 06:43:19.166  6593  6593 D NotebookSession: First 100 chars: #include <iostream>
+12-21 06:43:19.166  6593  6593 D NotebookSession: using namespace std;
+12-21 06:43:19.166  6593  6593 D NotebookSession: 
+12-21 06:43:19.166  6593  6593 D NotebookSession: int main() {
+12-21 06:43:19.166  6593  6593 D NotebookSession:     cout << "Hello" << endl;
+12-21 06:43:19.166  6593  6593 D NotebookSession:     int a = 6788
+12-21 06:43:19.166  6593  6593 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.cpp (174 chars)
+12-21 06:43:19.167  6593  6593 D Buffer  : setSessionId(legacy): id=2, detected type=NOTEBOOK
+12-21 06:43:19.167  6593  6593 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:43:19.167  6593  6593 D Buffer  : ║ SESSION SWITCH: NOTEBOOK_0 → NOTEBOOK_2
+12-21 06:43:19.167  6593  6593 D Buffer  : ║ Old: type=NOTEBOOK, id=0
+12-21 06:43:19.167  6593  6593 D Buffer  : ║ New: type=NOTEBOOK, id=2
+12-21 06:43:19.167  6593  6593 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:43:19.168  6593  6593 D Buffer  :   Saved state for NOTEBOOK_0: 0 files, 0 dirty
+12-21 06:43:19.168  6593  6593 D Buffer  :   Cleared current state
+12-21 06:43:19.168  6593  6593 D Buffer  :   No saved files for NOTEBOOK_2 (new session)
+12-21 06:43:19.168  6593  6593 D Buffer  :   No dirty files for NOTEBOOK_2
+12-21 06:43:19.168  6593  6593 D Buffer  : Session NOTEBOOK_2 initialized: 0 files, 0 dirty
+12-21 06:43:19.415  6593  6885 D NotebookSession: Notebook JS reported ready
+12-21 06:43:19.415  6593  6885 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.cpp
+12-21 06:43:19.415  6593  6885 D NotebookSession: Reading from content:// URI
+12-21 06:43:19.416  6593  6885 D NotebookSession: Content read successfully: 174 chars
+12-21 06:43:19.416  6593  6885 D NotebookSession: First 100 chars: #include <iostream>
+12-21 06:43:19.416  6593  6885 D NotebookSession: using namespace std;
+12-21 06:43:19.416  6593  6885 D NotebookSession: 
+12-21 06:43:19.416  6593  6885 D NotebookSession: int main() {
+12-21 06:43:19.416  6593  6885 D NotebookSession:     cout << "Hello" << endl;
+12-21 06:43:19.416  6593  6885 D NotebookSession:     int a = 6788
+12-21 06:43:19.416  6593  6885 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.cpp (174 chars)
+12-21 06:43:19.748  6593  6593 D NotebookSession: BufferViewModel set for notebook
+12-21 06:43:19.748  6593  6593 D Buffer  : setSessionId(legacy): id=2, detected type=NOTEBOOK
+12-21 06:43:19.748  6593  6593 D Buffer  : setSessionId called with same key: NOTEBOOK_2 (no-op)
+12-21 06:43:20.003  6593  6593 D NotebookSession: Notebook page finished loading
+12-21 06:43:20.003  6593  6593 D NotebookSession: WebView made visible
+12-21 06:43:20.004  6593  6593 D NotebookSession: Auto-save enabled: true, delay: 5s
+12-21 06:43:20.094  6593  6593 D NotebookSession: Calling JS loadContent with 182 chars
+12-21 06:43:20.095  6593  6593 D NotebookSession: Calling JS loadContent with 182 chars
+12-21 06:43:36.723  6593  6885 D NotebookSession: runCode called for cell cell-2
+12-21 06:47:44.274 12592 12592 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:47:44.275 12592 12592 D NotebookSession: ║ setFilePath called
+12-21 06:47:44.275 12592 12592 D NotebookSession: ║ Old path: null
+12-21 06:47:44.275 12592 12592 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:47:44.275 12592 12592 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:47:44.275 12592 12592 D NotebookSession: Clearing notebook before loading new content...
+12-21 06:47:44.276 12592 12592 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:47:44.276 12592 12592 D NotebookSession: Reading from content:// URI
+12-21 06:47:44.278 12592 12592 D NotebookSession: Content read successfully: 18 chars
+12-21 06:47:44.278 12592 12592 D NotebookSession: First 100 chars: # %%
+12-21 06:47:44.278 12592 12592 D NotebookSession: print(\"hi\")
+12-21 06:47:44.278 12592 12592 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py (18 chars)
+12-21 06:47:44.278 12592 12592 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:47:44.278 12592 12592 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:47:44.278 12592 12592 D Buffer  : ║ SESSION SWITCH: null → NOTEBOOK_0
+12-21 06:47:44.278 12592 12592 D Buffer  : ║ Old: type=null, id=null
+12-21 06:47:44.279 12592 12592 D Buffer  : ║ New: type=NOTEBOOK, id=0
+12-21 06:47:44.279 12592 12592 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:47:44.279 12592 12592 D Buffer  :   Cleared current state
+12-21 06:47:44.279 12592 12592 D Buffer  :   No saved files for NOTEBOOK_0 (new session)
+12-21 06:47:44.279 12592 12592 D Buffer  :   No dirty files for NOTEBOOK_0
+12-21 06:47:44.279 12592 12592 D Buffer  : Session NOTEBOOK_0 initialized: 0 files, 0 dirty
+12-21 06:47:44.997 12592 12845 D NotebookSession: Notebook JS reported ready
+12-21 06:47:44.997 12592 12845 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:47:44.997 12592 12845 D NotebookSession: Reading from content:// URI
+12-21 06:47:44.998 12592 12845 D NotebookSession: Content read successfully: 18 chars
+12-21 06:47:44.998 12592 12845 D NotebookSession: First 100 chars: # %%
+12-21 06:47:44.998 12592 12845 D NotebookSession: print(\"hi\")
+12-21 06:47:44.998 12592 12845 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py (18 chars)
+12-21 06:47:45.230 12592 12592 D NotebookSession: BufferViewModel set for notebook
+12-21 06:47:45.230 12592 12592 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:47:45.230 12592 12592 D Buffer  : setSessionId called with same key: NOTEBOOK_0 (no-op)
+12-21 06:47:45.236 12592 12592 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:47:45.236 12592 12592 D NotebookSession: ║ setFilePath called
+12-21 06:47:45.236 12592 12592 D NotebookSession: ║ Old path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:47:45.236 12592 12592 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:47:45.236 12592 12592 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:47:45.236 12592 12592 D NotebookSession: Same path, skipping reload
+12-21 06:47:45.543 12592 12592 D NotebookSession: Notebook page finished loading
+12-21 06:47:45.543 12592 12592 D NotebookSession: WebView made visible
+12-21 06:47:45.547 12592 12592 D NotebookSession: Auto-save enabled: true, delay: 5s
+12-21 06:47:45.601 12592 12592 D NotebookSession: Calling JS loadContent with 21 chars
+12-21 06:47:45.601 12592 12592 D NotebookSession: Calling JS loadContent with 21 chars
+12-21 06:47:52.819 12592 12592 D NotebookSession: Destroying notebook session
+12-21 06:47:58.691 12592 12592 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:47:58.691 12592 12592 D NotebookSession: ║ setFilePath called
+12-21 06:47:58.691 12592 12592 D NotebookSession: ║ Old path: null
+12-21 06:47:58.692 12592 12592 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:47:58.692 12592 12592 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:47:58.692 12592 12592 D NotebookSession: Clearing notebook before loading new content...
+12-21 06:47:58.693 12592 12592 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:47:58.694 12592 12592 D NotebookSession: Reading from content:// URI
+12-21 06:47:58.697 12592 12592 D NotebookSession: Content read successfully: 62 chars
+12-21 06:47:58.697 12592 12592 D NotebookSession: First 100 chars: print("Hello from Python!")
+12-21 06:47:58.697 12592 12592 D NotebookSession: a = 92
+12-21 06:47:58.697 12592 12592 D NotebookSession: b = 3
+12-21 06:47:58.697 12592 12592 D NotebookSession: print("Sum =", a + b)
+12-21 06:47:58.697 12592 12592 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py (62 chars)
+12-21 06:47:58.698 12592 12592 D Buffer  : setSessionId called with same key: NOTEBOOK_0 (no-op)
+12-21 06:47:59.539 12592 12592 D NotebookSession: BufferViewModel set for notebook
+12-21 06:47:59.539 12592 12592 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:47:59.539 12592 12592 D Buffer  : setSessionId called with same key: NOTEBOOK_0 (no-op)
+12-21 06:47:59.542 12592 12592 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:47:59.542 12592 12592 D NotebookSession: ║ setFilePath called
+12-21 06:47:59.542 12592 12592 D NotebookSession: ║ Old path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:47:59.542 12592 12592 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:47:59.542 12592 12592 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:47:59.542 12592 12592 D NotebookSession: Same path, skipping reload
+12-21 06:47:59.662 12592 12845 D NotebookSession: Notebook JS reported ready
+12-21 06:47:59.662 12592 12845 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:47:59.662 12592 12845 D NotebookSession: Reading from content:// URI
+12-21 06:47:59.663 12592 12845 D NotebookSession: Content read successfully: 62 chars
+12-21 06:47:59.663 12592 12845 D NotebookSession: First 100 chars: print("Hello from Python!")
+12-21 06:47:59.663 12592 12845 D NotebookSession: a = 92
+12-21 06:47:59.663 12592 12845 D NotebookSession: b = 3
+12-21 06:47:59.663 12592 12845 D NotebookSession: print("Sum =", a + b)
+12-21 06:47:59.663 12592 12845 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py (62 chars)
+12-21 06:48:00.005 12592 12592 D NotebookSession: Notebook page finished loading
+12-21 06:48:00.006 12592 12592 D NotebookSession: WebView made visible
+12-21 06:48:00.006 12592 12592 D NotebookSession: Auto-save enabled: true, delay: 5s
+12-21 06:48:00.043 12592 12592 D NotebookSession: Calling JS loadContent with 65 chars
+12-21 06:48:00.043 12592 12592 D NotebookSession: Calling JS loadContent with 65 chars
+12-21 06:52:55.663 12592 12592 D NotebookSession: Destroying notebook session
+12-21 06:53:00.216 12592 12592 D Buffer  : setSessionId(legacy): id=0, detected type=EDITOR
+12-21 06:53:00.217 12592 12592 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:53:00.217 12592 12592 D Buffer  : ║ SESSION SWITCH: NOTEBOOK_0 → EDITOR_0
+12-21 06:53:00.217 12592 12592 D Buffer  : ║ Old: type=NOTEBOOK, id=0
+12-21 06:53:00.217 12592 12592 D Buffer  : ║ New: type=EDITOR, id=0
+12-21 06:53:00.217 12592 12592 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:53:00.217 12592 12592 D Buffer  :   Saved state for NOTEBOOK_0: 2 files, 0 dirty
+12-21 06:53:00.217 12592 12592 D Buffer  :   Cleared current state
+12-21 06:53:00.218 12592 12592 D Buffer  :   No saved files for EDITOR_0 (new session)
+12-21 06:53:00.218 12592 12592 D Buffer  :   No dirty files for EDITOR_0
+12-21 06:53:00.218 12592 12592 D Buffer  : Session EDITOR_0 initialized: 0 files, 0 dirty
+12-21 06:53:00.530 12592 12592 D EditorSession: BufferViewModel set
+12-21 06:53:00.530 12592 12592 D Buffer  : setSessionId(legacy): id=0, detected type=EDITOR
+12-21 06:53:00.530 12592 12592 D Buffer  : setSessionId called with same key: EDITOR_0 (no-op)
+12-21 06:53:00.534 12592 12592 D Buffer  : Added: temp.p
+12-21 06:53:00.534 12592 12592 D Buffer  : saveCurrentContentToBuffer: currentFile is null, skipping
+12-21 06:53:00.535 12592 12592 D Buffer  : Reading from disk for temp.p
+12-21 06:53:00.539 12592 12592 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:53:00.539 12592 12592 D EditorSession: ║ setFilePath called
+12-21 06:53:00.539 12592 12592 D EditorSession: ║ Old path: null
+12-21 06:53:00.539 12592 12592 D EditorSession: ║ New path: /home/temp.p
+12-21 06:53:00.539 12592 12592 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:53:00.540 12592 12592 D Buffer  : Opened: temp.p, total: 1
+12-21 06:53:00.880 12592 12845 D EditorSession: ✓ JS: onReady called - CM6 initialized
+12-21 06:53:00.894 12592 12592 D EditorSession: ✓ Applied saved editor settings
+12-21 06:53:00.958 12592 12592 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:53:00.958 12592 12592 D EditorSession: ║ setFilePath called
+12-21 06:53:00.958 12592 12592 D EditorSession: ║ Old path: /home/temp.p
+12-21 06:53:00.958 12592 12592 D EditorSession: ║ New path: /home/temp.p
+12-21 06:53:00.958 12592 12592 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:53:02.665 12592 12592 D EditorSession: Injecting MutationObserver for content changes...
+12-21 06:53:03.336 12592 12592 D Buffer  : BufferViewModel cleared for session EDITOR_0
+12-21 06:53:08.676 12592 12592 D Buffer  : setSessionId(legacy): id=0, detected type=EDITOR
+12-21 06:53:08.676 12592 12592 D Buffer  : setSessionId called with same key: EDITOR_0 (no-op)
+12-21 06:53:08.936 12592 12592 D EditorSession: BufferViewModel set
+12-21 06:53:08.936 12592 12592 D Buffer  : setSessionId(legacy): id=0, detected type=EDITOR
+12-21 06:53:08.936 12592 12592 D Buffer  : setSessionId called with same key: EDITOR_0 (no-op)
+12-21 06:53:08.939 12592 12592 D Buffer  : Added: temp.py
+12-21 06:53:08.940 12592 12592 D Buffer  : saveCurrentContentToBuffer: currentFile is null, skipping
+12-21 06:53:08.940 12592 12592 D Buffer  : Reading from disk for temp.py
+12-21 06:53:08.944 12592 12592 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:53:08.944 12592 12592 D EditorSession: ║ setFilePath called
+12-21 06:53:08.944 12592 12592 D EditorSession: ║ Old path: null
+12-21 06:53:08.944 12592 12592 D EditorSession: ║ New path: /home/temp.py
+12-21 06:53:08.944 12592 12592 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:53:08.945 12592 12592 D Buffer  : Opened: temp.py, total: 1
+12-21 06:53:09.112 12592 12845 D EditorSession: ✓ JS: onReady called - CM6 initialized
+12-21 06:53:09.124 12592 12592 D EditorSession: ✓ Applied saved editor settings
+12-21 06:53:09.184 12592 12592 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:53:09.184 12592 12592 D EditorSession: ║ setFilePath called
+12-21 06:53:09.184 12592 12592 D EditorSession: ║ Old path: /home/temp.py
+12-21 06:53:09.184 12592 12592 D EditorSession: ║ New path: /home/temp.py
+12-21 06:53:09.184 12592 12592 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:53:11.066 12592 12592 D EditorSession: Injecting MutationObserver for content changes...
+12-21 06:53:14.214 12592 12845 D EditorSession: ✓ JS: AndroidInterface.saveFile() called - auto-save triggered
+12-21 06:53:14.217 12592 12592 D Buffer  : Marked clean: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py (session: EDITOR_0)
+12-21 06:53:14.217 12592 12592 D EditorSession: ✓ Auto-saved and marked clean: temp.py
+12-21 06:53:16.354 12592 12592 D EditorSession: Content saved (20 chars)
+12-21 06:53:17.929 12592 12592 D Buffer  : BufferViewModel cleared for session EDITOR_0
+12-21 06:53:22.877 12592 12592 D Buffer  : setSessionId(legacy): id=0, detected type=EDITOR
+12-21 06:53:22.877 12592 12592 D Buffer  : setSessionId called with same key: EDITOR_0 (no-op)
+12-21 06:53:23.140 12592 12592 D EditorSession: BufferViewModel set
+12-21 06:53:23.140 12592 12592 D Buffer  : setSessionId(legacy): id=0, detected type=EDITOR
+12-21 06:53:23.140 12592 12592 D Buffer  : setSessionId called with same key: EDITOR_0 (no-op)
+12-21 06:53:23.143 12592 12592 D Buffer  : Added: test.rs
+12-21 06:53:23.152 12592 12592 D Buffer  : saveCurrentContentToBuffer: currentFile is null, skipping
+12-21 06:53:23.152 12592 12592 D Buffer  : Reading from disk for test.rs
+12-21 06:53:23.156 12592 12592 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:53:23.156 12592 12592 D EditorSession: ║ setFilePath called
+12-21 06:53:23.156 12592 12592 D EditorSession: ║ Old path: null
+12-21 06:53:23.156 12592 12592 D EditorSession: ║ New path: /home/test.rs
+12-21 06:53:23.156 12592 12592 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:53:23.157 12592 12592 D Buffer  : Opened: test.rs, total: 1
+12-21 06:53:23.351 12592 12845 D EditorSession: ✓ JS: onReady called - CM6 initialized
+12-21 06:53:23.415 12592 12592 D EditorSession: ✓ Applied saved editor settings
+12-21 06:53:23.419 12592 12592 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:53:23.419 12592 12592 D EditorSession: ║ setFilePath called
+12-21 06:53:23.419 12592 12592 D EditorSession: ║ Old path: /home/test.rs
+12-21 06:53:23.419 12592 12592 D EditorSession: ║ New path: /home/test.rs
+12-21 06:53:23.419 12592 12592 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:53:25.350 12592 12592 D EditorSession: Injecting MutationObserver for content changes...
+12-21 06:53:30.734 12592 12845 D EditorSession: ✓ JS: AndroidInterface.saveFile() called - auto-save triggered
+12-21 06:54:18.686 17889 17889 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:54:18.686 17889 17889 D NotebookSession: ║ setFilePath called
+12-21 06:54:18.686 17889 17889 D NotebookSession: ║ Old path: null
+12-21 06:54:18.686 17889 17889 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:54:18.686 17889 17889 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:54:18.686 17889 17889 D NotebookSession: Clearing notebook before loading new content...
+12-21 06:54:18.688 17889 17889 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:54:18.688 17889 17889 D NotebookSession: Reading from content:// URI
+12-21 06:54:18.690 17889 17889 D NotebookSession: Content read successfully: 62 chars
+12-21 06:54:18.690 17889 17889 D NotebookSession: First 100 chars: print("Hello from Python!")
+12-21 06:54:18.690 17889 17889 D NotebookSession: a = 92
+12-21 06:54:18.690 17889 17889 D NotebookSession: b = 3
+12-21 06:54:18.690 17889 17889 D NotebookSession: print("Sum =", a + b)
+12-21 06:54:18.690 17889 17889 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py (62 chars)
+12-21 06:54:18.690 17889 17889 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:54:18.690 17889 17889 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:54:18.690 17889 17889 D Buffer  : ║ SESSION SWITCH: null → NOTEBOOK_0
+12-21 06:54:18.690 17889 17889 D Buffer  : ║ Old: type=null, id=null
+12-21 06:54:18.690 17889 17889 D Buffer  : ║ New: type=NOTEBOOK, id=0
+12-21 06:54:18.690 17889 17889 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:54:18.691 17889 17889 D Buffer  :   Cleared current state
+12-21 06:54:18.692 17889 17889 D Buffer  :   No saved files for NOTEBOOK_0 (new session)
+12-21 06:54:18.692 17889 17889 D Buffer  :   No dirty files for NOTEBOOK_0
+12-21 06:54:18.692 17889 17889 D Buffer  : Session NOTEBOOK_0 initialized: 0 files, 0 dirty
+12-21 06:54:19.677 17889 17889 D NotebookSession: BufferViewModel set for notebook
+12-21 06:54:19.677 17889 17889 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:54:19.677 17889 17889 D Buffer  : setSessionId called with same key: NOTEBOOK_0 (no-op)
+12-21 06:54:19.682 17889 17889 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:54:19.682 17889 17889 D NotebookSession: ║ setFilePath called
+12-21 06:54:19.682 17889 17889 D NotebookSession: ║ Old path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:54:19.682 17889 17889 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:54:19.682 17889 17889 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:54:19.682 17889 17889 D NotebookSession: Same path, skipping reload
+12-21 06:54:19.709 17889 18340 D NotebookSession: Notebook JS reported ready
+12-21 06:54:19.710 17889 18340 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:54:19.710 17889 18340 D NotebookSession: Reading from content:// URI
+12-21 06:54:19.722 17889 18340 D NotebookSession: Content read successfully: 62 chars
+12-21 06:54:19.722 17889 18340 D NotebookSession: First 100 chars: print("Hello from Python!")
+12-21 06:54:19.722 17889 18340 D NotebookSession: a = 92
+12-21 06:54:19.722 17889 18340 D NotebookSession: b = 3
+12-21 06:54:19.722 17889 18340 D NotebookSession: print("Sum =", a + b)
+12-21 06:54:19.725 17889 18340 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py (62 chars)
+12-21 06:54:19.994 17889 17889 D NotebookSession: Calling JS loadContent with 65 chars
+12-21 06:54:19.994 17889 17889 D NotebookSession: Calling JS loadContent with 65 chars
+12-21 06:54:20.000 17889 17889 D NotebookSession: Notebook page finished loading
+12-21 06:54:20.000 17889 17889 D NotebookSession: WebView made visible
+12-21 06:54:20.005 17889 17889 D NotebookSession: Auto-save enabled: true, delay: 5s
+12-21 06:54:25.846 17889 17889 D NotebookSession: Destroying notebook session id=0
+12-21 06:54:25.846 17889 17889 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:54:25.846 17889 17889 D Buffer  : ║ CLEARING SESSION BUFFER: NOTEBOOK_0
+12-21 06:54:25.846 17889 17889 D Buffer  : ║ Files: 0
+12-21 06:54:25.846 17889 17889 D Buffer  : ║ Buffers: 0
+12-21 06:54:25.846 17889 17889 D Buffer  : ║ Dirty files: 0
+12-21 06:54:25.846 17889 17889 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:54:25.846 17889 17889 D Buffer  : Cleared current session, resetting active state
+12-21 06:54:25.847 17889 17889 D Buffer  : Session NOTEBOOK_0 buffer cleared
+12-21 06:54:32.527 17889 17889 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:54:32.527 17889 17889 D NotebookSession: ║ setFilePath called
+12-21 06:54:32.527 17889 17889 D NotebookSession: ║ Old path: null
+12-21 06:54:32.528 17889 17889 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:54:32.528 17889 17889 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:54:32.528 17889 17889 D NotebookSession: Clearing notebook before loading new content...
+12-21 06:54:32.528 17889 17889 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:54:32.528 17889 17889 D NotebookSession: Reading from content:// URI
+12-21 06:54:32.532 17889 17889 D NotebookSession: Content read successfully: 18 chars
+12-21 06:54:32.532 17889 17889 D NotebookSession: First 100 chars: # %%
+12-21 06:54:32.532 17889 17889 D NotebookSession: print(\"hi\")
+12-21 06:54:32.533 17889 17889 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py (18 chars)
+12-21 06:54:32.533 17889 17889 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:54:32.533 17889 17889 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:54:32.533 17889 17889 D Buffer  : ║ SESSION SWITCH: null → NOTEBOOK_0
+12-21 06:54:32.533 17889 17889 D Buffer  : ║ Old: type=null, id=null
+12-21 06:54:32.533 17889 17889 D Buffer  : ║ New: type=NOTEBOOK, id=0
+12-21 06:54:32.533 17889 17889 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:54:32.533 17889 17889 D Buffer  :   Cleared current state
+12-21 06:54:32.533 17889 17889 D Buffer  :   No saved files for NOTEBOOK_0 (new session)
+12-21 06:54:32.533 17889 17889 D Buffer  :   No dirty files for NOTEBOOK_0
+12-21 06:54:32.533 17889 17889 D Buffer  : Session NOTEBOOK_0 initialized: 0 files, 0 dirty
+12-21 06:54:33.043 17889 17889 D NotebookSession: BufferViewModel set for notebook
+12-21 06:54:33.044 17889 17889 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:54:33.044 17889 17889 D Buffer  : setSessionId called with same key: NOTEBOOK_0 (no-op)
+12-21 06:54:33.050 17889 17889 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:54:33.050 17889 17889 D NotebookSession: ║ setFilePath called
+12-21 06:54:33.050 17889 17889 D NotebookSession: ║ Old path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:54:33.050 17889 17889 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:54:33.050 17889 17889 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:54:33.050 17889 17889 D NotebookSession: Same path, skipping reload
+12-21 06:54:33.527 17889 18340 D NotebookSession: Notebook JS reported ready
+12-21 06:54:33.527 17889 18340 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:54:33.527 17889 18340 D NotebookSession: Reading from content:// URI
+12-21 06:54:33.528 17889 18340 D NotebookSession: Content read successfully: 18 chars
+12-21 06:54:33.528 17889 18340 D NotebookSession: First 100 chars: # %%
+12-21 06:54:33.528 17889 18340 D NotebookSession: print(\"hi\")
+12-21 06:54:33.529 17889 18340 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py (18 chars)
+12-21 06:54:33.601 17889 17889 D NotebookSession: Notebook page finished loading
+12-21 06:54:33.601 17889 17889 D NotebookSession: WebView made visible
+12-21 06:54:33.601 17889 17889 D NotebookSession: Auto-save enabled: true, delay: 5s
+12-21 06:54:33.632 17889 17889 D NotebookSession: Calling JS loadContent with 21 chars
+12-21 06:54:33.633 17889 17889 D NotebookSession: Calling JS loadContent with 21 chars
+12-21 06:55:41.360 21409 21409 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:55:41.360 21409 21409 D NotebookSession: ║ setFilePath called
+12-21 06:55:41.360 21409 21409 D NotebookSession: ║ Old path: null
+12-21 06:55:41.360 21409 21409 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:55:41.360 21409 21409 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:55:41.360 21409 21409 D NotebookSession: Clearing notebook before loading new content...
+12-21 06:55:41.362 21409 21409 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:55:41.362 21409 21409 D NotebookSession: Reading from content:// URI
+12-21 06:55:41.363 21409 21409 D NotebookSession: Content read successfully: 62 chars
+12-21 06:55:41.364 21409 21409 D NotebookSession: First 100 chars: print("Hello from Python!")
+12-21 06:55:41.364 21409 21409 D NotebookSession: a = 92
+12-21 06:55:41.364 21409 21409 D NotebookSession: b = 3
+12-21 06:55:41.364 21409 21409 D NotebookSession: print("Sum =", a + b)
+12-21 06:55:41.364 21409 21409 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py (62 chars)
+12-21 06:55:41.364 21409 21409 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:55:41.364 21409 21409 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:55:41.364 21409 21409 D Buffer  : ║ SESSION SWITCH: null → NOTEBOOK_0
+12-21 06:55:41.364 21409 21409 D Buffer  : ║ Old: type=null, id=null
+12-21 06:55:41.364 21409 21409 D Buffer  : ║ New: type=NOTEBOOK, id=0
+12-21 06:55:41.364 21409 21409 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:55:41.364 21409 21409 D Buffer  :   Cleared current state
+12-21 06:55:41.365 21409 21409 D Buffer  :   No saved files for NOTEBOOK_0 (new session)
+12-21 06:55:41.365 21409 21409 D Buffer  :   No dirty files for NOTEBOOK_0
+12-21 06:55:41.365 21409 21409 D Buffer  : Session NOTEBOOK_0 initialized: 0 files, 0 dirty
+12-21 06:55:41.859 21409 21409 D NotebookSession: BufferViewModel set for notebook
+12-21 06:55:41.859 21409 21409 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:55:41.859 21409 21409 D Buffer  : setSessionId called with same key: NOTEBOOK_0 (no-op)
+12-21 06:55:41.865 21409 21409 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:55:41.865 21409 21409 D NotebookSession: ║ setFilePath called
+12-21 06:55:41.865 21409 21409 D NotebookSession: ║ Old path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:55:41.865 21409 21409 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:55:41.865 21409 21409 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:55:41.865 21409 21409 D NotebookSession: Same path, skipping reload
+12-21 06:55:42.160 21409 21652 D NotebookSession: Notebook JS reported ready
+12-21 06:55:42.160 21409 21652 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:55:42.160 21409 21652 D NotebookSession: Reading from content:// URI
+12-21 06:55:42.161 21409 21652 D NotebookSession: Content read successfully: 62 chars
+12-21 06:55:42.161 21409 21652 D NotebookSession: First 100 chars: print("Hello from Python!")
+12-21 06:55:42.161 21409 21652 D NotebookSession: a = 92
+12-21 06:55:42.161 21409 21652 D NotebookSession: b = 3
+12-21 06:55:42.161 21409 21652 D NotebookSession: print("Sum =", a + b)
+12-21 06:55:42.161 21409 21652 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py (62 chars)
+12-21 06:55:42.233 21409 21409 D NotebookSession: Notebook page finished loading
+12-21 06:55:42.233 21409 21409 D NotebookSession: WebView made visible
+12-21 06:55:42.236 21409 21409 D NotebookSession: Auto-save enabled: true, delay: 5s
+12-21 06:55:42.274 21409 21409 D NotebookSession: Calling JS loadContent with 65 chars
+12-21 06:55:42.275 21409 21409 D NotebookSession: Calling JS loadContent with 65 chars
+12-21 06:55:54.960 21409 21409 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:55:54.960 21409 21409 D Buffer  : setSessionId called with same key: NOTEBOOK_0 (no-op)
+12-21 06:55:55.301 21409 21409 D NotebookSession: BufferViewModel set for notebook
+12-21 06:55:55.301 21409 21409 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:55:55.301 21409 21409 D Buffer  : setSessionId called with same key: NOTEBOOK_0 (no-op)
+12-21 06:56:37.643 21409 21409 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:56:37.643 21409 21409 D NotebookSession: ║ setFilePath called
+12-21 06:56:37.643 21409 21409 D NotebookSession: ║ Old path: null
+12-21 06:56:37.643 21409 21409 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:56:37.643 21409 21409 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:56:37.644 21409 21409 D NotebookSession: Clearing notebook before loading new content...
+12-21 06:56:37.644 21409 21409 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:56:37.644 21409 21409 D NotebookSession: Reading from content:// URI
+12-21 06:56:37.647 21409 21409 D NotebookSession: Content read successfully: 62 chars
+12-21 06:56:37.647 21409 21409 D NotebookSession: First 100 chars: print("Hello from Python!")
+12-21 06:56:37.647 21409 21409 D NotebookSession: a = 92
+12-21 06:56:37.647 21409 21409 D NotebookSession: b = 3
+12-21 06:56:37.647 21409 21409 D NotebookSession: print("Sum =", a + b)
+12-21 06:56:37.647 21409 21409 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py (62 chars)
+12-21 06:56:37.648 21409 21409 D Buffer  : setSessionId(legacy): id=2, detected type=NOTEBOOK
+12-21 06:56:37.648 21409 21409 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:56:37.648 21409 21409 D Buffer  : ║ SESSION SWITCH: NOTEBOOK_0 → NOTEBOOK_2
+12-21 06:56:37.648 21409 21409 D Buffer  : ║ Old: type=NOTEBOOK, id=0
+12-21 06:56:37.648 21409 21409 D Buffer  : ║ New: type=NOTEBOOK, id=2
+12-21 06:56:37.648 21409 21409 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:56:37.649 21409 21409 D Buffer  :   Saved state for NOTEBOOK_0: 1 files, 0 dirty
+12-21 06:56:37.649 21409 21409 D Buffer  :   Cleared current state
+12-21 06:56:37.649 21409 21409 D Buffer  :   No saved files for NOTEBOOK_2 (new session)
+12-21 06:56:37.649 21409 21409 D Buffer  :   No dirty files for NOTEBOOK_2
+12-21 06:56:37.649 21409 21409 D Buffer  : Session NOTEBOOK_2 initialized: 0 files, 0 dirty
+12-21 06:56:37.921 21409 21652 D NotebookSession: Notebook JS reported ready
+12-21 06:56:37.922 21409 21652 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:56:37.922 21409 21652 D NotebookSession: Reading from content:// URI
+12-21 06:56:37.925 21409 21652 D NotebookSession: Content read successfully: 62 chars
+12-21 06:56:37.925 21409 21652 D NotebookSession: First 100 chars: print("Hello from Python!")
+12-21 06:56:37.925 21409 21652 D NotebookSession: a = 92
+12-21 06:56:37.925 21409 21652 D NotebookSession: b = 3
+12-21 06:56:37.925 21409 21652 D NotebookSession: print("Sum =", a + b)
+12-21 06:56:37.926 21409 21652 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py (62 chars)
+12-21 06:56:38.068 21409 21409 D NotebookSession: BufferViewModel set for notebook
+12-21 06:56:38.068 21409 21409 D Buffer  : setSessionId(legacy): id=2, detected type=NOTEBOOK
+12-21 06:56:38.068 21409 21409 D Buffer  : setSessionId called with same key: NOTEBOOK_2 (no-op)
+12-21 06:56:38.071 21409 21409 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:56:38.071 21409 21409 D NotebookSession: ║ setFilePath called
+12-21 06:56:38.071 21409 21409 D NotebookSession: ║ Old path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:56:38.072 21409 21409 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 06:56:38.072 21409 21409 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:56:38.072 21409 21409 D NotebookSession: Same path, skipping reload
+12-21 06:56:38.209 21409 21409 D NotebookSession: Notebook page finished loading
+12-21 06:56:38.209 21409 21409 D NotebookSession: WebView made visible
+12-21 06:56:38.209 21409 21409 D NotebookSession: Auto-save enabled: true, delay: 5s
+12-21 06:56:38.247 21409 21409 D NotebookSession: Calling JS loadContent with 65 chars
+12-21 06:56:38.247 21409 21409 D NotebookSession: Calling JS loadContent with 65 chars
+12-21 06:56:56.282 21409 21409 D Buffer  : BufferViewModel cleared for session NOTEBOOK_2
+12-21 06:57:01.047 21409 21409 D Buffer  : setSessionId(legacy): id=4, detected type=EDITOR
+12-21 06:57:01.047 21409 21409 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:57:01.047 21409 21409 D Buffer  : ║ SESSION SWITCH: NOTEBOOK_2 → EDITOR_4
+12-21 06:57:01.047 21409 21409 D Buffer  : ║ Old: type=NOTEBOOK, id=2
+12-21 06:57:01.047 21409 21409 D Buffer  : ║ New: type=EDITOR, id=4
+12-21 06:57:01.047 21409 21409 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:57:01.048 21409 21409 D Buffer  :   Saved state for NOTEBOOK_2: 0 files, 0 dirty
+12-21 06:57:01.048 21409 21409 D Buffer  :   Cleared current state
+12-21 06:57:01.048 21409 21409 D Buffer  :   No saved files for EDITOR_4 (new session)
+12-21 06:57:01.048 21409 21409 D Buffer  :   No dirty files for EDITOR_4
+12-21 06:57:01.048 21409 21409 D Buffer  : Session EDITOR_4 initialized: 0 files, 0 dirty
+12-21 06:57:01.348 21409 21652 D EditorSession: ✓ JS: onReady called - CM6 initialized
+12-21 06:57:01.459 21409 21409 D EditorSession: BufferViewModel set
+12-21 06:57:01.459 21409 21409 D Buffer  : setSessionId(legacy): id=4, detected type=EDITOR
+12-21 06:57:01.459 21409 21409 D Buffer  : setSessionId called with same key: EDITOR_4 (no-op)
+12-21 06:57:01.463 21409 21409 D Buffer  : Added: test.cpp
+12-21 06:57:01.471 21409 21409 D Buffer  : saveCurrentContentToBuffer: currentFile is null, skipping
+12-21 06:57:01.472 21409 21409 D Buffer  : Reading from disk for test.cpp
+12-21 06:57:01.477 21409 21409 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:57:01.477 21409 21409 D EditorSession: ║ setFilePath called
+12-21 06:57:01.477 21409 21409 D EditorSession: ║ Old path: null
+12-21 06:57:01.477 21409 21409 D EditorSession: ║ New path: /home/test.cpp
+12-21 06:57:01.477 21409 21409 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:57:01.478 21409 21409 D Buffer  : Opened: test.cpp, total: 1
+12-21 06:57:01.676 21409 21409 D EditorSession: ✓ Applied saved editor settings
+12-21 06:57:01.679 21409 21409 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:57:01.680 21409 21409 D EditorSession: ║ setFilePath called
+12-21 06:57:01.680 21409 21409 D EditorSession: ║ Old path: /home/test.cpp
+12-21 06:57:01.680 21409 21409 D EditorSession: ║ New path: /home/test.cpp
+12-21 06:57:01.680 21409 21409 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:57:03.675 21409 21409 D EditorSession: Injecting MutationObserver for content changes...
+12-21 06:57:05.571 21409 21409 D EditorSession: Content saved (174 chars)
+12-21 06:57:06.740 21409 21409 D Buffer  : setSessionId(legacy): id=2, detected type=NOTEBOOK
+12-21 06:57:06.740 21409 21409 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:57:06.740 21409 21409 D Buffer  : ║ SESSION SWITCH: EDITOR_4 → NOTEBOOK_2
+12-21 06:57:06.740 21409 21409 D Buffer  : ║ Old: type=EDITOR, id=4
+12-21 06:57:06.740 21409 21409 D Buffer  : ║ New: type=NOTEBOOK, id=2
+12-21 06:57:06.740 21409 21409 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:57:06.741 21409 21409 D Buffer  :   Saved state for EDITOR_4: 1 files, 0 dirty
+12-21 06:57:06.741 21409 21409 D Buffer  :   Cleared current state
+12-21 06:57:06.741 21409 21409 D Buffer  :   Loaded 0 files for NOTEBOOK_2
+12-21 06:57:06.741 21409 21409 D Buffer  :   Loaded 0 dirty files for NOTEBOOK_2
+12-21 06:57:06.741 21409 21409 D Buffer  : Session NOTEBOOK_2 initialized: 0 files, 0 dirty
+12-21 06:57:06.959 21409 21409 D NotebookSession: BufferViewModel set for notebook
+12-21 06:57:06.959 21409 21409 D Buffer  : setSessionId(legacy): id=2, detected type=NOTEBOOK
+12-21 06:57:06.959 21409 21409 D Buffer  : setSessionId called with same key: NOTEBOOK_2 (no-op)
+12-21 06:57:07.736 21409 21652 D EditorSession: ✓ JS: AndroidInterface.saveFile() called - auto-save triggered
+12-21 06:57:21.932 21409 21409 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:57:21.932 21409 21409 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:57:21.932 21409 21409 D Buffer  : ║ SESSION SWITCH: NOTEBOOK_2 → NOTEBOOK_0
+12-21 06:57:21.932 21409 21409 D Buffer  : ║ Old: type=NOTEBOOK, id=2
+12-21 06:57:21.932 21409 21409 D Buffer  : ║ New: type=NOTEBOOK, id=0
+12-21 06:57:21.932 21409 21409 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:57:21.933 21409 21409 D Buffer  :   Saved state for NOTEBOOK_2: 0 files, 0 dirty
+12-21 06:57:21.933 21409 21409 D Buffer  :   Cleared current state
+12-21 06:57:21.933 21409 21409 D Buffer  :   Loaded 1 files for NOTEBOOK_0
+12-21 06:57:21.933 21409 21409 D Buffer  :   Loaded 0 dirty files for NOTEBOOK_0
+12-21 06:57:21.933 21409 21409 D Buffer  : Session NOTEBOOK_0 initialized: 1 files, 0 dirty
+12-21 06:57:22.171 21409 21409 D NotebookSession: BufferViewModel set for notebook
+12-21 06:57:22.171 21409 21409 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:57:22.171 21409 21409 D Buffer  : setSessionId called with same key: NOTEBOOK_0 (no-op)
+12-21 06:57:26.054 21409 21409 D Buffer  : setSessionId(legacy): id=2, detected type=NOTEBOOK
+12-21 06:57:26.054 21409 21409 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:57:26.054 21409 21409 D Buffer  : ║ SESSION SWITCH: NOTEBOOK_0 → NOTEBOOK_2
+12-21 06:57:26.054 21409 21409 D Buffer  : ║ Old: type=NOTEBOOK, id=0
+12-21 06:57:26.054 21409 21409 D Buffer  : ║ New: type=NOTEBOOK, id=2
+12-21 06:57:26.054 21409 21409 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:57:26.055 21409 21409 D Buffer  :   Saved state for NOTEBOOK_0: 1 files, 0 dirty
+12-21 06:57:26.055 21409 21409 D Buffer  :   Cleared current state
+12-21 06:57:26.055 21409 21409 D Buffer  :   Loaded 0 files for NOTEBOOK_2
+12-21 06:57:26.055 21409 21409 D Buffer  :   Loaded 0 dirty files for NOTEBOOK_2
+12-21 06:57:26.055 21409 21409 D Buffer  : Session NOTEBOOK_2 initialized: 0 files, 0 dirty
+12-21 06:57:26.271 21409 21409 D NotebookSession: BufferViewModel set for notebook
+12-21 06:57:26.272 21409 21409 D Buffer  : setSessionId(legacy): id=2, detected type=NOTEBOOK
+12-21 06:57:26.272 21409 21409 D Buffer  : setSessionId called with same key: NOTEBOOK_2 (no-op)
+12-21 06:57:29.856 21409 21409 D NotebookSession: BufferViewModel set for notebook
+12-21 06:57:29.856 21409 21409 D Buffer  : setSessionId(legacy): id=2, detected type=NOTEBOOK
+12-21 06:57:29.856 21409 21409 D Buffer  : setSessionId called with same key: NOTEBOOK_2 (no-op)
+12-21 06:57:30.725 21409 21409 D NotebookSession: BufferViewModel set for notebook
+12-21 06:57:30.725 21409 21409 D Buffer  : setSessionId(legacy): id=2, detected type=NOTEBOOK
+12-21 06:57:30.725 21409 21409 D Buffer  : setSessionId called with same key: NOTEBOOK_2 (no-op)
+12-21 06:57:31.424 21409 21409 D NotebookSession: BufferViewModel set for notebook
+12-21 06:57:31.424 21409 21409 D Buffer  : setSessionId(legacy): id=2, detected type=NOTEBOOK
+12-21 06:57:31.424 21409 21409 D Buffer  : setSessionId called with same key: NOTEBOOK_2 (no-op)
+12-21 06:57:31.426 21409 21409 D Buffer  : NotebookSession detected - will skip loadContentWhenReady
+12-21 06:57:33.963 21409 21409 D NotebookSession: Destroying notebook session id=2
+12-21 06:57:33.963 21409 21409 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:57:33.963 21409 21409 D Buffer  : ║ CLEARING SESSION BUFFER: NOTEBOOK_2
+12-21 06:57:33.963 21409 21409 D Buffer  : ║ Files: 0
+12-21 06:57:33.963 21409 21409 D Buffer  : ║ Buffers: 0
+12-21 06:57:33.963 21409 21409 D Buffer  : ║ Dirty files: 0
+12-21 06:57:33.963 21409 21409 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:57:33.963 21409 21409 D Buffer  : Cleared current session, resetting active state
+12-21 06:57:33.963 21409 21409 D Buffer  : Session NOTEBOOK_2 buffer cleared
+12-21 06:57:34.126 21409 21409 D Buffer  : BufferViewModel cleared for session null
+12-21 06:57:34.727 21409 21409 D NotebookSession: Destroying notebook session id=0
+12-21 06:57:34.727 21409 21409 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:57:34.727 21409 21409 D Buffer  : ║ CLEARING SESSION BUFFER: NOTEBOOK_0
+12-21 06:57:34.727 21409 21409 D Buffer  : ║ Files: 1
+12-21 06:57:34.727 21409 21409 D Buffer  : ║ Buffers: 0
+12-21 06:57:34.727 21409 21409 D Buffer  : ║ Dirty files: 0
+12-21 06:57:34.727 21409 21409 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:57:34.728 21409 21409 D Buffer  : Session NOTEBOOK_0 buffer cleared
+12-21 06:57:46.246 21409 21409 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:57:46.246 21409 21409 D NotebookSession: ║ setFilePath called
+12-21 06:57:46.246 21409 21409 D NotebookSession: ║ Old path: null
+12-21 06:57:46.246 21409 21409 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:57:46.246 21409 21409 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:57:46.246 21409 21409 D NotebookSession: Clearing notebook before loading new content...
+12-21 06:57:46.246 21409 21409 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:57:46.247 21409 21409 D NotebookSession: Reading from content:// URI
+12-21 06:57:46.248 21409 21409 D NotebookSession: Content read successfully: 18 chars
+12-21 06:57:46.248 21409 21409 D NotebookSession: First 100 chars: # %%
+12-21 06:57:46.248 21409 21409 D NotebookSession: print(\"hi\")
+12-21 06:57:46.248 21409 21409 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py (18 chars)
+12-21 06:57:46.249 21409 21409 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:57:46.249 21409 21409 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:57:46.249 21409 21409 D Buffer  : ║ SESSION SWITCH: null → NOTEBOOK_0
+12-21 06:57:46.249 21409 21409 D Buffer  : ║ Old: type=null, id=null
+12-21 06:57:46.249 21409 21409 D Buffer  : ║ New: type=NOTEBOOK, id=0
+12-21 06:57:46.249 21409 21409 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:57:46.249 21409 21409 D Buffer  :   Cleared current state
+12-21 06:57:46.249 21409 21409 D Buffer  :   No saved files for NOTEBOOK_0 (new session)
+12-21 06:57:46.249 21409 21409 D Buffer  :   No dirty files for NOTEBOOK_0
+12-21 06:57:46.249 21409 21409 D Buffer  : Session NOTEBOOK_0 initialized: 0 files, 0 dirty
+12-21 06:57:46.650 21409 21409 D NotebookSession: BufferViewModel set for notebook
+12-21 06:57:46.650 21409 21409 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:57:46.650 21409 21409 D Buffer  : setSessionId called with same key: NOTEBOOK_0 (no-op)
+12-21 06:57:46.655 21409 21409 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:57:46.655 21409 21409 D NotebookSession: ║ setFilePath called
+12-21 06:57:46.655 21409 21409 D NotebookSession: ║ Old path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:57:46.655 21409 21409 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:57:46.655 21409 21409 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:57:46.655 21409 21409 D NotebookSession: Same path, skipping reload
+12-21 06:57:47.642 21409 21652 D NotebookSession: Notebook JS reported ready
+12-21 06:57:47.643 21409 21652 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 06:57:47.643 21409 21652 D NotebookSession: Reading from content:// URI
+12-21 06:57:47.649 21409 21652 D NotebookSession: Content read successfully: 18 chars
+12-21 06:57:47.649 21409 21652 D NotebookSession: First 100 chars: # %%
+12-21 06:57:47.649 21409 21652 D NotebookSession: print(\"hi\")
+12-21 06:57:47.649 21409 21652 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py (18 chars)
+12-21 06:57:47.690 21409 21409 D NotebookSession: Calling JS loadContent with 21 chars
+12-21 06:57:47.690 21409 21409 D NotebookSession: Calling JS loadContent with 21 chars
+12-21 06:57:47.707 21409 21409 D NotebookSession: Notebook page finished loading
+12-21 06:57:47.707 21409 21409 D NotebookSession: WebView made visible
+12-21 06:57:47.707 21409 21409 D NotebookSession: Auto-save enabled: true, delay: 5s
+12-21 06:57:56.830 21409 21409 D Buffer  : BufferViewModel cleared for session NOTEBOOK_0
+12-21 06:58:01.212 21409 21409 D Buffer  : setSessionId(legacy): id=2, detected type=EDITOR
+12-21 06:58:01.213 21409 21409 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:58:01.213 21409 21409 D Buffer  : ║ SESSION SWITCH: NOTEBOOK_0 → EDITOR_2
+12-21 06:58:01.213 21409 21409 D Buffer  : ║ Old: type=NOTEBOOK, id=0
+12-21 06:58:01.213 21409 21409 D Buffer  : ║ New: type=EDITOR, id=2
+12-21 06:58:01.213 21409 21409 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:58:01.213 21409 21409 D Buffer  :   Saved state for NOTEBOOK_0: 0 files, 0 dirty
+12-21 06:58:01.213 21409 21409 D Buffer  :   Cleared current state
+12-21 06:58:01.213 21409 21409 D Buffer  :   No saved files for EDITOR_2 (new session)
+12-21 06:58:01.213 21409 21409 D Buffer  :   No dirty files for EDITOR_2
+12-21 06:58:01.213 21409 21409 D Buffer  : Session EDITOR_2 initialized: 0 files, 0 dirty
+12-21 06:58:01.710 21409 21652 D EditorSession: ✓ JS: onReady called - CM6 initialized
+12-21 06:58:01.766 21409 21409 D EditorSession: BufferViewModel set
+12-21 06:58:01.766 21409 21409 D Buffer  : setSessionId(legacy): id=2, detected type=EDITOR
+12-21 06:58:01.766 21409 21409 D Buffer  : setSessionId called with same key: EDITOR_2 (no-op)
+12-21 06:58:01.769 21409 21409 D Buffer  : Added: test.cpp
+12-21 06:58:01.770 21409 21409 D Buffer  : saveCurrentContentToBuffer: currentFile is null, skipping
+12-21 06:58:01.771 21409 21409 D Buffer  : Reading from disk for test.cpp
+12-21 06:58:01.778 21409 21409 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:58:01.778 21409 21409 D EditorSession: ║ setFilePath called
+12-21 06:58:01.778 21409 21409 D EditorSession: ║ Old path: null
+12-21 06:58:01.778 21409 21409 D EditorSession: ║ New path: /home/test.cpp
+12-21 06:58:01.778 21409 21409 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:58:01.779 21409 21409 D Buffer  : Opened: test.cpp, total: 1
+12-21 06:58:01.916 21409 21409 D EditorSession: ✓ Applied saved editor settings
+12-21 06:58:01.918 21409 21409 D EditorSession: ╔══════════════════════════════════════════════════════════════
+12-21 06:58:01.918 21409 21409 D EditorSession: ║ setFilePath called
+12-21 06:58:01.918 21409 21409 D EditorSession: ║ Old path: /home/test.cpp
+12-21 06:58:01.918 21409 21409 D EditorSession: ║ New path: /home/test.cpp
+12-21 06:58:01.918 21409 21409 D EditorSession: ╚══════════════════════════════════════════════════════════════
+12-21 06:58:03.914 21409 21409 D EditorSession: Injecting MutationObserver for content changes...
+12-21 06:58:04.429 21409 21409 D EditorSession: Content saved (174 chars)
+12-21 06:58:05.102 21409 21409 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:58:05.102 21409 21409 D Buffer  : ╔══════════════════════════════════════════════════════════════
+12-21 06:58:05.102 21409 21409 D Buffer  : ║ SESSION SWITCH: EDITOR_2 → NOTEBOOK_0
+12-21 06:58:05.102 21409 21409 D Buffer  : ║ Old: type=EDITOR, id=2
+12-21 06:58:05.102 21409 21409 D Buffer  : ║ New: type=NOTEBOOK, id=0
+12-21 06:58:05.102 21409 21409 D Buffer  : ╚══════════════════════════════════════════════════════════════
+12-21 06:58:05.102 21409 21409 D Buffer  :   Saved state for EDITOR_2: 1 files, 0 dirty
+12-21 06:58:05.102 21409 21409 D Buffer  :   Cleared current state
+12-21 06:58:05.103 21409 21409 D Buffer  :   Loaded 0 files for NOTEBOOK_0
+12-21 06:58:05.103 21409 21409 D Buffer  :   Loaded 0 dirty files for NOTEBOOK_0
+12-21 06:58:05.103 21409 21409 D Buffer  : Session NOTEBOOK_0 initialized: 0 files, 0 dirty
+12-21 06:58:05.153 21409 21409 D Buffer  : NotebookSession detected - will skip loadContentWhenReady
+12-21 06:58:05.385 21409 21409 D NotebookSession: BufferViewModel set for notebook
+12-21 06:58:05.385 21409 21409 D Buffer  : setSessionId(legacy): id=0, detected type=NOTEBOOK
+12-21 06:58:05.385 21409 21409 D Buffer  : setSessionId called with same key: NOTEBOOK_0 (no-op)
+12-21 06:58:07.734 21409 21652 D EditorSession: ✓ JS: AndroidInterface.saveFile() called - auto-save triggered

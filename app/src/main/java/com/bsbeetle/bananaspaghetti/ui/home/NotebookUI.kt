@@ -33,16 +33,15 @@ import com.bsbeetle.bananaspaghetti.ui.components.*
 import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
 import com.bsbeetle.bananaspaghetti.ui.keyboard.SplitKeyboardHalf
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
+import com.bsbeetle.bananaspaghetti.utils.notebook.CellDelimiterRegistry
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType
-import com.bsbeetle.bananaspaghetti.utils.notebook.CellDelimiterRegistry
 import com.bsbeetle.bananaspaghetti.viewmodel.*
 
 /**
- * NotebookUI - UI for Notebook/REPL sessions
- * Similar structure to InitialEditorUI but uses NotebookSession's WebView
- * and does NOT route files based on extension.
+ * NotebookUI - UI for Notebook/REPL sessions Similar structure to InitialEditorUI but uses
+ * NotebookSession's WebView and does NOT route files based on extension.
  */
 @SuppressLint("RememberReturnType")
 @Composable
@@ -50,7 +49,7 @@ fun NotebookUI(navController: NavController) {
 
     // Use mutableStateOf to track the session and trigger recomposition when it becomes available
     var currentSession by remember { mutableStateOf<NotebookSession?>(null) }
-    
+
     // Find the NotebookSession - either at activeIndex or the last one in the list
     LaunchedEffect(Unit) {
         Log.d("NotebookUI", "NotebookUI launched")
@@ -63,7 +62,7 @@ fun NotebookUI(navController: NavController) {
                 currentSession = activeSession
                 return@LaunchedEffect
             }
-            
+
             // If active session is not a NotebookSession, find the last NotebookSession in the list
             val lastNotebook = SessionList.sessions.filterIsInstance<NotebookSession>().lastOrNull()
             if (lastNotebook != null) {
@@ -73,13 +72,16 @@ fun NotebookUI(navController: NavController) {
                 currentSession = lastNotebook
                 return@LaunchedEffect
             }
-            
-            Log.d("NotebookUI", "Session not found, attempt $attempt, activeIndex: ${SessionList.activeSessionIndex}, sessions: ${SessionList.sessions.size}, types: ${SessionList.sessions.map { it.type }}")
+
+            Log.d(
+                    "NotebookUI",
+                    "Session not found, attempt $attempt, activeIndex: ${SessionList.activeSessionIndex}, sessions: ${SessionList.sessions.size}, types: ${SessionList.sessions.map { it.type }}"
+            )
             kotlinx.coroutines.delay(100)
         }
         Log.e("NotebookUI", "Failed to find NotebookSession after retries")
     }
-    
+
     // Debug logging
     LaunchedEffect(currentSession) {
         Log.d("NotebookUI", "currentSession changed: $currentSession")
@@ -166,10 +168,13 @@ fun NotebookUI(navController: NavController) {
     // Observe ready state - need to handle case where session might not exist immediately
     val isReadyFlow = currentSession?.isReady
     val isReady by isReadyFlow?.collectAsStateWithLifecycle() ?: mutableStateOf(false)
-    
+
     // Additional debug logging for ready state
     LaunchedEffect(currentSession, webView, isReady) {
-        Log.d("NotebookUI", "State update - currentSession: $currentSession, webView: $webView, isReady: $isReady")
+        Log.d(
+                "NotebookUI",
+                "State update - currentSession: $currentSession, webView: $webView, isReady: $isReady"
+        )
     }
 
     // Shared File Opening Logic for Notebook
@@ -208,6 +213,16 @@ fun NotebookUI(navController: NavController) {
             DocumentFile.fromSingleUri(context, uri)?.let documentFile@{ documentFile ->
                 if (documentFile.isDirectory) {
                     Log.d("NotebookUI", "Opened directory: ${documentFile.name}, skipping")
+                    return@documentFile
+                }
+
+                // Check if file extension is supported by notebook
+                val extension = documentFile.name?.substringAfterLast(".", "") ?: ""
+                if (!CellDelimiterRegistry.isExtensionSupported(extension)) {
+                    // Show unsupported file dialog
+                    unsupportedFileName = documentFile.name ?: "Unknown file"
+                    showUnsupportedFileDialog = true
+                    Log.d("NotebookUI", "Unsupported file type in LaunchedEffect: .$extension")
                     return@documentFile
                 }
 
@@ -259,11 +274,11 @@ fun NotebookUI(navController: NavController) {
                     onMenuClick = { showSidebar = true },
                     showMenuIcon = !isLandscape,
                     showBranchButton = isLandscape,
-                    onSaveClick = { 
+                    onSaveClick = {
                         // Save notebook content
                         currentSession?.view?.evaluateJavascript(
-                            "if(window.saveContent) window.saveContent();",
-                            null
+                                "if(window.saveContent) window.saveContent();",
+                                null
                         )
                     },
                     onFileClick = {
@@ -292,9 +307,7 @@ fun NotebookUI(navController: NavController) {
                                 null
                         )
                     },
-                    onSearchClick = {
-                        showSearchBar = !showSearchBar
-                    }
+                    onSearchClick = { showSearchBar = !showSearchBar }
             )
 
             TopBar(
@@ -345,7 +358,7 @@ fun NotebookUI(navController: NavController) {
                         fileViewModel = fileViewModel,
                         bufferViewModel = bufferViewModel,
                         currentFilePath = fileViewModel.currentFilePath,
-                        onCommitClick = { /* No commit dialog for notebook yet */ },
+                        onCommitClick = { /* No commit dialog for notebook yet */},
                         onPushClick = { gitViewModel.push() },
                         onFileOpened = onFileOpened,
                         onFolderOpened = onFolderOpened
@@ -385,7 +398,10 @@ fun NotebookUI(navController: NavController) {
                                     Modifier.constrainAs(rightKb) {
                                                 end.linkTo(parent.end)
                                                 bottom.linkTo(parent.bottom)
-                                                width = Dimension.percent(uiState.rightKeyboardWidth)
+                                                width =
+                                                        Dimension.percent(
+                                                                uiState.rightKeyboardWidth
+                                                        )
                                             }
                                             .background(Color(0xFF212121)),
                             keyboardHeightFraction = uiState.rightKeyboardHeight
@@ -399,16 +415,16 @@ fun NotebookUI(navController: NavController) {
                         Modifier.constrainAs(editor) {
                             top.linkTo(topMiddle.bottom)
                             bottom.linkTo(parent.bottom)
-                            val showLeftKb = isLandscape && uiState.isLeftKeyboardVisible && !uiState.useLandscapeIme
-                            val showRightKb = isLandscape && uiState.isRightKeyboardVisible && !uiState.useLandscapeIme
-                            start.linkTo(
-                                    if (showLeftKb) leftKb.end
-                                    else parent.start
-                            )
-                            end.linkTo(
-                                    if (showRightKb) rightKb.start
-                                    else parent.end
-                            )
+                            val showLeftKb =
+                                    isLandscape &&
+                                            uiState.isLeftKeyboardVisible &&
+                                            !uiState.useLandscapeIme
+                            val showRightKb =
+                                    isLandscape &&
+                                            uiState.isRightKeyboardVisible &&
+                                            !uiState.useLandscapeIme
+                            start.linkTo(if (showLeftKb) leftKb.end else parent.start)
+                            end.linkTo(if (showRightKb) rightKb.start else parent.end)
                             width = Dimension.fillToConstraints
                             height = Dimension.fillToConstraints
                         },
@@ -417,17 +433,17 @@ fun NotebookUI(navController: NavController) {
             } else {
                 // Fallback: Show loading state when notebook is not ready
                 Box(
-                        modifier = Modifier
-                                .constrainAs(editor) {
-                                    top.linkTo(topMiddle.bottom)
-                                    bottom.linkTo(parent.bottom)
-                                    start.linkTo(parent.start)
-                                    end.linkTo(parent.end)
-                                    width = Dimension.fillToConstraints
-                                    height = Dimension.fillToConstraints
-                                }
-                                .fillMaxSize()
-                                .background(Color(0xFF1E1E1E)),
+                        modifier =
+                                Modifier.constrainAs(editor) {
+                                            top.linkTo(topMiddle.bottom)
+                                            bottom.linkTo(parent.bottom)
+                                            start.linkTo(parent.start)
+                                            end.linkTo(parent.end)
+                                            width = Dimension.fillToConstraints
+                                            height = Dimension.fillToConstraints
+                                        }
+                                        .fillMaxSize()
+                                        .background(Color(0xFF1E1E1E)),
                         contentAlignment = Alignment.Center
                 ) {
                     Column(
@@ -480,23 +496,16 @@ fun NotebookUI(navController: NavController) {
                             }
                         },
                         gitViewModel = gitViewModel,
-                        onFileOptionsClick = {
-                            showFileMenu = true
-                        },
-                        onSearchClick = {
-                            showSearchBar = !showSearchBar
-                        },
-                        onZoomOutClick = {
-                            navController.navigate(Screen.ZoomOut.route)
-                        },
-                        onSettingsClick = {
-                            navController.navigate(Screen.Settings.route)
-                        }
+                        onFileOptionsClick = { showFileMenu = true },
+                        onSearchClick = { showSearchBar = !showSearchBar },
+                        onZoomOutClick = { navController.navigate(Screen.ZoomOut.route) },
+                        onSettingsClick = { navController.navigate(Screen.Settings.route) }
                 )
             }
         }
 
-        // Extra Keys Row - Shows in portrait mode OR in landscape mode when useLandscapeIme is enabled
+        // Extra Keys Row - Shows in portrait mode OR in landscape mode when useLandscapeIme is
+        // enabled
         val showExtraKeys = !isLandscape || uiState.useLandscapeIme
         if (showExtraKeys) {
             val isKeyboardVisible = imeHeight > 0
@@ -533,45 +542,42 @@ fun NotebookUI(navController: NavController) {
                 onFileOpened = onFileOpened,
                 onFolderOpened = onFolderOpened
         )
-        
+
         // Unsupported file type dialog
         if (showUnsupportedFileDialog) {
             androidx.compose.material3.AlertDialog(
-                onDismissRequest = { showUnsupportedFileDialog = false },
-                title = { 
-                    Text(
-                        "Unsupported File Type",
-                        color = Color.White
-                    ) 
-                },
-                text = {
-                    androidx.compose.foundation.layout.Column {
-                        Text(
-                            "The file \"$unsupportedFileName\" is not supported in Notebook mode.",
-                            color = Color(0xFFCCCCCC)
-                        )
-                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Currently only Python files (.py) are supported.",
-                            color = Color(0xFF888888),
-                            fontSize = 12.sp
-                        )
-                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Use the Editor for other file types.",
-                            color = Color(0xFF888888),
-                            fontSize = 12.sp
-                        )
-                    }
-                },
-                confirmButton = {
-                    androidx.compose.material3.TextButton(
-                        onClick = { showUnsupportedFileDialog = false }
-                    ) {
-                        Text("OK", color = Color(0xFF4CAF50))
-                    }
-                },
-                containerColor = Color(0xFF2A2A2A)
+                    onDismissRequest = { showUnsupportedFileDialog = false },
+                    title = { Text("Unsupported File Type", color = Color.White) },
+                    text = {
+                        androidx.compose.foundation.layout.Column {
+                            Text(
+                                    "The file \"$unsupportedFileName\" is not supported in Notebook mode.",
+                                    color = Color(0xFFCCCCCC)
+                            )
+                            androidx.compose.foundation.layout.Spacer(
+                                    modifier = Modifier.height(8.dp)
+                            )
+                            Text(
+                                    "Currently only Python files (.py) are supported.",
+                                    color = Color(0xFF888888),
+                                    fontSize = 12.sp
+                            )
+                            androidx.compose.foundation.layout.Spacer(
+                                    modifier = Modifier.height(8.dp)
+                            )
+                            Text(
+                                    "Use the Editor for other file types.",
+                                    color = Color(0xFF888888),
+                                    fontSize = 12.sp
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        androidx.compose.material3.TextButton(
+                                onClick = { showUnsupportedFileDialog = false }
+                        ) { Text("OK", color = Color(0xFF4CAF50)) }
+                    },
+                    containerColor = Color(0xFF2A2A2A)
             )
         }
     }
