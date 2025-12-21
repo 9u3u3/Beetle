@@ -59,6 +59,9 @@ fun NotebookUI(navController: NavController) {
             val activeSession = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
             if (activeSession is NotebookSession) {
                 Log.d("NotebookUI", "Found NotebookSession at activeIndex on attempt $attempt")
+                // Ensure WebView is created
+                activeSession.getOrInitView()
+                Log.d("NotebookUI", "WebView initialized: ${activeSession.view != null}")
                 currentSession = activeSession
                 return@LaunchedEffect
             }
@@ -69,6 +72,9 @@ fun NotebookUI(navController: NavController) {
                 Log.d("NotebookUI", "Found last NotebookSession on attempt $attempt")
                 // Update active index to point to this notebook
                 SessionList.activeSessionIndex = SessionList.sessions.indexOf(lastNotebook)
+                // Ensure WebView is created
+                lastNotebook.getOrInitView()
+                Log.d("NotebookUI", "WebView initialized: ${lastNotebook.view != null}")
                 currentSession = lastNotebook
                 return@LaunchedEffect
             }
@@ -409,29 +415,58 @@ fun NotebookUI(navController: NavController) {
                 }
             }
 
-            // Main Editor/Notebook Area
-            if (webView != null && isReady) {
-                Editor(
-                        Modifier.constrainAs(editor) {
-                            top.linkTo(topMiddle.bottom)
-                            bottom.linkTo(parent.bottom)
-                            val showLeftKb =
-                                    isLandscape &&
-                                            uiState.isLeftKeyboardVisible &&
-                                            !uiState.useLandscapeIme
-                            val showRightKb =
-                                    isLandscape &&
-                                            uiState.isRightKeyboardVisible &&
-                                            !uiState.useLandscapeIme
-                            start.linkTo(if (showLeftKb) leftKb.end else parent.start)
-                            end.linkTo(if (showRightKb) rightKb.start else parent.end)
-                            width = Dimension.fillToConstraints
-                            height = Dimension.fillToConstraints
-                        },
-                        webView
-                )
+            // Main Editor/Notebook Area - Show WebView immediately, with loading overlay if not
+            // ready
+            if (webView != null) {
+                Box(
+                        modifier =
+                                Modifier.constrainAs(editor) {
+                                    top.linkTo(topMiddle.bottom)
+                                    bottom.linkTo(parent.bottom)
+                                    val showLeftKb =
+                                            isLandscape &&
+                                                    uiState.isLeftKeyboardVisible &&
+                                                    !uiState.useLandscapeIme
+                                    val showRightKb =
+                                            isLandscape &&
+                                                    uiState.isRightKeyboardVisible &&
+                                                    !uiState.useLandscapeIme
+                                    start.linkTo(if (showLeftKb) leftKb.end else parent.start)
+                                    end.linkTo(if (showRightKb) rightKb.start else parent.end)
+                                    width = Dimension.fillToConstraints
+                                    height = Dimension.fillToConstraints
+                                }
+                ) {
+                    // Show WebView immediately - it will load in the background
+                    Editor(Modifier.fillMaxSize(), webView)
+
+                    // Loading overlay - fades out when ready
+                    if (!isReady) {
+                        Box(
+                                modifier = Modifier.fillMaxSize().background(Color(0xFF1E1E1E)),
+                                contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                            ) {
+                                CircularProgressIndicator(
+                                        modifier = Modifier.size(32.dp),
+                                        color = Color(0xFF007ACC),
+                                        strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                        text = "Loading notebook...",
+                                        color = Color(0xFFAAAAAA),
+                                        fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+                }
             } else {
-                // Fallback: Show loading state when notebook is not ready
+                // Fallback: Show loading state when WebView doesn't exist yet
                 Box(
                         modifier =
                                 Modifier.constrainAs(editor) {
@@ -457,7 +492,7 @@ fun NotebookUI(navController: NavController) {
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                                text = "Loading notebook...",
+                                text = "Initializing notebook...",
                                 color = Color(0xFFAAAAAA),
                                 fontSize = 12.sp
                         )
