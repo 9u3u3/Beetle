@@ -168,7 +168,15 @@ function renderEmptyState() {
     const empty = document.createElement('div');
     empty.className = 'empty-notebook';
     empty.innerHTML = `
-    <div class="empty-notebook-icon">📝</div>
+    <div class="empty-notebook-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+        </svg>
+    </div>
     <div>No cells yet</div>
     <button id="empty-add-btn">Add First Cell</button>
   `;
@@ -199,9 +207,15 @@ function createCellElement(cell) {
     header.innerHTML = `
     <span class="cell-number">[-]</span>
     <div class="cell-header-spacer"></div>
-    <button class="cell-btn run-btn" title="Run Cell (Shift+Enter)">▶</button>
-    <button class="cell-btn clear-btn" title="Clear Output">⌫</button>
-    <button class="cell-btn delete-btn" title="Delete Cell">✕</button>
+    <button class="cell-btn run-btn" title="Run Cell (Shift+Enter)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <button class="cell-btn clear-btn" title="Clear Output">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
+    </button>
+    <button class="cell-btn delete-btn" title="Delete Cell">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+    </button>
   `;
 
     // Capture cell.id in a const to ensure correct closure
@@ -602,6 +616,49 @@ function updateStatus(message) {
 window.setFilePath = function (path) {
     currentFilePath = path;
     console.log(`[Notebook] File path set: ${path}`);
+};
+
+/**
+ * Clear all notebook state - called when switching sessions to prevent buffer mixup.
+ * This explicitly resets the cells array, destroys all editors, and clears the container.
+ */
+window.clearNotebook = function () {
+    console.log('[Notebook] ════════════════════════════════════════════════════');
+    console.log('[Notebook] clearNotebook called - resetting all state');
+    console.log(`[Notebook] Current cells count: ${cells.length}`);
+    console.log(`[Notebook] Current file path: ${currentFilePath}`);
+
+    // Destroy all cell editors
+    cells.forEach((cell, index) => {
+        if (cell.editor) {
+            try {
+                cell.editor.destroy();
+                console.log(`[Notebook] Destroyed editor for cell ${index}`);
+            } catch (e) {
+                console.warn('[Notebook] Error destroying editor:', e);
+            }
+        }
+        if (cell.element) {
+            cell.element.remove();
+            cell.element = null;
+        }
+    });
+
+    // Reset all state
+    cells = [];
+    selectedCellId = null;
+    cellIdCounter = 0;
+    currentFilePath = null;
+
+    // Clear container
+    if (container) {
+        container.innerHTML = '';
+        console.log('[Notebook] Container cleared');
+    }
+
+    console.log('[Notebook] Notebook state fully reset');
+    console.log('[Notebook] ════════════════════════════════════════════════════');
+    updateStatus('Cleared');
 };
 
 window.loadContent = function (content) {

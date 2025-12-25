@@ -1,0 +1,188 @@
+--------- beginning of main
+12-21 07:28:09.413 25638 25929 I chromium: [1221/072809.402494:INFO:android_webview/browser/variations/variations_seed_loader.cc:67] Failed to open file for reading.: No such file or directory (2)
+12-21 07:28:09.633 25638 25956 W chromium: [WARNING:net/dns/dns_config_service_android.cc:69] Failed to read DnsConfig.
+12-21 07:28:09.658 25638 25638 W chromium: [WARNING:android_webview/browser/network_service/net_helpers.cc:143] HTTP Cache size is: 20971520
+12-21 07:28:09.770 25940 25952 W chromium: [WARNING:content/app/android/content_main_android.cc:82] android_setCpu already initialized
+12-21 07:28:09.786 25940 25952 W chromium: [WARNING:content/child/runtime_features.cc:559] Fenced frames cannot be enabled in this configuration. Use --enable-features=FencedFrames instead.
+12-21 07:28:09.786 25940 25952 W chromium: [WARNING:content/child/runtime_features.cc:584] Topics cannot be enabled in this configuration. Use --enable-features=BrowsingTopics in addition.
+12-21 07:28:09.786 25940 25952 W chromium: [WARNING:content/child/runtime_features.cc:605] SharedStorage cannot be enabled in this configuration. Use --enable-features=SharedStorageAPI in addition.
+12-21 07:28:09.798 25638 25638 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 07:28:09.798 25638 25638 D NotebookSession: ║ setFilePath called
+12-21 07:28:09.798 25638 25638 D NotebookSession: ║ Old path: null
+12-21 07:28:09.798 25638 25638 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 07:28:09.798 25638 25638 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 07:28:09.798 25638 25638 D NotebookSession: Clearing notebook before loading new content...
+12-21 07:28:09.800 25638 25638 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 07:28:09.800 25638 25638 D NotebookSession: Reading from content:// URI
+12-21 07:28:09.801 25638 25638 D NotebookSession: Content read successfully: 62 chars
+12-21 07:28:09.802 25638 25638 D NotebookSession: First 100 chars: print("Hello from Python!")
+12-21 07:28:09.802 25638 25638 D NotebookSession: a = 92
+12-21 07:28:09.802 25638 25638 D NotebookSession: b = 3
+12-21 07:28:09.802 25638 25638 D NotebookSession: print("Sum =", a + b)
+12-21 07:28:09.802 25638 25638 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py (62 chars)
+12-21 07:28:10.397 25638 25992 D NotebookSession: Notebook JS reported ready
+12-21 07:28:10.398 25638 25992 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 07:28:10.398 25638 25992 D NotebookSession: Reading from content:// URI
+12-21 07:28:10.400 25638 25992 D NotebookSession: Content read successfully: 62 chars
+12-21 07:28:10.400 25638 25992 D NotebookSession: First 100 chars: print("Hello from Python!")
+12-21 07:28:10.400 25638 25992 D NotebookSession: a = 92
+12-21 07:28:10.400 25638 25992 D NotebookSession: b = 3
+12-21 07:28:10.400 25638 25992 D NotebookSession: print("Sum =", a + b)
+12-21 07:28:10.400 25638 25992 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py (62 chars)
+12-21 07:28:10.752 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Script loaded, waiting for DOM...", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:10.752 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Ready", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:10.752 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] initNotebook called", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:10.752 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Container element: found", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:10.752 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Toolbar buttons: add✓ run✓ clear✓ save✗", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:10.752 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Notifying Android that notebook is ready", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:10.753 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Status: Ready", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:10.753 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Initialization complete", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:10.762 25638 25638 D NotebookUI: NotebookUI launched
+12-21 07:28:10.763 25638 25638 D NotebookUI: Found last NotebookSession on attempt 0
+12-21 07:28:10.763 25638 25638 D NotebookUI: WebView initialized: true
+12-21 07:28:10.763 25638 25638 D NotebookUI: currentSession changed: com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession@44ee40c
+12-21 07:28:10.763 25638 25638 D NotebookUI: currentSession view: com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView{c5af155 IFEDHVC.. ......I. 0,0-0,0}
+12-21 07:28:10.763 25638 25638 D NotebookSession: BufferViewModel set for notebook
+12-21 07:28:10.767 25638 25638 D NotebookUI: IME height changed: 0 px
+12-21 07:28:10.767 25638 25638 D NotebookUI: State update - currentSession: com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession@44ee40c, webView: null, isReady: false
+12-21 07:28:10.772 25638 25638 D NotebookUI: Added to buffer: test.py
+12-21 07:28:10.773 25638 25638 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 07:28:10.773 25638 25638 D NotebookSession: ║ setFilePath called
+12-21 07:28:10.773 25638 25638 D NotebookSession: ║ Old path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 07:28:10.773 25638 25638 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 07:28:10.773 25638 25638 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 07:28:10.773 25638 25638 D NotebookSession: Same path, skipping reload
+12-21 07:28:10.773 25638 25638 D NotebookUI: Set file path in notebook: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py
+12-21 07:28:11.155 25638 25638 D NotebookSession: Notebook page finished loading
+12-21 07:28:11.155 25638 25638 D NotebookSession: WebView made visible
+12-21 07:28:11.160 25638 25638 D NotebookSession: Auto-save enabled: true, delay: 5s
+12-21 07:28:11.161 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] File path set: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftest.py", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.166 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] setAutoSave: true 5", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.168 25638 25638 D NotebookUI: currentSession changed: com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession@44ee40c
+12-21 07:28:11.168 25638 25638 D NotebookUI: currentSession view: com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView{c5af155 VFEDHVC.. ......ID 0,0-1440,1030}
+12-21 07:28:11.169 25638 25638 D NotebookUI: State update - currentSession: com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession@44ee40c, webView: com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView{c5af155 VFEDHVC.. ......ID 0,0-1440,1030}, isReady: true
+12-21 07:28:11.238 25638 25638 D NotebookSession: Calling JS loadContent with 65 chars
+12-21 07:28:11.238 25638 25638 D NotebookSession: Calling JS loadContent with 65 chars
+12-21 07:28:11.242 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] loadContent called with 62 chars", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.242 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Container available: yes", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.242 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] parseFileContent called with: print("Hello from Python!")
+12-21 07:28:11.242 25638 25638 I chromium: a = 92
+12-21 07:28:11.242 25638 25638 I chromium: b = 3
+12-21 07:28:11.242 25638 25638 I chromium: print("Sum =", a + b)", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.244 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Split into 1 parts", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.244 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Parsed 1 cells", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.244 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] renderCells called, container: exists", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.244 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Rendering 1 cells", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.296 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Editor created for cell cell-1", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.296 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Rendered cell 1 : cell-1", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.301 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Status: Notebook loaded", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.311 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] loadContent called with 62 chars", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.312 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Container available: yes", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.312 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] parseFileContent called with: print("Hello from Python!")
+12-21 07:28:11.312 25638 25638 I chromium: a = 92
+12-21 07:28:11.312 25638 25638 I chromium: b = 3
+12-21 07:28:11.312 25638 25638 I chromium: print("Sum =", a + b)", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.312 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Split into 1 parts", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.312 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Parsed 1 cells", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.312 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] renderCells called, container: exists", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.312 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Rendering 1 cells", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.313 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Editor created for cell cell-2", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.313 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Rendered cell 1 : cell-2", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:11.323 25638 25638 I chromium: [INFO:CONSOLE:1] "[Notebook] Status: Notebook loaded", source: http://localhost:8080/notebook.bundle.js (1)
+12-21 07:28:12.744 25940 26009 E chromium: [ERROR:cc/tiles/tile_manager.cc:1003] WARNING: tile memory limits exceeded, some content may not draw
+12-21 07:28:12.744 25940 26009 E chromium: [ERROR:cc/tiles/tile_manager.cc:1003] WARNING: tile memory limits exceeded, some content may not draw
+12-21 07:28:19.673 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] CM6 ready, isEditorReady set to true", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:19.673 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] Checking AndroidEditorReady interface...", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:19.674 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] window.AndroidEditorReady: [object Object]", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:19.674 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] Calling AndroidEditorReady.onReady()...", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:19.674 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] AndroidEditorReady.onReady() called successfully", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:19.770 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] Font size set to: 14", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:19.771 25638 25638 I chromium: [INFO:CONSOLE:1] "[LSP-JS] rootUri set to: file:///home", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:19.771 25638 25638 I chromium: [INFO:CONSOLE:1] "[LSP-JS] setFilePath: /home/test.cpp, oldURI=file:///main.cpp, newURI=file:///home/test.cpp", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:19.771 25638 25638 I chromium: [INFO:CONSOLE:1] "[LSP-JS] setLanguage called for cpp port: 8081", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:19.771 25638 25638 I chromium: [INFO:CONSOLE:1] "Connecting to LSP at ws://localhost:8081/clsp", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:19.772 25638 25638 I chromium: [INFO:CONSOLE:1] "[LSP-STATUS] line:1 col:1 err:0 warn:0", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:19.772 25638 25638 I chromium: [INFO:CONSOLE:1] "[LSP-JS] Language reconfigured to cpp", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:19.773 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] Bottom padding set to: 49", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:19.773 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] setBottomPadding called with 49", source:  (1)
+12-21 07:28:19.773 25638 25638 I chromium: [INFO:CONSOLE:1] "[Search] Cleared", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:20.067 25638 25638 I chromium: [INFO:CONSOLE:1] "WebSocket error: [object Event]", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:20.067 25638 25638 I chromium: [INFO:CONSOLE:1] "WebSocket closed: 1006 ", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:20.071 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] setTheme called with: github", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:20.078 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] Theme applied: github", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:20.078 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] setWordWrap: true", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:20.079 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] Word wrap applied: true", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:20.082 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] setLineNumbers: true", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:20.103 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] Line numbers applied: true", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:20.104 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] setTabSize: 4", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:20.104 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] Tab size applied: 4", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:20.104 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] setRelativeLineNumbers: false", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:20.106 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] Relative line numbers applied: false", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:20.106 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] setIndentGuides: false", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:20.110 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] Indent guides applied: false", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:20.110 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] setAutoSave: true 5", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:20.115 25638 25638 I chromium: [INFO:CONSOLE:1] "[LSP-JS] setFilePath: /home/test.cpp, oldURI=file:///home/test.cpp, newURI=file:///home/test.cpp", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:20.169 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] Background color updated to: rgb(13, 17, 23)", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:21.600 25940 26009 E chromium: [ERROR:cc/tiles/tile_manager.cc:1003] WARNING: tile memory limits exceeded, some content may not draw
+12-21 07:28:21.601 25940 26009 E chromium: [ERROR:cc/tiles/tile_manager.cc:1003] WARNING: tile memory limits exceeded, some content may not draw
+12-21 07:28:22.071 25638 25638 I chromium: [INFO:CONSOLE:4] "✓ JS: Legacy MutationObserver skipped", source:  (4)
+12-21 07:28:23.733 25638 25638 I chromium: [INFO:CONSOLE:1] "Attempting to reconnect...", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:23.733 25638 25638 I chromium: [INFO:CONSOLE:1] "Closing existing WebSocket connection...", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:23.734 25638 25638 I chromium: [INFO:CONSOLE:1] "Connecting to LSP at ws://localhost:8081/clsp", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:23.827 25638 25638 I chromium: [INFO:CONSOLE:1] "Connected to LSP server", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:23.827 25638 25638 I chromium: [INFO:CONSOLE:1] "[LSP-JS] Sending initialize with rootUri: file:///home, languageId: cpp", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:23.849 25638 25638 I chromium: [INFO:CONSOLE:1] "[LSP-JS] Received message (len=1969): {"id":1,"jsonrpc":"2.0","result":{"capabilities":{"astProvider":true,"callHierarchyProvider":true,"clangdInlayHintsProvider":true,"codeActionProvider":true,"compilationDatabase":{"automaticReload":tru...", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:23.849 25638 25638 I chromium: [INFO:CONSOLE:1] "[LSP-JS] Request 1 succeeded", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:23.849 25638 25638 I chromium: [INFO:CONSOLE:1] "[LSP-JS] ✅ Server initialized: clangd, rootUri was: file:///home", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:23.849 25638 25638 I chromium: [INFO:CONSOLE:1] "[LSP-JS] Server capabilities: {"resolveProvider":false,"triggerCharacters":[".","<",">",":","\"","/","*"]}", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:23.850 25638 25638 I chromium: [INFO:CONSOLE:1] "[LSP-JS] Initial didOpen for file:///home/test.cpp", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:25.167 25638 25638 I chromium: [INFO:CONSOLE:1] "[LSP-JS] Received message (len=130): {"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"diagnostics":[],"uri":"file:///home/test.cpp","version":1}}", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:25.734 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] Auto-save triggered", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:25.741 25638 25638 I chromium: [INFO:CONSOLE:1] "[LSP-RAW-DIAG] Received: []", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:27.750 25638 25638 D NotebookUI: NotebookUI launched
+12-21 07:28:27.750 25638 25638 D NotebookUI: Found last NotebookSession on attempt 0
+12-21 07:28:27.750 25638 25638 D NotebookUI: WebView initialized: true
+12-21 07:28:27.750 25638 25638 D NotebookUI: currentSession changed: com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession@977d3ca
+12-21 07:28:27.750 25638 25638 D NotebookUI: currentSession view: com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView{2c8e93b IFEDHVC.. ......I. 0,0-0,0}
+12-21 07:28:27.751 25638 25638 D NotebookSession: BufferViewModel set for notebook
+12-21 07:28:27.759 25638 25638 D NotebookUI: IME height changed: 0 px
+12-21 07:28:27.759 25638 25638 D NotebookUI: State update - currentSession: com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession@977d3ca, webView: null, isReady: false
+12-21 07:28:28.026 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] Bottom padding set to: 49", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:28:28.026 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] setBottomPadding called with 49", source:  (1)
+12-21 07:28:28.037 25638 25638 D NotebookUI: currentSession changed: com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession@977d3ca
+12-21 07:28:28.037 25638 25638 D NotebookUI: currentSession view: com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView{2c8e93b IFEDHVC.. ......I. 0,0-1440,1030}
+12-21 07:28:28.038 25638 25638 D NotebookUI: State update - currentSession: com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession@977d3ca, webView: com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView{2c8e93b IFEDHVC.. ......I. 0,0-1440,1030}, isReady: false
+12-21 07:29:09.486 25638 25638 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 07:29:09.486 25638 25638 D NotebookSession: ║ setFilePath called
+12-21 07:29:09.486 25638 25638 D NotebookSession: ║ Old path: null
+12-21 07:29:09.486 25638 25638 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 07:29:09.486 25638 25638 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 07:29:09.486 25638 25638 D NotebookSession: Clearing notebook before loading new content...
+12-21 07:29:09.486 25638 25638 D NotebookSession: loadFileContent: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 07:29:09.487 25638 25638 D NotebookSession: Reading from content:// URI
+12-21 07:29:09.489 25638 25638 D NotebookSession: Content read successfully: 18 chars
+12-21 07:29:09.489 25638 25638 D NotebookSession: First 100 chars: # %%
+12-21 07:29:09.489 25638 25638 D NotebookSession: print(\"hi\")
+12-21 07:29:09.489 25638 25638 D NotebookSession: ✓ Loaded content from content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py (18 chars)
+12-21 07:29:10.000 25638 25638 D NotebookUI: NotebookUI launched
+12-21 07:29:10.000 25638 25638 D NotebookUI: Found last NotebookSession on attempt 0
+12-21 07:29:10.000 25638 25638 D NotebookUI: WebView initialized: true
+12-21 07:29:10.000 25638 25638 D NotebookUI: currentSession changed: com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession@d621ba7
+12-21 07:29:10.000 25638 25638 D NotebookUI: currentSession view: com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView{15cd854 IFEDHVC.. ......I. 0,0-0,0}
+12-21 07:29:10.000 25638 25638 D NotebookSession: BufferViewModel set for notebook
+12-21 07:29:10.004 25638 25638 D NotebookUI: IME height changed: 0 px
+12-21 07:29:10.004 25638 25638 D NotebookUI: State update - currentSession: com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession@d621ba7, webView: null, isReady: false
+12-21 07:29:10.006 25638 25638 D NotebookUI: Added to buffer: temp.py
+12-21 07:29:10.006 25638 25638 D NotebookSession: ╔══════════════════════════════════════════════════════════════
+12-21 07:29:10.006 25638 25638 D NotebookSession: ║ setFilePath called
+12-21 07:29:10.006 25638 25638 D NotebookSession: ║ Old path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 07:29:10.006 25638 25638 D NotebookSession: ║ New path: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 07:29:10.006 25638 25638 D NotebookSession: ╚══════════════════════════════════════════════════════════════
+12-21 07:29:10.006 25638 25638 D NotebookSession: Same path, skipping reload
+12-21 07:29:10.006 25638 25638 D NotebookUI: Set file path in notebook: content://com.bsbeetle.bananaspaghetti.documents/document/%2Fdata%2Fuser%2F0%2Fcom.bsbeetle.bananaspaghetti%2Ffiles%2Falpine%2Fhome%2Ftemp.py
+12-21 07:29:10.239 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] Bottom padding set to: 49", source: http://localhost:8080/editor.bundle.js (1)
+12-21 07:29:10.239 25638 25638 I chromium: [INFO:CONSOLE:1] "[Editor] setBottomPadding called with 49", source:  (1)
+12-21 07:29:10.247 25638 25638 D NotebookUI: currentSession changed: com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession@d621ba7
+12-21 07:29:10.248 25638 25638 D NotebookUI: currentSession view: com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView{15cd854 IFEDHVC.. ......I. 0,0-1440,1030}
+12-21 07:29:10.248 25638 25638 D NotebookUI: State update - currentSession: com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession@d621ba7, webView: com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView{15cd854 IFEDHVC.. ......I. 0,0-1440,1030}, isReady: false
+12-21 07:29:10.255 25638 25638 D NotebookSession: Calling JS loadContent with 21 chars

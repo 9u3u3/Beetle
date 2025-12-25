@@ -73,7 +73,9 @@ fun BottomBar(
         color: Color,
         lspViewModel: LspViewModel = viewModel(),
         gitViewModel: GitViewModel = viewModel(),
-        editorViewModel: com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel? = null
+        editorViewModel: com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel? = null,
+        expandToHalf: Boolean = false,
+        onExpandHandled: () -> Unit = {}
 ) {
 
         var targetHeight by remember { mutableStateOf(18.dp) }
@@ -86,11 +88,23 @@ fun BottomBar(
 
         // Tab state
         var selectedTab by remember { mutableStateOf(BottomPanelTab.PROBLEMS) }
+        
+        // Handle external request to expand to half screen and switch to terminal
+        androidx.compose.runtime.LaunchedEffect(expandToHalf) {
+                if (expandToHalf) {
+                        targetHeight = screenHeight * 0.5f
+                        selectedTab = BottomPanelTab.TERMINAL
+                        onExpandHandled()
+                }
+        }
 
         // Get current editor session and use its linked terminals
-        val currentEditorSession = remember {
-                SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as?
+        // Use fallback logic: first try activeSessionIndex, then find any EditorSession
+        val currentEditorSession = remember(SessionList.activeSessionIndex, SessionList.sessions.size) {
+                val sessionAtIndex = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as?
                         com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
+                // Fallback: find any EditorSession if activeSessionIndex doesn't point to one
+                sessionAtIndex ?: SessionList.sessions.filterIsInstance<com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession>().lastOrNull()
         }
 
         // Terminal sessions for bottom panel - use EditorSession's linked terminals if available
