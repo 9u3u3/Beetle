@@ -63,10 +63,8 @@ const CELL_DELIMITER_REGEX = /^#\s*%%[^\n]*/gm;  // Matches # %%, #%%, # %% [mar
 
 // Parse .py file content into cells
 function parseFileContent(content) {
-    console.log('[Notebook] parseFileContent called with:', content ? content.substring(0, 100) : 'empty');
 
     if (!content || content.trim() === '') {
-        console.log('[Notebook] Content empty, creating default cell');
         return [createCell()];
     }
 
@@ -74,7 +72,6 @@ function parseFileContent(content) {
     const parts = content.split(CELL_DELIMITER_REGEX);
     const cellsData = [];
 
-    console.log('[Notebook] Split into', parts.length, 'parts');
 
     parts.forEach((part, index) => {
         // Skip empty first part before first delimiter
@@ -90,11 +87,9 @@ function parseFileContent(content) {
 
     // If no cells found, create one with the content
     if (cellsData.length === 0) {
-        console.log('[Notebook] No cells found, using whole content');
         cellsData.push(createCell(content.trim()));
     }
 
-    console.log('[Notebook] Parsed', cellsData.length, 'cells');
     return cellsData;
 }
 
@@ -115,7 +110,6 @@ function serializeCells() {
 
 // Render all cells
 function renderCells() {
-    console.log('[Notebook] renderCells called, container:', container ? 'exists' : 'null');
 
     if (!container) {
         console.error('[Notebook] Container is null! Cannot render cells.');
@@ -141,12 +135,10 @@ function renderCells() {
     container.innerHTML = '';
 
     if (cells.length === 0) {
-        console.log('[Notebook] No cells, showing empty state');
         renderEmptyState();
         return;
     }
 
-    console.log('[Notebook] Rendering', cells.length, 'cells');
 
     // Create fresh elements for all cells
     cells.forEach((cell, index) => {
@@ -159,7 +151,6 @@ function renderCells() {
         }
 
         container.appendChild(cell.element);
-        console.log('[Notebook] Rendered cell', index + 1, ':', cell.id);
     });
 }
 
@@ -302,7 +293,6 @@ function createCellElement(cell) {
             parent: codeDiv
         });
 
-        console.log('[Notebook] Editor created for cell', cell.id);
     } catch (err) {
         console.error('[Notebook] Error creating editor:', err);
         codeDiv.textContent = cell.code || '# Error creating editor';
@@ -459,7 +449,6 @@ function runCell(cellId) {
     if (window.AndroidPython && window.AndroidPython.runCode) {
         window.AndroidPython.runCode(code, cellId);
     } else {
-        console.log('[Notebook] AndroidPython not available, simulating...');
         setTimeout(() => {
             onPythonResult(cellId, `Simulated output for:\n${code}`, 'stdout', 0.1);
         }, 500);
@@ -515,7 +504,6 @@ function clearAllOutputs() {
 // =========================================
 
 window.onPythonResult = function (cellId, output, outputType, executionTime) {
-    console.log(`[Notebook] Result for ${cellId}: ${outputType}`);
 
     const cell = cells.find(c => c.id === cellId);
     if (!cell) return;
@@ -606,7 +594,6 @@ function updateStatus(message) {
     if (statusEl) {
         statusEl.textContent = message;
     }
-    console.log(`[Notebook] Status: ${message}`);
 }
 
 // =========================================
@@ -615,7 +602,6 @@ function updateStatus(message) {
 
 window.setFilePath = function (path) {
     currentFilePath = path;
-    console.log(`[Notebook] File path set: ${path}`);
 };
 
 /**
@@ -623,17 +609,12 @@ window.setFilePath = function (path) {
  * This explicitly resets the cells array, destroys all editors, and clears the container.
  */
 window.clearNotebook = function () {
-    console.log('[Notebook] ════════════════════════════════════════════════════');
-    console.log('[Notebook] clearNotebook called - resetting all state');
-    console.log(`[Notebook] Current cells count: ${cells.length}`);
-    console.log(`[Notebook] Current file path: ${currentFilePath}`);
 
     // Destroy all cell editors
     cells.forEach((cell, index) => {
         if (cell.editor) {
             try {
                 cell.editor.destroy();
-                console.log(`[Notebook] Destroyed editor for cell ${index}`);
             } catch (e) {
                 console.warn('[Notebook] Error destroying editor:', e);
             }
@@ -653,17 +634,12 @@ window.clearNotebook = function () {
     // Clear container
     if (container) {
         container.innerHTML = '';
-        console.log('[Notebook] Container cleared');
     }
 
-    console.log('[Notebook] Notebook state fully reset');
-    console.log('[Notebook] ════════════════════════════════════════════════════');
     updateStatus('Cleared');
 };
 
 window.loadContent = function (content) {
-    console.log(`[Notebook] loadContent called with ${content ? content.length : 0} chars`);
-    console.log(`[Notebook] Container available: ${container ? 'yes' : 'no'}`);
 
     // Destroy existing editors and elements completely
     cells.forEach(cell => {
@@ -718,11 +694,9 @@ window.getContent = function () {
 // =========================================
 
 function initNotebook() {
-    console.log('[Notebook] initNotebook called');
 
     // Get container
     container = document.getElementById('notebook-container');
-    console.log('[Notebook] Container element:', container ? 'found' : 'NOT FOUND');
 
     if (!container) {
         console.error('[Notebook] CRITICAL: notebook-container not found in DOM!');
@@ -734,13 +708,6 @@ function initNotebook() {
     const btnRunAll = document.getElementById('btn-run-all');
     const btnClearAll = document.getElementById('btn-clear-all');
     const btnSave = document.getElementById('btn-save');
-
-    console.log('[Notebook] Toolbar buttons:',
-        btnAddCell ? 'add✓' : 'add✗',
-        btnRunAll ? 'run✓' : 'run✗',
-        btnClearAll ? 'clear✓' : 'clear✗',
-        btnSave ? 'save✓' : 'save✗'
-    );
 
     if (btnAddCell) {
         btnAddCell.addEventListener('click', () => {
@@ -771,12 +738,10 @@ function initNotebook() {
 
     // Notify Android that notebook is ready
     if (window.AndroidNotebookReady && window.AndroidNotebookReady.onReady) {
-        console.log('[Notebook] Notifying Android that notebook is ready');
         window.AndroidNotebookReady.onReady();
     }
 
     updateStatus('Ready');
-    console.log('[Notebook] Initialization complete');
 }
 
 // =========================================
@@ -786,14 +751,12 @@ function initNotebook() {
 // Get serialized content for saving
 window.getContent = function () {
     const content = serializeCells();
-    console.log('[Notebook] getContent called, returning', content.length, 'chars');
     return content;
 };
 
 // Save the notebook content
 window.saveContent = function () {
     const content = serializeCells();
-    console.log('[Notebook] Saving content with', cells.length, 'cells');
 
     if (window.AndroidNotebook && window.AndroidNotebook.saveContent) {
         window.AndroidNotebook.saveContent(content);
@@ -1021,7 +984,6 @@ let autoSaveEnabled = false;
 let autoSaveDelay = 3000; // Default 3 seconds
 
 window.setAutoSave = function (enabled, delaySeconds) {
-    console.log('[Notebook] setAutoSave:', enabled, delaySeconds);
     autoSaveEnabled = enabled;
     if (delaySeconds) autoSaveDelay = delaySeconds * 1000;
 
@@ -1038,7 +1000,6 @@ function triggerAutoSave() {
     if (autoSaveTimer) clearTimeout(autoSaveTimer);
 
     autoSaveTimer = setTimeout(() => {
-        console.log('[Notebook] Auto-save triggered');
         if (window.AndroidInterface && window.AndroidInterface.saveFile) {
             window.AndroidInterface.saveFile();
         }
@@ -1046,7 +1007,6 @@ function triggerAutoSave() {
 }
 
 // Start initialization
-console.log('[Notebook] Script loaded, waiting for DOM...');
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initNotebook);
@@ -1055,4 +1015,3 @@ if (document.readyState === 'loading') {
     initNotebook();
 }
 
-console.log('[Notebook] Ready');

@@ -19,7 +19,6 @@ let isCtrlOn = false;
 // Function to set CTRL state from Android
 window.setCtrlState = function (state) {
   isCtrlOn = state;
-  console.log('CTRL state set to:', isCtrlOn);
 };
 
 // Function to get current CTRL state
@@ -56,7 +55,6 @@ term.onData((data) => {
     if (code >= 65 && code <= 90) {
       const ctrlCode = code - 64; // A=1, B=2, ... Z=26
       const ctrlChar = String.fromCharCode(ctrlCode);
-      console.log('Sending Ctrl+' + char + ' (0x' + ctrlCode.toString(16) + ')');
       AndroidTerminal.sendRaw(ctrlChar);
 
       // Turn off CTRL and notify Android
@@ -76,14 +74,10 @@ term.onData((data) => {
   if (data.length === 1) {
     const code = data.charCodeAt(0);
     if (code === 0x0D) {
-      console.log('Enter key pressed');
     } else if (code === 0x1B) {
-      console.log('ESC key pressed');
     } else if (code < 0x20) {
-      console.log('Control char:', code.toString(16));
     }
   } else if (data.charCodeAt(0) === 0x1B) {
-    console.log('Escape sequence:', data.split('').map(c => c.charCodeAt(0).toString(16)).join(' '));
   }
 
   // Send everything directly to PTY
@@ -173,7 +167,6 @@ window.performSelectAll = function () {
 
 window.performFind = function () {
   // xterm.js doesn't have built-in search UI
-  console.log("Find not supported in terminal");
 };
 
 window.performCtrlC = function () {
@@ -246,7 +239,6 @@ window.addEventListener('resize', () => {
 // Runtime font size change
 window.setFontSize = function (size) {
   term.options.fontSize = size;
-  console.log('[Terminal] Font size set to:', size);
   // Re-fit terminal to recalculate rows/cols with new font size
   setTimeout(() => {
     window.fitTerminal();
@@ -258,7 +250,6 @@ window.setBottomPadding = function (paddingPx) {
   const terminalEl = document.getElementById('terminal');
   if (terminalEl) {
     terminalEl.style.paddingBottom = paddingPx + 'px';
-    console.log('[Terminal] Bottom padding set to: ' + paddingPx);
     // Re-fit terminal to recalculate with new available space
     if (fitAddon) {
       setTimeout(() => {

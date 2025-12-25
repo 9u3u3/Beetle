@@ -661,11 +661,6 @@ class EditorSession(context: Context, name: String = "Editor") :
     }
 
     fun setFilePath(path: String) {
-        Log.d("EditorSession", "╔══════════════════════════════════════════════════════════════")
-        Log.d("EditorSession", "║ setFilePath called")
-        Log.d("EditorSession", "║ Old path: $currentFilePath")
-        Log.d("EditorSession", "║ New path: $path")
-        Log.d("EditorSession", "╚══════════════════════════════════════════════════════════════")
         currentFilePath = path
         view?.evaluateJavascript("if(window.setFilePath) window.setFilePath('$path');", null)
     }

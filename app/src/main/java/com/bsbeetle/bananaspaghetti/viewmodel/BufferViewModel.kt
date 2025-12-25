@@ -59,48 +59,19 @@ class BufferViewModel : ViewModel() {
     fun setSessionId(sessionId: Int, sessionType: SessionType) {
         val newKey = createSessionKey(sessionType, sessionId)
 
-        // Get caller info for debugging
-        val caller =
-                Thread.currentThread().stackTrace.getOrNull(3)?.let {
-                    "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}"
-                }
-                        ?: "unknown"
-
-        Log.d(TAG, "╔══════════════════════════════════════════════════════════════")
-        Log.d(TAG, "║ setSessionId CALLED")
-        Log.d(TAG, "║ Caller: $caller")
-        Log.d(TAG, "║ Request: type=$sessionType, id=$sessionId → key=$newKey")
-        Log.d(
-                TAG,
-                "║ Current: key=$currentSessionKey, type=$currentSessionType, id=$currentSessionId"
-        )
-        Log.d(TAG, "╚══════════════════════════════════════════════════════════════")
-
-        // Dump current state before any changes
-        Log.d(TAG, "[BEFORE] filesOpenedList: ${filesOpenedList.map { it.name }}")
-        Log.d(TAG, "[BEFORE] sessionFiles keys: ${sessionFiles.keys}")
-        sessionFiles.forEach { (key, files) ->
-            Log.d(TAG, "[BEFORE]   $key → ${files.map { it.name }}")
-        }
-
         if (currentSessionKey != newKey) {
-            Log.d(TAG, ">>> SWITCHING from $currentSessionKey to $newKey")
-
             // Save current state to old session
             currentSessionKey?.let { oldKey ->
                 val savedFiles = filesOpenedList.toMutableList()
                 val savedDirty = dirtyFiles.toMutableSet()
                 sessionFiles[oldKey] = savedFiles
                 sessionDirtyFiles[oldKey] = savedDirty
-                Log.d(TAG, ">>> SAVED state for $oldKey: ${savedFiles.map { it.name }}")
             }
-                    ?: Log.d(TAG, ">>> No old session to save (currentSessionKey was null)")
 
             // Clear current state
             filesOpenedList.clear()
             dirtyFiles.clear()
             currentFile.value = null
-            Log.d(TAG, ">>> CLEARED current filesOpenedList")
 
             // Update current session info
             currentSessionKey = newKey
@@ -108,33 +79,13 @@ class BufferViewModel : ViewModel() {
             currentSessionType = sessionType
 
             // Load new session's state
-            val loadedFiles = sessionFiles[newKey]
-            if (loadedFiles != null) {
+            sessionFiles[newKey]?.let { loadedFiles ->
                 filesOpenedList.addAll(loadedFiles)
-                Log.d(
-                        TAG,
-                        ">>> LOADED ${loadedFiles.size} files for $newKey: ${loadedFiles.map { it.name }}"
-                )
-            } else {
-                Log.d(TAG, ">>> No saved files for $newKey (new session)")
             }
 
-            val loadedDirty = sessionDirtyFiles[newKey]
-            if (loadedDirty != null) {
+            sessionDirtyFiles[newKey]?.let { loadedDirty ->
                 dirtyFiles.addAll(loadedDirty)
-                Log.d(TAG, ">>> LOADED ${loadedDirty.size} dirty files for $newKey")
             }
-
-            Log.d(TAG, ">>> Session switch COMPLETE: $newKey with ${filesOpenedList.size} files")
-        } else {
-            Log.d(TAG, ">>> SAME SESSION KEY: $newKey (no switch needed)")
-        }
-
-        // Dump state after operation
-        Log.d(TAG, "[AFTER] filesOpenedList: ${filesOpenedList.map { it.name }}")
-        Log.d(TAG, "[AFTER] sessionFiles keys: ${sessionFiles.keys}")
-        sessionFiles.forEach { (key, files) ->
-            Log.d(TAG, "[AFTER]   $key → ${files.map { it.name }}")
         }
     }
 
@@ -143,25 +94,9 @@ class BufferViewModel : ViewModel() {
      * SessionList.
      */
     fun setSessionId(sessionId: Int) {
-        // Get caller info for debugging
-        val caller =
-                Thread.currentThread().stackTrace.getOrNull(3)?.let {
-                    "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}"
-                }
-                        ?: "unknown"
-
         // Try to determine session type from the actual session
         val session = SessionList.sessions.getOrNull(sessionId)
         val sessionType = session?.type ?: SessionType.EDITOR
-
-        Log.d(TAG, "╔══════════════════════════════════════════════════════════════")
-        Log.d(TAG, "║ setSessionId(LEGACY) called")
-        Log.d(TAG, "║ Caller: $caller")
-        Log.d(TAG, "║ ID: $sessionId → detected type: $sessionType")
-        Log.d(TAG, "║ SessionList.sessions.size: ${SessionList.sessions.size}")
-        Log.d(TAG, "║ SessionList.activeSessionIndex: ${SessionList.activeSessionIndex}")
-        Log.d(TAG, "╚══════════════════════════════════════════════════════════════")
-
         setSessionId(sessionId, sessionType)
     }
 
@@ -172,7 +107,6 @@ class BufferViewModel : ViewModel() {
             currentSessionKey?.let { key ->
                 sessionDirtyFiles.getOrPut(key) { mutableSetOf() }.add(fileUri)
             }
-            Log.d(TAG, "Marked dirty: $fileUri (session: $currentSessionKey)")
         }
     }
 
@@ -180,7 +114,6 @@ class BufferViewModel : ViewModel() {
         dirtyFiles.remove(fileUri)
         // Also remove from session-specific storage
         currentSessionKey?.let { key -> sessionDirtyFiles[key]?.remove(fileUri) }
-        Log.d(TAG, "Marked clean: $fileUri (session: $currentSessionKey)")
     }
 
     /**
@@ -188,16 +121,8 @@ class BufferViewModel : ViewModel() {
      * evaluation, so the actual save happens in background.
      */
     fun saveCurrentContentToBuffer() {
-        val file = currentFile.value
-        if (file == null) {
-            Log.d(TAG, "saveCurrentContentToBuffer: currentFile is null, skipping")
-            return
-        }
-
+        val file = currentFile.value ?: return
         val fileUri = file.uri.toString()
-        Log.d(TAG, "saveCurrentContentToBuffer: Attempting to save ${file.name}")
-        Log.d(TAG, "  Session: $currentSessionKey")
-        Log.d(TAG, "  URI: $fileUri")
 
         // Get the actual session - could be Editor or Notebook
         val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
@@ -225,20 +150,12 @@ class BufferViewModel : ViewModel() {
                 }
             }
             else -> {
-                Log.e(
-                        TAG,
-                        "saveCurrentContentToBuffer: No Editor/Notebook session found! Session type: ${session?.type}"
-                )
+                Log.e(TAG, "saveCurrentContentToBuffer: No Editor/Notebook session found!")
             }
         }
     }
 
     private fun saveContentFromJsResult(file: DocumentFile, fileUri: String, result: String?) {
-        Log.d(
-                TAG,
-                "saveCurrentContentToBuffer: JS returned for ${file.name}, result length=${result?.length ?: 0}"
-        )
-
         if (result != null && result != "null" && result != "\"\"") {
             var content = result.removeSurrounding("\"")
 
@@ -260,12 +177,6 @@ class BufferViewModel : ViewModel() {
                     }
 
             bufferLine[fileUri] = content // Use URI as key
-            Log.d(TAG, "✓ Saved content for ${file.name}: ${content.length} chars")
-            Log.d(TAG, "  Session: $currentSessionKey")
-            Log.d(TAG, "  Buffer size: ${bufferLine.size}")
-            Log.d(TAG, "  First 50 chars: ${content.take(50)}")
-        } else {
-            Log.e(TAG, "✗ Failed to save ${file.name}: result was null or empty")
         }
     }
 
@@ -275,12 +186,6 @@ class BufferViewModel : ViewModel() {
      */
     fun clearSessionBuffer(sessionId: Int, sessionType: SessionType) {
         val sessionKey = createSessionKey(sessionType, sessionId)
-        Log.d(TAG, "╔══════════════════════════════════════════════════════════════")
-        Log.d(TAG, "║ CLEARING SESSION BUFFER: $sessionKey")
-        Log.d(TAG, "║ Files: ${sessionFiles[sessionKey]?.size ?: 0}")
-        Log.d(TAG, "║ Buffers: ${sessionBuffers[sessionKey]?.size ?: 0}")
-        Log.d(TAG, "║ Dirty files: ${sessionDirtyFiles[sessionKey]?.size ?: 0}")
-        Log.d(TAG, "╚══════════════════════════════════════════════════════════════")
 
         sessionBuffers.remove(sessionKey)
         sessionFiles.remove(sessionKey)
@@ -288,7 +193,6 @@ class BufferViewModel : ViewModel() {
 
         // If this was the current session, clear current state too
         if (currentSessionKey == sessionKey) {
-            Log.d(TAG, "Cleared current session, resetting active state")
             currentSessionKey = null
             currentSessionId = null
             currentSessionType = null
@@ -296,41 +200,17 @@ class BufferViewModel : ViewModel() {
             currentFile.value = null
             dirtyFiles.clear()
         }
-
-        Log.d(TAG, "Session $sessionKey buffer cleared")
     }
 
     fun clear() {
-        // Get caller info for debugging
-        val caller =
-                Thread.currentThread().stackTrace.getOrNull(3)?.let {
-                    "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}"
-                }
-                        ?: "unknown"
-
-        Log.d(TAG, "╔══════════════════════════════════════════════════════════════")
-        Log.d(TAG, "║ clear() CALLED - WARNING: This clears current buffer!")
-        Log.d(TAG, "║ Caller: $caller")
-        Log.d(TAG, "║ Current session: $currentSessionKey")
-        Log.d(TAG, "║ Files being cleared: ${filesOpenedList.map { it.name }}")
-        Log.d(TAG, "╚══════════════════════════════════════════════════════════════")
-
         bufferLine.clear()
         filesOpenedList.clear()
         currentFile.value = null
         dirtyFiles.clear()
-        Log.d(TAG, "BufferViewModel cleared for session $currentSessionKey")
     }
 
     /** Clear all session data (for app reset) */
     fun clearAll() {
-        Log.d(TAG, "╔══════════════════════════════════════════════════════════════")
-        Log.d(TAG, "║ CLEARING ALL BUFFER DATA")
-        Log.d(TAG, "║ Clearing ${sessionBuffers.size} session buffers")
-        Log.d(TAG, "║ Clearing ${sessionFiles.size} session file lists")
-        Log.d(TAG, "║ Clearing ${sessionDirtyFiles.size} session dirty lists")
-        Log.d(TAG, "╚══════════════════════════════════════════════════════════════")
-
         sessionBuffers.clear()
         sessionFiles.clear()
         sessionDirtyFiles.clear()
@@ -340,18 +220,10 @@ class BufferViewModel : ViewModel() {
         filesOpenedList.clear()
         currentFile.value = null
         dirtyFiles.clear()
-        Log.d(TAG, "BufferViewModel fully cleared")
     }
 
     /** Debug helper: Log current buffer state */
     fun debugLogState() {
-        Log.d(TAG, "╔══════════════════════════════════════════════════════════════")
-        Log.d(TAG, "║ BUFFER STATE DEBUG")
-        Log.d(TAG, "║ Current session: $currentSessionKey")
-        Log.d(TAG, "║ Current file: ${currentFile.value?.name ?: "none"}")
-        Log.d(TAG, "║ Files open: ${filesOpenedList.size}")
-        Log.d(TAG, "║ Dirty files: ${dirtyFiles.size}")
-        Log.d(TAG, "║ Session buffers: ${sessionBuffers.keys}")
-        Log.d(TAG, "╚══════════════════════════════════════════════════════════════")
+        Log.d(TAG, "Buffer state: session=$currentSessionKey, files=${filesOpenedList.size}, dirty=${dirtyFiles.size}")
     }
 }

@@ -278,11 +278,6 @@ class NotebookSession(context: Context, name: String = "Notebook") :
 
     /** Set the file path and load content into the notebook. */
     fun setFilePath(path: String) {
-        Log.d(TAG, "╔══════════════════════════════════════════════════════════════")
-        Log.d(TAG, "║ setFilePath called")
-        Log.d(TAG, "║ Old path: $currentFilePath")
-        Log.d(TAG, "║ New path: $path")
-        Log.d(TAG, "╚══════════════════════════════════════════════════════════════")
 
         // If already showing this path, skip reload
         if (currentFilePath == path) {
