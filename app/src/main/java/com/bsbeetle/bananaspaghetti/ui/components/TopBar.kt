@@ -429,6 +429,7 @@ fun TopBar(modifier: Modifier = Modifier, context: Context) {
 fun LeftTopBar(
         modifier: Modifier = Modifier,
         onSaveClick: () -> Unit = {},
+        onRunClick: () -> Unit = {},
         onFileClick: () -> Unit = {},
         onUndoClick: () -> Unit = {},
         onRedoClick: () -> Unit = {},
@@ -470,6 +471,9 @@ fun LeftTopBar(
                         )
                         // Save button
                         TopBarIconButton(icon = R.drawable.save_icon, onClick = onSaveClick)
+
+                        // Run button (play icon)
+                        TopBarIconButton(icon = R.drawable.play_arrow, onClick = onRunClick)
 
                         VerticalDivider(
                                 modifier = Modifier.fillMaxHeight().width(1.dp),
@@ -922,7 +926,7 @@ fun TerminalPortraitTopBar(
 }
 
 /** Convert a content URI to a real file path. Works with SAF (Storage Access Framework) URIs. */
-private fun getPathFromUri(context: Context, uri: android.net.Uri): String? {
+internal fun getPathFromUri(context: Context, uri: android.net.Uri): String? {
         android.util.Log.d("CodeRunner", "getPathFromUri: $uri")
 
         // If it's already a file path
