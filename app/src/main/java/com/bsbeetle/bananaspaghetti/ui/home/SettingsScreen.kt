@@ -447,11 +447,19 @@ private fun SettingsContent(selectedCategory: String, keyboardViewModel: Keyboar
                                 AppearanceSettingsContent(
                                         terminalFontSize = uiState.terminalFontSize,
                                         editorFontSize = uiState.editorFontSize,
+                                        topBarScale = uiState.topBarScale,
+                                        bottomBarScale = uiState.bottomBarScale,
                                         onTerminalFontSizeChange = {
                                                 keyboardViewModel.updateTerminalFontSize(it)
                                         },
                                         onEditorFontSizeChange = {
                                                 keyboardViewModel.updateEditorFontSize(it)
+                                        },
+                                        onTopBarScaleChange = {
+                                                keyboardViewModel.updateTopBarScale(it)
+                                        },
+                                        onBottomBarScaleChange = {
+                                                keyboardViewModel.updateBottomBarScale(it)
                                         }
                                 )
                         "Licenses" -> LicensesContent()
@@ -466,8 +474,12 @@ private fun SettingsContent(selectedCategory: String, keyboardViewModel: Keyboar
 private fun AppearanceSettingsContent(
         terminalFontSize: Int,
         editorFontSize: Int,
+        topBarScale: Float,
+        bottomBarScale: Float,
         onTerminalFontSizeChange: (Int) -> Unit,
-        onEditorFontSizeChange: (Int) -> Unit
+        onEditorFontSizeChange: (Int) -> Unit,
+        onTopBarScaleChange: (Float) -> Unit,
+        onBottomBarScaleChange: (Float) -> Unit
 ) {
         SettingsCard(title = "Font Size") {
                 // Terminal font size
@@ -486,6 +498,28 @@ private fun AppearanceSettingsContent(
                         description = "Font size for code editor (CodeMirror)",
                         value = editorFontSize,
                         onValueChange = onEditorFontSizeChange
+                )
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        SettingsCard(title = "Bar Size") {
+                // Top bar size
+                BarSizeSliderRow(
+                        title = "Top Bar",
+                        description = "Size of the top toolbar and icons",
+                        value = topBarScale,
+                        onValueChange = onTopBarScaleChange
+                )
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+
+                // Bottom bar size
+                BarSizeSliderRow(
+                        title = "Bottom Bar",
+                        description = "Size of the bottom status bar and tabs",
+                        value = bottomBarScale,
+                        onValueChange = onBottomBarScaleChange
                 )
         }
 }
@@ -522,6 +556,47 @@ private fun FontSizeSliderRow(
                         onValueChange = { onValueChange(it.toInt()) },
                         valueRange = 8f..24f,
                         steps = 15,
+                        colors =
+                                SliderDefaults.colors(
+                                        thumbColor = AccentBlue,
+                                        activeTrackColor = AccentBlue,
+                                        inactiveTrackColor = DividerColor
+                                )
+                )
+        }
+}
+
+@Composable
+private fun BarSizeSliderRow(
+        title: String,
+        description: String,
+        value: Float,
+        onValueChange: (Float) -> Unit
+) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                                Text(text = title, color = TextPrimary, fontSize = 16.sp)
+                                Text(text = description, color = TextSecondary, fontSize = 13.sp)
+                        }
+                        Text(
+                                text = "${(value * 100).toInt()}%",
+                                color = AccentBlue,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                        )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Slider(
+                        value = value,
+                        onValueChange = onValueChange,
+                        valueRange = 0.7f..1.5f,
                         colors =
                                 SliderDefaults.colors(
                                         thumbColor = AccentBlue,

@@ -6,6 +6,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title></title>
   <link href="./styles.css" rel="stylesheet">
+  <style>
+    /* Scroll wrapper for portrait mode keyboard avoidance */
+    #scroll-wrapper {
+      width: 100%;
+      min-height: 100vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #editor-container {
+      width: 100%;
+      min-height: 100vh;
+    }
+
+    /* Spacer for portrait mode - allows scrolling editor above keyboard */
+    #scroll-spacer {
+      width: 100%;
+      height: 0;
+      background: #1e1e1e;
+    }
+
+    /* In portrait mode, add scroll space */
+    @media (orientation: portrait) {
+      #scroll-spacer {
+        height: 50vh;
+      }
+    }
+  </style>
   <script>
     // Define setBottomPadding early so it's available before bundle loads
     // This prevents race condition when Kotlin calls it during editor init
@@ -25,13 +53,16 @@
 </head>
 
 <body>
-  <main>
-    <div id="editor">
-      <!--EDITOR CODE HERE-->
-    </div>
-    <div id="completion-list"
-      style="display: none; position: absolute; background: #2c313a; border: 1px solid #181a1f; z-index: 1000;"></div>
-  </main>
+  <div id="scroll-wrapper">
+    <main id="editor-container">
+      <div id="editor">
+        <!--EDITOR CODE HERE-->
+      </div>
+      <div id="completion-list"
+        style="display: none; position: absolute; background: #2c313a; border: 1px solid #181a1f; z-index: 1000;"></div>
+    </main>
+    <div id="scroll-spacer"></div>
+  </div>
   <script src="./editor.bundle.js"></script>
 </body>
 

@@ -29,5 +29,9 @@ data class KeyboardUiState(
     val linkedKeyboardHeight: Boolean = true, // When true, both height sliders move together
     // Landscape IME mode: if true, use system IME keyboard instead of custom split keyboard
     // Default is false (use custom split keyboard)
-    val useLandscapeIme: Boolean = false
+    val useLandscapeIme: Boolean = false,
+    // Bar size settings: scale factor for top bar and bottom bar
+    // Range: 0.7 to 1.5 (70% to 150%)
+    val topBarScale: Float = 1.0f,
+    val bottomBarScale: Float = 1.0f
 )

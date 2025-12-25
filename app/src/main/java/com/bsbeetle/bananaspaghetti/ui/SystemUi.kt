@@ -43,11 +43,26 @@ fun DisableDefaultKeyboard(useLandscapeIme: Boolean = false) {
 @Composable
 fun EnterImmersiveMode() {
     val view = LocalView.current
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(isLandscape) {
         val window = (view.context as Activity).window
         val insetsController = WindowInsetsControllerCompat(window, view)
-        insetsController.hide(WindowInsetsCompat.Type.systemBars())
-        insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        
+        if (isLandscape) {
+            // In landscape, hide all system bars for immersive coding experience
+            insetsController.hide(WindowInsetsCompat.Type.systemBars())
+            insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        } else {
+            // In portrait, keep navigation bar visible (for phones with navigation buttons)
+            insetsController.hide(WindowInsetsCompat.Type.statusBars())
+            insetsController.show(WindowInsetsCompat.Type.navigationBars())
+            insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+            
+            // Set navigation bar color to match the bottom bar (0xFF1B1B1B)
+            @Suppress("DEPRECATION")
+            window.navigationBarColor = 0xFF1B1B1B.toInt()
+        }
     }
 }

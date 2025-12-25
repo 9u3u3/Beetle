@@ -15,7 +15,6 @@ for pkg in $required_packages; do
 done
 
 if [ -n "$missing_packages" ]; then
-    echo -e "\e[34;1m[*] \e[0mInstalling important packages\e[0m"
     apk update && apk upgrade
     apk add $missing_packages
     if [ $? -eq 0 ]; then

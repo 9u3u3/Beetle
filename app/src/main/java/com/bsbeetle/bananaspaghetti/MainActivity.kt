@@ -12,11 +12,16 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import android.content.res.Configuration
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
@@ -133,10 +138,19 @@ class MainActivity : ComponentActivity() {
                                         LocalBrowserViewModel provides browserViewModel,
                                         LocalAuthViewModel provides authViewModel
                                 ) {
-                                        Box(modifier = Modifier.fillMaxSize()) {
+                                        // Check if portrait mode to apply navigation bar padding
+                                        val configuration = LocalConfiguration.current
+                                        val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+                                        
+                                        Box(
+                                                modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .then(
+                                                                if (isPortrait) Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+                                                                else Modifier
+                                                        )
+                                        ) {
                                                 AppNavigation(startDestination = startDestination)
-                                                //
-                                                // BrowserScreen(navController)
                                         }
                                 }
                         }
