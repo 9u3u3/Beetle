@@ -2,6 +2,7 @@ const term = new window.Terminal({
   cursorBlink: true,
   fontSize: 11,
   fontFamily: "monospace",
+  scrollback: 10000, // Large scrollback buffer like Termux
 });
 
 term.open(document.getElementById("terminal"));
@@ -262,3 +263,44 @@ window.setBottomPadding = function (paddingPx) {
     }
   }
 };
+
+// Add extra scroll space at bottom - allows scrolling content above keyboard
+// This injects CSS that adds padding after the terminal content like Termux
+window.setExtraScrollSpace = function (amount) {
+  // Remove existing style if present
+  const existingStyle = document.getElementById('extra-scroll-style');
+  if (existingStyle) {
+    existingStyle.remove();
+  }
+
+  if (amount) {
+    const style = document.createElement('style');
+    style.id = 'extra-scroll-style';
+    // Add padding to xterm viewport to allow scrolling past the last line
+    // Use 50vh = half the screen for keyboard coverage
+    style.textContent = `
+      .xterm-viewport {
+        padding-bottom: ${amount} !important;
+      }
+      .xterm-screen {
+        padding-bottom: ${amount} !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+};
+
+// Auto-enable extra scroll space in portrait mode
+const checkOrientation = () => {
+  if (window.matchMedia("(orientation: portrait)").matches) {
+    // Portrait mode - add 50vh (half screen) for keyboard
+    window.setExtraScrollSpace('50vh');
+  } else {
+    // Landscape mode - no extra space needed
+    window.setExtraScrollSpace(null);
+  }
+};
+
+// Check on load and orientation change
+setTimeout(checkOrientation, 100);
+window.addEventListener('resize', checkOrientation);

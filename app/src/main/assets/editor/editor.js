@@ -108,6 +108,11 @@ window.setTheme = function (themeName) {
       if (editorEl) {
         const bg = window.getComputedStyle(editorEl).backgroundColor;
         document.body.style.backgroundColor = bg;
+        // Also update scroll-spacer to match editor color
+        const scrollSpacer = document.getElementById('scroll-spacer');
+        if (scrollSpacer) {
+          scrollSpacer.style.backgroundColor = bg;
+        }
       }
     }, 50); // Small delay to ensure theme is fully applied
 
@@ -1410,6 +1415,11 @@ function setupEditor() {
   // -------------------------------------------
   const bg = window.getComputedStyle(editorEl).backgroundColor
   document.body.style.backgroundColor = bg
+  // Also update scroll-spacer to match editor color
+  const scrollSpacer = document.getElementById('scroll-spacer');
+  if (scrollSpacer) {
+    scrollSpacer.style.backgroundColor = bg;
+  }
 
   window.insertText = function (text) {
     view.dispatch(view.state.replaceSelection(text));
