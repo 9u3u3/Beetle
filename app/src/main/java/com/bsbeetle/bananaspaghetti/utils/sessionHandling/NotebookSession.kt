@@ -201,6 +201,7 @@ class NotebookSession(context: Context, name: String = "Notebook") :
                                                                 .replace("\\n", "\n")
                                                                 .replace("\\r", "\r")
                                                                 .replace("\\'", "'")
+                                                                .replace("\\\"", "\"")
                                                                 .replace("\\\\", "\\")
                                                 saveNotebookContent(content)
                                                 _hasUnsavedChanges.value = false
@@ -333,8 +334,11 @@ class NotebookSession(context: Context, name: String = "Notebook") :
                 Log.d(TAG, "Content read successfully: ${content.length} chars")
                 Log.d(TAG, "First 100 chars: ${content.take(100)}")
 
+                // First, fix any corrupted content from previous saves (where " became \")
+                val fixedContent = content.replace("\\\"", "\"")
+                
                 val escapedContent =
-                        content.replace("\\", "\\\\")
+                        fixedContent.replace("\\", "\\\\")
                                 .replace("'", "\\'")
                                 .replace("\n", "\\n")
                                 .replace("\r", "\\r")
@@ -437,6 +441,7 @@ class NotebookSession(context: Context, name: String = "Notebook") :
                             ?.replace("\\n", "\n")
                             ?.replace("\\r", "\r")
                             ?.replace("\\'", "'")
+                            ?.replace("\\\"", "\"")
                             ?.replace("\\\\", "\\")
                             ?: ""
             callback(content)
