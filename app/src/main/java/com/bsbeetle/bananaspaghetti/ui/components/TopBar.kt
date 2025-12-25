@@ -55,6 +55,8 @@ import com.bsbeetle.bananaspaghetti.utils.webViewHandling.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
+import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -63,10 +65,16 @@ fun TopBar(modifier: Modifier = Modifier, context: Context) {
         val bufferViewModel: BufferViewModel = LocalBufferViewModel.current
         val editorViewModel: EditorViewModel = LocalEditorViewModel.current
         val fileViewModel: FileViewModel = LocalFileViewModel.current
+        val keyboardViewModel = LocalKeyboardViewModel.current
+        val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
         val configuration = LocalConfiguration.current
         val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         val webView = editorViewModel.webView
         val coroutineScope = rememberCoroutineScope()
+        
+        // Scale bar height based on settings
+        val baseHeight = if (isLandscape) 18.dp else 28.dp
+        val barHeight = baseHeight * uiState.topBarScale
 
         // State for unsaved file close confirmation
         var fileToClose by remember { mutableStateOf<DocumentFile?>(null) }
@@ -76,7 +84,7 @@ fun TopBar(modifier: Modifier = Modifier, context: Context) {
                 modifier =
                         modifier.background(Color(0xFF1B1B1B))
                                 .fillMaxWidth()
-                                .height(if (isLandscape) 18.dp else 28.dp)
+                                .height(barHeight)
         ) {
                 LazyRow(
                         modifier = Modifier.fillMaxSize(),
@@ -441,11 +449,18 @@ fun LeftTopBar(
 ) {
         val configuration = LocalConfiguration.current
         val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val keyboardViewModel = LocalKeyboardViewModel.current
+        val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
+        
+        // Scale bar height and icon sizes based on settings
+        val baseHeight = if (isLandscape) 18.dp else 28.dp
+        val barHeight = baseHeight * uiState.topBarScale
+        val iconSize = 14.dp * uiState.topBarScale
 
         Box(
                 modifier =
                         modifier.background(Color(0xFF1B1B1B))
-                                .height(if (isLandscape) 18.dp else 28.dp)
+                                .height(barHeight)
                                 .padding(start = 4.dp)
         ) {
                 Row(
@@ -517,7 +532,7 @@ fun LeftTopBar(
                                                 imageVector = Icons.Default.Search,
                                                 contentDescription = "Search",
                                                 tint = Color(0xFFCCCCCC),
-                                                modifier = Modifier.size(14.dp)
+                                                modifier = Modifier.size(iconSize)
                                         )
                                 }
 
@@ -544,7 +559,7 @@ fun LeftTopBar(
 }
 
 @Composable
-private fun TopBarIconButton(icon: Int, onClick: () -> Unit) {
+private fun TopBarIconButton(icon: Int, onClick: () -> Unit, iconSize: androidx.compose.ui.unit.Dp = 14.dp) {
         Box(
                 modifier =
                         Modifier.clickable { onClick() }.fillMaxHeight().padding(horizontal = 4.dp),
@@ -554,7 +569,7 @@ private fun TopBarIconButton(icon: Int, onClick: () -> Unit) {
                         painter = painterResource(icon),
                         contentDescription = null,
                         tint = Color(0xFFCCCCCC),
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(iconSize)
                 )
         }
 }
@@ -567,6 +582,12 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
         val browserViewModel = LocalBrowserViewModel.current
         val fileViewModel = LocalFileViewModel.current
         val bufferViewModel = LocalBufferViewModel.current
+        val keyboardViewModel = LocalKeyboardViewModel.current
+        val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
+        
+        // Scale bar height based on settings
+        val baseHeight = if (isLandscape) 18.dp else 28.dp
+        val barHeight = baseHeight * uiState.topBarScale
 
         // Helper to save content before navigation
         val currentEditorSession =
@@ -581,7 +602,7 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
         Box(
                 modifier =
                         modifier.background(Color(0xFF1B1B1B))
-                                .height(if (isLandscape) 18.dp else 28.dp)
+                                .height(barHeight)
                                 .padding(end = 4.dp),
                 contentAlignment = Alignment.CenterEnd
         ) {
@@ -730,12 +751,18 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
 fun LeftTermTopBar(modifier: Modifier = Modifier) {
         val configuration = LocalConfiguration.current
         val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val keyboardViewModel = LocalKeyboardViewModel.current
+        val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
+        
+        // Scale bar height based on settings
+        val baseHeight = if (isLandscape) 18.dp else 28.dp
+        val barHeight = baseHeight * uiState.topBarScale
 
         Box(
                 modifier =
                         modifier.background(Color(0xFF1B1B1B))
                                 .fillMaxWidth()
-                                .height(if (isLandscape) 18.dp else 28.dp)
+                                .height(barHeight)
                                 .padding(start = 20.dp)
         ) {
                 Row(
@@ -885,11 +912,17 @@ fun TerminalPortraitTopBar(
         onMenuClick: () -> Unit,
         navController: NavController
 ) {
+        val keyboardViewModel = LocalKeyboardViewModel.current
+        val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
+        
+        // Scale bar height based on settings
+        val barHeight = 28.dp * uiState.topBarScale
+        
         Box(
                 modifier =
                         modifier.background(Color(0xFF1B1B1B))
                                 .fillMaxWidth()
-                                .height(28.dp)
+                                .height(barHeight)
                                 .padding(horizontal = 4.dp)
         ) {
                 Row(

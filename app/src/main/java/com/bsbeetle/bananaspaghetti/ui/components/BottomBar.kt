@@ -57,6 +57,7 @@ import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
 import com.bsbeetle.bananaspaghetti.viewmodel.DiagnosticItem
 import com.bsbeetle.bananaspaghetti.viewmodel.LspViewModel
+import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -85,6 +86,17 @@ fun BottomBar(
         val context = LocalContext.current
 
         val lspStatus by lspViewModel.lspStatus.collectAsStateWithLifecycle()
+        
+        // Get bottom bar scale from settings
+        val keyboardViewModel = LocalKeyboardViewModel.current
+        val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
+        val bottomBarScale = uiState.bottomBarScale
+        
+        // Scale heights based on settings
+        val statusBarHeight = 18.dp * bottomBarScale
+        val tabBarHeight = 24.dp * bottomBarScale
+        val iconSize = 9.dp * bottomBarScale
+        val fontSize = 9.sp * bottomBarScale
 
         // Tab state
         var selectedTab by remember { mutableStateOf(BottomPanelTab.PROBLEMS) }
@@ -136,11 +148,11 @@ fun BottomBar(
 
         Box(modifier = modifier.height(logHeight)) {
                 Column {
-                        // Status bar header - 18dp (UNCHANGED)
+                        // Status bar header - scaled based on settings
                         Box(
                                 modifier =
                                         Modifier.fillMaxWidth()
-                                                .height(18.dp)
+                                                .height(statusBarHeight)
                                                 .background(color)
                                                 .draggable(
                                                         orientation = Orientation.Vertical,
@@ -154,7 +166,7 @@ fun BottomBar(
                                                                                                         -delta.toDp()
                                                                                                 })
                                                                                         .coerceIn(
-                                                                                                18.dp,
+                                                                                                statusBarHeight,
                                                                                                 screenHeight
                                                                                         )
                                                                 }
@@ -168,7 +180,7 @@ fun BottomBar(
                                                 text =
                                                         "Ln ${lspStatus.line}, Col ${lspStatus.column}",
                                                 fontFamily = codaRegular,
-                                                fontSize = 9.sp,
+                                                fontSize = fontSize,
                                                 color = Color(0xFFFFFFFF)
                                         )
 
@@ -290,11 +302,11 @@ fun BottomBar(
                                 }
                         }
 
-                        // Tab bar - 24dp
+                        // Tab bar - scaled based on settings
                         Row(
                                 modifier =
                                         Modifier.fillMaxWidth()
-                                                .height(24.dp)
+                                                .height(tabBarHeight)
                                                 .background(Color(0xFF1E1E1E)),
                                 verticalAlignment = Alignment.CenterVertically
                         ) {

@@ -69,7 +69,9 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
             leftKeyboardHeight = sharedPreferences.getFloat("leftKeyboardHeight", 0.5f),
             rightKeyboardHeight = sharedPreferences.getFloat("rightKeyboardHeight", 0.5f),
             linkedKeyboardHeight = sharedPreferences.getBoolean("linkedKeyboardHeight", true),
-            useLandscapeIme = sharedPreferences.getBoolean("useLandscapeIme", false)
+            useLandscapeIme = sharedPreferences.getBoolean("useLandscapeIme", false),
+            topBarScale = sharedPreferences.getFloat("topBarScale", 1.0f),
+            bottomBarScale = sharedPreferences.getFloat("bottomBarScale", 1.0f)
         )
     }
 
@@ -90,6 +92,8 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
             .putFloat("rightKeyboardHeight", state.rightKeyboardHeight)
             .putBoolean("linkedKeyboardHeight", state.linkedKeyboardHeight)
             .putBoolean("useLandscapeIme", state.useLandscapeIme)
+            .putFloat("topBarScale", state.topBarScale)
+            .putFloat("bottomBarScale", state.bottomBarScale)
             .apply()
     }
 
@@ -496,6 +500,22 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
     fun toggleUseLandscapeIme() {
         _uiState.update { currentState ->
             currentState.copy(useLandscapeIme = !currentState.useLandscapeIme)
+        }
+        saveSettings()
+    }
+
+    // Update top bar scale factor (0.7 to 1.5)
+    fun updateTopBarScale(scale: Float) {
+        _uiState.update { currentState ->
+            currentState.copy(topBarScale = scale.coerceIn(0.7f, 1.5f))
+        }
+        saveSettings()
+    }
+
+    // Update bottom bar scale factor (0.7 to 1.5)
+    fun updateBottomBarScale(scale: Float) {
+        _uiState.update { currentState ->
+            currentState.copy(bottomBarScale = scale.coerceIn(0.7f, 1.5f))
         }
         saveSettings()
     }
