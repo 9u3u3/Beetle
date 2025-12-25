@@ -16,3 +16,5 @@ local.properties
 /node_modules
 app/src/main/assets/editor/editor.bundle.js
 app/src/main/assets/editor/editor.bundle.js.map
+app/src/main/assets/editor/notebook.bundle.js
+app/src/main/assets/editor/notebook.bundle.js.map

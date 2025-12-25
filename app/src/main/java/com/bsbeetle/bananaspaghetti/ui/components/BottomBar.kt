@@ -73,7 +73,9 @@ fun BottomBar(
         color: Color,
         lspViewModel: LspViewModel = viewModel(),
         gitViewModel: GitViewModel = viewModel(),
-        editorViewModel: com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel? = null
+        editorViewModel: com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel? = null,
+        expandToHalf: Boolean = false,
+        onExpandHandled: () -> Unit = {}
 ) {
 
         var targetHeight by remember { mutableStateOf(18.dp) }
@@ -86,16 +88,30 @@ fun BottomBar(
 
         // Tab state
         var selectedTab by remember { mutableStateOf(BottomPanelTab.PROBLEMS) }
+        
+        // Handle external request to expand to half screen and switch to terminal
+        androidx.compose.runtime.LaunchedEffect(expandToHalf) {
+                if (expandToHalf) {
+                        targetHeight = screenHeight * 0.5f
+                        selectedTab = BottomPanelTab.TERMINAL
+                        onExpandHandled()
+                }
+        }
 
         // Get current editor session and use its linked terminals
-        val currentEditorSession = remember {
-                SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
-                        as? com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
+        // Use fallback logic: first try activeSessionIndex, then find any EditorSession
+        val currentEditorSession = remember(SessionList.activeSessionIndex, SessionList.sessions.size) {
+                val sessionAtIndex = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as?
+                        com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
+                // Fallback: find any EditorSession if activeSessionIndex doesn't point to one
+                sessionAtIndex ?: SessionList.sessions.filterIsInstance<com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession>().lastOrNull()
         }
-        
+
         // Terminal sessions for bottom panel - use EditorSession's linked terminals if available
         // This ensures terminals persist when navigating away and back
-        val panelTerminals = currentEditorSession?.linkedTerminals ?: remember { mutableStateListOf<TerminalSession>() }
+        val panelTerminals =
+                currentEditorSession?.linkedTerminals
+                        ?: remember { mutableStateListOf<TerminalSession>() }
         var activeTerminalIndex by remember { mutableIntStateOf(0) }
 
         // Coroutine scope for async terminal creation
@@ -331,14 +347,10 @@ fun BottomBar(
                                                                                         .selectedFolderUri
                                                                                         ?.let { uri
                                                                                                 ->
-                                                                                                com.bsbeetle
-                                                                                                        .bananaspaghetti
-                                                                                                        .liveserver
-                                                                                                        .LiveServerManager
-                                                                                                        .getPathFromUri(
-                                                                                                                context,
-                                                                                                                uri
-                                                                                                        )
+                                                                                                extractPathFromUri(
+                                                                                                        context,
+                                                                                                        uri
+                                                                                                )
                                                                                         }
 
                                                                         // Fallback to file's parent
@@ -351,11 +363,7 @@ fun BottomBar(
                                                                                                 ?.let {
                                                                                                         uri
                                                                                                         ->
-                                                                                                        com.bsbeetle
-                                                                                                                .bananaspaghetti
-                                                                                                                .liveserver
-                                                                                                                .LiveServerManager
-                                                                                                                .getPathFromUri(
+                                                                                                        extractPathFromUri(
                                                                                                                         context,
                                                                                                                         uri
                                                                                                                 )
@@ -376,14 +384,10 @@ fun BottomBar(
                                                                                                 ?.let {
                                                                                                         uri
                                                                                                         ->
-                                                                                                        com.bsbeetle
-                                                                                                                .bananaspaghetti
-                                                                                                                .liveserver
-                                                                                                                .LiveServerManager
-                                                                                                                .getPathFromUri(
-                                                                                                                        context,
-                                                                                                                        uri
-                                                                                                                )
+                                                                                                        extractPathFromUri(
+                                                                                                                context,
+                                                                                                                uri
+                                                                                                        )
                                                                                                 }
 
                                                                         val newTerminal =
@@ -825,4 +829,51 @@ private fun TerminalContent(
                         }
                 }
         }
+}
+
+/** Convert a content URI to a real file path. Works with SAF (Storage Access Framework) URIs. */
+private fun extractPathFromUri(context: Context, uri: android.net.Uri): String? {
+        // If it's already a file path
+        if (uri.scheme == "file") {
+                return uri.path
+        }
+
+        // For content URIs, try to extract the path from the document ID
+        if (uri.scheme == "content") {
+                val docId =
+                        try {
+                                android.provider.DocumentsContract.getDocumentId(uri)
+                        } catch (e: Exception) {
+                                try {
+                                        android.provider.DocumentsContract.getTreeDocumentId(uri)
+                                } catch (e2: Exception) {
+                                        null
+                                }
+                        }
+
+                if (docId != null) {
+                        val split = docId.split(":")
+                        if (split.size >= 2) {
+                                val type = split[0]
+                                val path = split.subList(1, split.size).joinToString(":")
+                                return when {
+                                        type == "primary" -> "/storage/emulated/0/$path"
+                                        type == "raw" -> path
+                                        type.startsWith("/") -> docId
+                                        else -> "/storage/$type/$path"
+                                }
+                        } else if (docId.startsWith("/")) {
+                                return docId
+                        }
+                }
+
+                uri.path?.let { path ->
+                        val primaryMatch = Regex("primary:(.+)").find(path)
+                        if (primaryMatch != null) {
+                                return "/storage/emulated/0/${primaryMatch.groupValues[1]}"
+                        }
+                }
+        }
+
+        return null
 }

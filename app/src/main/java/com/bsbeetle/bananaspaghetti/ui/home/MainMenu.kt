@@ -1,8 +1,12 @@
 package com.bsbeetle.bananaspaghetti.ui.home
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.DocumentsContract
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -31,16 +35,22 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.documentfile.provider.DocumentFile
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.LocalAuthViewModel
+import com.bsbeetle.bananaspaghetti.LocalBufferViewModel
+import com.bsbeetle.bananaspaghetti.LocalEditorViewModel
 import com.bsbeetle.bananaspaghetti.LocalFileViewModel
 import com.bsbeetle.bananaspaghetti.LocalTerminalViewModel
 import com.bsbeetle.bananaspaghetti.R
+import com.bsbeetle.bananaspaghetti.ui.components.SessionTypeSelectionDialog
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.ui.theme.KarmaticFont
 import com.bsbeetle.bananaspaghetti.ui.theme.born2bsporty
-import com.bsbeetle.bananaspaghetti.utils.fileHandling.fileLauncher
+import com.bsbeetle.bananaspaghetti.utils.fileHandling.getFileName
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionFactory
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
 import com.bsbeetle.bananaspaghetti.viewmodel.TerminalViewModel
@@ -53,6 +63,13 @@ import com.kyant.backdrop.effects.vibrancy
 private const val PREFS_NAME = "beetle_storage_prefs"
 private const val KEY_SHOWN_STORAGE_HINT = "shown_storage_hint"
 
+// Action type enum for tracking which action triggered the session type dialog
+private enum class FileAction {
+    NEW_FILE,
+    OPEN_FILE,
+    OPEN_FOLDER
+}
+
 /**
  * Main menu component for home screen.
  * Contains Beetle branding and primary action buttons.
@@ -60,10 +77,11 @@ private const val KEY_SHOWN_STORAGE_HINT = "shown_storage_hint"
 @Composable
 fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
     val context = LocalContext.current
-    val launcher = fileLauncher(context, navController)
     val buttonFontSize = 30.sp
     val terminalViewModel: TerminalViewModel = LocalTerminalViewModel.current
     val fileViewModel = LocalFileViewModel.current
+    val editorViewModel = LocalEditorViewModel.current
+    val bufferViewModel = LocalBufferViewModel.current
     
     // SharedPreferences to track if storage hint has been shown
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
@@ -78,6 +96,81 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
     val authViewModel = LocalAuthViewModel.current
     val userEmail by authViewModel.userEmail.collectAsState()
     
+    // State for session type selection
+    var showSessionTypeDialog by remember { mutableStateOf(false) }
+    var currentFileAction by remember { mutableStateOf<FileAction?>(null) }
+    var selectedSessionType by remember { mutableStateOf<String?>(null) } // "editor" or "notebook"
+    
+    // Launcher for Editor sessions
+    val editorLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val uri: Uri? = result.data?.data
+            if (uri != null) {
+                val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                context.contentResolver.takePersistableUriPermission(uri, flags)
+                
+                if (DocumentsContract.isDocumentUri(context, uri)) {
+                    // File selected - create Editor session
+                    fileViewModel.selectedUri = uri
+                    fileViewModel.selectedFolderUri = null
+                    
+                    val fileName = getFileName(context, uri)
+                    val session = SessionFactory.createSession(context.applicationContext, fileName, uri.toString())
+                    session.id?.let { id -> bufferViewModel.setSessionId(id) }
+                    
+                    val view = session.getOrInitView()
+                    editorViewModel.setEditorWebView(view)
+                    navController.navigate(Screen.OpenFile.route)
+                } else {
+                    // Folder selected - create Editor session with folder
+                    fileViewModel.selectedFolderUri = uri
+                    val folderDoc = DocumentFile.fromTreeUri(context, uri)
+                    val session = EditorSession(context.applicationContext, folderDoc?.name ?: "Project")
+                    session.projectRoot = folderDoc
+                    session.id?.let { id -> bufferViewModel.setSessionId(id) }
+                    editorViewModel.setEditorWebView(SessionList.sessions[SessionList.activeSessionIndex!!].view!!)
+                    navController.navigate(Screen.OpenFolder.route)
+                }
+            }
+        }
+    }
+    
+    // Launcher for Notebook sessions
+    val notebookLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val uri: Uri? = result.data?.data
+            if (uri != null) {
+                val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                context.contentResolver.takePersistableUriPermission(uri, flags)
+                
+                if (DocumentsContract.isDocumentUri(context, uri)) {
+                    // File selected - create Notebook session
+                    fileViewModel.selectedUri = uri
+                    fileViewModel.selectedFolderUri = null
+                    
+                    val fileName = getFileName(context, uri)
+                    val session = NotebookSession(context.applicationContext, fileName)
+                    session.setFilePath(uri.toString())
+                    session.id?.let { id -> bufferViewModel.setSessionId(id) }
+                    
+                    navController.navigate(Screen.Notebook.route)
+                } else {
+                    // Folder selected - create Notebook session with folder
+                    fileViewModel.selectedFolderUri = uri
+                    val folderDoc = DocumentFile.fromTreeUri(context, uri)
+                    val session = NotebookSession(context.applicationContext, folderDoc?.name ?: "Notebook")
+                    session.projectRoot = folderDoc
+                    session.id?.let { id -> bufferViewModel.setSessionId(id) }
+                    navController.navigate(Screen.Notebook.route)
+                }
+            }
+        }
+    }
+    
     // Helper function to check and show hint before action
     fun executeWithHintCheck(action: () -> Unit) {
         if (!hasShownHint) {
@@ -85,6 +178,27 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
             showStorageHintDialog = true
         } else {
             action()
+        }
+    }
+    
+    // Helper to launch file picker after session type is selected
+    fun launchFilePicker(fileAction: FileAction, sessionType: String) {
+        val intent = when (fileAction) {
+            FileAction.NEW_FILE -> Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "*/*"
+            }
+            FileAction.OPEN_FILE -> Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "*/*"
+            }
+            FileAction.OPEN_FOLDER -> Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+        }
+        
+        if (sessionType == "editor") {
+            editorLauncher.launch(intent)
+        } else {
+            notebookLauncher.launch(intent)
         }
     }
 
@@ -141,11 +255,8 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
                     modifier = Modifier.weight(1f).height(50.dp),
                     onClick = {
                         executeWithHintCheck {
-                            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                                addCategory(Intent.CATEGORY_OPENABLE)
-                                type = "*/*"
-                            }
-                            launcher.launch(intent)
+                            currentFileAction = FileAction.NEW_FILE
+                            showSessionTypeDialog = true
                         }
                     }
                 )
@@ -157,11 +268,8 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
                     modifier = Modifier.weight(1f).height(50.dp),
                     onClick = {
                         executeWithHintCheck {
-                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                                addCategory(Intent.CATEGORY_OPENABLE)
-                                type = "*/*"
-                            }
-                            launcher.launch(intent)
+                            currentFileAction = FileAction.OPEN_FILE
+                            showSessionTypeDialog = true
                         }
                     }
                 )
@@ -177,8 +285,8 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
                 modifier = Modifier.width(400.dp).height(50.dp),
                 onClick = {
                     executeWithHintCheck {
-                        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
-                        launcher.launch(intent)
+                        currentFileAction = FileAction.OPEN_FOLDER
+                        showSessionTypeDialog = true
                     }
                 }
             )
@@ -217,6 +325,30 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
             }
             
         }
+    }
+    
+    // Session Type Selection Dialog
+    if (showSessionTypeDialog && currentFileAction != null) {
+        SessionTypeSelectionDialog(
+            onDismiss = {
+                showSessionTypeDialog = false
+                currentFileAction = null
+            },
+            onSelectEditor = {
+                currentFileAction?.let { action ->
+                    launchFilePicker(action, "editor")
+                }
+                showSessionTypeDialog = false
+                currentFileAction = null
+            },
+            onSelectNotebook = {
+                currentFileAction?.let { action ->
+                    launchFilePicker(action, "notebook")
+                }
+                showSessionTypeDialog = false
+                currentFileAction = null
+            }
+        )
     }
     
     // Storage hint dialog - shows only on first use

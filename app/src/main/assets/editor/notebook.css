@@ -1,0 +1,399 @@
+/* =========================================
+   Python Notebook Styles - Google Colab-like
+   ========================================= */
+
+:root {
+    --bg-primary: #1e1e1e;
+    --bg-secondary: #252526;
+    --bg-tertiary: #2d2d2d;
+    --bg-cell: #1e1e1e;
+    --bg-cell-hover: #262626;
+    --bg-cell-selected: #2a2d3e;
+    --border-color: #3c3c3c;
+    --border-selected: #0078d4;
+    --text-primary: #d4d4d4;
+    --text-secondary: #808080;
+    --accent-blue: #0078d4;
+    --accent-green: #4ec9b0;
+    --accent-orange: #ce9178;
+    --output-bg: #1a1a1a;
+    --error-red: #f44747;
+    --success-green: #6a9955;
+    --running-yellow: #dcdcaa;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    height: 100%;
+    width: 100%;
+}
+
+body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    font-size: 12px;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* =========================================
+   Toolbar Styles
+   ========================================= */
+
+#notebook-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+#notebook-toolbar button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.15s ease;
+}
+
+#notebook-toolbar button:hover {
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
+}
+
+#notebook-toolbar button:active {
+    transform: scale(0.96);
+}
+
+.toolbar-icon {
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.toolbar-label {
+    font-size: 10px;
+}
+
+.toolbar-spacer {
+    flex: 1;
+}
+
+#notebook-status {
+    font-size: 10px;
+    color: var(--text-secondary);
+    padding-right: 4px;
+}
+
+/* Save indicator dot - shown when there are unsaved changes */
+.save-indicator {
+    color: white;
+    font-size: 8px;
+    margin-right: 6px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.save-indicator.visible {
+    opacity: 1;
+}
+
+/* =========================================
+   Notebook Container
+   ========================================= */
+
+#notebook-container {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px;
+    min-height: 0;
+    /* Important for flex scrolling */
+}
+
+/* =========================================
+   Cell Styles (Colab-like)
+   ========================================= */
+
+.notebook-cell {
+    margin-bottom: 8px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: var(--bg-cell);
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.notebook-cell:hover {
+    border-color: var(--border-color);
+}
+
+.notebook-cell.selected {
+    border-color: var(--border-selected);
+    background: var(--bg-cell-selected);
+}
+
+.notebook-cell.running {
+    border-color: var(--running-yellow);
+}
+
+.notebook-cell.running::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--running-yellow);
+    border-radius: 6px 0 0 6px;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 0.5;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+/* Cell Header with controls */
+.cell-header {
+    display: flex;
+    align-items: center;
+    padding: 2px 6px;
+    background: var(--bg-secondary);
+    border-radius: 6px 6px 0 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.cell-number {
+    font-size: 9px;
+    color: var(--text-secondary);
+    padding: 1px 6px;
+    background: var(--bg-tertiary);
+    border-radius: 3px;
+    margin-right: 6px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.cell-header-spacer {
+    flex: 1;
+}
+
+.cell-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 11px;
+    transition: all 0.15s ease;
+}
+
+.cell-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.cell-btn.run-btn:hover {
+    color: var(--accent-green);
+}
+
+.cell-btn.delete-btn:hover {
+    color: var(--error-red);
+}
+
+.cell-btn.clear-btn:hover {
+    color: var(--accent-orange);
+}
+
+/* Code Editor Area */
+.cell-code {
+    min-height: 40px;
+    border-radius: 0 0 6px 6px;
+}
+
+.cell-code .cm-editor {
+    background: var(--bg-cell);
+    font-size: 12px;
+}
+
+.cell-code .cm-content {
+    padding: 8px !important;
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+}
+
+.cell-code .cm-gutters {
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
+}
+
+/* =========================================
+   Output Area
+   ========================================= */
+
+.cell-output {
+    background: var(--output-bg);
+    border-top: 1px solid var(--border-color);
+    border-radius: 0 0 6px 6px;
+    padding: 8px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 300px;
+    overflow-y: auto;
+    display: none;
+}
+
+.cell-output.visible {
+    display: block;
+}
+
+.cell-output.stdout {
+    color: var(--text-primary);
+}
+
+.cell-output.stderr {
+    color: var(--error-red);
+}
+
+.cell-output img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 3px;
+    margin-top: 6px;
+}
+
+/* Output execution info */
+.cell-output-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 9px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.execution-time {
+    color: var(--accent-green);
+}
+
+/* =========================================
+   Add Cell Button (between cells)
+   ========================================= */
+
+.add-cell-between {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    margin: -8px 0;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.add-cell-between:hover {
+    opacity: 1;
+}
+
+.add-cell-between button {
+    padding: 2px 12px;
+    font-size: 12px;
+    background: var(--bg-tertiary);
+    border: 1px dashed var(--border-color);
+    border-radius: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.add-cell-between button:hover {
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+}
+
+/* =========================================
+   Empty State
+   ========================================= */
+
+.empty-notebook {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.empty-notebook-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-notebook button {
+    margin-top: 16px;
+    padding: 10px 24px;
+    background: var(--accent-blue);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* =========================================
+   Scrollbar Styling
+   ========================================= */
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}

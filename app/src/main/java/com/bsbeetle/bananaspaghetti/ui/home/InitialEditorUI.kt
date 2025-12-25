@@ -42,6 +42,7 @@ import com.bsbeetle.bananaspaghetti.utils.fileHandling.readFromFile
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.saveFile
 import com.bsbeetle.bananaspaghetti.utils.languageHandling.LanguageRegistry
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.viewmodel.*
@@ -54,7 +55,8 @@ fun InitialEditorUI(navController: NavController) {
     // Log.d("Sessions", "Active Session Index: ${SessionList.activeSessionIndex}")
 
     // Get current editor session for content preservation
-    val currentSession = remember {
+    // Use activeSessionIndex as key so it updates when session changes
+    val currentSession = remember(SessionList.activeSessionIndex) {
         SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? EditorSession
     }
 
@@ -63,6 +65,7 @@ fun InitialEditorUI(navController: NavController) {
     val sliderViewModel: SliderViewModel = LocalSliderViewModel.current
     val editorViewModel: EditorViewModel = LocalEditorViewModel.current
     val bufferViewModel: BufferViewModel = LocalBufferViewModel.current
+    val browserViewModel = LocalBrowserViewModel.current
     val lspViewModel: LspViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
     val gitViewModel: com.bsbeetle.bananaspaghetti.directGit.viewmodel.GitViewModel =
             androidx.lifecycle.viewmodel.compose.viewModel()
@@ -98,6 +101,12 @@ fun InitialEditorUI(navController: NavController) {
         if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
             session.setLspViewModel(lspViewModel)
             session.setBufferViewModel(bufferViewModel)
+            // Switch to this session's buffer
+            session.id?.let { id -> bufferViewModel.setSessionId(id) }
+        } else if (session is NotebookSession) {
+            session.setBufferViewModel(bufferViewModel)
+            // Switch to this session's buffer
+            session.id?.let { id -> bufferViewModel.setSessionId(id) }
         }
     }
 
@@ -156,9 +165,22 @@ fun InitialEditorUI(navController: NavController) {
     var pendingCommitFiles by remember { mutableStateOf(listOf<String>()) }
     var missingLanguageExt by remember { mutableStateOf("") }
     var showSearchBar by remember { mutableStateOf(false) }
+    
+    // Run Button States
+    var showRunPackageDialog by remember { mutableStateOf(false) }
+    var runMissingPackage by remember { mutableStateOf("") }
+    var runPendingFilePath by remember { mutableStateOf<String?>(null) }
+    var expandBottomBar by remember { mutableStateOf(false) }
 
     // 🚀 File Load (with LSP check & Performance fix)
     LaunchedEffect(fileViewModel.selectedUri) {
+        // Check if this is a NotebookSession - they handle their own content loading
+        val activeSession = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
+        val isNotebookSession = activeSession is NotebookSession
+        if (isNotebookSession) {
+            Log.d("Buffer", "NotebookSession detected - will skip loadContentWhenReady")
+        }
+
         // delay(50) removed to speed up LSP startup
         fileViewModel.selectedUri?.let { uri ->
             DocumentFile.fromSingleUri(context, uri)?.let documentFile@{ documentFile ->
@@ -221,7 +243,15 @@ fun InitialEditorUI(navController: NavController) {
                         }
 
                 bufferViewModel.currentFile.value = documentFile // Track current file
-                loadContentWhenReady(editorViewModel.webView, content)
+
+                // Only load content via loadContentWhenReady for non-notebook sessions
+                // NotebookSession handles its own content loading via setFilePath
+                if (!isNotebookSession) {
+                    loadContentWhenReady(editorViewModel.webView, content)
+                } else {
+                    Log.d("Buffer", "Skipping loadContentWhenReady for NotebookSession")
+                }
+
                 fileViewModel.currentFilePath = uri.toString()
 
                 // Re-inject LspViewModel when file changes/session might change
@@ -364,6 +394,69 @@ fun InitialEditorUI(navController: NavController) {
                     showMenuIcon = !isLandscape,
                     showBranchButton = isLandscape,
                     onSaveClick = { saveFile(fileViewModel, bufferViewModel, context) },
+                    onRunClick = {
+                        // Run the current file
+                        Log.d("CodeRunner", "Run button clicked")
+                        Log.d("CodeRunner", "ActiveSessionIndex: ${SessionList.activeSessionIndex}")
+                        Log.d("CodeRunner", "Sessions count: ${SessionList.sessions.size}")
+                        Log.d("CodeRunner", "selectedUri: ${fileViewModel.selectedUri}")
+                        
+                        // Try to get EditorSession from activeSessionIndex first, 
+                        // then fall back to finding any EditorSession in the list
+                        var currentEditorSession = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? EditorSession
+                        
+                        if (currentEditorSession == null) {
+                            // Fall back: find the first (or most recent) EditorSession
+                            currentEditorSession = SessionList.sessions.filterIsInstance<EditorSession>().lastOrNull()
+                            Log.d("CodeRunner", "Fallback: found EditorSession: $currentEditorSession")
+                        }
+                        
+                        val currentUri = fileViewModel.selectedUri
+                        
+                        Log.d("CodeRunner", "currentEditorSession: $currentEditorSession")
+                        
+                        if (currentEditorSession == null) {
+                            Log.e("CodeRunner", "No editor session found in session list")
+                            android.widget.Toast.makeText(context, "No editor session", android.widget.Toast.LENGTH_SHORT).show()
+                            return@LeftTopBar
+                        }
+                        
+                        if (currentUri == null) {
+                            Log.e("CodeRunner", "No file URI - selectedUri is null")
+                            android.widget.Toast.makeText(context, "No file open", android.widget.Toast.LENGTH_SHORT).show()
+                            return@LeftTopBar
+                        }
+                        
+                        // First save the file
+                        saveFile(fileViewModel, bufferViewModel, context)
+                        
+                        // Get the file path
+                        val filePath = getPathFromUri(context, currentUri)
+                        Log.d("CodeRunner", "Running file: $filePath (from URI: $currentUri)")
+                        
+                        if (filePath == null) {
+                            android.widget.Toast.makeText(context, "Cannot get file path", android.widget.Toast.LENGTH_SHORT).show()
+                            return@LeftTopBar
+                        }
+                        
+                        // Get or create the runner terminal
+                        Log.d("CodeRunner", "Getting runner terminal...")
+                        val (terminal, wasNew) = currentEditorSession.getOrCreateRunnerTerminal(context)
+                        Log.d("CodeRunner", "Got terminal: $terminal, wasNew: $wasNew")
+                        
+                        // Build the command
+                        val runCmd = "clear && bash \$PREFIX/code-runner.sh \"$filePath\"\n"
+                        Log.d("CodeRunner", "Inserting command: $runCmd")
+                        
+                        // Insert command into terminal
+                        terminal.insertText(runCmd)
+                        Log.d("CodeRunner", "Command inserted into terminal")
+                        
+                        // Expand bottom bar to show terminal output
+                        expandBottomBar = true
+                        
+                        android.widget.Toast.makeText(context, "Running ${java.io.File(filePath).name}", android.widget.Toast.LENGTH_SHORT).show()
+                    },
                     onFileClick = {
                         if (isLandscape) {
                             topRightMode =
@@ -499,42 +592,101 @@ fun InitialEditorUI(navController: NavController) {
             }
 
             // Check if webView is available before rendering Editor
-            val webView = editorViewModel.webView
-            if (webView != null) {
-                Editor(
-                        Modifier.constrainAs(editor) {
-                            top.linkTo(topMiddle.bottom)
-                            bottom.linkTo(parent.bottom)
-                            // If using landscape IME mode, give full width to editor
-                            val showLeftKb = isLandscape && uiState.isLeftKeyboardVisible && !uiState.useLandscapeIme
-                            val showRightKb = isLandscape && uiState.isRightKeyboardVisible && !uiState.useLandscapeIme
-                            start.linkTo(
-                                    if (showLeftKb) leftKb.end
-                                    else parent.start
-                            )
-                            end.linkTo(
-                                    if (showRightKb) rightKb.start
-                                    else parent.end
-                            )
-                            width = Dimension.fillToConstraints
-                            height = Dimension.fillToConstraints
-                        },
-                        webView
+            // Collect from StateFlow for reactive updates when session changes
+            val currentWebView by editorViewModel.webViewFlow.collectAsStateWithLifecycle()
+            val webView = currentWebView // Local copy for smart cast
+
+            // Observe isReady state from the session
+            val session = webView?.session as? EditorSession
+            val isReadyFlow = session?.isReady
+            val isReady by isReadyFlow?.collectAsStateWithLifecycle() ?: mutableStateOf(false)
+
+            // Debug logging for session switching
+            LaunchedEffect(webView) {
+                Log.d(
+                        "InitialEditorUI",
+                        "webView changed! New webView for session: ${webView?.session?.name}"
                 )
-            } else {
-                // Fallback: Show loading state when webView is not ready
+                Log.d(
+                        "InitialEditorUI",
+                        "webView is ${if (webView != null) "NOT NULL" else "NULL"}"
+                )
+                if (webView != null) {
+                    val sess = webView.session
+                    when (sess) {
+                        is NotebookSession ->
+                                Log.d("InitialEditorUI", "Session isReady: ${sess.isReady.value}")
+                        is EditorSession ->
+                                Log.d("InitialEditorUI", "Session isReady: ${sess.isReady.value}")
+                        else -> Log.d("InitialEditorUI", "Unknown session type")
+                    }
+                }
+            }
+
+            // Main Editor Area - Show WebView immediately, with loading overlay if not ready
+            if (webView != null) {
                 Box(
-                        modifier = Modifier
-                                .constrainAs(editor) {
+                        modifier =
+                                Modifier.constrainAs(editor) {
                                     top.linkTo(topMiddle.bottom)
                                     bottom.linkTo(parent.bottom)
-                                    start.linkTo(parent.start)
-                                    end.linkTo(parent.end)
+                                    // If using landscape IME mode, give full width to editor
+                                    val showLeftKb =
+                                            isLandscape &&
+                                                    uiState.isLeftKeyboardVisible &&
+                                                    !uiState.useLandscapeIme
+                                    val showRightKb =
+                                            isLandscape &&
+                                                    uiState.isRightKeyboardVisible &&
+                                                    !uiState.useLandscapeIme
+                                    start.linkTo(if (showLeftKb) leftKb.end else parent.start)
+                                    end.linkTo(if (showRightKb) rightKb.start else parent.end)
                                     width = Dimension.fillToConstraints
                                     height = Dimension.fillToConstraints
                                 }
-                                .fillMaxSize()
-                                .background(Color(0xFF1E1E1E)),
+                ) {
+                    // Show WebView immediately - it will load in the background
+                    Editor(Modifier.fillMaxSize(), webView)
+
+                    // Loading overlay - fades out when ready
+                    if (!isReady) {
+                        Box(
+                                modifier = Modifier.fillMaxSize().background(Color(0xFF1E1E1E)),
+                                contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                            ) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                        modifier = Modifier.size(32.dp),
+                                        color = Color(0xFF007ACC),
+                                        strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                        text = "Loading editor...",
+                                        color = Color(0xFFAAAAAA),
+                                        fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Fallback: Show loading state when WebView doesn't exist yet
+                Box(
+                        modifier =
+                                Modifier.constrainAs(editor) {
+                                            top.linkTo(topMiddle.bottom)
+                                            bottom.linkTo(parent.bottom)
+                                            start.linkTo(parent.start)
+                                            end.linkTo(parent.end)
+                                            width = Dimension.fillToConstraints
+                                            height = Dimension.fillToConstraints
+                                        }
+                                        .fillMaxSize()
+                                        .background(Color(0xFF1E1E1E)),
                         contentAlignment = Alignment.Center
                 ) {
                     Column(
@@ -548,7 +700,7 @@ fun InitialEditorUI(navController: NavController) {
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                                text = "Loading editor...",
+                                text = "Initializing editor...",
                                 color = Color(0xFFAAAAAA),
                                 fontSize = 12.sp
                         )
@@ -566,7 +718,9 @@ fun InitialEditorUI(navController: NavController) {
                     color = Color(0xFF1B1B1B),
                     lspViewModel = lspViewModel,
                     gitViewModel = gitViewModel,
-                    editorViewModel = editorViewModel
+                    editorViewModel = editorViewModel,
+                    expandToHalf = expandBottomBar,
+                    onExpandHandled = { expandBottomBar = false }
             )
 
             if (!isLandscape) {
@@ -585,12 +739,24 @@ fun InitialEditorUI(navController: NavController) {
                                 gitViewModel.initializeGit()
                             }
                         },
-                        gitViewModel = gitViewModel
+                        gitViewModel = gitViewModel,
+                        // Quick action callbacks (buttons moved from top bar in portrait mode)
+                        onFileOptionsClick = { showFileMenu = true },
+                        onSearchClick = { showSearchBar = !showSearchBar },
+                        onZoomOutClick = {
+                            currentSession?.saveContent()
+                            navController.navigate(Screen.ZoomOut.route)
+                        },
+                        onSettingsClick = {
+                            currentSession?.saveContent()
+                            navController.navigate(Screen.Settings.route)
+                        }
                 )
             }
         }
 
-        // Extra Keys Row - Shows in portrait mode OR in landscape mode when useLandscapeIme is enabled
+        // Extra Keys Row - Shows in portrait mode OR in landscape mode when useLandscapeIme is
+        // enabled
         val showExtraKeys = !isLandscape || uiState.useLandscapeIme
         if (showExtraKeys) {
             val imeInsets = WindowInsets.ime

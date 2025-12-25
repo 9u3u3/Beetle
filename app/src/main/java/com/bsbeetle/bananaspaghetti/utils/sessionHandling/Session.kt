@@ -8,6 +8,7 @@ enum class SessionType {
     EDITOR,
     BROWSER,
     TERMINAL,
+    NOTEBOOK,
     DEMO
 }
 
@@ -15,6 +16,9 @@ abstract class Session(val context: Context, val type: SessionType, var name: St
     var id: Int? = null
     var view: CustomWebView? = null
     var _inputConnection: InputConnection? = null
+    
+    // Project root folder for the session (used by EditorSession and NotebookSession)
+    var projectRoot: androidx.documentfile.provider.DocumentFile? = null
 
     init {
         // Register session

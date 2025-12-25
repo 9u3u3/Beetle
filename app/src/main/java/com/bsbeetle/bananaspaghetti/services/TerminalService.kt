@@ -108,12 +108,13 @@ class TerminalService : Service() {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_DEFAULT // Default importance for foreground services
+                NotificationManager.IMPORTANCE_LOW // Low importance = silent, no popup
             ).apply {
                 description = "Keeps terminal sessions running in background"
                 setShowBadge(false)
-                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-                // Foreground service notifications cannot be dismissed anyway
+                lockscreenVisibility = Notification.VISIBILITY_SECRET // Hide on lock screen
+                enableVibration(false)
+                setSound(null, null)
             }
             
             val notificationManager = getSystemService(NotificationManager::class.java)
@@ -153,15 +154,15 @@ class TerminalService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(text)
-            .setSmallIcon(R.drawable.ic_notification_beetle) // Minimal "B" icon
+            .setSmallIcon(R.drawable.ic_notification_beetle)
             .setContentIntent(pendingIntent)
-            .setOngoing(true) // Cannot be dismissed by user
-            .setAutoCancel(false) // Don't auto-cancel
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT) // Default priority for persistent notifications
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .setPriority(NotificationCompat.PRIORITY_LOW) // Low priority = minimal visibility
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE) // Show immediately
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // Show on lock screen
-            .setColor(0xFF4EC9B0.toInt()) // Beetle teal accent color
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_DEFERRED) // Defer showing
+            .setVisibility(NotificationCompat.VISIBILITY_SECRET) // Hide from lock screen
+            .setSilent(true) // No sound
             .build()
     }
     

@@ -111,14 +111,8 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
     var showSshSetupDialog by remember { mutableStateOf(false) }
     var showPullBranchDialog by remember { mutableStateOf(false) }
 
-    // Show SSH setup dialog if keys are not configured (only once per session)
-    var hasShownSshDialog by remember { mutableStateOf(false) }
-    LaunchedEffect(uiState.sshKeysConfigured) {
-        if (!uiState.sshKeysConfigured && !showSshSetupDialog && !hasShownSshDialog) {
-            showSshSetupDialog = true
-            hasShownSshDialog = true
-        }
-    }
+    // SSH setup dialog is now only shown when user clicks SSH button in header
+    // (removed auto-popup behavior)
 
     // Action to retry after auth
     var authAction by remember { mutableStateOf<((String, String, Boolean) -> Unit)?>(null) }
@@ -330,6 +324,56 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                 onSave = { path, content -> viewModel.saveMergedContent(path, content) },
                 onDismiss = { viewModel.closeMergeEditor() }
         )
+    }
+
+    // Check if Git is configured FIRST before showing any Git UI
+    val prefs = remember { com.bsbeetle.bananaspaghetti.utils.preferences.EditorPreferences(context) }
+    
+    // Check if SSH key exists
+    val sshKeyExists = remember {
+        val alpinePath = "${context.filesDir.absolutePath}/alpine/home/.ssh/id_ed25519.pub"
+        val file = java.io.File(alpinePath)
+        file.exists()
+    }
+    
+    if (!prefs.isGitConfigured() || !sshKeyExists) {
+        // Show only the setup message - no header, no controls
+        Box(
+            modifier = Modifier.fillMaxSize().background(GitTheme.BgDark),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(32.dp)
+            ) {
+                Icon(
+                    Icons.Rounded.Settings,
+                    contentDescription = null,
+                    tint = GitTheme.TextSecondary,
+                    modifier = Modifier.size(48.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "Setup Git in Settings",
+                    color = GitTheme.TextPrimary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    if (!prefs.isGitConfigured()) 
+                        "Add your name and email in Settings → Git"
+                    else 
+                        "Generate an SSH key in Settings → Git",
+                    color = GitTheme.TextSecondary,
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+        return
     }
 
     Column(modifier = Modifier.fillMaxSize().background(GitTheme.BgDark)) {
@@ -1329,42 +1373,71 @@ fun StoragePermissionRequest(onRequestPermission: () -> Unit, onRefresh: () -> U
 
 @Composable
 fun EmptyState(onInit: () -> Unit, onClone: () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Rounded.Source, null, tint = GitTheme.TextTertiary, modifier = Modifier.size(64.dp))
-            Spacer(modifier = Modifier.height(16.dp))
+    Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Rounded.Source, null, tint = GitTheme.TextTertiary, modifier = Modifier.size(48.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
-                    "No Git Repository Found",
+                    "No Git Repository",
                     color = GitTheme.TextSecondary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                    "Initialize a new repository or clone an existing one.",
+                    "Initialize or clone a repository",
                     color = GitTheme.TextTertiary,
-                    fontSize = 12.sp
+                    fontSize = 11.sp,
+                    textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(24.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(
-                        onClick = onInit,
-                        colors = ButtonDefaults.buttonColors(containerColor = GitTheme.AccentBlue),
-                        shape = RoundedCornerShape(6.dp)
+            Spacer(modifier = Modifier.height(16.dp))
+            // Stack buttons vertically for sidebar
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Initialize button - white bg, black text
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color.White)
+                        .clickable { onInit() }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Rounded.Add, null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Initialize Repository")
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Rounded.Add, null, tint = Color.Black, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Initialize", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    }
                 }
-                Button(
-                        onClick = onClone,
-                        colors = ButtonDefaults.buttonColors(containerColor = GitTheme.BgHover),
-                        border = BorderStroke(1.dp, GitTheme.BorderColor),
-                        shape = RoundedCornerShape(6.dp)
+                // Clone button - white bg, black text
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color.White)
+                        .clickable { onClone() }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Rounded.CloudDownload, null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Clone Repository")
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Rounded.CloudDownload, null, tint = Color.Black, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Clone", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    }
                 }
             }
         }

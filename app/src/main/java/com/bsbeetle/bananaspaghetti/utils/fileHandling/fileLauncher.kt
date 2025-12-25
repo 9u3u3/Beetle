@@ -16,7 +16,7 @@ import com.bsbeetle.bananaspaghetti.data.FileData
 import com.bsbeetle.bananaspaghetti.data.OpenedFiles
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
-import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionFactory
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 
@@ -25,6 +25,7 @@ fun fileLauncher(context: Context, navController: NavController): ActivityResult
 
         val fileViewModel: FileViewModel = LocalFileViewModel.current
         val editorViewModel: EditorViewModel = LocalEditorViewModel.current
+        val bufferViewModel = com.bsbeetle.bananaspaghetti.LocalBufferViewModel.current
 
         return rememberLauncherForActivityResult(
                 ActivityResultContracts.StartActivityForResult(),
@@ -55,13 +56,27 @@ fun fileLauncher(context: Context, navController: NavController): ActivityResult
                                                 fileViewModel.selectedFolderUri = null
 
                                                 // Adding to the newly created session here
-                                                EditorSession(context.applicationContext)
-                                                editorViewModel.setEditorWebView(
-                                                        SessionList.sessions[
-                                                                        SessionList
-                                                                                .activeSessionIndex!!]
-                                                                .view!!
-                                                )
+                                                // Always creates EditorSession - Notebook is a
+                                                // separate session type
+                                                val fileName = getFileName(context, uri)
+                                                val session =
+                                                        SessionFactory.createSession(
+                                                                context.applicationContext,
+                                                                fileName,
+                                                                uri.toString()
+                                                        )
+
+                                                // Switch buffer context to this new session
+                                                // immediately
+                                                // This ensures file loading happens in the correct
+                                                // session context
+                                                session.id?.let { id ->
+                                                        bufferViewModel.setSessionId(id)
+                                                }
+
+                                                // Ensure view is created before accessing it
+                                                val view = session.getOrInitView()
+                                                editorViewModel.setEditorWebView(view)
 
                                                 navController.navigate(Screen.OpenFile.route)
                                         } else {
@@ -77,12 +92,15 @@ fun fileLauncher(context: Context, navController: NavController): ActivityResult
                                                                 folderDoc?.name ?: "Project"
                                                         )
                                                 session.projectRoot = folderDoc
-                                                editorViewModel.setEditorWebView(
-                                                        SessionList.sessions[
-                                                                        SessionList
-                                                                                .activeSessionIndex!!]
-                                                                .view!!
-                                                )
+
+                                                // Switch buffer context to this new session
+                                                session.id?.let { id ->
+                                                        bufferViewModel.setSessionId(id)
+                                                }
+
+                                                // Ensure view is created before accessing it
+                                                val view = session.getOrInitView()
+                                                editorViewModel.setEditorWebView(view)
 
                                                 navController.navigate(Screen.OpenFolder.route)
                                         }

@@ -24,7 +24,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
@@ -40,20 +39,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
-import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 
 // Windows 11 color palette
@@ -380,64 +379,87 @@ private fun SidebarItem(label: String, isSelected: Boolean, onClick: () -> Unit)
 }
 
 @Composable
-private fun SettingsContent(
-    selectedCategory: String,
-    keyboardViewModel: KeyboardViewModel
-) {
-    val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
-    val scrollState = rememberScrollState()
-    
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(BackgroundDark)
-            .padding(32.dp)
-            .verticalScroll(scrollState)
-    ) {
-        Text(
-            text = selectedCategory,
-            color = TextPrimary,
-            fontSize = 32.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        when (selectedCategory) {
-            "Keyboard" -> KeyboardSettingsContent(
-                isLeftVisible = uiState.isLeftKeyboardVisible,
-                isRightVisible = uiState.isRightKeyboardVisible,
-                leftWidth = uiState.leftKeyboardWidth,
-                rightWidth = uiState.rightKeyboardWidth,
-                isLinked = uiState.linkedKeyboardSliders,
-                leftPadding = uiState.leftKeyboardPadding,
-                leftHeight = uiState.leftKeyboardHeight,
-                rightHeight = uiState.rightKeyboardHeight,
-                isHeightLinked = uiState.linkedKeyboardHeight,
-                useLandscapeIme = uiState.useLandscapeIme,
-                onLeftToggle = { keyboardViewModel.toggleLeftKeyboardVisibility() },
-                onRightToggle = { keyboardViewModel.toggleRightKeyboardVisibility() },
-                onLeftWidthChange = { keyboardViewModel.updateLeftKeyboardWidth(it) },
-                onRightWidthChange = { keyboardViewModel.updateRightKeyboardWidth(it) },
-                onLinkToggle = { keyboardViewModel.toggleLinkedKeyboardSliders() },
-                onLeftPaddingChange = { keyboardViewModel.updateLeftKeyboardPadding(it) },
-                onLeftHeightChange = { keyboardViewModel.updateLeftKeyboardHeight(it) },
-                onRightHeightChange = { keyboardViewModel.updateRightKeyboardHeight(it) },
-                onHeightLinkToggle = { keyboardViewModel.toggleLinkedKeyboardHeight() },
-                onUseLandscapeImeToggle = { keyboardViewModel.toggleUseLandscapeIme() }
-            )
-            "Appearance" -> AppearanceSettingsContent(
-                terminalFontSize = uiState.terminalFontSize,
-                editorFontSize = uiState.editorFontSize,
-                onTerminalFontSizeChange = { keyboardViewModel.updateTerminalFontSize(it) },
-                onEditorFontSizeChange = { keyboardViewModel.updateEditorFontSize(it) }
-            )
-            "Licenses" -> LicensesContent()
-            "Editor" -> EditorSettingsContent()
-            "Git" -> GitSettingsContent()
-            "General" -> GeneralSettingsContent()
+private fun SettingsContent(selectedCategory: String, keyboardViewModel: KeyboardViewModel) {
+        val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
+        val scrollState = rememberScrollState()
+
+        Column(
+                modifier =
+                        Modifier.fillMaxSize()
+                                .background(BackgroundDark)
+                                .padding(32.dp)
+                                .verticalScroll(scrollState)
+        ) {
+                Text(
+                        text = selectedCategory,
+                        color = TextPrimary,
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.SemiBold
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                when (selectedCategory) {
+                        "Keyboard" ->
+                                KeyboardSettingsContent(
+                                        isLeftVisible = uiState.isLeftKeyboardVisible,
+                                        isRightVisible = uiState.isRightKeyboardVisible,
+                                        leftWidth = uiState.leftKeyboardWidth,
+                                        rightWidth = uiState.rightKeyboardWidth,
+                                        isLinked = uiState.linkedKeyboardSliders,
+                                        leftPadding = uiState.leftKeyboardPadding,
+                                        leftHeight = uiState.leftKeyboardHeight,
+                                        rightHeight = uiState.rightKeyboardHeight,
+                                        isHeightLinked = uiState.linkedKeyboardHeight,
+                                        useLandscapeIme = uiState.useLandscapeIme,
+                                        onLeftToggle = {
+                                                keyboardViewModel.toggleLeftKeyboardVisibility()
+                                        },
+                                        onRightToggle = {
+                                                keyboardViewModel.toggleRightKeyboardVisibility()
+                                        },
+                                        onLeftWidthChange = {
+                                                keyboardViewModel.updateLeftKeyboardWidth(it)
+                                        },
+                                        onRightWidthChange = {
+                                                keyboardViewModel.updateRightKeyboardWidth(it)
+                                        },
+                                        onLinkToggle = {
+                                                keyboardViewModel.toggleLinkedKeyboardSliders()
+                                        },
+                                        onLeftPaddingChange = {
+                                                keyboardViewModel.updateLeftKeyboardPadding(it)
+                                        },
+                                        onLeftHeightChange = {
+                                                keyboardViewModel.updateLeftKeyboardHeight(it)
+                                        },
+                                        onRightHeightChange = {
+                                                keyboardViewModel.updateRightKeyboardHeight(it)
+                                        },
+                                        onHeightLinkToggle = {
+                                                keyboardViewModel.toggleLinkedKeyboardHeight()
+                                        },
+                                        onUseLandscapeImeToggle = {
+                                                keyboardViewModel.toggleUseLandscapeIme()
+                                        }
+                                )
+                        "Appearance" ->
+                                AppearanceSettingsContent(
+                                        terminalFontSize = uiState.terminalFontSize,
+                                        editorFontSize = uiState.editorFontSize,
+                                        onTerminalFontSizeChange = {
+                                                keyboardViewModel.updateTerminalFontSize(it)
+                                        },
+                                        onEditorFontSizeChange = {
+                                                keyboardViewModel.updateEditorFontSize(it)
+                                        }
+                                )
+                        "Licenses" -> LicensesContent()
+                        "Editor" -> EditorSettingsContent()
+                        "Git" -> GitSettingsContent()
+                        "General" -> GeneralSettingsContent()
+                }
         }
-    }
 }
 
 @Composable
@@ -522,30 +544,31 @@ private fun KeyboardSettingsContent(
         rightHeight: Float = 0.5f,
         isHeightLinked: Boolean = true,
         useLandscapeIme: Boolean = false,
-    onLeftToggle: () -> Unit,
-    onRightToggle: () -> Unit,
-    onLeftWidthChange: (Float) -> Unit,
-    onRightWidthChange: (Float) -> Unit,
-    onLinkToggle: () -> Unit,
-    onLeftPaddingChange: (Float) -> Unit = {},
-    onLeftHeightChange: (Float) -> Unit = {},
-    onRightHeightChange: (Float) -> Unit = {},
-    onHeightLinkToggle: () -> Unit = {},
-    onUseLandscapeImeToggle: () -> Unit = {}
+        onLeftToggle: () -> Unit,
+        onRightToggle: () -> Unit,
+        onLeftWidthChange: (Float) -> Unit,
+        onRightWidthChange: (Float) -> Unit,
+        onLinkToggle: () -> Unit,
+        onLeftPaddingChange: (Float) -> Unit = {},
+        onLeftHeightChange: (Float) -> Unit = {},
+        onRightHeightChange: (Float) -> Unit = {},
+        onHeightLinkToggle: () -> Unit = {},
+        onUseLandscapeImeToggle: () -> Unit = {}
 ) {
         // Landscape IME Mode section (at the top)
-    SettingsCard(title = "Input Mode (Landscape)") {
-        SettingRowWithCheckbox(
-            title = "Use System Keyboard",
-            description = "Use the system IME keyboard instead of custom split keyboard in landscape mode",
-            isChecked = useLandscapeIme,
-            onCheckedChange = { onUseLandscapeImeToggle() }
-        )
-    }
+        SettingsCard(title = "Input Mode (Landscape)") {
+                SettingRowWithCheckbox(
+                        title = "Use System Keyboard",
+                        description =
+                                "Use the system IME keyboard instead of custom split keyboard in landscape mode",
+                        isChecked = useLandscapeIme,
+                        onCheckedChange = { onUseLandscapeImeToggle() }
+                )
+        }
 
-    Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-    // Visibility section
+        // Visibility section
         SettingsCard(title = "Visibility") {
                 SettingRowWithCheckbox(
                         title = "Left Keyboard",
@@ -838,23 +861,22 @@ private fun SettingRowWithCheckbox(
 
 @Composable
 private fun LicensesContent() {
-    Column(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Text(
-            text = "Open Source Licenses",
-            color = TextSecondary,
-            fontSize = 14.sp,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+        Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                        text = "Open Source Licenses",
+                        color = TextSecondary,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                )
 
-        // PRoot - GPL License
-        LicenseSection(
-            libraryName = "PRoot",
-            license = "GPLv2",
-            description = "PRoot is used to provide Linux environment emulation.",
-            sourceCodeUrl = "https://github.com/proot-me/proot",
-            licenseText = """
+                // PRoot - GPL License
+                LicenseSection(
+                        libraryName = "PRoot",
+                        license = "GPLv2",
+                        description = "PRoot is used to provide Linux environment emulation.",
+                        sourceCodeUrl = "https://github.com/proot-me/proot",
+                        licenseText =
+                                """
                 GNU GENERAL PUBLIC LICENSE
                 Version 2, June 1991
                 
@@ -871,17 +893,18 @@ private fun LicensesContent() {
                 
                 Full license: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
             """.trimIndent()
-        )
+                )
 
-        Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(24.dp))
 
-        // CodeMirror - MIT License
-        LicenseSection(
-            libraryName = "CodeMirror",
-            license = "MIT License",
-            description = "CodeMirror is used for the code editor component.",
-            sourceCodeUrl = "https://github.com/codemirror/codemirror",
-            licenseText = """
+                // CodeMirror - MIT License
+                LicenseSection(
+                        libraryName = "CodeMirror",
+                        license = "MIT License",
+                        description = "CodeMirror is used for the code editor component.",
+                        sourceCodeUrl = "https://github.com/codemirror/codemirror",
+                        licenseText =
+                                """
                 MIT License
                 
                 Copyright (C) 2017 by Marijn Haverbeke <marijn@haverbeke.berlin> and others
@@ -892,17 +915,18 @@ private fun LicensesContent() {
                 
                 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             """.trimIndent()
-        )
+                )
 
-        Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(24.dp))
 
-        // xterm.js - MIT License
-        LicenseSection(
-            libraryName = "xterm.js",
-            license = "MIT License",
-            description = "xterm.js is used for the terminal emulator.",
-            sourceCodeUrl = "https://github.com/xtermjs/xterm.js",
-            licenseText = """
+                // xterm.js - MIT License
+                LicenseSection(
+                        libraryName = "xterm.js",
+                        license = "MIT License",
+                        description = "xterm.js is used for the terminal emulator.",
+                        sourceCodeUrl = "https://github.com/xtermjs/xterm.js",
+                        licenseText =
+                                """
                 MIT License
                 
                 Copyright (c) 2017-present, The xterm.js authors
@@ -913,138 +937,120 @@ private fun LicensesContent() {
                 
                 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             """.trimIndent()
-        )
+                )
 
-        Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(24.dp))
 
-        // Additional Libraries Summary
-        Text(
-            text = "Additional Libraries",
-            color = TextPrimary,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
+                // Additional Libraries Summary
+                Text(
+                        text = "Additional Libraries",
+                        color = TextPrimary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                )
 
-        AdditionalLibraryItem("JGit", "EDL (Eclipse Distribution License)")
-        AdditionalLibraryItem("Ktor", "Apache License 2.0")
-        AdditionalLibraryItem("NanoHTTPD", "BSD License")
-        AdditionalLibraryItem("Android Libraries", "Apache License 2.0")
-    }
+                AdditionalLibraryItem("JGit", "EDL (Eclipse Distribution License)")
+                AdditionalLibraryItem("Ktor", "Apache License 2.0")
+                AdditionalLibraryItem("NanoHTTPD", "BSD License")
+                AdditionalLibraryItem("Android Libraries", "Apache License 2.0")
+        }
 }
 
 @Composable
 private fun LicenseSection(
-    libraryName: String,
-    license: String,
-    description: String,
-    sourceCodeUrl: String,
-    licenseText: String
+        libraryName: String,
+        license: String,
+        description: String,
+        sourceCodeUrl: String,
+        licenseText: String
 ) {
-    var isExpanded by remember { mutableStateOf(false) }
+        var isExpanded by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CardDark)
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+                modifier =
+                        Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(CardDark)
+                                .padding(16.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                        text = libraryName,
+                                        color = TextPrimary,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(text = license, color = AccentBlue, fontSize = 14.sp)
+                        }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                Text(text = description, color = TextSecondary, fontSize = 14.sp)
+
+                Spacer(Modifier.height(12.dp))
+
                 Text(
-                    text = libraryName,
-                    color = TextPrimary,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
+                        text = "Source Code:",
+                        color = TextPrimary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
                 )
-                Spacer(Modifier.height(4.dp))
                 Text(
-                    text = license,
-                    color = AccentBlue,
-                    fontSize = 14.sp
+                        text = sourceCodeUrl,
+                        color = AccentBlue,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 4.dp)
                 )
-            }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Expand/Collapse License Text
+                Box(
+                        modifier =
+                                Modifier.fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(BackgroundDark)
+                                        .clickable { isExpanded = !isExpanded }
+                                        .padding(12.dp)
+                ) {
+                        Text(
+                                text = if (isExpanded) "Hide License Text" else "Show License Text",
+                                color = AccentBlue,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                        )
+                }
+
+                if (isExpanded) {
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                                text = licenseText,
+                                color = TextSecondary,
+                                fontSize = 11.sp,
+                                lineHeight = 16.sp,
+                                modifier = Modifier.padding(8.dp)
+                        )
+                }
         }
-
-        Spacer(Modifier.height(8.dp))
-
-        Text(
-            text = description,
-            color = TextSecondary,
-            fontSize = 14.sp
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        Text(
-            text = "Source Code:",
-            color = TextPrimary,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium
-        )
-        Text(
-            text = sourceCodeUrl,
-            color = AccentBlue,
-            fontSize = 12.sp,
-            modifier = Modifier.padding(top = 4.dp)
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        // Expand/Collapse License Text
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(BackgroundDark)
-                .clickable { isExpanded = !isExpanded }
-                .padding(12.dp)
-        ) {
-            Text(
-                text = if (isExpanded) "Hide License Text" else "Show License Text",
-                color = AccentBlue,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
-        }
-
-        if (isExpanded) {
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = licenseText,
-                color = TextSecondary,
-                fontSize = 11.sp,
-                lineHeight = 16.sp,
-                modifier = Modifier.padding(8.dp)
-            )
-        }
-    }
 }
 
 @Composable
 private fun AdditionalLibraryItem(name: String, license: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = name,
-            color = TextPrimary,
-            fontSize = 14.sp
-        )
-        Text(
-            text = license,
-            color = TextSecondary,
-            fontSize = 13.sp
-        )
-    }
+        Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+                Text(text = name, color = TextPrimary, fontSize = 14.sp)
+                Text(text = license, color = TextSecondary, fontSize = 13.sp)
+        }
 }
 
 @Composable
@@ -1284,9 +1290,7 @@ private fun EditorSettingsContent() {
                                 )
                         }
                 )
-
         }
-
 
         SettingsCard(title = "Auto Save") {
                 SettingRowWithCheckbox(
@@ -1352,26 +1356,44 @@ private fun EditorSettingsContent() {
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-
-
 }
+
 @Composable
 private fun GitSettingsContent() {
         val context = androidx.compose.ui.platform.LocalContext.current
-        var userName by remember { mutableStateOf("") }
-        var userEmail by remember { mutableStateOf("") }
+        val prefs = remember { com.bsbeetle.bananaspaghetti.utils.preferences.EditorPreferences(context) }
+        val scope = rememberCoroutineScope()
+        
+        var userName by remember { mutableStateOf(prefs.gitUserName) }
+        var userEmail by remember { mutableStateOf(prefs.gitUserEmail) }
         var showPublicKey by remember { mutableStateOf(false) }
         var publicKey by remember { mutableStateOf("") }
+        var isGenerating by remember { mutableStateOf(false) }
+        var sshKeyExists by remember { mutableStateOf(false) }
+        var errorMessage by remember { mutableStateOf<String?>(null) }
+        
+        // Check if SSH key already exists
+        val sshKeyManager = remember { com.bsbeetle.bananaspaghetti.directGit.utils.AlpineSshKeyManager(context) }
+        
+        // Check key status on load
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+                val alpinePath = "${context.filesDir.absolutePath}/alpine/home/.ssh/id_ed25519.pub"
+                val file = java.io.File(alpinePath)
+                sshKeyExists = file.exists() || sshKeyManager.hasKeys()
+                if (sshKeyExists && file.exists()) {
+                        publicKey = file.readText()
+                }
+        }
 
-        // Load public key
+        // Load public key when showing
         androidx.compose.runtime.LaunchedEffect(showPublicKey) {
-                if (showPublicKey) {
+                if (showPublicKey && sshKeyExists) {
                         try {
                                 val alpinePath =
                                         "${context.filesDir.absolutePath}/alpine/home/.ssh/id_ed25519.pub"
                                 val file = java.io.File(alpinePath)
                                 publicKey =
-                                        if (file.exists()) file.readText() else "No SSH key found"
+                                        if (file.exists()) file.readText() else sshKeyManager.getPublicKey() ?: "No SSH key found"
                         } catch (e: Exception) {
                                 publicKey = "Error reading key: ${e.message}"
                         }
@@ -1382,11 +1404,11 @@ private fun GitSettingsContent() {
                 // User Name
                 Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                         Text("User Name", color = TextPrimary, fontSize = 16.sp)
-                        Text("Used for commit author name", color = TextSecondary, fontSize = 13.sp)
+                        Text("Used for commit author and SSH key", color = TextSecondary, fontSize = 13.sp)
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
                                 value = userName,
-                                onValueChange = { userName = it },
+                                onValueChange = { userName = it; prefs.gitUserName = it },
                                 placeholder = { Text("Your Name", color = TextSecondary) },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(8.dp),
@@ -1410,14 +1432,14 @@ private fun GitSettingsContent() {
                 Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                         Text("User Email", color = TextPrimary, fontSize = 16.sp)
                         Text(
-                                "Used for commit author email",
+                                "Used for commit author and SSH key",
                                 color = TextSecondary,
                                 fontSize = 13.sp
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
                                 value = userEmail,
-                                onValueChange = { userEmail = it },
+                                onValueChange = { userEmail = it; prefs.gitUserEmail = it },
                                 placeholder = { Text("you@example.com", color = TextSecondary) },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(8.dp),
@@ -1439,6 +1461,7 @@ private fun GitSettingsContent() {
         Spacer(modifier = Modifier.height(24.dp))
 
         SettingsCard(title = "SSH Key") {
+                // Generate SSH Key button
                 Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                         Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -1447,12 +1470,12 @@ private fun GitSettingsContent() {
                         ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                                "View Public Key",
-                                                color = TextPrimary,
+                                                if (sshKeyExists) "SSH Key Generated ✓" else "Generate SSH Key",
+                                                color = if (sshKeyExists) Color(0xFF4CAF50) else TextPrimary,
                                                 fontSize = 16.sp
                                         )
                                         Text(
-                                                "Copy to add to GitHub/GitLab",
+                                                if (sshKeyExists) "Key ready for GitHub/GitLab" else "Required for Git push/pull",
                                                 color = TextSecondary,
                                                 fontSize = 13.sp
                                         )
@@ -1460,48 +1483,166 @@ private fun GitSettingsContent() {
                                 Box(
                                         modifier =
                                                 Modifier.clip(RoundedCornerShape(8.dp))
-                                                        .background(AccentBlue)
-                                                        .clickable {
-                                                                showPublicKey = !showPublicKey
+                                                        .background(
+                                                                if (isGenerating) Color(0xFF555555)
+                                                                else if (sshKeyExists) Color(0xFF4CAF50)
+                                                                else AccentBlue
+                                                        )
+                                                        .clickable(enabled = !isGenerating) {
+                                                                if (userName.isBlank() || userEmail.isBlank()) {
+                                                                        errorMessage = "Please enter name and email first"
+                                                                        return@clickable
+                                                                }
+                                                                
+                                                                errorMessage = null
+                                                                isGenerating = true
+                                                                
+                                                                scope.launch {
+                                                                        try {
+                                                                                val success = sshKeyManager.generateKeyPair()
+                                                                                if (success) {
+                                                                                        sshKeyExists = true
+                                                                                        val alpinePath = "${context.filesDir.absolutePath}/alpine/home/.ssh/id_ed25519.pub"
+                                                                                        val file = java.io.File(alpinePath)
+                                                                                        if (file.exists()) {
+                                                                                                publicKey = file.readText()
+                                                                                        }
+                                                                                        android.widget.Toast.makeText(context, "SSH key generated!", android.widget.Toast.LENGTH_SHORT).show()
+                                                                                } else {
+                                                                                        errorMessage = "Failed to generate key. Make sure Terminal is initialized."
+                                                                                }
+                                                                        } catch (e: Exception) {
+                                                                                errorMessage = e.message ?: "Error generating SSH key"
+                                                                        } finally {
+                                                                                isGenerating = false
+                                                                        }
+                                                                }
                                                         }
                                                         .padding(
                                                                 horizontal = 16.dp,
                                                                 vertical = 8.dp
                                                         )
                                 ) {
-                                        Text(
-                                                if (showPublicKey) "Hide" else "Show",
-                                                color = TextPrimary,
-                                                fontSize = 14.sp
-                                        )
+                                        if (isGenerating) {
+                                                Text("Generating...", color = TextPrimary, fontSize = 14.sp)
+                                        } else {
+                                                Text(
+                                                        if (sshKeyExists) "Regenerate" else "Generate",
+                                                        color = TextPrimary,
+                                                        fontSize = 14.sp
+                                                )
+                                        }
                                 }
                         }
-
-                        if (showPublicKey) {
-                                Spacer(modifier = Modifier.height(12.dp))
+                        
+                        // Error message
+                        if (errorMessage != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                        publicKey,
-                                        color = TextSecondary,
-                                        fontSize = 11.sp,
-                                        modifier =
-                                                Modifier.fillMaxWidth()
-                                                        .background(
-                                                                Color(0xFF1E1E1E),
-                                                                RoundedCornerShape(4.dp)
-                                                        )
-                                                        .padding(8.dp)
+                                        errorMessage!!,
+                                        color = Color(0xFFFF5252),
+                                        fontSize = 13.sp
                                 )
+                        }
+                }
+                
+                if (sshKeyExists) {
+                        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+                        
+                        // View Public Key
+                        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                                Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                        "View Public Key",
+                                                        color = TextPrimary,
+                                                        fontSize = 16.sp
+                                                )
+                                                Text(
+                                                        "Copy to add to GitHub/GitLab",
+                                                        color = TextSecondary,
+                                                        fontSize = 13.sp
+                                                )
+                                        }
+                                        Box(
+                                                modifier =
+                                                        Modifier.clip(RoundedCornerShape(8.dp))
+                                                                .background(CardDark)
+                                                                .clickable {
+                                                                        showPublicKey = !showPublicKey
+                                                                }
+                                                                .padding(
+                                                                        horizontal = 16.dp,
+                                                                        vertical = 8.dp
+                                                                )
+                                        ) {
+                                                Text(
+                                                        if (showPublicKey) "Hide" else "Show",
+                                                        color = TextPrimary,
+                                                        fontSize = 14.sp
+                                                )
+                                        }
+                                }
+
+                                if (showPublicKey) {
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                                Text(
+                                                        publicKey,
+                                                        color = TextSecondary,
+                                                        fontSize = 11.sp,
+                                                        modifier =
+                                                                Modifier.weight(1f)
+                                                                        .background(
+                                                                                Color(0xFF1E1E1E),
+                                                                                RoundedCornerShape(4.dp)
+                                                                        )
+                                                                        .padding(8.dp)
+                                                )
+                                                // Copy button
+                                                Box(
+                                                        modifier = Modifier
+                                                                .clip(RoundedCornerShape(4.dp))
+                                                                .background(AccentBlue)
+                                                                .clickable {
+                                                                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                                                        val clip = android.content.ClipData.newPlainText("SSH Public Key", publicKey)
+                                                                        clipboard.setPrimaryClip(clip)
+                                                                        android.widget.Toast.makeText(context, "Public key copied!", android.widget.Toast.LENGTH_SHORT).show()
+                                                                }
+                                                                .padding(8.dp)
+                                                ) {
+                                                        Text("Copy", color = TextPrimary, fontSize = 12.sp)
+                                                }
+                                        }
+                                }
                         }
                 }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-                "Note: Git user config will be applied when saved in a future update.",
-                color = TextSecondary,
-                fontSize = 12.sp
-        )
+        // Status message
+        if (!sshKeyExists) {
+                Text(
+                        "Generate an SSH key to enable Git push/pull features.",
+                        color = TextSecondary,
+                        fontSize = 12.sp
+                )
+        } else {
+                Text(
+                        "Git is configured! Add your public key to GitHub/GitLab to use push/pull.",
+                        color = Color(0xFF4CAF50),
+                        fontSize = 12.sp
+                )
+        }
 }
 
 @Composable

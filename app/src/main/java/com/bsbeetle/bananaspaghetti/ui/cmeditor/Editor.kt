@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 
@@ -33,11 +34,15 @@ import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 @Composable
 fun Editor(modifier: Modifier = Modifier, webView: CustomWebView) {
 
-    // Get EditorSession from the WebView to observe isReady state
-    val editorSession = webView.session as? EditorSession
-    val isEditorReady by
-            (editorSession?.isReady ?: kotlinx.coroutines.flow.MutableStateFlow(true))
-                    .collectAsStateWithLifecycle()
+    // Get isReady state from session (works for both EditorSession and NotebookSession)
+    val session = webView.session
+    val isEditorReady by when (session) {
+        is EditorSession -> session.isReady.collectAsStateWithLifecycle()
+        is NotebookSession -> session.isReady.collectAsStateWithLifecycle()
+        else -> kotlinx.coroutines.flow.MutableStateFlow(true).collectAsStateWithLifecycle()
+    }
+    
+    val isNotebookSession = session is NotebookSession
 
     // Set active session when this editor view is displayed
     DisposableEffect(webView) {
@@ -76,11 +81,21 @@ fun Editor(modifier: Modifier = Modifier, webView: CustomWebView) {
             }
         }
 
-        // Editor WebView - invisible until ready
-        AndroidView(
+        // CRITICAL: Use key() to force AndroidView recreation when webView changes
+        // Without this, Compose reuses the old AndroidView with the old session's webView
+        androidx.compose.runtime.key(webView) {
+            android.util.Log.d("Editor", "Creating AndroidView for session: ${webView.session?.name}")
+            
+            AndroidView(
                 factory = { ctx ->
                     // Remove from existing parent if any (prevents crash)
                     (webView.parent as? ViewGroup)?.removeView(webView)
+                    
+                    // Ensure WebView fills the parent completely
+                    webView.layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
 
                     // Request initial focus
                     webView.post {
@@ -116,5 +131,6 @@ fun Editor(modifier: Modifier = Modifier, webView: CustomWebView) {
                     }
                 }
         )
+    }
     }
 }

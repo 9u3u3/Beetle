@@ -9,6 +9,7 @@ sealed class Screen(val route: String) {
     object Settings: Screen("settings")
     object Demo: Screen("demo")
     object Browser: Screen("browser")
+    object Notebook: Screen("notebook")
 
     // zoom out preview testing
     object ZoomOut: Screen("zoom_out")

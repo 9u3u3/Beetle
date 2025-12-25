@@ -7,7 +7,9 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -45,6 +47,7 @@ import com.bsbeetle.bananaspaghetti.LocalFileViewModel
 import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.readFromFile
+import com.bsbeetle.bananaspaghetti.utils.fileHandling.saveFile
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.BrowserSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
@@ -155,10 +158,12 @@ fun TopBar(modifier: Modifier = Modifier, context: Context) {
                                                                         "TopBar",
                                                                         "  First 50 chars: ${bufferedContent.take(50)}"
                                                                 )
-                                                                loadContentWhenReady(
-                                                                        webView!!,
-                                                                        bufferedContent
-                                                                )
+                                                                webView?.let { wv ->
+                                                                    loadContentWhenReady(
+                                                                            wv,
+                                                                            bufferedContent
+                                                                    )
+                                                                }
                                                         } else {
                                                                 android.util.Log.d(
                                                                         "TopBar",
@@ -173,10 +178,12 @@ fun TopBar(modifier: Modifier = Modifier, context: Context) {
                                                                         "TopBar",
                                                                         "  Read from disk: ${content.length} chars"
                                                                 )
-                                                                loadContentWhenReady(
-                                                                        webView!!,
-                                                                        content
-                                                                )
+                                                                webView?.let { wv ->
+                                                                    loadContentWhenReady(
+                                                                            wv,
+                                                                            content
+                                                                    )
+                                                                }
                                                                 bufferViewModel.bufferLine[
                                                                         fileUri] =
                                                                         content // Use URI as key
@@ -229,20 +236,24 @@ fun TopBar(modifier: Modifier = Modifier, context: Context) {
                                                                                         nextFile.uri
                                                                                                 .toString()]
                                                                                         ?: ""
-                                                                        loadContentWhenReady(
-                                                                                webView!!,
-                                                                                content
-                                                                        )
+                                                                        webView?.let { wv ->
+                                                                            loadContentWhenReady(
+                                                                                    wv,
+                                                                                    content
+                                                                            )
+                                                                        }
                                                                 } else {
                                                                         fileViewModel.selectedUri =
                                                                                 null
                                                                         fileViewModel
                                                                                 .currentFilePath =
                                                                                 null
-                                                                        loadContentWhenReady(
-                                                                                webView!!,
-                                                                                ""
-                                                                        )
+                                                                        webView?.let { wv ->
+                                                                            loadContentWhenReady(
+                                                                                    wv,
+                                                                                    ""
+                                                                            )
+                                                                        }
                                                                 }
                                                         }
                                                 }
@@ -305,20 +316,24 @@ fun TopBar(modifier: Modifier = Modifier, context: Context) {
                                                                                         nextFile.uri
                                                                                                 .toString()]
                                                                                         ?: ""
-                                                                        loadContentWhenReady(
-                                                                                webView!!,
-                                                                                content
-                                                                        )
+                                                                        webView?.let { wv ->
+                                                                            loadContentWhenReady(
+                                                                                    wv,
+                                                                                    content
+                                                                            )
+                                                                        }
                                                                 } else {
                                                                         fileViewModel.selectedUri =
                                                                                 null
                                                                         fileViewModel
                                                                                 .currentFilePath =
                                                                                 null
-                                                                        loadContentWhenReady(
-                                                                                webView!!,
-                                                                                ""
-                                                                        )
+                                                                        webView?.let { wv ->
+                                                                            loadContentWhenReady(
+                                                                                    wv,
+                                                                                    ""
+                                                                            )
+                                                                        }
                                                                 }
                                                         }
                                                 }
@@ -364,10 +379,12 @@ fun TopBar(modifier: Modifier = Modifier, context: Context) {
                                                                                                 nextFile.uri
                                                                                                         .toString()]
                                                                                                 ?: ""
-                                                                                loadContentWhenReady(
-                                                                                        webView!!,
-                                                                                        content
-                                                                                )
+                                                                                                webView?.let { wv ->
+                                                                                    loadContentWhenReady(
+                                                                                            wv,
+                                                                                            content
+                                                                                    )
+                                                                                }
                                                                         } else {
                                                                                 fileViewModel
                                                                                         .selectedUri =
@@ -375,10 +392,12 @@ fun TopBar(modifier: Modifier = Modifier, context: Context) {
                                                                                 fileViewModel
                                                                                         .currentFilePath =
                                                                                         null
-                                                                                loadContentWhenReady(
-                                                                                        webView!!,
-                                                                                        ""
-                                                                                )
+                                                                                webView?.let { wv ->
+                                                                                    loadContentWhenReady(
+                                                                                            wv,
+                                                                                            ""
+                                                                                    )
+                                                                                }
                                                                         }
                                                                 }
                                                         }
@@ -410,6 +429,7 @@ fun TopBar(modifier: Modifier = Modifier, context: Context) {
 fun LeftTopBar(
         modifier: Modifier = Modifier,
         onSaveClick: () -> Unit = {},
+        onRunClick: () -> Unit = {},
         onFileClick: () -> Unit = {},
         onUndoClick: () -> Unit = {},
         onRedoClick: () -> Unit = {},
@@ -443,10 +463,6 @@ fun LeftTopBar(
                                         )
                                 }
 
-                                VerticalDivider(
-                                        modifier = Modifier.fillMaxHeight().width(1.dp),
-                                        color = Color(0xFF3E3E42)
-                                )
                         }
 
                         VerticalDivider(
@@ -456,22 +472,26 @@ fun LeftTopBar(
                         // Save button
                         TopBarIconButton(icon = R.drawable.save_icon, onClick = onSaveClick)
 
-                        VerticalDivider(
-                                modifier = Modifier.fillMaxHeight().width(1.dp),
-                                color = Color(0xFF3E3E42)
-                        )
-
-                        // File button
-                        TopBarIconButton(
-                                // title = "File",
-                                icon = R.drawable.article_icon,
-                                onClick = onFileClick
-                        )
+                        // Run button (play icon)
+                        TopBarIconButton(icon = R.drawable.play_arrow, onClick = onRunClick)
 
                         VerticalDivider(
                                 modifier = Modifier.fillMaxHeight().width(1.dp),
                                 color = Color(0xFF3E3E42)
                         )
+
+                        // File button - only show in landscape (in portrait, it's in the sidebar)
+                        if (isLandscape) {
+                                TopBarIconButton(
+                                        icon = R.drawable.article_icon,
+                                        onClick = onFileClick
+                                )
+
+                                VerticalDivider(
+                                        modifier = Modifier.fillMaxHeight().width(1.dp),
+                                        color = Color(0xFF3E3E42)
+                                )
+                        }
 
                         // Undo button (icon only)
                         TopBarIconButton(icon = R.drawable.undo_icon, onClick = onUndoClick)
@@ -484,26 +504,28 @@ fun LeftTopBar(
                                 color = Color(0xFF3E3E42)
                         )
 
-                        // Search button
-                        Box(
-                                modifier =
-                                        Modifier.clickable { onSearchClick() }
-                                                .fillMaxHeight()
-                                                .padding(horizontal = 4.dp),
-                                contentAlignment = Alignment.Center
-                        ) {
-                                Icon(
-                                        imageVector = Icons.Default.Search,
-                                        contentDescription = "Search",
-                                        tint = Color(0xFFCCCCCC),
-                                        modifier = Modifier.size(14.dp)
+                        // Search button - only show in landscape (in portrait, it's in the sidebar)
+                        if (isLandscape) {
+                                Box(
+                                        modifier =
+                                                Modifier.clickable { onSearchClick() }
+                                                        .fillMaxHeight()
+                                                        .padding(horizontal = 4.dp),
+                                        contentAlignment = Alignment.Center
+                                ) {
+                                        Icon(
+                                                imageVector = Icons.Default.Search,
+                                                contentDescription = "Search",
+                                                tint = Color(0xFFCCCCCC),
+                                                modifier = Modifier.size(14.dp)
+                                        )
+                                }
+
+                                VerticalDivider(
+                                        modifier = Modifier.fillMaxHeight().width(1.dp),
+                                        color = Color(0xFF3E3E42)
                                 )
                         }
-
-                        VerticalDivider(
-                                modifier = Modifier.fillMaxHeight().width(1.dp),
-                                color = Color(0xFF3E3E42)
-                        )
 
                         // Branch button (conditional)
                         if (showBranchButton) {
@@ -544,303 +566,67 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
         val context = LocalContext.current
         val browserViewModel = LocalBrowserViewModel.current
         val fileViewModel = LocalFileViewModel.current
-
-        // State for live server
-        var isServerRunning by remember {
-                mutableStateOf(
-                        com.bsbeetle.bananaspaghetti.liveserver.LiveServerManager.isRunning()
-                )
-        }
+        val bufferViewModel = LocalBufferViewModel.current
 
         // Helper to save content before navigation
         val currentEditorSession =
                 SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as?
                         EditorSession
 
+        // Package install dialog state
+        var showPackageDialog by remember { mutableStateOf(false) }
+        var missingPackage by remember { mutableStateOf("") }
+        var pendingFilePath by remember { mutableStateOf<String?>(null) }
+
         Box(
                 modifier =
                         modifier.background(Color(0xFF1B1B1B))
                                 .height(if (isLandscape) 18.dp else 28.dp)
-                                .padding(end = 4.dp)
+                                .padding(end = 4.dp),
+                contentAlignment = Alignment.CenterEnd
         ) {
                 Row(
                         modifier = Modifier.fillMaxHeight().wrapContentWidth(),
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                 ) {
-                        VerticalDivider(
-                                modifier = Modifier.fillMaxHeight().width(1.dp),
-                                color = Color(0xFF3E3E42)
-                        )
+                        // Session/ZoomOut button - only show in landscape (in portrait, it's in the sidebar)
+                        if (isLandscape) {
+                                VerticalDivider(
+                                        modifier = Modifier.fillMaxHeight().width(1.dp),
+                                        color = Color(0xFF3E3E42)
+                                )
 
-                        // Session/Fullscreen button
-                        TopBarIconButton(
-                                icon = R.drawable.zoom_in,
-                                onClick = {
-                                        currentEditorSession?.saveContent()
-                                        navController.navigate(Screen.ZoomOut.route)
-                                }
-                        )
-
-                        VerticalDivider(
-                                modifier = Modifier.fillMaxHeight().width(1.dp),
-                                color = Color(0xFF3E3E42)
-                        )
-
-                        // Play button - Live Server
-                        TopBarIconButton(
-                                icon = R.drawable.play_arrow,
-                                onClick = {
-                                        currentEditorSession?.saveContent()
-
-                                        // Get current file info
-                                        val currentFileUri = fileViewModel.selectedUri
-                                        val currentFilePath =
-                                                currentFileUri?.let { uri ->
-                                                        com.bsbeetle.bananaspaghetti.liveserver
-                                                                .LiveServerManager.getPathFromUri(
-                                                                context,
-                                                                uri
-                                                        )
-                                                }
-
-                                        // Get file name from path
-                                        val currentFileName =
-                                                currentFilePath?.substringAfterLast("/")
-
-                                        // Get parent directory of current file
-                                        val fileParentDir =
-                                                currentFilePath?.substringBeforeLast("/")
-
-                                        // Get project root - try multiple methods
-                                        val projectRoot = run {
-                                                // Method 1: Use the open folder from sidebar
-                                                fileViewModel.selectedFolderUri?.let { folderUri ->
-                                                        com.bsbeetle.bananaspaghetti.liveserver
-                                                                .LiveServerManager.getPathFromUri(
-                                                                context,
-                                                                folderUri
-                                                        )
-                                                }
-                                                // Method 2: Editor session project root
-                                                ?: currentEditorSession?.projectRoot?.uri?.let { uri
-                                                                ->
-                                                                com.bsbeetle.bananaspaghetti
-                                                                        .liveserver
-                                                                        .LiveServerManager
-                                                                        .getPathFromUri(
-                                                                                context,
-                                                                                uri
-                                                                        )
-                                                        }
-                                                        // Method 3: Use parent directory of current
-                                                        // file
-                                                        ?: fileParentDir
+                                TopBarIconButton(
+                                        icon = R.drawable.zoom_in,
+                                        onClick = {
+                                                currentEditorSession?.saveContent()
+                                                navController.navigate(Screen.ZoomOut.route)
                                         }
+                                )
+                        }
 
-                                        if (projectRoot == null) {
-                                                android.widget.Toast.makeText(
-                                                                context,
-                                                                "Could not find file location",
-                                                                android.widget.Toast.LENGTH_LONG
-                                                        )
-                                                        .show()
-                                                return@TopBarIconButton
-                                        }
+                        // Browser button - only show in landscape (in portrait, it's in the sidebar)
+                        if (isLandscape) {
+                                VerticalDivider(
+                                        modifier = Modifier.fillMaxHeight().width(1.dp),
+                                        color = Color(0xFF3E3E42)
+                                )
 
-                                        // Find actual project root by searching upward for
-                                        // package.json or index.html
-                                        val actualProjectRoot =
-                                                com.bsbeetle.bananaspaghetti.liveserver
-                                                        .LiveServerManager.findProjectRoot(
-                                                        projectRoot
-                                                )
-
-                                        // Determine entry file - use current file if it's HTML,
-                                        // otherwise null
-                                        val entryFile =
-                                                if (currentFileName?.endsWith(".html", true) ==
-                                                                true ||
-                                                                currentFileName?.endsWith(
-                                                                        ".htm",
-                                                                        true
-                                                                ) == true
-                                                ) {
-                                                        currentFileName
-                                                } else {
-                                                        null // Will use index.html
-                                                }
-
-                                        // Start live server
-                                        val result =
-                                                com.bsbeetle.bananaspaghetti.liveserver
-                                                        .LiveServerManager.startServer(
-                                                        context,
-                                                        actualProjectRoot,
-                                                        entryFile
-                                                )
-
-                                        if (result.success) {
-                                                isServerRunning = true
-
-                                                // For React projects, automatically run the dev
-                                                // server
-                                                if (result.reactDevPort != null) {
-                                                        val devPort = result.reactDevPort
-                                                        val devCommand =
-                                                                if (devPort == 5173) "npm run dev"
-                                                                else "npm start"
-
-                                                        // Show starting message
-                                                        android.widget.Toast.makeText(
-                                                                        context,
-                                                                        "Starting dev server...",
-                                                                        android.widget.Toast
-                                                                                .LENGTH_SHORT
-                                                                )
-                                                                .show()
-
-                                                        // Create a terminal session in the project
-                                                        // directory
-                                                        val termSession =
-                                                                com.bsbeetle.bananaspaghetti.utils
-                                                                        .sessionHandling
-                                                                        .TerminalSession(
-                                                                                context,
-                                                                                "Dev Server",
-                                                                                actualProjectRoot
-                                                                        )
-                                                        termSession.createView()
-
-                                                        // Wait a bit for terminal to initialize,
-                                                        // then run npm command
-                                                        android.os.Handler(
-                                                                        android.os.Looper
-                                                                                .getMainLooper()
-                                                                )
-                                                                .postDelayed(
-                                                                        {
-                                                                                // Send cd command
-                                                                                // first (in case
-                                                                                // initialDir didn't
-                                                                                // work)
-                                                                                termSession
-                                                                                        .insertText(
-                                                                                                "cd \"$actualProjectRoot\" && $devCommand\n"
-                                                                                        )
-
-                                                                                // Wait for server
-                                                                                // to start, then
-                                                                                // open browser
-                                                                                android.os.Handler(
-                                                                                                android.os
-                                                                                                        .Looper
-                                                                                                        .getMainLooper()
-                                                                                        )
-                                                                                        .postDelayed(
-                                                                                                {
-                                                                                                        android.widget
-                                                                                                                .Toast
-                                                                                                                .makeText(
-                                                                                                                        context,
-                                                                                                                        "Dev server started! Opening browser...",
-                                                                                                                        android.widget
-                                                                                                                                .Toast
-                                                                                                                                .LENGTH_SHORT
-                                                                                                                )
-                                                                                                                .show()
-
-                                                                                                        // Open browser to dev server
-                                                                                                        val urlToOpen =
-                                                                                                                "http://localhost:$devPort"
-                                                                                                        BrowserSession(
-                                                                                                                context
-                                                                                                        )
-                                                                                                        browserViewModel
-                                                                                                                .setDevWebView(
-                                                                                                                        SessionList
-                                                                                                                                        .sessions[
-                                                                                                                                        SessionList
-                                                                                                                                                .activeSessionIndex!!]
-                                                                                                                                .view!!
-                                                                                                                )
-                                                                                                        browserViewModel
-                                                                                                                .loadUrl(
-                                                                                                                        urlToOpen
-                                                                                                                )
-                                                                                                        navController
-                                                                                                                .navigate(
-                                                                                                                        Screen.Browser
-                                                                                                                                .route
-                                                                                                                )
-                                                                                                },
-                                                                                                5000
-                                                                                        ) // Wait 5
-                                                                                // seconds
-                                                                                // for dev
-                                                                                // server
-                                                                                // to
-                                                                                // start
-                                                                        },
-                                                                        2000
-                                                                ) // Wait 2 seconds for terminal to
-                                                        // initialize
-
-                                                        return@TopBarIconButton
-                                                }
-
-                                                // Show message for vanilla HTML
-                                                android.widget.Toast.makeText(
-                                                                context,
-                                                                result.message,
-                                                                android.widget.Toast.LENGTH_SHORT
-                                                        )
-                                                        .show()
-
-                                                // Get URL to open (only for vanilla HTML)
-                                                val urlToOpen =
-                                                        result.serverUrl ?: "http://localhost:5500"
-
-                                                // Create browser session and navigate
+                                TopBarIconButton(
+                                        icon = R.drawable.web_icon,
+                                        onClick = {
+                                                currentEditorSession?.saveContent()
                                                 BrowserSession(context)
                                                 browserViewModel.setDevWebView(
                                                         SessionList.sessions[
-                                                                        SessionList
-                                                                                .activeSessionIndex!!]
+                                                                        SessionList.activeSessionIndex!!]
                                                                 .view!!
                                                 )
-                                                browserViewModel.loadUrl(urlToOpen)
                                                 navController.navigate(Screen.Browser.route)
-                                        } else {
-                                                android.widget.Toast.makeText(
-                                                                context,
-                                                                result.message,
-                                                                android.widget.Toast.LENGTH_LONG
-                                                        )
-                                                        .show()
                                         }
-                                }
-                        )
-
-                        VerticalDivider(
-                                modifier = Modifier.fillMaxHeight().width(1.dp),
-                                color = Color(0xFF3E3E42)
-                        )
-
-                        // Browser button
-                        TopBarIconButton(
-                                icon = R.drawable.web_icon,
-                                onClick = {
-                                        currentEditorSession?.saveContent()
-                                        BrowserSession(context)
-                                        browserViewModel.setDevWebView(
-                                                SessionList.sessions[
-                                                                SessionList.activeSessionIndex!!]
-                                                        .view!!
-                                        )
-                                        navController.navigate(Screen.Browser.route)
-                                }
-                        )
+                                )
+                        }
 
                         VerticalDivider(
                                 modifier = Modifier.fillMaxHeight().width(1.dp),
@@ -856,25 +642,87 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
                                 }
                         )
 
-                        VerticalDivider(
-                                modifier = Modifier.fillMaxHeight().width(1.dp),
-                                color = Color(0xFF3E3E42)
-                        )
+                        // Settings button - only show in landscape (in portrait, it's in the sidebar)
+                        if (isLandscape) {
+                                VerticalDivider(
+                                        modifier = Modifier.fillMaxHeight().width(1.dp),
+                                        color = Color(0xFF3E3E42)
+                                )
 
-                        // Settings button
-                        TopBarIconButton(
-                                icon = R.drawable.settings_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
-                                onClick = {
-                                        currentEditorSession?.saveContent()
-                                        navController.navigate(Screen.Settings.route)
-                                }
-                        )
-
-                        VerticalDivider(
-                                modifier = Modifier.fillMaxHeight().width(1.dp),
-                                color = Color(0xFF3E3E42)
-                        )
+                                TopBarIconButton(
+                                        icon = R.drawable.settings_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
+                                        onClick = {
+                                                currentEditorSession?.saveContent()
+                                                navController.navigate(Screen.Settings.route)
+                                        }
+                                )
+                        }
                 }
+        }
+
+        // Package Install Dialog
+        if (showPackageDialog) {
+                androidx.compose.material3.AlertDialog(
+                        onDismissRequest = {
+                                showPackageDialog = false
+                                missingPackage = ""
+                                pendingFilePath = null
+                        },
+                        title = { Text("Missing Package", color = Color.White) },
+                        text = {
+                                Text(
+                                        "Would you like to install '$missingPackage'? It is needed to run this code.",
+                                        color = Color(0xFFCCCCCC)
+                                )
+                        },
+                        confirmButton = {
+                                androidx.compose.material3.TextButton(
+                                        onClick = {
+                                                showPackageDialog = false
+                                                val pkgToInstall = missingPackage
+                                                val fileToRun = pendingFilePath
+                                                missingPackage = ""
+                                                pendingFilePath = null
+
+                                                // Install package and re-run
+                                                currentEditorSession?.let { session ->
+                                                        val (terminal, _) =
+                                                                session.getOrCreateRunnerTerminal(
+                                                                        context
+                                                                )
+                                                        android.util.Log.d(
+                                                                "CodeRunner",
+                                                                "Installing package: $pkgToInstall"
+                                                        )
+
+                                                        // Install then re-run
+                                                        val installCmd =
+                                                                "apk add $pkgToInstall && clear && bash \$PREFIX/code-runner.sh \"$fileToRun\"\n"
+                                                        terminal.insertText(installCmd)
+
+                                                        android.widget.Toast.makeText(
+                                                                        context,
+                                                                        "Installing $pkgToInstall...",
+                                                                        android.widget.Toast
+                                                                                .LENGTH_SHORT
+                                                                )
+                                                                .show()
+                                                }
+                                        }
+                                ) { Text("Install", color = Color(0xFF4CAF50)) }
+                        },
+                        dismissButton = {
+                                androidx.compose.material3.TextButton(
+                                        onClick = {
+                                                showPackageDialog = false
+                                                missingPackage = ""
+                                                pendingFilePath = null
+                                        }
+                                ) { Text("Cancel", color = Color(0xFFFF5252)) }
+                        },
+                        containerColor = Color(0xFF2D2D2D),
+                        tonalElevation = 8.dp
+                )
         }
 }
 
@@ -896,4 +744,240 @@ fun LeftTermTopBar(modifier: Modifier = Modifier) {
                         verticalAlignment = Alignment.CenterVertically
                 ) {}
         }
+}
+
+/**
+ * Terminal Sidebar - Simplified sidebar for terminal portrait mode
+ * Only contains ZoomOut, Browser, and Settings buttons
+ */
+@Composable
+fun TerminalSidebar(
+        isVisible: Boolean,
+        onDismiss: () -> Unit,
+        onZoomOutClick: () -> Unit,
+        onSettingsClick: () -> Unit
+) {
+        val configuration = LocalConfiguration.current
+        val screenWidth = configuration.screenWidthDp.dp
+        val sidebarWidth = screenWidth * 0.75f
+
+        // Animated offset for slide-in effect
+        val offsetX by androidx.compose.animation.core.animateDpAsState(
+                targetValue = if (isVisible) 0.dp else -sidebarWidth,
+                animationSpec = androidx.compose.animation.core.tween(
+                        durationMillis = 300,
+                        easing = androidx.compose.animation.core.FastOutSlowInEasing
+                ),
+                label = "sidebarOffset"
+        )
+
+        // Only render when visible or animating
+        if (isVisible || offsetX > -sidebarWidth) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                        // Scrim (background overlay)
+                        if (isVisible) {
+                                Box(
+                                        modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(Color.Black.copy(alpha = 0.5f))
+                                                .clickable { onDismiss() }
+                                )
+                        }
+
+                        // Sidebar panel
+                        Column(
+                                modifier = Modifier
+                                        .offset(x = offsetX)
+                                        .width(sidebarWidth)
+                                        .fillMaxHeight()
+                                        .background(Color(0xFF1E1E1E))
+                                        .padding(top = 40.dp) // Account for status bar
+                        ) {
+                                // Header
+                                Box(
+                                        modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(Color(0xFF2D2D30))
+                                                .padding(16.dp)
+                                ) {
+                                        Text(
+                                                "Quick Actions",
+                                                color = Color.White,
+                                                style = androidx.compose.material3.MaterialTheme.typography.titleMedium
+                                        )
+                                }
+
+                                androidx.compose.material3.HorizontalDivider(
+                                        thickness = 1.dp,
+                                        color = Color(0xFF2D2D2D)
+                                )
+
+                                // Action buttons
+                                Column(
+                                        modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                        // ZoomOut / Sessions button
+                                        TerminalSidebarButton(
+                                                icon = R.drawable.zoom_in,
+                                                label = "Sessions",
+                                                onClick = {
+                                                        onZoomOutClick()
+                                                        onDismiss()
+                                                }
+                                        )
+
+                                        // Settings button
+                                        TerminalSidebarButton(
+                                                icon = R.drawable.settings_24dp_e3e3e3_fill0_wght400_grad0_opsz24,
+                                                label = "Settings",
+                                                onClick = {
+                                                        onSettingsClick()
+                                                        onDismiss()
+                                                }
+                                        )
+                                }
+                        }
+                }
+        }
+}
+
+@Composable
+private fun TerminalSidebarButton(
+        icon: Int,
+        label: String,
+        onClick: () -> Unit
+) {
+        Row(
+                modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF2D2D30))
+                        .clickable { onClick() }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start
+        ) {
+                Icon(
+                        painter = painterResource(icon),
+                        contentDescription = label,
+                        tint = Color(0xFFCCCCCC),
+                        modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                        text = label,
+                        color = Color.White,
+                        style = androidx.compose.material3.MaterialTheme.typography.bodyLarge
+                )
+        }
+}
+
+/**
+ * Terminal Portrait Top Bar - Simplified top bar for terminal in portrait mode
+ * Has menu button on left and exit button on right
+ */
+@Composable
+fun TerminalPortraitTopBar(
+        modifier: Modifier = Modifier, 
+        onMenuClick: () -> Unit,
+        navController: NavController
+) {
+        Box(
+                modifier =
+                        modifier.background(Color(0xFF1B1B1B))
+                                .fillMaxWidth()
+                                .height(28.dp)
+                                .padding(horizontal = 4.dp)
+        ) {
+                Row(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                        // Menu button (left side)
+                        Row(
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                                IconButton(onClick = onMenuClick) {
+                                        Icon(
+                                                imageVector = Icons.Default.Menu,
+                                                contentDescription = "Toggle Sidebar",
+                                                tint = Color(0xFF858585)
+                                        )
+                                }
+                        }
+                        
+                        // Exit button (right side)
+                        Row(
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                                TopBarIconButton(
+                                        icon = R.drawable.back_logout,
+                                        onClick = {
+                                                navController.popBackStack()
+                                        }
+                                )
+                        }
+                }
+        }
+}
+
+/** Convert a content URI to a real file path. Works with SAF (Storage Access Framework) URIs. */
+internal fun getPathFromUri(context: Context, uri: android.net.Uri): String? {
+        android.util.Log.d("CodeRunner", "getPathFromUri: $uri")
+
+        // If it's already a file path
+        if (uri.scheme == "file") {
+                return uri.path
+        }
+
+        // For content URIs, try to extract the path from the document ID
+        if (uri.scheme == "content") {
+                // Check if it's a document URI
+                val docId =
+                        try {
+                                android.provider.DocumentsContract.getDocumentId(uri)
+                        } catch (e: Exception) {
+                                try {
+                                        android.provider.DocumentsContract.getTreeDocumentId(uri)
+                                } catch (e2: Exception) {
+                                        null
+                                }
+                        }
+
+                android.util.Log.d("CodeRunner", "Document ID: $docId")
+
+                if (docId != null) {
+                        // Common format: "primary:path/to/folder" or "raw:/storage/emulated/0/path"
+                        val split = docId.split(":")
+                        if (split.size >= 2) {
+                                val type = split[0]
+                                val path = split.subList(1, split.size).joinToString(":")
+
+                                return when {
+                                        type == "primary" -> "/storage/emulated/0/$path"
+                                        type == "raw" -> path
+                                        type.startsWith("/") -> docId // Already a path
+                                        else -> "/storage/$type/$path" // Try volume path
+                                }
+                        } else if (docId.startsWith("/")) {
+                                return docId
+                        }
+                }
+
+                // Fallback: try to get the path directly
+                uri.path?.let { path ->
+                        // SAF URIs often have format: /tree/primary:xxx/document/primary:xxx
+                        val primaryMatch = Regex("primary:(.+)").find(path)
+                        if (primaryMatch != null) {
+                                return "/storage/emulated/0/${primaryMatch.groupValues[1]}"
+                        }
+                }
+        }
+
+        android.util.Log.w("CodeRunner", "Could not extract path from URI: $uri")
+        return null
 }

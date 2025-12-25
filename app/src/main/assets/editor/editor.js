@@ -95,14 +95,12 @@ const themes = {
 
 // Set editor theme function - exposed globally
 window.setTheme = function (themeName) {
-  console.log('[Editor] setTheme called with:', themeName);
   const theme = themes[themeName];
   if (theme && window.view) {
     window.view.dispatch({
       effects: themeCompartment.reconfigure(theme)
     });
     window.currentTheme = themeName;
-    console.log('[Editor] Theme applied:', themeName);
 
     // Extract and apply background color after theme change
     setTimeout(() => {
@@ -110,7 +108,6 @@ window.setTheme = function (themeName) {
       if (editorEl) {
         const bg = window.getComputedStyle(editorEl).backgroundColor;
         document.body.style.backgroundColor = bg;
-        console.log('[Editor] Background color updated to:', bg);
       }
     }, 50); // Small delay to ensure theme is fully applied
 
@@ -136,31 +133,26 @@ window.getCurrentTheme = function () {
 
 // Word wrap setting
 window.setWordWrap = function (enabled) {
-  console.log('[Editor] setWordWrap:', enabled);
   if (!window.view) return false;
 
   window.view.dispatch({
     effects: lineWrapCompartment.reconfigure(enabled ? EditorView.lineWrapping : [])
   });
-  console.log('[Editor] Word wrap applied:', enabled);
   return true;
 };
 
 // Line numbers setting
 window.setLineNumbers = function (enabled) {
-  console.log('[Editor] setLineNumbers:', enabled);
   if (!window.view) return false;
 
   window.view.dispatch({
     effects: lineNumbersCompartment.reconfigure(enabled ? [lineNumbers(), highlightActiveLineGutter()] : [])
   });
-  console.log('[Editor] Line numbers applied:', enabled);
   return true;
 };
 
 // Tab size setting
 window.setTabSize = function (size) {
-  console.log('[Editor] setTabSize:', size);
   if (!window.view) return false;
 
   const spaces = ' '.repeat(size);
@@ -170,14 +162,12 @@ window.setTabSize = function (size) {
       indentUnit.of(spaces)
     ])
   });
-  console.log('[Editor] Tab size applied:', size);
   return true;
 };
 
 // Relative line numbers setting  
 let relativeLineNumbersEnabled = false;
 window.setRelativeLineNumbers = function (enabled) {
-  console.log('[Editor] setRelativeLineNumbers:', enabled);
   if (!window.view) return false;
 
   relativeLineNumbersEnabled = enabled;
@@ -201,69 +191,57 @@ window.setRelativeLineNumbers = function (enabled) {
     });
   }
 
-  console.log('[Editor] Relative line numbers applied:', enabled);
   return true;
 };
 
 // Indent guides setting
 window.setIndentGuides = function (enabled) {
-  console.log('[Editor] setIndentGuides:', enabled);
   if (!window.view) return false;
 
   window.view.dispatch({
     effects: indentGuidesCompartment.reconfigure(enabled ? indentationMarkers() : [])
   });
-  console.log('[Editor] Indent guides applied:', enabled);
   return true;
 };
 
 // Highlight active line setting
 window.setHighlightActiveLine = function (enabled) {
-  console.log('[Editor] setHighlightActiveLine:', enabled);
   if (!window.view) return false;
 
   window.view.dispatch({
     effects: highlightActiveLineCompartment.reconfigure(enabled ? highlightActiveLine() : [])
   });
-  console.log('[Editor] Highlight active line applied:', enabled);
   return true;
 };
 
 // Bracket matching setting
 window.setBracketMatching = function (enabled) {
-  console.log('[Editor] setBracketMatching:', enabled);
   if (!window.view) return false;
 
   window.view.dispatch({
     effects: bracketMatchingCompartment.reconfigure(enabled ? bracketMatching() : [])
   });
-  console.log('[Editor] Bracket matching applied:', enabled);
   return true;
 };
 
 // Auto close brackets setting
 window.setCloseBrackets = function (enabled) {
-  console.log('[Editor] setCloseBrackets:', enabled);
   if (!window.view) return false;
 
   window.view.dispatch({
     effects: closeBracketsCompartment.reconfigure(enabled ? closeBrackets() : [])
   });
-  console.log('[Editor] Close brackets applied:', enabled);
   return true;
 };
 
 // Minimap (not natively supported in CM6, would need extension)
 window.setMinimap = function (enabled) {
-  console.log('[Editor] setMinimap:', enabled);
   // CM6 doesn't have built-in minimap - would need a third-party extension
   // For now, we just store the preference and log it
-  console.log('[Editor] Minimap toggled to:', enabled, '(requires third-party extension for actual implementation)');
   return true;
 };
 
 window.setLanguage = async function (slug, port = 8081) {
-  console.log(`[LSP-JS] setLanguage called for ${slug} port: ${port}`);
   currentLanguageId = slug; // Update current language
 
   // Connect to LSP
@@ -290,7 +268,6 @@ window.setLanguage = async function (slug, port = 8081) {
       window.view.dispatch({
         effects: languageCompartment.reconfigure(langModule)
       })
-      console.log(`[LSP-JS] Language reconfigured to ${slug}`);
     }
   } catch (e) {
     console.error(`[LSP-JS] Failed to load language ${slug}`, e);
@@ -299,7 +276,6 @@ window.setLanguage = async function (slug, port = 8081) {
 
 // Clear language support (for unsupported files)
 window.clearLanguage = function () {
-  console.log('[LSP-JS] Clearing language support (plaintext mode)');
   currentLanguageId = 'plaintext';
 
   // Close any existing LSP connection
@@ -576,7 +552,6 @@ function showDocPopup(item, targetElement) {
   docPopupEl.style.top = `${topPos}px`;
   docPopupEl.style.display = 'block';
 
-  console.log(`[LSP-JS] Showing doc popup for: ${item.label}`);
 }
 
 // Hide documentation popup
@@ -632,7 +607,6 @@ function setupEditor() {
         params: { id: id }
       };
       ws.send(JSON.stringify(cancel));
-      console.log(`[LSP-JS] Cancelled request ${id}`);
     }
   }
 
@@ -642,7 +616,6 @@ function setupEditor() {
   window.setFilePath = (path) => {
     const oldURI = URI;
     URI = `file://${path}`;
-    console.log(`[LSP-JS] setFilePath: ${path}, oldURI=${oldURI}, newURI=${URI}`);
 
     // If we haven't initialized yet, just updating URI is enough.
     // The onopen handler will use the new URI.
@@ -668,13 +641,11 @@ function setupEditor() {
         }
       });
       openedDocumentUri = URI;
-      console.log(`[LSP-JS] Sent didOpen for ${URI} with version ${window.lspVersion}`);
     }
   };
 
   window.setRootUri = (uri) => {
     rootURI = uri;
-    console.log(`[LSP-JS] rootUri set to: ${rootURI}`);
   }
 
   // Debounced diagnostics handling
@@ -749,7 +720,6 @@ function setupEditor() {
           window.cachedWarnings = warningCount;
 
           // Use CodeMirror's built-in setDiagnostics for proper linting display
-          console.log(`[LSP-JS] Applying ${validDiagnostics.length} diagnostics (${errorCount} errors, ${warningCount} warnings)`);
           view.dispatch(setDiagnostics(view.state, validDiagnostics));
 
           // IMMEDIATELY send status update when diagnostics change (for bottom bar)
@@ -783,11 +753,9 @@ function setupEditor() {
     if (window.completionItems.length === 0) {
       completionListEl.style.display = 'none';
       window.completionActive = false;
-      console.log('[LSP-JS] Hiding completion list (empty)');
       return;
     }
 
-    console.log(`[LSP-JS] Showing completion list with ${window.completionItems.length} items`);
 
     completionListEl.innerHTML = '';
     window.completionItems.forEach((item, index) => {
@@ -930,7 +898,6 @@ function setupEditor() {
   // ...
   window.insertText = function (text) {
     view.dispatch(view.state.replaceSelection(text));
-    // console.log("[LSP-JS] insertText called with: '" + text + "'"); // Silenced
     view.focus(); // Re-enabled focus
 
     // Manually trigger completion
@@ -943,11 +910,9 @@ function setupEditor() {
   async function lspCompletionSource(context) {
     // Wait for initialization
     if (!isInitialized) {
-      // console.log('[LSP-JS] Completion skipped: Not initialized');
       return null;
     }
 
-    // console.log('[LSP-JS] Completion source triggered');
 
     const now = Date.now()
 
@@ -996,7 +961,6 @@ function setupEditor() {
         },
         contentChanges: [{ text: context.state.doc.toString() }]
       });
-      console.log('[LSP-JS] Flushed pending didChange for completion');
     }
 
     try {
@@ -1005,7 +969,6 @@ function setupEditor() {
       pendingCompletionId = currentRequestId;
 
       // Log the completion request details
-      console.log(`[LSP-JS] Completion request: uri=${URI}, line=${lineNumber}, char=${character}, triggerKind=${triggerKind}, triggerChar=${triggerCharacter || 'none'}, langId=${currentLanguageId}`);
 
       const result = await sendRequest(ws, 'textDocument/completion', {
         textDocument: { uri: URI },
@@ -1022,14 +985,12 @@ function setupEditor() {
 
       const items = result.items || result
       if (!Array.isArray(items) || items.length === 0) {
-        console.log('[LSP-JS] No completion items returned');
         return null
       }
 
       // console.log(`✨ Got ${items.length} completion items`);
       if (items.length > 0) {
         const firstFew = items.slice(0, 5).map(i => `${i.label}(${i.kind || '?'})`).join(', ');
-        console.log(`[LSP-JS] First 5 items: ${firstFew}`);
       }
 
       const wordBefore = context.matchBefore(/[\w\-]*/) // Match words and hyphens (for CSS/HTML)
@@ -1145,7 +1106,6 @@ function setupEditor() {
 
           // Notify Android about content change
           if (window.AndroidEditor && !window.isProgrammaticChange) {
-            // console.log('[LSP-JS] Content changed (user), calling onContentChanged');
             window.AndroidEditor.onContentChanged();
           }
           // Trigger auto-save timer
@@ -1334,7 +1294,6 @@ function setupEditor() {
           window.didChangeTimeout = setTimeout(() => {
             // Double-check document is still open (might have changed during debounce)
             if (openedDocumentUri !== URI) {
-              console.log(`[LSP-JS] Skipping didChange: document ${URI} not opened (opened: ${openedDocumentUri})`);
               return;
             }
 
@@ -1348,7 +1307,6 @@ function setupEditor() {
             };
 
             sendNotification(ws, 'textDocument/didChange', payload);
-            console.log(`[LSP-JS] Sent didChange for ${URI} version ${window.lspVersion}`);
           }, 100); // 100ms debounce - fastest LSP updates
         }
       })
@@ -1363,21 +1321,15 @@ function setupEditor() {
   window.editor = view; // Alias for compatibility
 
   window.isEditorReady = true
-  console.log('[Editor] CM6 ready, isEditorReady set to true');
 
   // Notify Android that CM6 is ready so loading screen can be hidden
-  console.log('[Editor] Checking AndroidEditorReady interface...');
-  console.log('[Editor] window.AndroidEditorReady:', window.AndroidEditorReady);
   if (window.AndroidEditorReady && window.AndroidEditorReady.onReady) {
-    console.log('[Editor] Calling AndroidEditorReady.onReady()...');
     try {
       window.AndroidEditorReady.onReady();
-      console.log('[Editor] AndroidEditorReady.onReady() called successfully');
     } catch (e) {
       console.error('[Editor] Error calling onReady:', e);
     }
   } else {
-    console.log('[Editor] AndroidEditorReady interface not available');
   }
 
   const editorEl = document.querySelector('.cm-editor')
@@ -1505,7 +1457,6 @@ function setupEditor() {
 
     // Use auto-indent for new lines
     insertNewlineAndIndent(view);
-    console.log("[LSP-JS] Performed insertNewlineAndIndent");
   };
 
   window.performCopy = function () {
@@ -1846,19 +1797,16 @@ function setupEditor() {
 
   // Toggle CM6's built-in search panel
   window.toggleSearchPanel = function () {
-    console.log('[Editor] Toggling CM6 search panel');
     openSearchPanel(view);
     return true;
   };
 
   window.openSearch = function () {
-    console.log('[Editor] Opening CM6 search panel');
     openSearchPanel(view);
     return true;
   };
 
   window.closeSearch = function () {
-    console.log('[Editor] Closing CM6 search panel');
     closeSearchPanel(view);
     return true;
   };
@@ -1959,7 +1907,6 @@ function setupEditor() {
             }
           });
           openedDocumentUri = URI;
-          console.log(`[LSP-JS] Reconnect didOpen for ${URI}`);
         }
         return;
       }
@@ -1968,7 +1915,6 @@ function setupEditor() {
       isInitialized = false;
 
       // Log the initialize request for debugging
-      console.log(`[LSP-JS] Sending initialize with rootUri: ${rootURI}, languageId: ${currentLanguageId}`);
 
       initializationPromise = sendRequest(ws, 'initialize', {
         processId: null,
@@ -2025,8 +1971,6 @@ function setupEditor() {
           }
         }
       }, 15000).then((result) => {
-        console.log(`[LSP-JS] ✅ Server initialized: ${result.serverInfo?.name || 'unknown'}, rootUri was: ${rootURI}`);
-        console.log(`[LSP-JS] Server capabilities: ${JSON.stringify(result.capabilities?.completionProvider || {})}`);
         isInitialized = true;
         initializedPorts.add(port); // Mark as initialized
         sendNotification(ws, 'initialized', {});
@@ -2044,7 +1988,6 @@ function setupEditor() {
             }
           });
           openedDocumentUri = URI;
-          console.log(`[LSP-JS] Initial didOpen for ${URI}`);
 
           // If user was typing during initialization, the document may have changed
           // by the time didOpen was sent. Schedule a sync to ensure LSP has latest text.
@@ -2059,7 +2002,6 @@ function setupEditor() {
                   textDocument: { uri: URI, version: window.lspVersion },
                   contentChanges: [{ text: latestText }]
                 });
-                console.log(`[LSP-JS] Post-init sync: text changed during init, sent didChange v${window.lspVersion}`);
               }
             }
           }, 200); // 200ms after didOpen to catch any typing during init
@@ -2092,7 +2034,6 @@ function setupEditor() {
 
         // Log all incoming messages for debugging
         const msgPreview = event.data.length > 200 ? event.data.substring(0, 200) + '...' : event.data;
-        console.log(`[LSP-JS] Received message (len=${event.data.length}): ${msgPreview}`);
 
         // IMPORTANT: Distinguish between:
         // 1. Response to OUR request: has id, has result OR error, NO method
@@ -2106,21 +2047,17 @@ function setupEditor() {
             clearTimeout(timer);
             pendingRequests.delete(msg.id);
             if (msg.error) {
-              console.log(`[LSP-JS] Request ${msg.id} failed:`, msg.error);
               reject(msg.error);
             } else {
-              console.log(`[LSP-JS] Request ${msg.id} succeeded`);
               resolve(msg.result);
             }
           } else {
-            console.log(`[LSP-JS] Received response for unknown request ${msg.id}`);
           }
           return;
         }
 
         // Handle Server Requests (has both id and method - server is asking US something)
         if (msg.id !== undefined && msg.method !== undefined) {
-          console.log(`[LSP-JS] Server request: ${msg.method} (id=${msg.id})`);
 
           // Respond to workspace/configuration requests
           if (msg.method === 'workspace/configuration') {
@@ -2131,7 +2068,6 @@ function setupEditor() {
               result: msg.params.items.map(() => ({})) // Empty config for each item
             };
             ws.send(JSON.stringify(response));
-            console.log(`[LSP-JS] Sent configuration response for id=${msg.id}`);
           } else {
             // For other server requests, send an error (not supported)
             const response = {
@@ -2212,7 +2148,6 @@ window.setFontSize = function (size) {
     }
   `;
   document.head.appendChild(fontStyle);
-  console.log('[Editor] Font size set to:', size);
 };
 
 // Dynamic bottom padding for when bottom bar is expanded
@@ -2231,7 +2166,6 @@ window.setBottomPadding = function (paddingPx) {
     }
   `;
   document.head.appendChild(paddingStyle);
-  console.log('[Editor] Bottom padding set to:', paddingPx);
 };
 
 // Auto-save functionality
@@ -2240,7 +2174,6 @@ let autoSaveEnabled = false;
 let autoSaveDelay = 3000; // Default 3 seconds
 
 window.setAutoSave = function (enabled, delaySeconds) {
-  console.log('[Editor] setAutoSave:', enabled, delaySeconds);
   autoSaveEnabled = enabled;
   if (delaySeconds) autoSaveDelay = delaySeconds * 1000;
 
@@ -2257,7 +2190,6 @@ function triggerAutoSave() {
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
 
   autoSaveTimer = setTimeout(() => {
-    console.log('[Editor] Auto-save triggered');
     if (window.AndroidInterface && window.AndroidInterface.saveFile) {
       window.AndroidInterface.saveFile();
     }

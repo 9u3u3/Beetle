@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Python Notebook</title>
+    <link href="./notebook.css" rel="stylesheet">
+    <script>
+        // Define setBottomPadding early so it's available before bundle loads
+        // Apply as margin-bottom on last element to prevent layout shift
+        window.setBottomPadding = function (paddingPx) {
+            var existingStyle = document.getElementById('notebook-bottom-padding-style');
+            if (existingStyle) {
+                existingStyle.remove();
+            }
+
+            var paddingStyle = document.createElement('style');
+            paddingStyle.id = 'notebook-bottom-padding-style';
+            // Apply margin to last cell and as a pseudo-element spacer in the container
+            paddingStyle.textContent = '#notebook-container::after { content: ""; display: block; height: ' + paddingPx + 'px; }';
+            document.head.appendChild(paddingStyle);
+            console.log('[Notebook] Bottom padding set to: ' + paddingPx);
+        };
+    </script>
+</head>
+
+<body>
+    <!-- Toolbar -->
+    <div id="notebook-toolbar">
+        <button id="btn-add-cell" title="Add Cell">
+            <svg class="toolbar-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span class="toolbar-label">Cell</span>
+        </button>
+        <button id="btn-run-all" title="Run All Cells">
+            <svg class="toolbar-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+            </svg>
+            <span class="toolbar-label">Run All</span>
+        </button>
+        <button id="btn-clear-all" title="Clear All Outputs">
+            <svg class="toolbar-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            <span class="toolbar-label">Clear All</span>
+        </button>
+        <div class="toolbar-spacer"></div>
+        <span id="notebook-status">Ready</span>
+    </div>
+
+    <!-- Notebook Container -->
+    <div id="notebook-container">
+        <!-- Cells will be rendered here -->
+    </div>
+
+    <script src="./notebook.bundle.js"></script>
+</body>
+
+</html>

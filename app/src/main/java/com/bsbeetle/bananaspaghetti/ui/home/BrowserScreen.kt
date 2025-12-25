@@ -22,21 +22,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
 import com.bsbeetle.bananaspaghetti.LocalSliderViewModel
 import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
-import com.bsbeetle.bananaspaghetti.data.sidebar.Sidebar
-import com.bsbeetle.bananaspaghetti.data.sidebar.SidebarTab
 import com.bsbeetle.bananaspaghetti.ui.browser.DevBrowserScreen
 import com.bsbeetle.bananaspaghetti.ui.components.ExtraKeysRow
 import com.bsbeetle.bananaspaghetti.ui.components.LeftTermTopBar
 import com.bsbeetle.bananaspaghetti.ui.components.RightTopBar
+import com.bsbeetle.bananaspaghetti.ui.components.TerminalPortraitTopBar
+import com.bsbeetle.bananaspaghetti.ui.components.TerminalSidebar
 import com.bsbeetle.bananaspaghetti.ui.components.TopLeftTermBox
 import com.bsbeetle.bananaspaghetti.ui.components.TopRightBox
 import com.bsbeetle.bananaspaghetti.ui.keyboard.KeyboardSide
@@ -50,7 +50,32 @@ import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
 @Composable
 fun BrowserScreen(navController: NavController) {
 
-    Log.d("BrowserScreen", "Loading the Browser screen, Session type: ${SessionList.sessions[SessionList.activeSessionIndex!!].type}")
+    // Safely check if session exists before accessing
+    val sessionIndex = SessionList.activeSessionIndex
+    val sessions = SessionList.sessions
+
+    // If index is invalid, navigate back to home
+    if (sessionIndex == null || sessionIndex < 0 || sessionIndex >= sessions.size) {
+        Log.w(
+                "BrowserScreen",
+                "Invalid session index: $sessionIndex, sessions size: ${sessions.size}"
+        )
+        navController.navigate(Screen.Home.route) {
+            popUpTo(Screen.Home.route) { inclusive = true }
+        }
+        return
+    }
+
+    val currentSession = sessions.getOrNull(sessionIndex)
+    if (currentSession == null || currentSession.view == null) {
+        Log.w("BrowserScreen", "Session or view is null, navigating back")
+        navController.navigate(Screen.Home.route) {
+            popUpTo(Screen.Home.route) { inclusive = true }
+        }
+        return
+    }
+
+    Log.d("BrowserScreen", "Loading the Browser screen, Session type: ${currentSession.type}")
 
     BackHandler {
         navController.navigate(Screen.Home.route) {
@@ -72,155 +97,186 @@ fun BrowserScreen(navController: NavController) {
 
     var showSidebar by rememberSaveable { mutableStateOf(false) }
 
-    val layout = when (uiState.keyboardPage) {
-        0 -> KeyboardLayout.qwertyLayout    // Alphabets
-        1 -> KeyboardLayout.editorLayout    // Symbols
-        else -> KeyboardLayout.terminalLayout // Navigation
-    }
+    val layout =
+            when (uiState.keyboardPage) {
+                0 -> KeyboardLayout.qwertyLayout // Alphabets
+                1 -> KeyboardLayout.editorLayout // Symbols
+                else -> KeyboardLayout.terminalLayout // Navigation
+            }
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1B1B1B))) {
         ConstraintLayout(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(if (!isLandscape) Modifier.padding(top = 40.dp) else Modifier)
+                modifier =
+                        Modifier.fillMaxSize()
+                                .then(if (!isLandscape) Modifier.padding(top = 40.dp) else Modifier)
         ) {
-
             val (topLeft, topRight, leftBox, rightBox, leftKb, editor, rightKb) = createRefs()
 
             // MERGE NOTE: Kept Block 2's logic for Portrait/Landscape TopBars
             if (isLandscape) {
                 LeftTermTopBar(
-                    modifier = Modifier.constrainAs(topLeft) {
-                        top.linkTo(parent.top)
-                        start.linkTo(parent.start)
-                        end.linkTo(editor.start)
-                        width = Dimension.fillToConstraints
-                        height = Dimension.wrapContent
-                    }
+                        modifier =
+                                Modifier.constrainAs(topLeft) {
+                                    top.linkTo(parent.top)
+                                    start.linkTo(parent.start)
+                                    end.linkTo(editor.start)
+                                    width = Dimension.fillToConstraints
+                                    height = Dimension.wrapContent
+                                }
                 )
 
                 RightTopBar(
-                    modifier = Modifier.constrainAs(topRight) {
-                        top.linkTo(parent.top)
-                        start.linkTo(editor.end)
-                        end.linkTo(parent.end)
-                        width = Dimension.fillToConstraints
-                        height = Dimension.wrapContent
-                    },
-                    navController = navController
+                        modifier =
+                                Modifier.constrainAs(topRight) {
+                                    top.linkTo(parent.top)
+                                    start.linkTo(editor.end)
+                                    end.linkTo(parent.end)
+                                    width = Dimension.fillToConstraints
+                                    height = Dimension.wrapContent
+                                },
+                        navController = navController
                 )
             } else {
-                // Portrait Top Bar
-                RightTopBar(
-                    modifier = Modifier.constrainAs(topLeft) {
-                        top.linkTo(parent.top)
-                        start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                        width = Dimension.fillToConstraints
-                        height = Dimension.wrapContent
-                    },
-                    navController = navController
+                // Portrait Top Bar - Custom top bar with menu and exit buttons
+                TerminalPortraitTopBar(
+                        modifier =
+                                Modifier.constrainAs(topLeft) {
+                                    top.linkTo(parent.top)
+                                    start.linkTo(parent.start)
+                                    end.linkTo(parent.end)
+                                    width = Dimension.fillToConstraints
+                                    height = Dimension.wrapContent
+                                },
+                        onMenuClick = { showSidebar = !showSidebar },
+                        navController = navController
                 )
             }
 
             if (isLandscape) {
                 TopLeftTermBox(
-                    Modifier.constrainAs(leftBox) {
-                        top.linkTo(topRight.bottom)
-                        bottom.linkTo(leftKb.top)
-                        start.linkTo(parent.start)
-                        end.linkTo(editor.start)
-                        width = Dimension.fillToConstraints
-                        height = Dimension.fillToConstraints
-                    }
+                        Modifier.constrainAs(leftBox) {
+                            top.linkTo(topRight.bottom)
+                            bottom.linkTo(leftKb.top)
+                            start.linkTo(parent.start)
+                            end.linkTo(editor.start)
+                            width = Dimension.fillToConstraints
+                            height = Dimension.fillToConstraints
+                        }
                 )
 
                 TopRightBox(
-                    Modifier.constrainAs(rightBox) {
-                        top.linkTo(topRight.bottom)
-                        bottom.linkTo(rightKb.top)
-                        start.linkTo(editor.start)
-                        end.linkTo(parent.end)
-                        width = Dimension.fillToConstraints
-                        height = Dimension.fillToConstraints
-                    }
+                        Modifier.constrainAs(rightBox) {
+                            top.linkTo(topRight.bottom)
+                            bottom.linkTo(rightKb.top)
+                            start.linkTo(editor.start)
+                            end.linkTo(parent.end)
+                            width = Dimension.fillToConstraints
+                            height = Dimension.fillToConstraints
+                        }
                 )
 
                 // Only show custom keyboards if NOT using landscape IME mode
                 if (uiState.isLeftKeyboardVisible && !uiState.useLandscapeIme) {
                     SplitKeyboardHalf(
-                        layout = layout,
-                        side = KeyboardSide.LEFT,
-                        isCapsLockOn = uiState.isCapsLockOn,
-                        isShiftOn = uiState.isShiftOn,
-                        isCtrlOn = uiState.isCtrlOn,
-                        onKeyEvent = keyboardViewModel::onKeyEvent,
-                        modifier = Modifier.constrainAs(leftKb) {
-                            start.linkTo(parent.start)
-                            bottom.linkTo(parent.bottom)
-                            width = Dimension.percent(uiState.leftKeyboardWidth)
-                        }
-                            .background(Color(0xFF212121)),
-                        leftPadding = uiState.leftKeyboardPadding,
-                        keyboardHeightFraction = uiState.leftKeyboardHeight
+                            layout = layout,
+                            side = KeyboardSide.LEFT,
+                            isCapsLockOn = uiState.isCapsLockOn,
+                            isShiftOn = uiState.isShiftOn,
+                            isCtrlOn = uiState.isCtrlOn,
+                            onKeyEvent = keyboardViewModel::onKeyEvent,
+                            modifier =
+                                    Modifier.constrainAs(leftKb) {
+                                                start.linkTo(parent.start)
+                                                bottom.linkTo(parent.bottom)
+                                                width = Dimension.percent(uiState.leftKeyboardWidth)
+                                            }
+                                            .background(Color(0xFF212121)),
+                            leftPadding = uiState.leftKeyboardPadding,
+                            keyboardHeightFraction = uiState.leftKeyboardHeight
                     )
                 }
 
                 if (uiState.isRightKeyboardVisible && !uiState.useLandscapeIme) {
                     SplitKeyboardHalf(
-                        layout = layout,
-                        side = KeyboardSide.RIGHT,
-                        isCapsLockOn = uiState.isCapsLockOn,
-                        isShiftOn = uiState.isShiftOn,
-                        isCtrlOn = uiState.isCtrlOn,
-                        onKeyEvent = keyboardViewModel::onKeyEvent,
-                        modifier = Modifier.constrainAs(rightKb) {
-                            end.linkTo(parent.end)
-                            bottom.linkTo(parent.bottom)
-                            width = Dimension.percent(uiState.rightKeyboardWidth)
-                        }
-                            .background(Color(0xFF212121)),
-                        keyboardHeightFraction = uiState.rightKeyboardHeight
+                            layout = layout,
+                            side = KeyboardSide.RIGHT,
+                            isCapsLockOn = uiState.isCapsLockOn,
+                            isShiftOn = uiState.isShiftOn,
+                            isCtrlOn = uiState.isCtrlOn,
+                            onKeyEvent = keyboardViewModel::onKeyEvent,
+                            modifier =
+                                    Modifier.constrainAs(rightKb) {
+                                                end.linkTo(parent.end)
+                                                bottom.linkTo(parent.bottom)
+                                                width =
+                                                        Dimension.percent(
+                                                                uiState.rightKeyboardWidth
+                                                        )
+                                            }
+                                            .background(Color(0xFF212121)),
+                            keyboardHeightFraction = uiState.rightKeyboardHeight
                     )
                 }
             }
 
             DevBrowserScreen(
-                modifier = Modifier.constrainAs(editor) {
-                    // MERGE NOTE: Kept Block 2's smart constraints for Portrait mode
-                    if (isLandscape) {
-                        top.linkTo(parent.top)
-                    } else {
-                        top.linkTo(topLeft.bottom)
-                    }
-                    bottom.linkTo(parent.bottom)
+                    modifier =
+                            Modifier.constrainAs(editor) {
+                                // MERGE NOTE: Kept Block 2's smart constraints for Portrait mode
+                                if (isLandscape) {
+                                    top.linkTo(parent.top)
+                                } else {
+                                    top.linkTo(topLeft.bottom)
+                                }
+                                bottom.linkTo(parent.bottom)
 
-                    // If using landscape IME mode, give full width to browser
-                    val showLeftKb = isLandscape && uiState.isLeftKeyboardVisible && !uiState.useLandscapeIme
-                    val showRightKb = isLandscape && uiState.isRightKeyboardVisible && !uiState.useLandscapeIme
-                    
-                    if (showLeftKb) {
-                        start.linkTo(leftKb.end)
-                    } else {
-                        start.linkTo(parent.start)
-                    }
+                                // If using landscape IME mode, give full width to browser
+                                val showLeftKb =
+                                        isLandscape &&
+                                                uiState.isLeftKeyboardVisible &&
+                                                !uiState.useLandscapeIme
+                                val showRightKb =
+                                        isLandscape &&
+                                                uiState.isRightKeyboardVisible &&
+                                                !uiState.useLandscapeIme
 
-                    if (showRightKb) {
-                        end.linkTo(rightKb.start)
-                    } else {
-                        end.linkTo(parent.end)
-                    }
+                                if (showLeftKb) {
+                                    start.linkTo(leftKb.end)
+                                } else {
+                                    start.linkTo(parent.start)
+                                }
 
-                    width = Dimension.fillToConstraints
-                    height = Dimension.fillToConstraints
-                },
-                // MERGE NOTE: Used Block 2's session access (`.view!!`) + Block 1's ViewModel
-                webView = SessionList.sessions[SessionList.activeSessionIndex!!].view!!,
-                viewModel = devWebViewModel
+                                if (showRightKb) {
+                                    end.linkTo(rightKb.start)
+                                } else {
+                                    end.linkTo(parent.end)
+                                }
+
+                                width = Dimension.fillToConstraints
+                                height = Dimension.fillToConstraints
+                            },
+                    // Use the validated currentSession from earlier
+                    webView = currentSession.view!!,
+                    viewModel = devWebViewModel
             )
         }
 
-        // Extra Keys Row - Shows in portrait mode OR in landscape mode when useLandscapeIme is enabled
+        // Browser Sidebar for portrait mode (simplified with only quick actions)
+        if (!isLandscape) {
+            TerminalSidebar(
+                    isVisible = showSidebar,
+                    onDismiss = { showSidebar = false },
+                    onZoomOutClick = {
+                        navController.navigate(Screen.ZoomOut.route)
+                    },
+                    onSettingsClick = {
+                        navController.navigate(Screen.Settings.route)
+                    }
+            )
+        }
+
+        // Extra Keys Row - Shows in portrait mode OR in landscape mode when useLandscapeIme is
+        // enabled
         val showExtraKeys = !isLandscape || uiState.useLandscapeIme
         if (showExtraKeys) {
             val imeInsets = WindowInsets.ime
@@ -229,13 +285,19 @@ fun BrowserScreen(navController: NavController) {
 
             if (isKeyboardVisible) {
                 ExtraKeysRow(
-                    keyboardViewModel = keyboardViewModel,
-                    mode = com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionType.BROWSER,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF2E2E2E))
-                        .windowInsetsPadding(imeInsets)
-                        .align(Alignment.BottomCenter)
+                        keyboardViewModel = keyboardViewModel,
+                        mode =
+                                com.bsbeetle
+                                        .bananaspaghetti
+                                        .utils
+                                        .sessionHandling
+                                        .SessionType
+                                        .BROWSER,
+                        modifier =
+                                Modifier.fillMaxWidth()
+                                        .background(Color(0xFF2E2E2E))
+                                        .windowInsetsPadding(imeInsets)
+                                        .align(Alignment.BottomCenter)
                 )
             }
         }

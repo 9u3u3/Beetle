@@ -43,12 +43,12 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
             tenebrio!!.init()
 
             // Start foreground service and register this session
-            // Skip for internal installation sessions (they have special handling)
-            if (!name.startsWith("Install-")) {
-                TerminalService.startService(context.applicationContext)
-                TerminalService.incrementSessionCount()
-                isRegisteredWithService = true
-            }
+            // DISABLED - notification functionality removed
+            // if (!name.startsWith("Install-")) {
+            //     TerminalService.startService(context.applicationContext)
+            //     TerminalService.incrementSessionCount()
+            //     isRegisteredWithService = true
+            // }
 
             // If initial directory is provided, we need to cd into it
             // We delay this so it runs AFTER the shell's init script completes
@@ -114,11 +114,11 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
     override fun destroy() {
         Log.d("TerminalSession", "Destroying terminal session: $name")
 
-        // Unregister from service if we were registered
-        if (isRegisteredWithService) {
-            TerminalService.decrementSessionCount(context)
-            isRegisteredWithService = false
-        }
+        // Unregister from service if we were registered - DISABLED
+        // if (isRegisteredWithService) {
+        //     TerminalService.decrementSessionCount(context)
+        //     isRegisteredWithService = false
+        // }
 
         // Clean up tenebrio reference (no explicit destroy method)
         tenebrio = null

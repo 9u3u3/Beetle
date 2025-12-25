@@ -27,33 +27,48 @@ import commonjs from "@rollup/plugin-commonjs";
 import polyfillNode from "rollup-plugin-polyfill-node";
 import terser from "@rollup/plugin-terser";
 
-export default {
-  input: "./app/src/main/assets/editor/editor.js",
-  output: {
-    file: "./app/src/main/assets/editor/editor.bundle.js",
-    format: "iife", // Immediately Invoked Function Expression for browser
-    name: "EditorBundle", // gives a global name to access exports if needed
-    sourcemap: true,
-  },
-  plugins: [
-    nodeResolve({
-      browser: true,        // prefer browser-compatible builds
-      preferBuiltins: false // don’t assume Node built-ins
-    }),
+const commonPlugins = [
+  nodeResolve({
+    browser: true,        // prefer browser-compatible builds
+    preferBuiltins: false // don't assume Node built-ins
+  }),
+  polyfillNode(),         // injects shims for Node built-ins like 'events'
+  commonjs({
+    include: /node_modules/,
+    transformMixedEsModules: true, // supports hybrid ESM+CJS modules
+  }),
+  terser(), // optional: minify output
+];
 
-    polyfillNode(),         // ✅ injects shims for Node built-ins like 'events'
-
-    commonjs({
-      include: /node_modules/,
-      transformMixedEsModules: true, // supports hybrid ESM+CJS modules
-    }),
-
-    terser(), // optional: minify output
-  ],
-
-  // optional: suppress the "unresolved events" warning Rollup might throw
-  onwarn(warning, warn) {
-    if (warning.code === "UNRESOLVED_IMPORT" && /events/.test(warning.source)) return;
-    warn(warning);
-  },
+const commonOnWarn = (warning, warn) => {
+  if (warning.code === "UNRESOLVED_IMPORT" && /events/.test(warning.source)) return;
+  warn(warning);
 };
+
+export default [
+  // Editor bundle
+  {
+    input: "./app/src/main/assets/editor/editor.js",
+    output: {
+      file: "./app/src/main/assets/editor/editor.bundle.js",
+      format: "iife",
+      name: "EditorBundle",
+      sourcemap: true,
+    },
+    plugins: commonPlugins,
+    onwarn: commonOnWarn,
+  },
+  // Notebook bundle (for Python REPL mode)
+  {
+    input: "./app/src/main/assets/editor/notebook.js",
+    output: {
+      file: "./app/src/main/assets/editor/notebook.bundle.js",
+      format: "iife",
+      name: "NotebookBundle",
+      sourcemap: true,
+    },
+    plugins: commonPlugins,
+    onwarn: commonOnWarn,
+  },
+];
+

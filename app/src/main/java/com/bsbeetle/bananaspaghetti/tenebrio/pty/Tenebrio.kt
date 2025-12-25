@@ -70,6 +70,9 @@ class Tenebrio(private val context: Context, private val session: Session) {
     fun init() {
         Log.d("Tenebrio", "Initializing")
 
+        // Always copy the code-runner script so updates take effect immediately
+        copyAssetsTo(PREFIX, "scripts/code-runner.sh", context)
+
         // Check if Alpine is properly extracted by verifying /bin/busybox exists
         // We use busybox directly now instead of /bin/sh to avoid symlink issues
         val alpineBusybox = File(alpine, "bin/busybox")
@@ -112,6 +115,7 @@ class Tenebrio(private val context: Context, private val session: Session) {
                     }
 
                     copyAssetsTo(PREFIX, "scripts/init-alpine.sh", context)
+                    copyAssetsTo(PREFIX, "scripts/code-runner.sh", context)
                     Log.d("Tenebrio", "Download complete, starting extraction...")
 
                     // Creating necessary folders
@@ -380,9 +384,10 @@ class Tenebrio(private val context: Context, private val session: Session) {
                                     val jsCommand = "term.write(${JSONObject.quote(text)});"
                                     terminalWebView.evaluateJavascript(jsCommand, null)
                                 }
-                            } else {
-                                terminalSession.onOutput?.invoke(text)
                             }
+                            // Always invoke onOutput callback if set (for code runner to detect
+                            // MISSING_PKG)
+                            terminalSession.onOutput?.invoke(text)
                         } else if (bytesRead < 0) {
                             break // EOF or error
                         }

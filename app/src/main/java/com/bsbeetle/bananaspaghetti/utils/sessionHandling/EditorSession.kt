@@ -24,12 +24,36 @@ class EditorSession(context: Context, name: String = "Editor") :
     private val _isReady = MutableStateFlow(false)
     val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
 
-    // Project root folder for the editor session
-    var projectRoot: androidx.documentfile.provider.DocumentFile? = null
-    
+    // projectRoot is inherited from Session base class
     // Terminal sessions linked to this editor session (bottom panel terminals)
     // Using mutableStateListOf so Compose can observe changes
     val linkedTerminals = androidx.compose.runtime.mutableStateListOf<TerminalSession>()
+
+    // Runner terminal for code execution - lazy initialized on first run
+    private var _runnerTerminal: TerminalSession? = null
+
+    /**
+     * Get or create the runner terminal for this editor session. The runner terminal persists
+     * across multiple runs. Automatically added to linkedTerminals for visibility in bottom panel.
+     * Returns Pair(terminal, wasNewlyCreated) - wasNewlyCreated is true only if terminal was just
+     * created
+     */
+    fun getOrCreateRunnerTerminal(ctx: Context): Pair<TerminalSession, Boolean> {
+        val wasNew = _runnerTerminal == null || _runnerTerminal?.view == null
+        if (wasNew) {
+            Log.d("EditorSession", "Creating new runner terminal for session: $id")
+            _runnerTerminal = TerminalSession(ctx.applicationContext, "Runner-${name}")
+            _runnerTerminal!!.createView()
+            // Add to linkedTerminals so it shows in bottom panel
+            if (!linkedTerminals.contains(_runnerTerminal)) {
+                linkedTerminals.add(_runnerTerminal!!)
+            }
+        }
+        return Pair(_runnerTerminal!!, wasNew)
+    }
+
+    /** Check if this session has a runner terminal. */
+    fun hasRunnerTerminal(): Boolean = _runnerTerminal != null
 
     // Track cursor position for backspace guard (updated by LSP-STATUS parsing)
     var cursorLine: Int = 1
@@ -101,7 +125,17 @@ class EditorSession(context: Context, name: String = "Editor") :
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun createView(): CustomWebView {
-        if (view != null) return view!!
+        android.util.Log.d(
+                "EditorSession",
+                "📍 createView() called for session: $name, view is null: ${view == null}"
+        )
+        if (view != null) {
+            android.util.Log.d(
+                    "EditorSession",
+                    "⚠️ createView() returning early - view already exists!"
+            )
+            return view!!
+        }
         // Disable WebViewPool to prevent recycling crashed views
         // view = WebViewPool.get(context.applicationContext).apply {
         view =
@@ -178,56 +212,61 @@ class EditorSession(context: Context, name: String = "Editor") :
                                             "✓ JS: onReady called - CM6 initialized"
                                     )
                                     _isReady.value = true
-                                    
+
                                     // Apply saved editor settings
                                     view?.post {
                                         // Load preferences
-                                        val prefs = com.bsbeetle.bananaspaghetti.utils.preferences.EditorPreferences(context)
-                                        
+                                        val prefs =
+                                                com.bsbeetle.bananaspaghetti.utils.preferences
+                                                        .EditorPreferences(context)
+
                                         // Apply theme
                                         view?.evaluateJavascript(
-                                            "if(window.setTheme) window.setTheme('${prefs.theme}');",
-                                            null
+                                                "if(window.setTheme) window.setTheme('${prefs.theme}');",
+                                                null
                                         )
-                                        
+
                                         // Apply word wrap
                                         view?.evaluateJavascript(
-                                            "if(window.setWordWrap) window.setWordWrap(${prefs.wordWrap});",
-                                            null
+                                                "if(window.setWordWrap) window.setWordWrap(${prefs.wordWrap});",
+                                                null
                                         )
-                                        
+
                                         // Apply line numbers
                                         view?.evaluateJavascript(
-                                            "if(window.setLineNumbers) window.setLineNumbers(${prefs.lineNumbers});",
-                                            null
+                                                "if(window.setLineNumbers) window.setLineNumbers(${prefs.lineNumbers});",
+                                                null
                                         )
-                                        
+
                                         // Apply tab size
                                         view?.evaluateJavascript(
-                                            "if(window.setTabSize) window.setTabSize(${prefs.tabSize});",
-                                            null
+                                                "if(window.setTabSize) window.setTabSize(${prefs.tabSize});",
+                                                null
                                         )
-                                        
+
                                         // Apply relative line numbers
                                         view?.evaluateJavascript(
-                                            "if(window.setRelativeLineNumbers) window.setRelativeLineNumbers(${prefs.relativeLineNumbers});",
-                                            null
+                                                "if(window.setRelativeLineNumbers) window.setRelativeLineNumbers(${prefs.relativeLineNumbers});",
+                                                null
                                         )
-                                        
+
                                         // Apply indent guides
                                         view?.evaluateJavascript(
-                                            "if(window.setIndentGuides) window.setIndentGuides(${prefs.indentGuides});",
-                                            null
+                                                "if(window.setIndentGuides) window.setIndentGuides(${prefs.indentGuides});",
+                                                null
                                         )
-                                        
+
                                         // Apply auto save
                                         view?.evaluateJavascript(
-                                            "if(window.setAutoSave) window.setAutoSave(${prefs.autoSave}, ${prefs.autoSaveDelay});",
-                                            null
+                                                "if(window.setAutoSave) window.setAutoSave(${prefs.autoSave}, ${prefs.autoSaveDelay});",
+                                                null
                                         )
-                                        
-                                        android.util.Log.d("EditorSession", "✓ Applied saved editor settings")
-                                        
+
+                                        android.util.Log.d(
+                                                "EditorSession",
+                                                "✓ Applied saved editor settings"
+                                        )
+
                                         // Make WebView visible
                                         view?.visibility = android.view.View.VISIBLE
                                         view?.alpha = 1f
@@ -255,32 +294,50 @@ class EditorSession(context: Context, name: String = "Editor") :
                                             view?.evaluateJavascript(
                                                     "window.editor?.state?.doc?.toString() || window.code_ || ''"
                                             ) { result ->
-                                                if (result != null && result != "null" && result != "\"\"") {
+                                                if (result != null &&
+                                                                result != "null" &&
+                                                                result != "\"\""
+                                                ) {
                                                     try {
-                                                        var content = result.removeSurrounding("\"")
-                                                                .replace("\\n", "\n")
-                                                                .replace("\\t", "\t")
-                                                                .replace("\\r", "\r")
-                                                                .replace("\\\"", "\"")
-                                                                .replace("\\\\", "\\")
-                                                        
+                                                        var content =
+                                                                result.removeSurrounding("\"")
+                                                                        .replace("\\n", "\n")
+                                                                        .replace("\\t", "\t")
+                                                                        .replace("\\r", "\r")
+                                                                        .replace("\\\"", "\"")
+                                                                        .replace("\\\\", "\\")
+
                                                         // Unescape Unicode sequences
-                                                        val unicodePattern = Regex("\\\\u([0-9a-fA-F]{4})")
-                                                        content = unicodePattern.replace(content) { matchResult ->
-                                                            val hexCode = matchResult.groupValues[1]
-                                                            hexCode.toInt(16).toChar().toString()
-                                                        }
-                                                        
+                                                        val unicodePattern =
+                                                                Regex("\\\\u([0-9a-fA-F]{4})")
+                                                        content =
+                                                                unicodePattern.replace(content) {
+                                                                        matchResult ->
+                                                                    val hexCode =
+                                                                            matchResult.groupValues[
+                                                                                    1]
+                                                                    hexCode.toInt(16)
+                                                                            .toChar()
+                                                                            .toString()
+                                                                }
+
                                                         // Save to file
                                                         val resolver = context.contentResolver
-                                                        val out = resolver.openOutputStream(uri, "wt")
+                                                        val out =
+                                                                resolver.openOutputStream(uri, "wt")
                                                         if (out != null) {
-                                                            java.io.OutputStreamWriter(out, Charsets.UTF_8).use { writer ->
-                                                                writer.write(content)
-                                                                writer.flush()
-                                                            }
+                                                            java.io.OutputStreamWriter(
+                                                                            out,
+                                                                            Charsets.UTF_8
+                                                                    )
+                                                                    .use { writer ->
+                                                                        writer.write(content)
+                                                                        writer.flush()
+                                                                    }
                                                             // Clear dirty state
-                                                            bufferViewModel?.markAsClean(uri.toString())
+                                                            bufferViewModel?.markAsClean(
+                                                                    uri.toString()
+                                                            )
                                                             android.util.Log.d(
                                                                     "EditorSession",
                                                                     "✓ Auto-saved and marked clean: ${currentFile.name}"
@@ -307,7 +364,62 @@ class EditorSession(context: Context, name: String = "Editor") :
                             "AndroidInterface"
                     )
 
-                    loadUrl(AppConfig.EDITOR_URL)
+                    // Add unique session ID to URL to bypass WebView's connection pooling
+                    // This makes each session appear as a unique URL, preventing connection
+                    // blocking
+                    val uniqueUrl =
+                            "${AppConfig.EDITOR_URL}?session=${System.currentTimeMillis()}_${id ?: 0}"
+
+                    // CRITICAL: Defer loadUrl() until WebView is attached to window hierarchy
+                    // Android WebView may block network requests if not attached to a window
+                    var urlLoaded = false
+                    addOnAttachStateChangeListener(
+                            object : android.view.View.OnAttachStateChangeListener {
+                                override fun onViewAttachedToWindow(v: android.view.View) {
+                                    if (!urlLoaded) {
+                                        urlLoaded = true
+                                        android.util.Log.d(
+                                                "EditorSession",
+                                                "📍 loadUrl on attach for session: $name, URL: $uniqueUrl"
+                                        )
+                                        loadUrl(uniqueUrl)
+                                    }
+                                }
+                                override fun onViewDetachedFromWindow(v: android.view.View) {}
+                            }
+                    )
+
+                    // Also try loading immediately via post{} in case view is already attached
+                    post {
+                        if (!urlLoaded) {
+                            urlLoaded = true
+                            android.util.Log.d(
+                                    "EditorSession",
+                                    "📍 loadUrl via post for session: $name, URL: $uniqueUrl"
+                            )
+                            loadUrl(uniqueUrl)
+                        }
+                    }
+
+                    // CRITICAL: 5-second fallback timeout to force isReady
+                    // This runs regardless of page load status, ensuring the editor
+                    // doesn't get stuck on loading forever even if bundle.js hangs
+                    post {
+                        postDelayed(
+                                {
+                                    if (!_isReady.value) {
+                                        android.util.Log.w(
+                                                "EditorSession",
+                                                "⚠️ Fallback: Forcing isReady after 5s timeout (bundle may not have loaded)"
+                                        )
+                                        _isReady.value = true
+                                        visibility = android.view.View.VISIBLE
+                                        alpha = 1f
+                                    }
+                                },
+                                5000
+                        ) // Force ready after 5s
+                    }
 
                     // Inject listener immediately after load
                     post {
@@ -529,8 +641,15 @@ class EditorSession(context: Context, name: String = "Editor") :
     }
 
     override fun destroy() {
-        // view?.let { WebViewPool.recycle(it) }
-        view?.destroy()
+        // Properly clean up WebView to release network connections
+        // This is critical to prevent bundle.js from hanging for new sessions
+        view?.let { webView ->
+            webView.stopLoading()
+            webView.clearCache(false)
+            webView.clearHistory()
+            webView.loadUrl("about:blank") // Clear the page
+            webView.destroy()
+        }
         view = null
         super.destroy()
     }

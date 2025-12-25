@@ -535,6 +535,10 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
                             ) {
                                 session.insertTextToEditor(textToSend)
                             } else if (session is
+                                            com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession
+                            ) {
+                                session.insertTextToEditor(textToSend)
+                            } else if (session is
                                             com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
                             ) {
                                 session.insertText(textToSend)
@@ -571,6 +575,9 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
                     return@launch
                 }
                 session.performEditorAction("performBackspace")
+            } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession
+            ) {
+                session.performEditorAction("performBackspace")
             } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
             ) {
                 session.insertText("\u007F")
@@ -593,6 +600,9 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
                     SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
                             ?: return@launch
             if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession) {
+                session.performEditorAction("performEnter")
+            } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession
+            ) {
                 session.performEditorAction("performEnter")
             } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
             ) {
@@ -630,6 +640,14 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
                     is EditorAction.Find -> session.performEditorAction("performFind")
                     is EditorAction.Navigation -> session.performNavigation(action.type)
                     // Add other actions as needed
+                    else -> _editorAction.emit(action)
+                }
+            } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession
+            ) {
+                when (action) {
+                    is EditorAction.Undo -> session.performEditorAction("performUndo")
+                    is EditorAction.Redo -> session.performEditorAction("performRedo")
+                    is EditorAction.Navigation -> session.performNavigation(action.type)
                     else -> _editorAction.emit(action)
                 }
             } else if (session is com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession

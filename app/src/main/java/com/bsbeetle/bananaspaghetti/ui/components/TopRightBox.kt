@@ -404,6 +404,30 @@ fun TopRightBox(
                         onOperationComplete = {}
                     )
                 } else if (mode == TopRightMode.GIT) {
+                    // Check if Git is configured and SSH key exists
+                    val prefs = com.bsbeetle.bananaspaghetti.utils.preferences.EditorPreferences(context)
+                    val sshKeyExists = remember {
+                        val alpinePath = "${context.filesDir.absolutePath}/alpine/home/.ssh/id_ed25519.pub"
+                        java.io.File(alpinePath).exists()
+                    }
+                    if (!prefs.isGitConfigured() || !sshKeyExists) {
+                        // Show setup message
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            androidx.compose.material3.Text(
+                                if (!prefs.isGitConfigured()) 
+                                    "Setup Git in Settings"
+                                else 
+                                    "Generate SSH key in Settings",
+                                color = GitTheme.TextSecondary,
+                                fontSize = 12.sp,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+                    } else {
                     Column(
                             modifier = Modifier.fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -526,6 +550,7 @@ fun TopRightBox(
                             }
                         }
                     }
+                    } // end else isGitConfigured
                 } else if (mode == TopRightMode.FILE) {
                     FileOptionsPanel(
                             fileViewModel = fileViewModel,
