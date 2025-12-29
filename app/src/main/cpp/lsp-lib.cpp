@@ -20,7 +20,7 @@ extern "C" JNIEXPORT jint JNICALL
 Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_LspServer_startNativeLsp(
     JNIEnv *env, jobject /*thizz nutz*/, jstring prefix, jstring jNativeDirPath,
     jstring jProotTmpDir, jstring jProotLoader, jstring jProotLoader32,
-    jstring jProot, jstring jPublic, jstring jAlpineTmp, jstring jAlpine,
+    jstring jProot, jstring jPublic, jstring jUbuntuTmp, jstring jUbuntu,
     jstring jScriptName) {
 
   ALOGE("Called getCppLsp");
@@ -32,8 +32,8 @@ Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_LspServer_startNativeLs
   const char *PROOT_LOADER32 = env->GetStringUTFChars(jProotLoader32, nullptr);
   const char *PROOT = env->GetStringUTFChars(jProot, nullptr);
   const char *PUBLIC = env->GetStringUTFChars(jPublic, nullptr);
-  const char *ALPINE_TMP = env->GetStringUTFChars(jAlpineTmp, nullptr);
-  const char *ALPINE = env->GetStringUTFChars(jAlpine, nullptr);
+  const char *UBUNTU_TMP = env->GetStringUTFChars(jUbuntuTmp, nullptr);
+  const char *UBUNTU = env->GetStringUTFChars(jUbuntu, nullptr);
   const char *SCRIPT_NAME = env->GetStringUTFChars(jScriptName, nullptr);
 
   setenv("PREFIX", PREFIX, 1);
@@ -88,7 +88,7 @@ Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_LspServer_startNativeLs
                   "-b",
                   const_cast<char *>(PUBLIC),
                   "-b",
-                  const_cast<char *>(ALPINE_TMP),
+                  const_cast<char *>(UBUNTU_TMP),
 
                   "-b",
                   "/proc/self/fd:/dev/fd",
@@ -100,7 +100,7 @@ Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_LspServer_startNativeLs
                   "/proc/self/fd/2:/dev/stderr",
 
                   "-r",
-                  const_cast<char *>(ALPINE),
+                  const_cast<char *>(UBUNTU),
 
                   "-0",
                   "--link2symlink",

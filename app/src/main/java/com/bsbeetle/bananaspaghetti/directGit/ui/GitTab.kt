@@ -331,8 +331,8 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
     
     // Check if SSH key exists
     val sshKeyExists = remember {
-        val alpinePath = "${context.filesDir.absolutePath}/alpine/home/.ssh/id_ed25519.pub"
-        val file = java.io.File(alpinePath)
+        val ubuntuPath = "${context.filesDir.absolutePath}/ubuntu/home/.ssh/id_ed25519.pub"
+        val file = java.io.File(ubuntuPath)
         file.exists()
     }
     

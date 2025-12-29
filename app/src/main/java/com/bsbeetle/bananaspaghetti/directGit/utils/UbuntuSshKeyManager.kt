@@ -10,18 +10,18 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /**
- * Alpine SSH Key Manager - Generates ED25519 keys using Alpine's native ssh-keygen
+ * Ubuntu SSH Key Manager - Generates ED25519 keys using Ubuntu's native ssh-keygen
  *
- * This manager uses Alpine Linux's native ssh-keygen command to generate proper ED25519 keys, which
+ * This manager uses Ubuntu Linux's native ssh-keygen command to generate proper ED25519 keys, which
  * are the latest and most secure SSH key format.
  *
- * Keys are stored encrypted and auto-configured in Alpine's ~/.ssh/ directory.
+ * Keys are stored encrypted and auto-configured in Ubuntu's ~/.ssh/ directory.
  */
-class AlpineSshKeyManager(private val context: Context) {
+class UbuntuSshKeyManager(private val context: Context) {
 
     companion object {
-        private const val TAG = "AlpineSshKeyManager"
-        private const val PREFS_NAME = "alpine_ssh_keys"
+        private const val TAG = "UbuntuSshKeyManager"
+        private const val PREFS_NAME = "ubuntu_ssh_keys"
         private const val KEY_PRIVATE = "ed25519_private_key"
         private const val KEY_PUBLIC = "ed25519_public_key"
     }
@@ -46,30 +46,30 @@ class AlpineSshKeyManager(private val context: Context) {
         return hasPrivate && hasPublic
     }
 
-    /** Generate ED25519 SSH key pair using Alpine's native ssh-keygen via proot */
+    /** Generate ED25519 SSH key pair using Ubuntu's native ssh-keygen via proot */
     suspend fun generateKeyPair(): Boolean =
             withContext(Dispatchers.IO) {
                 try {
-                    Log.d(TAG, "🔑 Generating ED25519 SSH key pair using Alpine/proot...")
+                    Log.d(TAG, "🔑 Generating ED25519 SSH key pair using Ubuntu/proot...")
 
                     // Path configuration - same as Tenebrio uses
                     val PREFIX = context.filesDir
                     val nativeDir = context.applicationInfo.nativeLibraryDir
-                    val alpine = java.io.File(PREFIX, "alpine")
+                    val ubuntu = java.io.File(PREFIX, "ubuntu")
                     val tmp = java.io.File(PREFIX, "tmp")
                     val proot = java.io.File(nativeDir, "libproot-xed.so")
                     val prootLoader = java.io.File(nativeDir, "libproot.so")
                     val prootLoader32 = java.io.File(nativeDir, "libproot32.so")
 
-                    // Check if Alpine is installed
-                    val alpineBusybox = java.io.File(alpine, "bin/busybox")
-                    if (!alpineBusybox.exists()) {
+                    // Check if Ubuntu is installed
+                    val ubuntuBash = java.io.File(ubuntu, "bin/bash")
+                    if (!ubuntuBash.exists()) {
                         Log.e(
                                 TAG,
-                                "❌ Alpine not installed - please open terminal once to initialize"
+                                "❌ Ubuntu not installed - please open terminal once to initialize"
                         )
                         throw Exception(
-                                "Alpine not initialized. Please open a Terminal once to set up Alpine, then try again."
+                                "Ubuntu not initialized. Please open a Terminal once to set up Ubuntu, then try again."
                         )
                     }
 
@@ -105,8 +105,8 @@ class AlpineSshKeyManager(private val context: Context) {
                                             "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
                             )
 
-                    // Copy SSH key generation script from assets to Alpine tmp
-                    val scriptFile = java.io.File(alpine, "tmp/gen_ssh_key.sh")
+                    // Copy SSH key generation script from assets to Ubuntu tmp
+                    val scriptFile = java.io.File(ubuntu, "tmp/gen_ssh_key.sh")
                     scriptFile.parentFile?.mkdirs()
                     context.assets.open("scripts/gen_ssh_key.sh").use { input ->
                         scriptFile.outputStream().use { output -> input.copyTo(output) }
@@ -115,41 +115,41 @@ class AlpineSshKeyManager(private val context: Context) {
 
                     Log.d(TAG, "🔐 Running SSH key generation script...")
 
-                    // Execute the script through /bin/sh
+                    // Execute the script through /bin/bash
                     val keygenResult =
-                            runProotCommand(proot, alpine, envMap, "/bin/sh", "/tmp/gen_ssh_key.sh")
+                            runProotCommand(proot, ubuntu, envMap, "/bin/bash", "/tmp/gen_ssh_key.sh")
                     Log.d(TAG, "Script output: $keygenResult")
 
-                    // Read generated keys from Alpine filesystem
-                    val alpinePrivateKeyPath =
-                            java.io.File(context.filesDir, "alpine/home/.ssh/id_ed25519")
-                    val alpinePublicKeyPath =
-                            java.io.File(context.filesDir, "alpine/home/.ssh/id_ed25519.pub")
+                    // Read generated keys from Ubuntu filesystem
+                    val ubuntuPrivateKeyPath =
+                            java.io.File(context.filesDir, "ubuntu/home/.ssh/id_ed25519")
+                    val ubuntuPublicKeyPath =
+                            java.io.File(context.filesDir, "ubuntu/home/.ssh/id_ed25519.pub")
 
                     // Wait for files with retry
                     var retries = 10
                     while (retries > 0 &&
-                            (!alpinePrivateKeyPath.exists() || !alpinePublicKeyPath.exists())) {
+                            (!ubuntuPrivateKeyPath.exists() || !ubuntuPublicKeyPath.exists())) {
                         Log.d(TAG, "⏳ Waiting for key files... (retries: $retries)")
                         delay(500)
                         retries--
                     }
 
-                    if (!alpinePrivateKeyPath.exists() || !alpinePublicKeyPath.exists()) {
+                    if (!ubuntuPrivateKeyPath.exists() || !ubuntuPublicKeyPath.exists()) {
                         Log.e(TAG, "❌ Key files not found after generation")
                         Log.e(
                                 TAG,
-                                "Private key path: ${alpinePrivateKeyPath.absolutePath}, exists: ${alpinePrivateKeyPath.exists()}"
+                                "Private key path: ${ubuntuPrivateKeyPath.absolutePath}, exists: ${ubuntuPrivateKeyPath.exists()}"
                         )
                         Log.e(
                                 TAG,
-                                "Public key path: ${alpinePublicKeyPath.absolutePath}, exists: ${alpinePublicKeyPath.exists()}"
+                                "Public key path: ${ubuntuPublicKeyPath.absolutePath}, exists: ${ubuntuPublicKeyPath.exists()}"
                         )
                         return@withContext false
                     }
 
-                    val privateKey = alpinePrivateKeyPath.readText()
-                    val publicKey = alpinePublicKeyPath.readText()
+                    val privateKey = ubuntuPrivateKeyPath.readText()
+                    val publicKey = ubuntuPublicKeyPath.readText()
 
                     // Store keys encrypted
                     encryptedPrefs
@@ -168,10 +168,10 @@ class AlpineSshKeyManager(private val context: Context) {
                 }
             }
 
-    /** Run a command inside Alpine using proot */
+    /** Run a command inside Ubuntu using proot */
     private fun runProotCommand(
             proot: java.io.File,
-            alpine: java.io.File,
+            ubuntu: java.io.File,
             env: Map<String, String>,
             vararg command: String
     ): String {
@@ -181,7 +181,7 @@ class AlpineSshKeyManager(private val context: Context) {
                         "--link2symlink",
                         "-0", // Run as root
                         "-r",
-                        alpine.absolutePath, // Root filesystem
+                        ubuntu.absolutePath, // Root filesystem
                         "-b",
                         "/dev",
                         "-b",

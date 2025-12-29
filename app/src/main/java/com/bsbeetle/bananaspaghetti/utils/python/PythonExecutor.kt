@@ -12,7 +12,7 @@ import java.util.regex.Pattern
 
 /**
  * PythonExecutor manages a persistent headless Python REPL for notebook execution.
- * It uses a hidden TerminalSession with PTY to communicate with Python running in Alpine.
+ * It uses a hidden TerminalSession with PTY to communicate with Python running in Ubuntu.
  */
 class PythonExecutor(private val context: Context) {
     

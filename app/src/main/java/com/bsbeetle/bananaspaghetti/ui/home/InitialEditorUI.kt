@@ -260,18 +260,18 @@ fun InitialEditorUI(navController: NavController) {
                     session.setLspViewModel(lspViewModel)
 
                     // Determine project root from parent folder
-                    // For files in alpine, we use the parent directory as project root
+                    // For files in ubuntu, we use the parent directory as project root
                     val parentFolder = documentFile.parentFile
                     val projectRoot =
                             if (parentFolder != null) {
                                 // Convert content:// URI to a path the LSP can understand
-                                // Typically files are in /data/.../alpine/home/... or similar
+                                // Typically files are in /data/.../ubuntu/home/... or similar
                                 val parentPath = parentFolder.uri.path ?: "/home"
-                                // Clean up the path - extract the part after "alpine" if present
-                                val alpineIndex = parentPath.indexOf("/alpine/")
+                                // Clean up the path - extract the part after "ubuntu" if present
+                                val ubuntuIndex = parentPath.indexOf("/ubuntu/")
                                 val cleanPath =
-                                        if (alpineIndex >= 0) {
-                                            parentPath.substring(alpineIndex + 7) // Skip "/alpine"
+                                        if (ubuntuIndex >= 0) {
+                                            parentPath.substring(ubuntuIndex + 7) // Skip "/ubuntu"
                                         } else {
                                             parentPath
                                         }
@@ -286,10 +286,10 @@ fun InitialEditorUI(navController: NavController) {
                     // Set file path relative to project
                     val cleanName = documentFile.name?.replace(" ", "_") ?: "main.cpp"
                     val parentPath = documentFile.parentFile?.uri?.path ?: "/home"
-                    val alpineIndex = parentPath.indexOf("/alpine/")
+                    val ubuntuIndex = parentPath.indexOf("/ubuntu/")
                     val cleanParentPath =
-                            if (alpineIndex >= 0) {
-                                parentPath.substring(alpineIndex + 7)
+                            if (ubuntuIndex >= 0) {
+                                parentPath.substring(ubuntuIndex + 7)
                             } else {
                                 parentPath
                             }

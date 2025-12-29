@@ -27,7 +27,7 @@ fun CloneDialog(
     val context = LocalContext.current
     var url by remember { mutableStateOf("") }
     var targetPath by remember {
-        mutableStateOf(File(context.filesDir, "alpine/home/").absolutePath + "/")
+        mutableStateOf(File(context.filesDir, "ubuntu/home/").absolutePath + "/")
     }
 
     StyledDialog(title = "Clone Repository", onDismiss = onDismiss) {
@@ -45,7 +45,7 @@ fun CloneDialog(
                 if (newUrl.isNotBlank()) {
                     val repoName = newUrl.substringAfterLast("/").removeSuffix(".git")
                     if (repoName.isNotBlank()) {
-                        targetPath = File(context.filesDir, "alpine/home/$repoName").absolutePath
+                        targetPath = File(context.filesDir, "ubuntu/home/$repoName").absolutePath
                     }
                 }
             },
@@ -66,7 +66,7 @@ fun CloneDialog(
             value = targetPath,
             onValueChange = { targetPath = it },
             label = { Text("Clone To (Full Path)") },
-            placeholder = { Text(File(context.filesDir, "alpine/home/my-project").absolutePath) },
+            placeholder = { Text(File(context.filesDir, "ubuntu/home/my-project").absolutePath) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(

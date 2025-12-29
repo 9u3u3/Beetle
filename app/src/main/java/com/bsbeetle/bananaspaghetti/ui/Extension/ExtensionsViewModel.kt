@@ -192,7 +192,7 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                 """.trimIndent())
                 wrapperFile.setExecutable(true)
 
-                addInstallOutput("$ Running installation script in Alpine Linux...")
+                addInstallOutput("$ Running installation script in Ubuntu Linux...")
                 addInstallOutput("")
 
                 val installComplete = CompletableDeferred<Boolean>()

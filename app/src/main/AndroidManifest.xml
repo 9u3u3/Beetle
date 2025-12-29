@@ -60,7 +60,7 @@
         </service>
 
         <provider
-            android:name="com.bsbeetle.bananaspaghetti.utils.fileHandling.AlpineDocumentProvider"
+            android:name="com.bsbeetle.bananaspaghetti.utils.fileHandling.UbuntuDocumentProvider"
             android:authorities="${applicationId}.documents"
             android:permission="android.permission.MANAGE_DOCUMENTS"
             android:exported="true"

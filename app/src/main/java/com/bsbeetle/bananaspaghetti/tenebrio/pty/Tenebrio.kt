@@ -26,7 +26,7 @@ class Tenebrio(private val context: Context, private val session: Session) {
         private val downloadLock = Any()
     }
 
-    external fun startAlpine(
+    external fun startUbuntu(
             prefix: String,
             jNativeDirPath: String,
             jProotTmpDir: String,
@@ -34,9 +34,9 @@ class Tenebrio(private val context: Context, private val session: Session) {
             jProotLoader32: String,
             jProot: String,
             jPublic: String,
-            jAlpineTmp: String,
-            jAlpine: String,
-            jAlpineInit: String,
+            jUbuntuTmp: String,
+            jUbuntu: String,
+            jUbuntuInit: String,
             jRows: Int,
             jCols: Int
     ): Int
@@ -44,15 +44,15 @@ class Tenebrio(private val context: Context, private val session: Session) {
     external fun resizePty(masterFd: Int, rows: Int, cols: Int): Int
 
     var gMasterFd: Int = -1
-    val alpineUrl = "https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/aarch64/alpine-minirootfs-3.21.0-aarch64.tar.gz"
+    val ubuntuUrl = "https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.3-base-arm64.tar.gz"
     private val nativeDir: String = context.applicationInfo.nativeLibraryDir
     private var pfd: ParcelFileDescriptor? = null
     private var input: FileInputStream? = null
     private var output: FileOutputStream? = null
     private val PREFIX: File = context.filesDir
     private val tmp: File = File(PREFIX, "tmp")
-    private val alpine: File = File(PREFIX, "alpine")
-    private val alpineTmp: File = File(alpine, "tmp")
+    private val ubuntu: File = File(PREFIX, "ubuntu")
+    private val ubuntuTmp: File = File(ubuntu, "tmp")
     private val public: File = File(PREFIX, "public")
     private val dotDownloaded: File = File(PREFIX, ".downloaded")
     private val prootLoader: File = File(nativeDir, "libproot.so")
@@ -71,16 +71,15 @@ class Tenebrio(private val context: Context, private val session: Session) {
         // Always copy the code-runner script so updates take effect immediately
         copyAssetsTo(PREFIX, "scripts/code-runner.sh", context)
 
-        // Check if Alpine is properly extracted by verifying /bin/busybox exists
-        // We use busybox directly now instead of /bin/sh to avoid symlink issues
-        val alpineBusybox = File(alpine, "bin/busybox")
+        // Check if Ubuntu is properly extracted by verifying /bin/bash exists
+        val ubuntuBash = File(ubuntu, "bin/bash")
 
-        if (!alpineBusybox.exists()) {
+        if (!ubuntuBash.exists()) {
             // Use synchronized block to prevent multiple concurrent downloads
             synchronized(downloadLock) {
                 // Double-check after acquiring lock
-                if (alpineBusybox.exists()) {
-                    Log.d("Tenebrio", "Alpine shell was extracted by another thread")
+                if (ubuntuBash.exists()) {
+                    Log.d("Tenebrio", "Ubuntu shell was extracted by another thread")
                     return
                 }
 
@@ -91,35 +90,35 @@ class Tenebrio(private val context: Context, private val session: Session) {
                 isDownloading = true
             }
 
-            Log.d("Tenebrio", "Alpine shell not found, downloading and extracting...")
+            Log.d("Tenebrio", "Ubuntu shell not found, downloading and extracting...")
 
             // Clean up any partial extraction
             if (dotDownloaded.exists()) {
-                Log.w("Tenebrio", "Found .downloaded marker but /bin/sh missing - re-extracting")
+                Log.w("Tenebrio", "Found .downloaded marker but /bin/bash missing - re-extracting")
                 dotDownloaded.delete()
             }
 
-            // Clean up corrupted alpine directory
-            if (alpine.exists()) {
-                Log.d("Tenebrio", "Cleaning up corrupted alpine directory...")
-                alpine.deleteRecursively()
+            // Clean up corrupted ubuntu directory
+            if (ubuntu.exists()) {
+                Log.d("Tenebrio", "Cleaning up corrupted ubuntu directory...")
+                ubuntu.deleteRecursively()
             }
 
-            downloadFile(context, alpineUrl, "alpine.tar.gz") { file ->
+            downloadFile(context, ubuntuUrl, "ubuntu.tar.gz") { file ->
                 try {
                     if (file == null) {
-                        Log.e("Tenebrio", "Failed to download alpine root file system")
+                        Log.e("Tenebrio", "Failed to download Ubuntu root file system")
                         return@downloadFile
                     }
 
-                    copyAssetsTo(PREFIX, "scripts/init-alpine.sh", context)
+                    copyAssetsTo(PREFIX, "scripts/init-ubuntu.sh", context)
                     copyAssetsTo(PREFIX, "scripts/code-runner.sh", context)
                     Log.d("Tenebrio", "Download complete, starting extraction...")
 
                     // Creating necessary folders
                     if (!tmp.exists()) tmp.mkdirs()
-                    if (!alpine.exists()) alpine.mkdirs()
-                    if (!alpineTmp.exists()) alpineTmp.mkdirs()
+                    if (!ubuntu.exists()) ubuntu.mkdirs()
+                    if (!ubuntuTmp.exists()) ubuntuTmp.mkdirs()
                     if (!public.exists()) public.mkdirs()
 
                     // Setup environment for proot
@@ -152,7 +151,7 @@ class Tenebrio(private val context: Context, private val session: Session) {
                                     "--link2symlink",
                                     "-0",
                                     "-r",
-                                    alpine.absolutePath,
+                                    ubuntu.absolutePath,
                                     "-b",
                                     "/dev",
                                     "-b",
@@ -164,7 +163,7 @@ class Tenebrio(private val context: Context, private val session: Session) {
                                     "tar",
                                     "--no-same-owner",
                                     "-xzf",
-                                    "${PREFIX}/alpine.tar.gz"
+                                    "${PREFIX}/ubuntu.tar.gz"
                             )
                     pb.environment()
                             .putAll(
@@ -191,9 +190,9 @@ class Tenebrio(private val context: Context, private val session: Session) {
                                         "tar",
                                         "--no-same-owner",
                                         "-xzf",
-                                        "${PREFIX}/alpine.tar.gz",
+                                        "${PREFIX}/ubuntu.tar.gz",
                                         "-C",
-                                        alpine.absolutePath
+                                        ubuntu.absolutePath
                                 )
                         fallbackPb.redirectErrorStream(true)
                         val fallbackProcess = fallbackPb.start()
@@ -201,78 +200,21 @@ class Tenebrio(private val context: Context, private val session: Session) {
                         fallbackProcess.waitFor()
                     }
 
-                    // Check for bin directory and busybox
-                    val binDir = File(alpine, "bin")
-                    val busybox = File(binDir, "busybox")
+                    // Check for bin directory and bash
+                    val binDir = File(ubuntu, "bin")
+                    val bashFile = File(binDir, "bash")
                     val shFile = File(binDir, "sh")
 
                     Log.d(
                             "Tenebrio",
-                            "bin exists: ${binDir.exists()}, busybox exists: ${busybox.exists()}, sh exists: ${shFile.exists()}"
+                            "bin exists: ${binDir.exists()}, bash exists: ${bashFile.exists()}, sh exists: ${shFile.exists()}"
                     )
-
-                    // If sh doesn't exist but busybox does, create the symlink manually
-                    if (busybox.exists() && !shFile.exists()) {
-                        Log.d("Tenebrio", "Creating sh -> busybox symlink manually...")
-
-                        // First try: Use busybox's built-in ln command (most reliable on Android)
-                        try {
-                            val lnProcess =
-                                    ProcessBuilder(
-                                            busybox.absolutePath,
-                                            "ln",
-                                            "-sf",
-                                            "busybox",
-                                            "sh"
-                                    )
-                            lnProcess.directory(binDir)
-                            lnProcess.redirectErrorStream(true)
-                            val lnResult = lnProcess.start()
-                            val lnOutput = lnResult.inputStream.bufferedReader().readText()
-                            val lnExit = lnResult.waitFor()
-
-                            if (lnExit == 0 && shFile.exists()) {
-                                Log.d("Tenebrio", "Created sh symlink using busybox ln")
-                            } else {
-                                Log.w("Tenebrio", "busybox ln failed (exit=$lnExit): $lnOutput")
-                                throw Exception("busybox ln failed")
-                            }
-                        } catch (bbError: Exception) {
-                            // Second try: Java Files API
-                            try {
-                                Files.createSymbolicLink(
-                                        shFile.toPath(),
-                                        java.nio.file.Paths.get("busybox")
-                                )
-                                Log.d("Tenebrio", "Created sh symlink using Files API")
-                            } catch (e: Exception) {
-                                Log.w("Tenebrio", "Symlink failed: ${e.message}")
-
-                                // Third try: Copy busybox as sh
-                                try {
-                                    FileInputStream(busybox).use { input ->
-                                        FileOutputStream(shFile).use { output ->
-                                            input.copyTo(output)
-                                        }
-                                    }
-                                    shFile.setExecutable(true, false)
-                                    shFile.setReadable(true, false)
-                                    Log.d("Tenebrio", "Copied busybox to sh successfully")
-                                } catch (copyError: Exception) {
-                                    Log.e(
-                                            "Tenebrio",
-                                            "All methods failed to create sh: ${copyError.message}"
-                                    )
-                                }
-                            }
-                        }
-                    }
 
                     // If bin doesn't exist at all, the tar truly failed
                     if (!binDir.exists()) {
                         Log.e("Tenebrio", "bin directory doesn't exist after extraction!")
-                        alpine.listFiles()?.forEach {
-                            Log.d("Tenebrio", "Alpine contents: ${it.name}")
+                        ubuntu.listFiles()?.forEach {
+                            Log.d("Tenebrio", "Ubuntu contents: ${it.name}")
                         }
                         return@downloadFile
                     }
@@ -285,15 +227,15 @@ class Tenebrio(private val context: Context, private val session: Session) {
                         )
                     }
 
-                    // Verify extraction succeeded - check for busybox since we use it directly
-                    if (!busybox.exists()) {
-                        Log.e("Tenebrio", "Extraction completed but /bin/busybox not found!")
+                    // Verify extraction succeeded - check for bash
+                    if (!bashFile.exists()) {
+                        Log.e("Tenebrio", "Extraction completed but /bin/bash not found!")
                         return@downloadFile
                     }
 
                     Log.d("Tenebrio", "Extracted the rootfs successfully")
 
-                    val resolvconf: File = File(alpine, "/etc/resolv.conf")
+                    val resolvconf: File = File(ubuntu, "/etc/resolv.conf")
                     resolvconf.createNewFile()
                     resolvconf.writeText("nameserver 8.8.4.4 \nnameserver 8.8.8.8")
 
@@ -305,7 +247,7 @@ class Tenebrio(private val context: Context, private val session: Session) {
 
                     // Create marker ONLY after successful extraction
                     dotDownloaded.mkdirs()
-                    Log.d("Tenebrio", "Alpine setup complete!")
+                    Log.d("Tenebrio", "Ubuntu setup complete!")
                 } finally {
                     synchronized(downloadLock) { isDownloading = false }
                 }
@@ -339,7 +281,7 @@ class Tenebrio(private val context: Context, private val session: Session) {
             }
 
             val masterFd =
-                    startAlpine(
+                    startUbuntu(
                             PREFIX.absolutePath.toString(),
                             nativeDir,
                             tmp.absolutePath.toString(),
@@ -347,9 +289,9 @@ class Tenebrio(private val context: Context, private val session: Session) {
                             prootLoader32.absolutePath.toString(),
                             proot.absolutePath.toString(),
                             "${public.absolutePath}:/public",
-                            "${alpineTmp.absolutePath}:/dev/shm",
-                            alpine.absolutePath.toString(),
-                            "${PREFIX.absolutePath}/init-alpine.sh",
+                            "${ubuntuTmp.absolutePath}:/dev/shm",
+                            ubuntu.absolutePath.toString(),
+                            "${PREFIX.absolutePath}/init-ubuntu.sh",
                             terminalSession.rows!!,
                             terminalSession.cols!!
                     )

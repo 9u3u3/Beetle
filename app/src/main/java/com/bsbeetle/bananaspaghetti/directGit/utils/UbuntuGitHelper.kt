@@ -3,12 +3,12 @@ package com.bsbeetle.bananaspaghetti.directGit.utils
 import android.content.Context
 
 /**
- * Alpine Git Helper - Executes Git commands using Alpine Linux's native git binary.
+ * Ubuntu Git Helper - Executes Git commands using Ubuntu Linux's native git binary.
  *
  * This now delegates to GitTerminalManager for all operations, providing a unified interface while
  * the terminal manager handles the actual command execution.
  */
-class AlpineGitHelper(private val context: Context) {
+class UbuntuGitHelper(private val context: Context) {
 
         private val terminalManager = GitTerminalManager(context)
 
@@ -17,12 +17,12 @@ class AlpineGitHelper(private val context: Context) {
                 return terminalManager.initialize()
         }
 
-        /** Setup SSH keys in Alpine's ~/.ssh/ directory */
+        /** Setup SSH keys in Ubuntu's ~/.ssh/ directory */
         suspend fun setupSshKeys(privateKey: String, publicKey: String): Result<Unit> {
                 return terminalManager.setupSshKeys(privateKey, publicKey)
         }
 
-        /** Execute a Git command in the Alpine environment */
+        /** Execute a Git command in the Ubuntu environment */
         suspend fun executeGitCommand(repoPath: String, command: String): Result<String> {
                 return terminalManager.executeGitCommand(repoPath, command, showInTerminal = true)
         }
@@ -60,7 +60,7 @@ class AlpineGitHelper(private val context: Context) {
                                 val sshUrl = "$sshPrefix$username/$repo.git"
 
                                 android.util.Log.d(
-                                        "AlpineGitHelper",
+                                        "UbuntuGitHelper",
                                         "🔄 Converting HTTPS to SSH: $remoteUrl -> $sshUrl"
                                 )
                                 terminalManager.executeGitCommand(
@@ -115,8 +115,8 @@ class AlpineGitHelper(private val context: Context) {
                         localEmailResult.getOrNull()?.trim()?.takeIf { it.isNotEmpty() }
                                 ?: "user@bananaspaghetti.app"
 
-                // Set global identity in Alpine
-                android.util.Log.d("AlpineGitHelper", "🔧 Configuring git identity: $name <$email>")
+                // Set global identity in Ubuntu
+                android.util.Log.d("UbuntuGitHelper", "🔧 Configuring git identity: $name <$email>")
                 terminalManager.executeGitCommand(
                         repoPath,
                         "git config --global user.name '$name'",
@@ -176,7 +176,7 @@ class AlpineGitHelper(private val context: Context) {
                 val parentDir = java.io.File(targetPath).parent ?: "/"
                 val dirName = java.io.File(targetPath).name
                 android.util.Log.d(
-                        "AlpineGitHelper",
+                        "UbuntuGitHelper",
                         "🚀 Cloning $repoUrl into $targetPath (parent: $parentDir, name: $dirName)"
                 )
                 return terminalManager.executeGitCommand(

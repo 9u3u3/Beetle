@@ -1,10 +1,10 @@
 #!/bin/sh
-# SSH ED25519 Key Generation Script for Alpine/proot
+# SSH ED25519 Key Generation Script for Ubuntu/proot
 # This script generates ED25519 SSH keys for Git authentication
 
 set -e
 
-# Set PATH explicitly for Alpine
+# Set PATH explicitly for Ubuntu
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 export HOME=/home
 
@@ -15,9 +15,10 @@ chmod 700 /home/.ssh
 # Install openssh if ssh-keygen not found
 if ! command -v ssh-keygen > /dev/null 2>&1; then
     echo "Installing openssh..."
-    apk update
-    apk add openssh
+    apt-get update
+    apt-get install -y openssh-client
 fi
+
 
 # Remove existing keys if present (for regeneration)
 rm -f /home/.ssh/id_ed25519 /home/.ssh/id_ed25519.pub
