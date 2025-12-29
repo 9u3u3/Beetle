@@ -176,18 +176,9 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
 
                 val wrapperFile = File(publicDir, "wrapper_${extension.slug}.sh")
                 wrapperFile.writeText("""
-                    #!/bin/sh
-                    # Override both exec and exit to detect installation completion
-                    exec() {
-                        echo "INSTALLATION_COMPLETE"
-                        command exit 0
-                    }
-                    exit() {
-                        echo "INSTALLATION_COMPLETE"
-                        command exit 0
-                    }
-                    . /public/${tempScript.name}
-                    # If script doesn't call exit explicitly, mark complete anyway
+                    #!/bin/bash
+                    # Run the installation script in install-only mode
+                    /public/${tempScript.name} --install-only
                     echo "INSTALLATION_COMPLETE"
                 """.trimIndent())
                 wrapperFile.setExecutable(true)

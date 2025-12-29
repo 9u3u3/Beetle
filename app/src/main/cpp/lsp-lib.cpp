@@ -107,7 +107,7 @@ Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_LspServer_startNativeLs
                   "--sysvipc",
                   "-L",
 
-                  "/bin/sh",
+                  "/bin/bash",
                   "-c",
                   const_cast<char *>(cmd.c_str()),
                   NULL};

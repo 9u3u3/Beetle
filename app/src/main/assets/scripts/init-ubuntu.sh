@@ -1,9 +1,22 @@
+#!/bin/bash
 set -e  # Exit immediately on failure
 
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/share/bin:/usr/share/sbin:/usr/local/bin:/usr/local/sbin:/system/bin:/system/xbin:$PREFIX/local/bin
 export PS1="\[\e[38;5;46m\]\u\[\033[39m\]@localhost \[\033[39m\]\w \[\033[0m\]\\$ "
 export HOME=/home
 export TERM=xterm-256color
+
+# Suppress group ID warnings by adding Android groups to /etc/group
+if ! grep -q "^inet:" /etc/group 2>/dev/null; then
+    echo "Adding Android group IDs to /etc/group..."
+    cat >> /etc/group << 'GROUPS'
+inet:x:3003:
+everybody:x:9997:
+u0_a721:x:10721:
+u0_a721_cache:x:20721:
+all_a721:x:50721:
+GROUPS
+fi
 
 # Setup apt sources.list if missing (base rootfs doesn't include it)
 if [ ! -f /etc/apt/sources.list ] || [ ! -s /etc/apt/sources.list ]; then
@@ -41,19 +54,24 @@ if [ "$#" -eq 0 ]; then
 
     # Create initrc if it doesn't exist
     if [ ! -e "$PREFIX/ubuntu/initrc" ]; then
-        cat <<EOF > "$PREFIX/ubuntu/initrc"
-if [[ -f ~/.bashrc ]]; then
-    source ~/.bashrc
+        cat <<'EOF' > "$PREFIX/ubuntu/initrc"
+# Bash initialization file for Ubuntu terminal
+
+# Source system bashrc if it exists
+if [ -f /etc/bash.bashrc ]; then
+    . /etc/bash.bashrc
 fi
 
-if [[ -f /etc/bash.bashrc ]]; then
-    source /etc/bash.bashrc
+# Source user bashrc if it exists
+if [ -f ~/.bashrc ]; then
+    . ~/.bashrc
 fi
 
-export PATH=\$PATH:/bin:/sbin:/usr/bin:/usr/sbin:/usr/share/bin:/usr/share/sbin:/usr/local/bin:/usr/local/sbin
+export PATH=$PATH:/bin:/sbin:/usr/bin:/usr/sbin:/usr/share/bin:/usr/share/sbin:/usr/local/bin:/usr/local/sbin
 export HOME=/home
 export TERM=xterm-256color
-export SHELL=\$(command -v bash)
+export SHELL=$(command -v bash)
+export PS1="\[\e[38;5;46m\]\u\[\e[0m\]@localhost \[\e[0m\]\w \[\e[0m\]\\$ "
 
 # Start in home directory
 cd
@@ -61,10 +79,8 @@ cd
 EOF
     fi
 
-    echo 'export PS1="\[\e[38;5;46m\]\u\[\e[0m\]@localhost \[\e[0m\]\w \[\e[0m\]\\$ "' >> $PREFIX/ubuntu/initrc
-    echo 'cd' >> $PREFIX/ubuntu/initrc
     chmod +x "$PREFIX/ubuntu/initrc"
-    exec /bin/bash --rcfile /data/user/0/com.bsbeetle.bananaspaghetti/files/ubuntu/initrc -i
+    exec /bin/bash --rcfile "$PREFIX/ubuntu/initrc" -i
 
 else
     exec "$@"
