@@ -44,8 +44,7 @@ class Tenebrio(private val context: Context, private val session: Session) {
     external fun resizePty(masterFd: Int, rows: Int, cols: Int): Int
 
     var gMasterFd: Int = -1
-    val alpineUrl =
-            "https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/aarch64/alpine-minirootfs-3.21.0-aarch64.tar.gz"
+    val alpineUrl = "https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/aarch64/alpine-minirootfs-3.21.0-aarch64.tar.gz"
     private val nativeDir: String = context.applicationInfo.nativeLibraryDir
     private var pfd: ParcelFileDescriptor? = null
     private var input: FileInputStream? = null
@@ -58,7 +57,6 @@ class Tenebrio(private val context: Context, private val session: Session) {
     private val dotDownloaded: File = File(PREFIX, ".downloaded")
     private val prootLoader: File = File(nativeDir, "libproot.so")
     private val prootLoader32: File = File(nativeDir, "libproot32.so")
-    private val libtalloc: File = File(PREFIX, "libtalloc.so.2")
     private val proot: File = File(nativeDir, "libproot-xed.so")
 
     fun resizeTerminal(rows: Int, cols: Int) {
