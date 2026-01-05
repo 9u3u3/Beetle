@@ -146,51 +146,24 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                 // TerminalService.setInstallationInProgress(extension.name)
                 
                 addInstallOutput("$ Starting installation of ${extension.name}...")
-                addInstallOutput("$ Copying extension files from local assets...")
+                addInstallOutput("$ Downloading extension files...")
                 
                 val pluginDir = File(context.filesDir, "plugins/${extension.slug}")
                 if (!pluginDir.exists()) {
                     pluginDir.mkdirs()
                 }
 
-                // TEMP: Use local assets instead of downloading from backend
-                // TODO: Revert to downloading once scripts are uploaded to backend
-                
-                // Copy JS Module from assets (or download if not available locally)
-                addInstallOutput("$ Setting up JS module...")
-                val jsFile = File(pluginDir, "${extension.slug}.js")
-                try {
-                    context.assets.open("lsp_scripts/${extension.slug}.js").use { input ->
-                        jsFile.outputStream().use { output ->
-                            input.copyTo(output)
-                        }
-                    }
-                    addInstallOutput("  ✓ JS module copied from assets")
-                } catch (e: Exception) {
-                    // Fallback: download from backend if local asset not found
-                    addInstallOutput("  ⚠ Local JS not found, downloading from backend...")
-                    downloadFile(extension.jsModule, jsFile)
-                    addInstallOutput("  ✓ JS module downloaded")
-                }
+                // Download JS Module
+                addInstallOutput("$ Downloading JS module...")
+                downloadFile(extension.jsModule, File(pluginDir, "${extension.slug}.js"))
+                addInstallOutput("  ✓ JS module downloaded")
 
-                // Copy LSP Script from local assets
-                addInstallOutput("$ Setting up LSP script...")
+                // Download LSP Script  
+                addInstallOutput("$ Downloading LSP script...")
                 val scriptFile = File(pluginDir, "${extension.slug}.sh")
-                try {
-                    context.assets.open("lsp_scripts/${extension.slug}.sh").use { input ->
-                        scriptFile.outputStream().use { output ->
-                            input.copyTo(output)
-                        }
-                    }
-                    scriptFile.setExecutable(true)
-                    addInstallOutput("  ✓ LSP script copied from assets")
-                } catch (e: Exception) {
-                    // Fallback: download from backend if local asset not found
-                    addInstallOutput("  ⚠ Local script not found, downloading from backend...")
-                    downloadFile(extension.lspScript, scriptFile)
-                    scriptFile.setExecutable(true)
-                    addInstallOutput("  ✓ LSP script downloaded")
-                }
+                downloadFile(extension.lspScript, scriptFile)
+                scriptFile.setExecutable(true)
+                addInstallOutput("  ✓ LSP script downloaded")
 
                 // --- Installation Logic ---
                 addInstallOutput("$ Preparing installation environment...")
