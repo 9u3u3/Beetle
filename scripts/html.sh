@@ -1,17 +1,37 @@
 #!/bin/bash
-set -ex
+# HTML LSP startup script
+# IMPORTANT: During LSP mode, stdout must be kept clean for JSON-RPC communication.
 
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:$HOME/.local/bin
 export HOME=/home
 export TERM=xterm-256color
+export DEBIAN_FRONTEND=noninteractive
+export TZ=UTC
 
 # Check for install-only mode
 INSTALL_ONLY=false
 if [ "$1" = "--install-only" ]; then
     INSTALL_ONLY=true
+    set -ex  # Enable tracing only during install
 fi
 
-# Detect Linux distribution (Alpine vs Ubuntu)
+# Helper to conditionally output (only during install mode)
+log_msg() {
+    if [ "$INSTALL_ONLY" = true ]; then
+        echo "$1" >&2
+    fi
+}
+
+# Helper to redirect command output (silent in LSP mode, visible in install mode)
+run_silent() {
+    if [ "$INSTALL_ONLY" = true ]; then
+        "$@" 2>&1
+    else
+        "$@" >/dev/null 2>&1
+    fi
+}
+
+# Detect Linux distribution
 detect_distro() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
@@ -27,30 +47,35 @@ detect_distro() {
 
 DISTRO=$(detect_distro)
 
+# Create linkerconfig if needed
 if [ ! -f /linkerconfig/ld.config.txt ]; then
-    mkdir -p /linkerconfig
-    touch /linkerconfig/ld.config.txt
+    mkdir -p /linkerconfig 2>/dev/null || true
+    touch /linkerconfig/ld.config.txt 2>/dev/null || true
 fi
 
 # Install Node if missing
-if ! command -v node >/dev/null; then
+if ! command -v node >/dev/null 2>&1; then
+    log_msg "[HTML] Node not found, installing..."
     if [ "$DISTRO" = "alpine" ]; then
-        apk add --no-cache nodejs npm
+        run_silent apk add --no-cache nodejs npm
     else
-        apt-get update -qq 2>&1 >&2 || true
-        apt-get install -y nodejs npm 2>&1 >&2 || true
+        run_silent apt-get update -qq || true
+        run_silent apt-get install -y nodejs npm || true
     fi
 fi
 
 # Install HTML language server
-if ! command -v vscode-html-language-server >/dev/null; then
-    npm install -g vscode-langservers-extracted
+if ! command -v vscode-html-language-server >/dev/null 2>&1; then
+    log_msg "[HTML] vscode-html-language-server not found, installing..."
+    run_silent npm install -g vscode-langservers-extracted
+    log_msg "[HTML] Installation complete."
 fi
 
 # If install-only mode, exit now without starting LSP
 if [ "$INSTALL_ONLY" = true ]; then
-    echo "[HTML] Install-only mode, exiting." >&2
+    log_msg "[HTML] Install-only mode, exiting."
     exit 0
 fi
 
+# Run the LSP server
 exec vscode-html-language-server --stdio

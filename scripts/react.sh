@@ -1,17 +1,37 @@
 #!/bin/bash
-set -ex
+# React/TypeScript LSP startup script
+# IMPORTANT: During LSP mode, stdout must be kept clean for JSON-RPC communication.
 
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/share/bin:/usr/share/sbin:/usr/local/bin:/usr/local/sbin:/system/bin:/system/xbin:$PREFIX/local/bin
 export HOME=/home
 export TERM=xterm-256color
+export DEBIAN_FRONTEND=noninteractive
+export TZ=UTC
 
 # Check for install-only mode
 INSTALL_ONLY=false
 if [ "$1" = "--install-only" ]; then
     INSTALL_ONLY=true
+    set -ex  # Enable tracing only during install
 fi
 
-# Detect Linux distribution (Alpine vs Ubuntu)
+# Helper to conditionally output (only during install mode)
+log_msg() {
+    if [ "$INSTALL_ONLY" = true ]; then
+        echo "$1" >&2
+    fi
+}
+
+# Helper to redirect command output (silent in LSP mode, visible in install mode)
+run_silent() {
+    if [ "$INSTALL_ONLY" = true ]; then
+        "$@" 2>&1
+    else
+        "$@" >/dev/null 2>&1
+    fi
+}
+
+# Detect Linux distribution
 detect_distro() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
@@ -27,58 +47,50 @@ detect_distro() {
 
 DISTRO=$(detect_distro)
 
-# Ensure linker config exists
+# Create linkerconfig if needed
 if [ ! -f /linkerconfig/ld.config.txt ]; then
-    mkdir -p /linkerconfig
-    touch /linkerconfig/ld.config.txt
+    mkdir -p /linkerconfig 2>/dev/null || true
+    touch /linkerconfig/ld.config.txt 2>/dev/null || true
 fi
 
 # Node.js
 if ! command -v node >/dev/null 2>&1; then
-    echo "[REACT] Installing Node.js..." >&2
+    log_msg "[REACT] Installing Node.js..."
     if [ "$DISTRO" = "alpine" ]; then
-        apk add --no-cache nodejs npm 2>&1 >&2 || true
+        run_silent apk add --no-cache nodejs npm || true
     else
-        apt-get update -qq 2>&1 >&2 || true
-        apt-get install -y nodejs npm 2>&1 >&2 || true
+        run_silent apt-get update -qq || true
+        run_silent apt-get install -y nodejs npm || true
     fi
 fi
 
 if ! command -v node >/dev/null 2>&1; then
-    echo "[REACT] ERROR: Node install failed" >&2
+    log_msg "[REACT] ERROR: Node install failed"
     exit 1
 fi
 
 # TypeScript + LSP
 if ! command -v typescript-language-server >/dev/null 2>&1; then
-    echo "[REACT] Installing TypeScript LSP..." >&2
-
-    npm install -g \
-        typescript \
-        typescript-language-server \
-        --no-fund --no-audit \
-        2>&1 >&2 || true
+    log_msg "[REACT] Installing TypeScript LSP..."
+    run_silent npm install -g typescript typescript-language-server --no-fund --no-audit || true
 fi
 
 if ! command -v typescript-language-server >/dev/null 2>&1; then
-    echo "[REACT] ERROR: typescript-language-server not found" >&2
+    log_msg "[REACT] ERROR: typescript-language-server not found"
     exit 1
 fi
 
 # Optional: ESLint / HTML / CSS
 if ! command -v vscode-eslint-language-server >/dev/null 2>&1; then
-    echo "[REACT] Installing HTML/CSS/ESLint servers..." >&2
-    npm install -g vscode-langservers-extracted \
-        --no-fund --no-audit \
-        2>&1 >&2 || true
+    log_msg "[REACT] Installing HTML/CSS/ESLint servers..."
+    run_silent npm install -g vscode-langservers-extracted --no-fund --no-audit || true
 fi
 
 # If install-only mode, exit now without starting LSP
 if [ "$INSTALL_ONLY" = true ]; then
-    echo "[REACT] Install-only mode, exiting." >&2
+    log_msg "[REACT] Install-only mode, exiting."
     exit 0
 fi
 
-# Launch React LSP
-echo "[REACT] Launching TypeScript Language Server..." >&2
+# Run the LSP server
 exec typescript-language-server --stdio

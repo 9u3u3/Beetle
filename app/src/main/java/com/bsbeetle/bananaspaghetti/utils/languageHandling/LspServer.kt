@@ -251,6 +251,10 @@ go 1.21
                     val n = input!!.read(readBuf)
                     if (n <= 0) break
                     
+                    // DEBUG: Log raw output to see what's coming from proot/bash
+                    val rawOutput = String(readBuf, 0, n, Charsets.UTF_8)
+                    Log.d("cLsp-RAW", "Read $n bytes: ${rawOutput.take(200)}")
+                    
                     // Simple resize if needed (doubling)
                     if (bufferSize + n > buffer.size) {
                          Log.e("cLsp", "Buffer overflow, clearing buffer. Message too large?")

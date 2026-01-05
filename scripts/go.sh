@@ -1,17 +1,38 @@
 #!/bin/bash
-set -ex  # Exit immediately on failure and print commands
+# Go LSP (gopls) startup script
+# IMPORTANT: During LSP mode, stdout must be kept clean for JSON-RPC communication.
 
-export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/share/bin:/usr/share/sbin:/usr/local/bin:/usr/local/sbin:/system/bin:/system/xbin:$PREFIX/local/bin
+export PATH=/home/go/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/share/bin:/usr/share/sbin:/usr/local/bin:/usr/local/sbin:/system/bin:/system/xbin:$PREFIX/local/bin
 export HOME=/home
 export TERM=xterm-256color
+export DEBIAN_FRONTEND=noninteractive
+export TZ=UTC
+export GOPATH="$HOME/go"
 
 # Check for install-only mode
 INSTALL_ONLY=false
 if [ "$1" = "--install-only" ]; then
     INSTALL_ONLY=true
+    set -ex  # Enable tracing only during install
 fi
 
-# Detect Linux distribution (Alpine vs Ubuntu)
+# Helper to conditionally output (only during install mode)
+log_msg() {
+    if [ "$INSTALL_ONLY" = true ]; then
+        echo "$1" >&2
+    fi
+}
+
+# Helper to redirect command output (silent in LSP mode, visible in install mode)
+run_silent() {
+    if [ "$INSTALL_ONLY" = true ]; then
+        "$@" 2>&1
+    else
+        "$@" >/dev/null 2>&1
+    fi
+}
+
+# Detect Linux distribution
 detect_distro() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
@@ -27,66 +48,62 @@ detect_distro() {
 
 DISTRO=$(detect_distro)
 
-# Ensure linker config exists
+# Create linkerconfig if needed
 if [ ! -f /linkerconfig/ld.config.txt ]; then
-    mkdir -p /linkerconfig
-    touch /linkerconfig/ld.config.txt
+    mkdir -p /linkerconfig 2>/dev/null || true
+    touch /linkerconfig/ld.config.txt 2>/dev/null || true
 fi
 
 # Check Go Toolchain
 if ! command -v go >/dev/null 2>&1; then
-    echo "[GO] Go compiler not found. Installing..." >&2
+    log_msg "[GO] Go compiler not found. Installing..."
 
     if [ "$DISTRO" = "alpine" ]; then
-        apk add --no-cache go 2>&1 >&2 || true
+        run_silent apk add --no-cache go || true
     else
-        apt-get update -qq 2>&1 >&2 || true
-        apt-get install -y golang-go 2>&1 >&2 || true
+        run_silent apt-get update -qq || true
+        run_silent apt-get install -y golang-go || true
     fi
 
     if ! command -v go >/dev/null 2>&1; then
-        echo "[GO] ERROR: Go installation failed" >&2
+        log_msg "[GO] ERROR: Go installation failed"
         exit 1
     fi
 
-    echo "[GO] Go installed successfully." >&2
+    log_msg "[GO] Go installed successfully."
 fi
 
 # Check gopls (Go LSP)
 if ! command -v gopls >/dev/null 2>&1; then
-    echo "[GO] gopls not found. Installing..." >&2
+    log_msg "[GO] gopls not found. Installing..."
 
     if [ "$DISTRO" = "alpine" ]; then
-        apk add --no-cache gopls 2>&1 >&2 || true
+        run_silent apk add --no-cache gopls || true
     else
-        apt-get update -qq 2>&1 >&2 || true
-        apt-get install -y gopls 2>&1 >&2 || true
+        run_silent apt-get update -qq || true
+        run_silent apt-get install -y gopls || true
     fi
 
     # Fallback: install via go install
     if ! command -v gopls >/dev/null 2>&1; then
-        echo "[GO] Package gopls failed, installing via go toolchain..." >&2
-
-        export GOPATH="$HOME/go"
+        log_msg "[GO] Package gopls failed, installing via go toolchain..."
         export PATH="$GOPATH/bin:$PATH"
-
-        go install golang.org/x/tools/gopls@latest 2>&1 >&2 || true
+        run_silent go install golang.org/x/tools/gopls@latest || true
     fi
 
     if ! command -v gopls >/dev/null 2>&1; then
-        echo "[GO] ERROR: gopls installation failed" >&2
+        log_msg "[GO] ERROR: gopls installation failed"
         exit 1
     fi
 
-    echo "[GO] gopls installed successfully." >&2
+    log_msg "[GO] gopls installed successfully."
 fi
 
 # If install-only mode, exit now without starting LSP
 if [ "$INSTALL_ONLY" = true ]; then
-    echo "[GO] Install-only mode, exiting." >&2
+    log_msg "[GO] Install-only mode, exiting."
     exit 0
 fi
 
 # Run the LSP server
-echo "[GO] gopls found. Launching LSP..." >&2
 exec gopls

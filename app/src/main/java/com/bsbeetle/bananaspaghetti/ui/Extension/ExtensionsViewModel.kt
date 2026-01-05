@@ -146,24 +146,51 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                 // TerminalService.setInstallationInProgress(extension.name)
                 
                 addInstallOutput("$ Starting installation of ${extension.name}...")
-                addInstallOutput("$ Downloading extension files...")
+                addInstallOutput("$ Copying extension files from local assets...")
                 
                 val pluginDir = File(context.filesDir, "plugins/${extension.slug}")
                 if (!pluginDir.exists()) {
                     pluginDir.mkdirs()
                 }
 
-                // Download JS Module
-                addInstallOutput("$ Downloading JS module...")
-                downloadFile(extension.jsModule, File(pluginDir, "${extension.slug}.js"))
-                addInstallOutput("  ✓ JS module downloaded")
+                // TEMP: Use local assets instead of downloading from backend
+                // TODO: Revert to downloading once scripts are uploaded to backend
+                
+                // Copy JS Module from assets (or download if not available locally)
+                addInstallOutput("$ Setting up JS module...")
+                val jsFile = File(pluginDir, "${extension.slug}.js")
+                try {
+                    context.assets.open("lsp_scripts/${extension.slug}.js").use { input ->
+                        jsFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    addInstallOutput("  ✓ JS module copied from assets")
+                } catch (e: Exception) {
+                    // Fallback: download from backend if local asset not found
+                    addInstallOutput("  ⚠ Local JS not found, downloading from backend...")
+                    downloadFile(extension.jsModule, jsFile)
+                    addInstallOutput("  ✓ JS module downloaded")
+                }
 
-                // Download LSP Script
-                addInstallOutput("$ Downloading LSP script...")
+                // Copy LSP Script from local assets
+                addInstallOutput("$ Setting up LSP script...")
                 val scriptFile = File(pluginDir, "${extension.slug}.sh")
-                downloadFile(extension.lspScript, scriptFile)
-                scriptFile.setExecutable(true)
-                addInstallOutput("  ✓ LSP script downloaded")
+                try {
+                    context.assets.open("lsp_scripts/${extension.slug}.sh").use { input ->
+                        scriptFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    scriptFile.setExecutable(true)
+                    addInstallOutput("  ✓ LSP script copied from assets")
+                } catch (e: Exception) {
+                    // Fallback: download from backend if local asset not found
+                    addInstallOutput("  ⚠ Local script not found, downloading from backend...")
+                    downloadFile(extension.lspScript, scriptFile)
+                    scriptFile.setExecutable(true)
+                    addInstallOutput("  ✓ LSP script downloaded")
+                }
 
                 // --- Installation Logic ---
                 addInstallOutput("$ Preparing installation environment...")
@@ -177,6 +204,11 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                 val wrapperFile = File(publicDir, "wrapper_${extension.slug}.sh")
                 wrapperFile.writeText("""
                     #!/bin/bash
+                    # Set non-interactive mode for apt to avoid tzdata prompts
+                    export DEBIAN_FRONTEND=noninteractive
+                    export TZ=UTC
+                    # Pre-configure tzdata to avoid prompts
+                    ln -fs /usr/share/zoneinfo/UTC /etc/localtime 2>/dev/null || true
                     # Run the installation script in install-only mode
                     /public/${tempScript.name} --install-only
                     echo "INSTALLATION_COMPLETE"
@@ -211,7 +243,7 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                 
                 session.insertText("/public/${wrapperFile.name}\n")
 
-                withTimeout(180000) { // 3 minutes timeout
+                withTimeout(600000) { // 10 minutes timeout for slow package installations
                     installComplete.await()
                 }
 

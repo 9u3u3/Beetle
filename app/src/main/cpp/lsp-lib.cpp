@@ -45,7 +45,14 @@ Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_LspServer_startNativeLs
   setenv("PROOT", PROOT, 1);
 
   // Construct command dynamically using PREFIX and SCRIPT_NAME
+  // Note: stderr is redirected to /dev/null at process level (see dup2 below),
+  // so any debug output or shell traces won't pollute the LSP channel.
   std::string cmd = std::string(". ") + PREFIX + "/" + SCRIPT_NAME;
+
+  ALOGE("LSP Command: %s", cmd.c_str());
+  ALOGE("PREFIX: %s", PREFIX);
+  ALOGE("SCRIPT_NAME: %s", SCRIPT_NAME);
+  ALOGE("UBUNTU rootfs: %s", UBUNTU);
 
   char *argv[] = {const_cast<char *>(PROOT),
 
@@ -191,7 +198,15 @@ Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_LspServer_startNativeLs
 
     dup2(slave_fd, STDIN_FILENO);
     dup2(slave_fd, STDOUT_FILENO);
-    dup2(slave_fd, STDERR_FILENO);
+
+    // Redirect stderr to /dev/null to keep LSP channel clean.
+    // Shell traces (set -x), pip warnings, and other diagnostic output
+    // were polluting the JSON-RPC communication.
+    int devnull = open("/dev/null", O_WRONLY);
+    if (devnull >= 0) {
+      dup2(devnull, STDERR_FILENO);
+      close(devnull);
+    }
 
     if (slave_fd > STDERR_FILENO) {
       close(slave_fd);

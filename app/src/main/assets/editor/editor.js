@@ -247,11 +247,16 @@ window.setMinimap = function (enabled) {
 };
 
 window.setLanguage = async function (slug, port = 8081) {
+  console.log(`[LSP-DEBUG] setLanguage called with slug=${slug}, port=${port}`);
   currentLanguageId = slug; // Update current language
 
   // Connect to LSP
+  console.log(`[LSP-DEBUG] window.connectLsp exists: ${typeof window.connectLsp}`);
   if (window.connectLsp) {
+    console.log(`[LSP-DEBUG] Calling connectLsp(${port})`);
     window.connectLsp(port);
+  } else {
+    console.error(`[LSP-DEBUG] ERROR: window.connectLsp is undefined!`);
   }
 
   let langModule;
