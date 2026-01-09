@@ -11,11 +11,11 @@
 #define ALOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_startAlpine(
+Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_startUbuntu(
     JNIEnv *env, jobject /*this*/, jstring prefix, jstring jNativeDirPath,
     jstring jProotTmpDir, jstring jProotLoader, jstring jProotLoader32,
-    jstring jProot, jstring jPublic, jstring jAlpineTmp, jstring jAlpine,
-    jstring jAlpineInit, jint rows, jint cols) {
+    jstring jProot, jstring jPublic, jstring jUbuntuTmp, jstring jUbuntu,
+    jstring jUbuntuInit, jint rows, jint cols) {
 
   // Initializing paths
   const char *PREFIX = env->GetStringUTFChars(prefix, nullptr);
@@ -25,9 +25,9 @@ Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_startAlpine(
   const char *PROOT_LOADER32 = env->GetStringUTFChars(jProotLoader32, nullptr);
   const char *PROOT = env->GetStringUTFChars(jProot, nullptr);
   const char *PUBLIC = env->GetStringUTFChars(jPublic, nullptr);
-  const char *ALPINE_TMP = env->GetStringUTFChars(jAlpineTmp, nullptr);
-  const char *ALPINE = env->GetStringUTFChars(jAlpine, nullptr);
-  // const char *INIT_ALPINE = env->GetStringUTFChars(jAlpineInit, nullptr);
+  const char *UBUNTU_TMP = env->GetStringUTFChars(jUbuntuTmp, nullptr);
+  const char *UBUNTU = env->GetStringUTFChars(jUbuntu, nullptr);
+  // const char *INIT_UBUNTU = env->GetStringUTFChars(jUbuntuInit, nullptr);
 
   // Setting the environment variables
   setenv("PREFIX", PREFIX, 1);
@@ -39,7 +39,7 @@ Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_startAlpine(
   setenv("PROOT", PROOT, 1);
 
   char command[] =
-      ". /data/user/0/com.bsbeetle.bananaspaghetti/files/init-alpine.sh";
+      ". /data/user/0/com.bsbeetle.bananaspaghetti/files/init-ubuntu.sh";
 
   // Building proot command
   char *argv[] = {const_cast<char *>(PROOT),
@@ -83,7 +83,7 @@ Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_startAlpine(
                   "-b",
                   const_cast<char *>(PUBLIC),
                   "-b",
-                  const_cast<char *>(ALPINE_TMP),
+                  const_cast<char *>(UBUNTU_TMP),
 
                   "-b",
                   "/proc/self/fd:/dev/fd",
@@ -95,7 +95,7 @@ Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_startAlpine(
                   "/proc/self/fd/2:/dev/stderr",
 
                   "-r",
-                  const_cast<char *>(ALPINE),
+                  const_cast<char *>(UBUNTU),
 
                   "-0",
                   "--link2symlink",
@@ -104,8 +104,7 @@ Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_startAlpine(
                   "-w",
                   "/home",
 
-                  "/bin/busybox",
-                  "ash",
+                  "/bin/bash",
                   "-c",
                   command,
                   NULL};

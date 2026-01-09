@@ -21,7 +21,7 @@ import java.util.LinkedList;
 import java.util.Locale;
 
 
-public class AlpineDocumentProvider extends DocumentsProvider {
+public class UbuntuDocumentProvider extends DocumentsProvider {
 
     private static final String ALL_MIME_TYPES = "*/*";
 
@@ -52,7 +52,7 @@ public class AlpineDocumentProvider extends DocumentsProvider {
 
     @Override
     public Cursor queryRoots(String[] projection) {
-        File BASE_DIR = new File(getContext().getFilesDir(),"alpine/home");
+        File BASE_DIR = new File(getContext().getFilesDir(),"ubuntu/home");
         if (!BASE_DIR.exists()) {
             BASE_DIR.mkdirs();
         }
@@ -305,7 +305,7 @@ public class AlpineDocumentProvider extends DocumentsProvider {
     }
 
     public static boolean isDocumentProviderEnabled(Context context) {
-        ComponentName componentName = new ComponentName(context, AlpineDocumentProvider.class);
+        ComponentName componentName = new ComponentName(context, UbuntuDocumentProvider.class);
         int state = context.getPackageManager().getComponentEnabledSetting(componentName);
         return state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED ||
                 state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT;
@@ -315,7 +315,7 @@ public class AlpineDocumentProvider extends DocumentsProvider {
         if (isDocumentProviderEnabled(context) == enabled) {
             return;
         }
-        ComponentName componentName = new ComponentName(context, AlpineDocumentProvider.class);
+        ComponentName componentName = new ComponentName(context, UbuntuDocumentProvider.class);
         int newState = enabled ?
                 PackageManager.COMPONENT_ENABLED_STATE_ENABLED :
                 PackageManager.COMPONENT_ENABLED_STATE_DISABLED;

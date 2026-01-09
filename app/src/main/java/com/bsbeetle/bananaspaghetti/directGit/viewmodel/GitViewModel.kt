@@ -4,8 +4,8 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.bsbeetle.bananaspaghetti.directGit.utils.AlpineGitHelper
-import com.bsbeetle.bananaspaghetti.directGit.utils.AlpineSshKeyManager
+import com.bsbeetle.bananaspaghetti.directGit.utils.UbuntuGitHelper
+import com.bsbeetle.bananaspaghetti.directGit.utils.UbuntuSshKeyManager
 import com.bsbeetle.bananaspaghetti.directGit.utils.GitSshKeyManager
 import com.bsbeetle.bananaspaghetti.directGit.utils.GitSshSessionFactory
 import com.bsbeetle.bananaspaghetti.directGit.utils.GitUrlConverter
@@ -70,11 +70,11 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     private val sshKeyManager = GitSshKeyManager(application)
     private val sshSessionFactory = GitSshSessionFactory(sshKeyManager)
 
-    // Alpine SSH key manager for ED25519 keys (used for push/pull via terminal)
-    private val alpineSshKeyManager = AlpineSshKeyManager(application)
+    // Ubuntu SSH key manager for ED25519 keys (used for push/pull via terminal)
+    private val ubuntuSshKeyManager = UbuntuSshKeyManager(application)
 
-    // Alpine Git Helper for terminal-based Git operations
-    private val alpineGitHelper = AlpineGitHelper(application)
+    // Ubuntu Git Helper for terminal-based Git operations
+    private val ubuntuGitHelper = UbuntuGitHelper(application)
 
     private var isGitInitialized = false
 
@@ -96,26 +96,26 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
             // Configure SSH for JGit operations (local commits, etc.)
             SshSessionFactory.setInstance(sshSessionFactory)
 
-            // Check if Alpine SSH keys are configured (ED25519)
-            val hasAlpineKeys = alpineSshKeyManager.hasKeys()
-            Log.d("GitViewModel", "Alpine ED25519 keys exist: $hasAlpineKeys")
-            _uiState.value = _uiState.value.copy(sshKeysConfigured = hasAlpineKeys)
+            // Check if Ubuntu SSH keys are configured (ED25519)
+            val hasUbuntuKeys = ubuntuSshKeyManager.hasKeys()
+            Log.d("GitViewModel", "Ubuntu ED25519 keys exist: $hasUbuntuKeys")
+            _uiState.value = _uiState.value.copy(sshKeysConfigured = hasUbuntuKeys)
 
-            // Auto-setup Alpine SSH keys if they exist
-            if (hasAlpineKeys) {
-                Log.d("GitViewModel", "🔑 Auto-setting up ED25519 SSH keys in Alpine...")
+            // Auto-setup Ubuntu SSH keys if they exist
+            if (hasUbuntuKeys) {
+                Log.d("GitViewModel", "🔑 Auto-setting up ED25519 SSH keys in Ubuntu...")
                 viewModelScope.launch(Dispatchers.IO) {
                     try {
-                        val privateKey = alpineSshKeyManager.getPrivateKeyPEM()
-                        val publicKey = alpineSshKeyManager.getPublicKey()
+                        val privateKey = ubuntuSshKeyManager.getPrivateKeyPEM()
+                        val publicKey = ubuntuSshKeyManager.getPublicKey()
 
                         Log.d("GitViewModel", "Private key null: ${privateKey == null}")
                         Log.d("GitViewModel", "Public key null: ${publicKey == null}")
 
                         if (privateKey != null && publicKey != null) {
-                            Log.d("GitViewModel", "📤 Calling alpineGitHelper.setupSshKeys()...")
-                            alpineGitHelper.setupSshKeys(privateKey, publicKey)
-                            Log.d("GitViewModel", "✅ ED25519 SSH keys auto-configured in Alpine")
+                            Log.d("GitViewModel", "📤 Calling ubuntuGitHelper.setupSshKeys()...")
+                            ubuntuGitHelper.setupSshKeys(privateKey, publicKey)
+                            Log.d("GitViewModel", "✅ ED25519 SSH keys auto-configured in Ubuntu")
                         } else {
                             Log.w(
                                     "GitViewModel",
@@ -142,7 +142,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope.launch {
                 while (true) {
                     delay(500) // Update every 500ms
-                    val history = alpineGitHelper.getCommandHistory()
+                    val history = ubuntuGitHelper.getCommandHistory()
                     if (history != _uiState.value.terminalHistory) {
                         _uiState.value = _uiState.value.copy(terminalHistory = history)
                     }
@@ -328,7 +328,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                                 stashes = stashes,
                                 aheadCount = ahead,
                                 behindCount = behind,
-                                sshKeysConfigured = alpineSshKeyManager.hasKeys(),
+                                sshKeysConfigured = ubuntuSshKeyManager.hasKeys(),
                                 isLoading = false,
                                 operationInProgress = null
                         )
@@ -347,7 +347,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                                 remoteUrl = remote,
                                 aheadCount = ahead,
                                 behindCount = behind,
-                                sshKeysConfigured = alpineSshKeyManager.hasKeys(),
+                                sshKeysConfigured = ubuntuSshKeyManager.hasKeys(),
                                 isLoading = false,
                                 operationInProgress = null
                         )
@@ -357,9 +357,9 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
 
     fun getSshKeyManager(): GitSshKeyManager = sshKeyManager
 
-    fun getAlpineSshKeyManager(): AlpineSshKeyManager = alpineSshKeyManager
+    fun getUbuntuSshKeyManager(): UbuntuSshKeyManager = ubuntuSshKeyManager
 
-    fun getAlpineGitHelper(): AlpineGitHelper = alpineGitHelper
+    fun getUbuntuGitHelper(): UbuntuGitHelper = ubuntuGitHelper
 
     fun initRepo() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -428,7 +428,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     fun commitAndPush(message: String, files: List<String>) {
         viewModelScope.launch(Dispatchers.IO) {
             // Check if SSH is configured
-            if (!alpineSshKeyManager.hasKeys()) {
+            if (!ubuntuSshKeyManager.hasKeys()) {
                 showError("SSH not configured", "Please set up SSH keys first")
                 return@launch
             }
@@ -502,7 +502,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
             Log.d("GitViewModel", "🔄 Inside push coroutine")
 
             // Check if SSH is configured
-            val hasKeys = alpineSshKeyManager.hasKeys()
+            val hasKeys = ubuntuSshKeyManager.hasKeys()
             Log.d("GitViewModel", "🔑 SSH keys configured: $hasKeys")
             if (!hasKeys) {
                 showError("SSH not configured", "Please set up SSH keys first")
@@ -523,14 +523,14 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                             operationInProgress = "Pushing to remote..."
                     )
 
-            // Use Alpine's native git for SSH operations
+            // Use Ubuntu's native git for SSH operations
             val branch = repository?.getCurrentBranch() ?: "main"
             Log.d("GitViewModel", "🌿 Branch: $branch")
             GitLogger.log("git push origin $branch", LogType.COMMAND)
 
-            Log.d("GitViewModel", "⏳ Calling alpineGitHelper.push()...")
-            val result = alpineGitHelper.push(repoPath, branch)
-            Log.d("GitViewModel", "✅ alpineGitHelper.push() returned: $result")
+            Log.d("GitViewModel", "⏳ Calling ubuntuGitHelper.push()...")
+            val result = ubuntuGitHelper.push(repoPath, branch)
+            Log.d("GitViewModel", "✅ ubuntuGitHelper.push() returned: $result")
 
             result.fold(
                     onSuccess = { output ->
@@ -563,7 +563,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     fun pullFromBranch(remoteBranch: String?) {
         viewModelScope.launch(Dispatchers.IO) {
             // Check if SSH is configured
-            if (!alpineSshKeyManager.hasKeys()) {
+            if (!ubuntuSshKeyManager.hasKeys()) {
                 showError("SSH not configured", "Please set up SSH keys first")
                 return@launch
             }
@@ -583,9 +583,9 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                             operationInProgress = "Pulling from origin/$branch..."
                     )
 
-            // Use Alpine's native git for SSH operations
+            // Use Ubuntu's native git for SSH operations
             GitLogger.log("git pull origin $branch", LogType.COMMAND)
-            val result = alpineGitHelper.pull(repoPath, branch)
+            val result = ubuntuGitHelper.pull(repoPath, branch)
             result.fold(
                     onSuccess = { output ->
                         showSuccess("Pull from '$branch' completed")
@@ -604,7 +604,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     fun fetch() {
         viewModelScope.launch(Dispatchers.IO) {
             // Check if SSH is configured
-            if (!alpineSshKeyManager.hasKeys()) {
+            if (!ubuntuSshKeyManager.hasKeys()) {
                 showError("SSH not configured", "Please set up SSH keys first")
                 return@launch
             }
@@ -622,9 +622,9 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                             operationInProgress = "Fetching from remote..."
                     )
 
-            // Use Alpine's native git for SSH operations
+            // Use Ubuntu's native git for SSH operations
             GitLogger.log("git fetch origin", LogType.COMMAND)
-            val result = alpineGitHelper.fetch(repoPath)
+            val result = ubuntuGitHelper.fetch(repoPath)
             result.fold(
                     onSuccess = { output ->
                         showSuccess("Fetch completed")
@@ -643,13 +643,13 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
             // Try JGit first
             var diff = repository?.getDiff(filePath) ?: "No diff available"
 
-            // If JGit failed (missing objects), try using Alpine's git command as fallback
+            // If JGit failed (missing objects), try using Ubuntu's git command as fallback
             if (diff.contains("Repository objects missing") || diff.contains("Error loading diff")
             ) {
-                Log.d("GitViewModel", "JGit diff failed, trying Alpine git diff...")
+                Log.d("GitViewModel", "JGit diff failed, trying Ubuntu git diff...")
                 val repoPath = currentRoot?.absolutePath
                 if (repoPath != null) {
-                    val result = alpineGitHelper.getDiff(repoPath, filePath)
+                    val result = ubuntuGitHelper.getDiff(repoPath, filePath)
                     if (result.isSuccess) {
                         diff = result.getOrNull() ?: diff
                     }
@@ -743,7 +743,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                         logs = emptyList(),
                         terminalHistory = emptyList()
                 )
-        alpineGitHelper.clearHistory()
+        ubuntuGitHelper.clearHistory()
     }
 
     // === Branch Operations ===
@@ -814,7 +814,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // === Advanced Branch Operations (via Alpine) ===
+    // === Advanced Branch Operations (via Ubuntu) ===
 
     /** Create a new branch from a specific source branch */
     fun createBranchFrom(newName: String, sourceBranch: String) {
@@ -827,7 +827,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                     )
             GitLogger.log("git checkout -b $newName $sourceBranch", LogType.COMMAND)
 
-            val result = alpineGitHelper.createBranchFrom(repoPath, newName, sourceBranch)
+            val result = ubuntuGitHelper.createBranchFrom(repoPath, newName, sourceBranch)
             result.fold(
                     onSuccess = { showSuccess("Created branch '$newName' from '$sourceBranch'") },
                     onFailure = { e -> showError("Failed to create branch", e.message) }
@@ -848,7 +848,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                     )
             GitLogger.log("git branch -d $branchName", LogType.COMMAND)
 
-            val localResult = alpineGitHelper.deleteBranchLocal(repoPath, branchName)
+            val localResult = ubuntuGitHelper.deleteBranchLocal(repoPath, branchName)
             localResult.fold(
                     onSuccess = {
                         if (deleteRemote) {
@@ -859,7 +859,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                                     )
                             GitLogger.log("git push origin --delete $branchName", LogType.COMMAND)
                             val remoteResult =
-                                    alpineGitHelper.deleteBranchRemote(repoPath, branchName)
+                                    ubuntuGitHelper.deleteBranchRemote(repoPath, branchName)
                             remoteResult.fold(
                                     onSuccess = {
                                         showSuccess("Deleted branch '$branchName' (local + remote)")
@@ -891,7 +891,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                     )
             GitLogger.log("git branch -m $oldName $newName", LogType.COMMAND)
 
-            val result = alpineGitHelper.renameBranch(repoPath, oldName, newName)
+            val result = ubuntuGitHelper.renameBranch(repoPath, oldName, newName)
             result.fold(
                     onSuccess = { showSuccess("Renamed branch to '$newName'") },
                     onFailure = { e -> showError("Failed to rename branch", e.message) }
@@ -910,7 +910,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                     )
             GitLogger.log("git merge $branchName", LogType.COMMAND)
 
-            val result = alpineGitHelper.merge(repoPath, branchName)
+            val result = ubuntuGitHelper.merge(repoPath, branchName)
             result.fold(
                     onSuccess = { output ->
                         if (output.contains("CONFLICT")) {
@@ -933,7 +933,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                     _uiState.value.copy(operationInProgress = "Rebasing onto '$ontoBranch'...")
             GitLogger.log("git rebase $ontoBranch", LogType.COMMAND)
 
-            val result = alpineGitHelper.rebase(repoPath, ontoBranch)
+            val result = ubuntuGitHelper.rebase(repoPath, ontoBranch)
             result.fold(
                     onSuccess = { output ->
                         if (output.contains("CONFLICT")) {
@@ -958,7 +958,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.value = _uiState.value.copy(operationInProgress = "Aborting merge...")
             GitLogger.log("git merge --abort", LogType.COMMAND)
 
-            val result = alpineGitHelper.mergeAbort(repoPath)
+            val result = ubuntuGitHelper.mergeAbort(repoPath)
             result.fold(
                     onSuccess = { showSuccess("Merge aborted") },
                     onFailure = { e -> showError("Failed to abort merge", e.message) }
@@ -974,7 +974,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.value = _uiState.value.copy(operationInProgress = "Aborting rebase...")
             GitLogger.log("git rebase --abort", LogType.COMMAND)
 
-            val result = alpineGitHelper.rebaseAbort(repoPath)
+            val result = ubuntuGitHelper.rebaseAbort(repoPath)
             result.fold(
                     onSuccess = { showSuccess("Rebase aborted") },
                     onFailure = { e -> showError("Failed to abort rebase", e.message) }
@@ -1011,7 +1011,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
     fun cloneRepository(url: String, targetPath: String) {
         viewModelScope.launch(Dispatchers.IO) {
             // Check if SSH is configured
-            if (!alpineSshKeyManager.hasKeys()) {
+            if (!ubuntuSshKeyManager.hasKeys()) {
                 showError("SSH not configured", "Please set up SSH keys first")
                 return@launch
             }
@@ -1050,11 +1050,11 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
-            // Use Alpine's native git for SSH clone
+            // Use Ubuntu's native git for SSH clone
             GitLogger.log("git clone $sshUrl", LogType.COMMAND)
-            Log.d("GitViewModel", "⏳ Calling alpineGitHelper.clone()...")
-            val result = alpineGitHelper.clone(sshUrl, targetPath)
-            Log.d("GitViewModel", "✅ alpineGitHelper.clone() returned: $result")
+            Log.d("GitViewModel", "⏳ Calling ubuntuGitHelper.clone()...")
+            val result = ubuntuGitHelper.clone(sshUrl, targetPath)
+            Log.d("GitViewModel", "✅ ubuntuGitHelper.clone() returned: $result")
 
             result.fold(
                     onSuccess = { output ->

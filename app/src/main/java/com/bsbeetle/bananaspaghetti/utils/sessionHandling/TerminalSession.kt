@@ -60,8 +60,8 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
                         // Wait for shell to initialize (initrc runs and does 'cd')
                         delay(1500)
 
-                        // Convert the path to Alpine-friendly format
-                        val alpinePath =
+                        // Convert the path to Ubuntu-friendly format
+                        val ubuntuPath =
                                 when {
                                     // External storage - create symlink in /home
                                     dir.startsWith("/storage/emulated/0/") -> {
@@ -79,17 +79,17 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
                                         )
                                         null // Already handled
                                     }
-                                    // Alpine internal storage - exact home directory
-                                    // (e.g., /data/user/0/.../alpine/home)
-                                    dir.endsWith("/alpine/home") -> {
+                                    // Ubuntu internal storage - exact home directory
+                                    // (e.g., /data/user/0/.../ubuntu/home)
+                                    dir.endsWith("/ubuntu/home") -> {
                                         "/home"
                                     }
-                                    // Alpine internal storage with subpath (e.g.,
-                                    // /data/user/0/.../alpine/home/Test)
-                                    dir.contains("/alpine/home/") -> {
-                                        // Extract the path after "alpine/home/" to get the relative
+                                    // Ubuntu internal storage with subpath (e.g.,
+                                    // /data/user/0/.../ubuntu/home/Test)
+                                    dir.contains("/ubuntu/home/") -> {
+                                        // Extract the path after "ubuntu/home/" to get the relative
                                         // path
-                                        val relativePath = dir.substringAfter("/alpine/home/")
+                                        val relativePath = dir.substringAfter("/ubuntu/home/")
                                         "/home/$relativePath"
                                     }
                                     // Already a /home path
@@ -99,7 +99,7 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
                                 }
 
                         // If we have a path to cd to (wasn't handled by symlink)
-                        alpinePath?.let { path ->
+                        ubuntuPath?.let { path ->
                             Log.d("TerminalSession", "cd to: $path")
                             insertText("export HOME=/home && cd \"$path\" && clear\n")
                         }
@@ -262,5 +262,17 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
 
     fun insertText(text: String) {
         writeToTerminal(text.toByteArray())
+    }
+
+    /**
+     * Send installation progress message directly to terminal WebView.
+     * Used during Ubuntu installation when PTY doesn't exist yet.
+     */
+    fun sendInstallationMessage(message: String) {
+        view?.post {
+            val jsCommand = "term.write(${org.json.JSONObject.quote("$message\r\n")});"
+            view?.evaluateJavascript(jsCommand, null)
+            Log.d("TerminalSession", "Installation message: $message")
+        }
     }
 }

@@ -1448,12 +1448,12 @@ private fun GitSettingsContent() {
         var errorMessage by remember { mutableStateOf<String?>(null) }
         
         // Check if SSH key already exists
-        val sshKeyManager = remember { com.bsbeetle.bananaspaghetti.directGit.utils.AlpineSshKeyManager(context) }
+        val sshKeyManager = remember { com.bsbeetle.bananaspaghetti.directGit.utils.UbuntuSshKeyManager(context) }
         
         // Check key status on load
         androidx.compose.runtime.LaunchedEffect(Unit) {
-                val alpinePath = "${context.filesDir.absolutePath}/alpine/home/.ssh/id_ed25519.pub"
-                val file = java.io.File(alpinePath)
+                val ubuntuPath = "${context.filesDir.absolutePath}/ubuntu/home/.ssh/id_ed25519.pub"
+                val file = java.io.File(ubuntuPath)
                 sshKeyExists = file.exists() || sshKeyManager.hasKeys()
                 if (sshKeyExists && file.exists()) {
                         publicKey = file.readText()
@@ -1464,9 +1464,9 @@ private fun GitSettingsContent() {
         androidx.compose.runtime.LaunchedEffect(showPublicKey) {
                 if (showPublicKey && sshKeyExists) {
                         try {
-                                val alpinePath =
-                                        "${context.filesDir.absolutePath}/alpine/home/.ssh/id_ed25519.pub"
-                                val file = java.io.File(alpinePath)
+                                val ubuntuPath =
+                                        "${context.filesDir.absolutePath}/ubuntu/home/.ssh/id_ed25519.pub"
+                                val file = java.io.File(ubuntuPath)
                                 publicKey =
                                         if (file.exists()) file.readText() else sshKeyManager.getPublicKey() ?: "No SSH key found"
                         } catch (e: Exception) {
@@ -1577,8 +1577,8 @@ private fun GitSettingsContent() {
                                                                                 val success = sshKeyManager.generateKeyPair()
                                                                                 if (success) {
                                                                                         sshKeyExists = true
-                                                                                        val alpinePath = "${context.filesDir.absolutePath}/alpine/home/.ssh/id_ed25519.pub"
-                                                                                        val file = java.io.File(alpinePath)
+                                                                                        val ubuntuPath = "${context.filesDir.absolutePath}/ubuntu/home/.ssh/id_ed25519.pub"
+                                                                                        val file = java.io.File(ubuntuPath)
                                                                                         if (file.exists()) {
                                                                                                 publicKey = file.readText()
                                                                                         }

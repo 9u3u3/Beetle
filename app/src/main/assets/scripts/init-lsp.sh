@@ -13,8 +13,8 @@ if [ "$#" -eq 0 ]; then
     echo "$$" > "$PREFIX/pid"
 
     # Create initrc if it doesn't exist
-    if [ ! -e "$PREFIX/alpine/initrc" ]; then
-        cat <<EOF > "$PREFIX/alpine/initrc"
+    if [ ! -e "$PREFIX/ubuntu/initrc" ]; then
+        cat <<EOF > "$PREFIX/ubuntu/initrc"
 if [[ -f ~/.bashrc ]]; then
     source ~/.bashrc
 fi

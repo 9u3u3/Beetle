@@ -101,12 +101,12 @@ class GitTerminalManager(private val context: Context) {
                     Log.d(TAG, "🔐 Writing private key to /home/.ssh and /root/.ssh...")
 
                     // /home/.ssh/ (some setups use this)
-                    val alpinePrivateKeyPath = File(context.filesDir, "alpine/home/.ssh/id_ed25519")
-                    alpinePrivateKeyPath.parentFile?.mkdirs()
-                    alpinePrivateKeyPath.writeText(privateKey)
+                    val ubuntuPrivateKeyPath = File(context.filesDir, "ubuntu/home/.ssh/id_ed25519")
+                    ubuntuPrivateKeyPath.parentFile?.mkdirs()
+                    ubuntuPrivateKeyPath.writeText(privateKey)
 
                     // /root/.ssh/ (Alpine terminal runs as root)
-                    val rootPrivateKeyPath = File(context.filesDir, "alpine/root/.ssh/id_ed25519")
+                    val rootPrivateKeyPath = File(context.filesDir, "ubuntu/root/.ssh/id_ed25519")
                     rootPrivateKeyPath.parentFile?.mkdirs()
                     rootPrivateKeyPath.writeText(privateKey)
 
@@ -116,12 +116,12 @@ class GitTerminalManager(private val context: Context) {
 
                     // Write public key to both locations
                     Log.d(TAG, "🔓 Writing public key...")
-                    val alpinePublicKeyPath =
-                            File(context.filesDir, "alpine/home/.ssh/id_ed25519.pub")
-                    alpinePublicKeyPath.writeText(publicKey)
+                    val ubuntuPublicKeyPath =
+                            File(context.filesDir, "ubuntu/home/.ssh/id_ed25519.pub")
+                    ubuntuPublicKeyPath.writeText(publicKey)
 
                     val rootPublicKeyPath =
-                            File(context.filesDir, "alpine/root/.ssh/id_ed25519.pub")
+                            File(context.filesDir, "ubuntu/root/.ssh/id_ed25519.pub")
                     rootPublicKeyPath.parentFile
                             ?.mkdirs() // Ensure parent directory exists for root
                     rootPublicKeyPath.writeText(publicKey)
@@ -156,11 +156,11 @@ class GitTerminalManager(private val context: Context) {
                     UserKnownHostsFile /dev/null
             """.trimIndent()
 
-                    val alpineSshConfigPath = File(context.filesDir, "alpine/home/.ssh/config")
-                    alpineSshConfigPath.writeText(sshConfig)
+                    val ubuntuSshConfigPath = File(context.filesDir, "ubuntu/home/.ssh/config")
+                    ubuntuSshConfigPath.writeText(sshConfig)
 
                     // Also write to /root/.ssh/config
-                    val rootSshConfigPath = File(context.filesDir, "alpine/root/.ssh/config")
+                    val rootSshConfigPath = File(context.filesDir, "ubuntu/root/.ssh/config")
                     rootSshConfigPath.writeText(sshConfig)
 
                     session.insertText("chmod 600 ~/.ssh/config\n")
@@ -223,15 +223,15 @@ class GitTerminalManager(private val context: Context) {
 
                     // Execute command with output redirection to /home which is properly mapped
                     val outputFileName = "git_output_${System.currentTimeMillis()}.txt"
-                    val alpineOutputFile = "/home/$outputFileName"
+                    val ubuntuOutputFile = "/home/$outputFileName"
                     val fullCommand =
-                            "$command > $alpineOutputFile 2>&1; echo \$? >> $alpineOutputFile"
+                            "$command > $ubuntuOutputFile 2>&1; echo \$? >> $ubuntuOutputFile"
                     Log.d(TAG, "📝 Full command: $fullCommand")
                     session.insertText("$fullCommand\n")
 
                     // Poll for command to complete (check output file has content)
-                    val alpineOutputPath = File(context.filesDir, "alpine/home/$outputFileName")
-                    Log.d(TAG, "📖 Output file path: ${alpineOutputPath.absolutePath}")
+                    val ubuntuOutputPath = File(context.filesDir, "ubuntu/home/$outputFileName")
+                    Log.d(TAG, "📖 Output file path: ${ubuntuOutputPath.absolutePath}")
 
                     val startTime = System.currentTimeMillis()
                     var output = ""
@@ -242,8 +242,8 @@ class GitTerminalManager(private val context: Context) {
                         delay(500)
                         pollCount++
 
-                        if (alpineOutputPath.exists()) {
-                            val content = alpineOutputPath.readText()
+                        if (ubuntuOutputPath.exists()) {
+                            val content = ubuntuOutputPath.readText()
                             // Check if output contains exit code (command completed)
                             // The exit code is appended as the last line
                             val lines = content.lines().filter { it.isNotBlank() }
@@ -270,7 +270,7 @@ class GitTerminalManager(private val context: Context) {
                             if (pollCount % 4 == 0) {
                                 Log.d(
                                         TAG,
-                                        "⏳ Poll $pollCount: File ${alpineOutputPath.absolutePath} NOT found yet"
+                                        "⏳ Poll $pollCount: File ${ubuntuOutputPath.absolutePath} NOT found yet"
                                 )
                             }
                         }
@@ -280,8 +280,8 @@ class GitTerminalManager(private val context: Context) {
                     Log.d(TAG, "⏱️ Total wait time: ${elapsedTime}ms")
 
                     // Final read if we timed out but file exists
-                    if (output.isEmpty() && alpineOutputPath.exists()) {
-                        output = alpineOutputPath.readText()
+                    if (output.isEmpty() && ubuntuOutputPath.exists()) {
+                        output = ubuntuOutputPath.readText()
                         Log.d(
                                 TAG,
                                 "⚠️ Timeout reached, reading whatever output we have: ${output.length} chars"
@@ -289,8 +289,8 @@ class GitTerminalManager(private val context: Context) {
                     }
 
                     // Clean up output file
-                    if (alpineOutputPath.exists()) {
-                        alpineOutputPath.delete()
+                    if (ubuntuOutputPath.exists()) {
+                        ubuntuOutputPath.delete()
                     }
 
                     Log.d(TAG, "📄 Final output (${output.length} chars): ${output.take(500)}")
@@ -355,7 +355,7 @@ class GitTerminalManager(private val context: Context) {
             addToHistory("📦 Checking git installation...")
 
             // Check if git is installed
-            val gitCheckFile = File(context.filesDir, "alpine/usr/bin/git")
+            val gitCheckFile = File(context.filesDir, "ubuntu/usr/bin/git")
             if (!gitCheckFile.exists()) {
                 Log.d(TAG, "📥 Git not found, installing...")
                 addToHistory("📥 Installing git...")

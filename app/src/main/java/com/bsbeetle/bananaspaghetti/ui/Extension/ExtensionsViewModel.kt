@@ -146,24 +146,28 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                 // TerminalService.setInstallationInProgress(extension.name)
                 
                 addInstallOutput("$ Starting installation of ${extension.name}...")
-                addInstallOutput("$ Downloading extension files...")
+                addInstallOutput("$ Downloading extension files from backend...")
                 
                 val pluginDir = File(context.filesDir, "plugins/${extension.slug}")
                 if (!pluginDir.exists()) {
                     pluginDir.mkdirs()
                 }
 
-                // Download JS Module
-                addInstallOutput("$ Downloading JS module...")
-                downloadFile(extension.jsModule, File(pluginDir, "${extension.slug}.js"))
+                // REVERTED: Download from backend instead of using local assets
+                // Updated scripts are now available in the backend bucket
+                
+                // Download JS Module from backend
+                addInstallOutput("$ Downloading JS module from backend...")
+                val jsFile = File(pluginDir, "${extension.slug}.js")
+                downloadFile(extension.jsModule, jsFile)
                 addInstallOutput("  ✓ JS module downloaded")
 
-                // Download LSP Script
-                addInstallOutput("$ Downloading LSP script...")
+                // Download LSP Script from backend
+                addInstallOutput("$ Downloading LSP script from backend...")
                 val scriptFile = File(pluginDir, "${extension.slug}.sh")
                 downloadFile(extension.lspScript, scriptFile)
                 scriptFile.setExecutable(true)
-                addInstallOutput("  ✓ LSP script downloaded")
+                addInstallOutput("  ✓ LSP script downloaded and made executable")
 
                 // --- Installation Logic ---
                 addInstallOutput("$ Preparing installation environment...")
@@ -176,23 +180,19 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
 
                 val wrapperFile = File(publicDir, "wrapper_${extension.slug}.sh")
                 wrapperFile.writeText("""
-                    #!/bin/sh
-                    # Override both exec and exit to detect installation completion
-                    exec() {
-                        echo "INSTALLATION_COMPLETE"
-                        command exit 0
-                    }
-                    exit() {
-                        echo "INSTALLATION_COMPLETE"
-                        command exit 0
-                    }
-                    . /public/${tempScript.name}
-                    # If script doesn't call exit explicitly, mark complete anyway
+                    #!/bin/bash
+                    # Set non-interactive mode for apt to avoid tzdata prompts
+                    export DEBIAN_FRONTEND=noninteractive
+                    export TZ=UTC
+                    # Pre-configure tzdata to avoid prompts
+                    ln -fs /usr/share/zoneinfo/UTC /etc/localtime 2>/dev/null || true
+                    # Run the installation script in install-only mode
+                    /public/${tempScript.name} --install-only
                     echo "INSTALLATION_COMPLETE"
                 """.trimIndent())
                 wrapperFile.setExecutable(true)
 
-                addInstallOutput("$ Running installation script in Alpine Linux...")
+                addInstallOutput("$ Running installation script in Ubuntu Linux...")
                 addInstallOutput("")
 
                 val installComplete = CompletableDeferred<Boolean>()
@@ -220,7 +220,7 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                 
                 session.insertText("/public/${wrapperFile.name}\n")
 
-                withTimeout(180000) { // 3 minutes timeout
+                withTimeout(600000) { // 10 minutes timeout for slow package installations
                     installComplete.await()
                 }
 

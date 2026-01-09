@@ -166,10 +166,10 @@ fun TopRightBox(
                             val uri = android.net.Uri.parse(rawPath)
                             when {
                                 uri.authority == "${context.packageName}.documents" -> {
-                                    // Alpine internal storage
+                                    // Ubuntu internal storage
                                     val docId =
                                             android.provider.DocumentsContract.getDocumentId(uri)
-                                    // docId format: /data/user/0/.../alpine/home/folder/file.ext
+                                    // docId format: /data/user/0/.../ubuntu/home/folder/file.ext
                                     // Get parent directory
                                     java.io.File(docId).parent
                                 }
@@ -231,7 +231,7 @@ fun TopRightBox(
                                                 .replace("%3A", ":")
                                 "/storage/emulated/0/$pathPart"
                             }
-                            // Handle Alpine internal storage URIs (same as GitTab)
+                            // Handle Ubuntu internal storage URIs (same as GitTab)
                             folderUri.authority == "${context.packageName}.documents" -> {
                                 android.provider.DocumentsContract.getDocumentId(folderUri)
                             }
@@ -407,8 +407,8 @@ fun TopRightBox(
                     // Check if Git is configured and SSH key exists
                     val prefs = com.bsbeetle.bananaspaghetti.utils.preferences.EditorPreferences(context)
                     val sshKeyExists = remember {
-                        val alpinePath = "${context.filesDir.absolutePath}/alpine/home/.ssh/id_ed25519.pub"
-                        java.io.File(alpinePath).exists()
+                        val ubuntuPath = "${context.filesDir.absolutePath}/ubuntu/home/.ssh/id_ed25519.pub"
+                        java.io.File(ubuntuPath).exists()
                     }
                     if (!prefs.isGitConfigured() || !sshKeyExists) {
                         // Show setup message

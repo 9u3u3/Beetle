@@ -21,12 +21,12 @@ import com.bsbeetle.bananaspaghetti.ui.theme.AppColors
 import java.io.File
 
 /**
- * Check if Alpine terminal is installed by looking for busybox.
+ * Check if Ubuntu terminal is installed by looking for bash.
  * This uses the same logic as Tenebrio.kt
  */
 fun isTerminalInstalled(filesDir: File): Boolean {
-    val alpineBusybox = File(filesDir, "alpine/bin/busybox")
-    return alpineBusybox.exists()
+    val ubuntuBash = File(filesDir, "ubuntu/bin/bash")
+    return ubuntuBash.exists()
 }
 
 /**
@@ -102,7 +102,7 @@ fun TerminalInstallDialog(
                     FeatureItem("LSP", "Language Server Protocol for code intelligence")
                     FeatureItem("Git", "Full Git integration with SSH support")
                     FeatureItem("Build Tools", "Compilers, package managers, and more")
-                    FeatureItem("Shell", "Interactive Alpine Linux terminal")
+                    FeatureItem("Shell", "Interactive Ubuntu Linux terminal")
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -127,7 +127,7 @@ fun TerminalInstallDialog(
 
                 // Note
                 Text(
-                    text = "This will download ~10MB and install Alpine Linux",
+                    text = "This will download ~30MB and install Ubuntu Linux",
                     color = AppColors.TextTertiary,
                     fontSize = 12.sp,
                     textAlign = TextAlign.Center

@@ -42,8 +42,8 @@ class LspServer(private val context: Context, private val port: Int = 8081) {
         jProotLoader32: String,
         jProot: String,
         jPublic: String,
-        jAlpineTmp: String,
-        jAlpine: String,
+        jUbuntuTmp: String,
+        jUbuntu: String,
         jScriptName: String
     ): Int
 
@@ -63,8 +63,8 @@ class LspServer(private val context: Context, private val port: Int = 8081) {
     private val nativeDir = context.applicationInfo.nativeLibraryDir
     private val PREFIX = context.filesDir
     private val tmp = File(PREFIX, "tmp")
-    private val alpine = File(PREFIX, "alpine")
-    private val alpineTmp = File(alpine, "tmp")
+    private val ubuntu = File(PREFIX, "ubuntu")
+    private val ubuntuTmp = File(ubuntu, "tmp")
     private val public = File(PREFIX, "public")
     private val prootLoader = File(nativeDir, "libproot.so")
     private val prootLoader32 = File(nativeDir, "libproot32.so")
@@ -127,7 +127,7 @@ class LspServer(private val context: Context, private val port: Int = 8081) {
         // This enables rust-analyzer to work with standalone .rs files
         if (slug == "rust") {
             try {
-                val cargoToml = File(alpine, "home/Cargo.toml")
+                val cargoToml = File(ubuntu, "home/Cargo.toml")
                 if (!cargoToml.exists()) {
                     cargoToml.parentFile?.mkdirs()
                     cargoToml.writeText("""
@@ -153,7 +153,7 @@ path = "main.rs"
         // This enables jdtls to work with standalone .java files
         if (slug == "java") {
             try {
-                val homeDir = File(alpine, "home")
+                val homeDir = File(ubuntu, "home")
                 homeDir.mkdirs()
                 
                 // Create .project file (Eclipse project descriptor)
@@ -201,7 +201,7 @@ path = "main.rs"
         // This enables gopls to work with standalone .go files
         if (slug == "go") {
             try {
-                val goMod = File(alpine, "home/go.mod")
+                val goMod = File(ubuntu, "home/go.mod")
                 if (!goMod.exists()) {
                     goMod.parentFile?.mkdirs()
                     goMod.writeText("""
@@ -224,8 +224,8 @@ go 1.21
             prootLoader32.absolutePath,
             proot.absolutePath,
             "${public.absolutePath}:/public",
-            "${alpineTmp.absolutePath}:/dev/shm",
-            alpine.absolutePath,
+            "${ubuntuTmp.absolutePath}:/dev/shm",
+            ubuntu.absolutePath,
             scriptRelativePath
         )
 
@@ -250,6 +250,10 @@ go 1.21
                 while (true) {
                     val n = input!!.read(readBuf)
                     if (n <= 0) break
+                    
+                    // DEBUG: Log raw output to see what's coming from proot/bash
+                    val rawOutput = String(readBuf, 0, n, Charsets.UTF_8)
+                    Log.d("cLsp-RAW", "Read $n bytes: ${rawOutput.take(200)}")
                     
                     // Simple resize if needed (doubling)
                     if (bufferSize + n > buffer.size) {

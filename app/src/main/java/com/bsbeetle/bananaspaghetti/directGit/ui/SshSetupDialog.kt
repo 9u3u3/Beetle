@@ -33,9 +33,9 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun SshSetupDialog(viewModel: GitViewModel, onDismiss: () -> Unit, onComplete: () -> Unit) {
-    // Use Alpine SSH Key Manager for ED25519 keys
-    val alpineSshKeyManager = viewModel.getAlpineSshKeyManager()
-    val alpineGitHelper = viewModel.getAlpineGitHelper()
+    // Use Ubuntu SSH Key Manager for ED25519 keys
+    val ubuntuSshKeyManager = viewModel.getUbuntuSshKeyManager()
+    val ubuntuGitHelper = viewModel.getUbuntuGitHelper()
     val oldSshKeyManager = viewModel.getSshKeyManager() // Old RSA manager
 
     var username by remember { mutableStateOf("") }
@@ -51,14 +51,14 @@ fun SshSetupDialog(viewModel: GitViewModel, onDismiss: () -> Unit, onComplete: (
     // Check for existing keys when dialog opens
     LaunchedEffect(Unit) {
         hasOldKeys = oldSshKeyManager.hasKeys()
-        hasNewKeys = alpineSshKeyManager.hasKeys()
+        hasNewKeys = ubuntuSshKeyManager.hasKeys()
 
         Log.d("SshSetupDialog", "🔍 Checking existing keys:")
         Log.d("SshSetupDialog", "  - Old RSA keys exist: $hasOldKeys")
         Log.d("SshSetupDialog", "  - New ED25519 keys exist: $hasNewKeys")
 
         if (hasNewKeys) {
-            val key = alpineSshKeyManager.getPublicKey()
+            val key = ubuntuSshKeyManager.getPublicKey()
             Log.d("SshSetupDialog", "  - ED25519 public key: ${key?.take(50)}...")
             publicKey = key ?: ""
         } else if (hasOldKeys) {
@@ -143,7 +143,7 @@ fun SshSetupDialog(viewModel: GitViewModel, onDismiss: () -> Unit, onComplete: (
                                     try {
                                         Log.d("SshSetupDialog", "🗑️ Deleting all keys...")
                                         oldSshKeyManager.deleteKeys()
-                                        alpineSshKeyManager.deleteKeys()
+                                        ubuntuSshKeyManager.deleteKeys()
 
                                         withContext(Dispatchers.Main) {
                                             hasOldKeys = false
@@ -197,12 +197,12 @@ fun SshSetupDialog(viewModel: GitViewModel, onDismiss: () -> Unit, onComplete: (
                             // Run key generation on background thread
                             CoroutineScope(Dispatchers.IO).launch {
                                 try {
-                                    // Generate ED25519 keys using Alpine
-                                    val success = alpineSshKeyManager.generateKeyPair()
+                                    // Generate ED25519 keys using Ubuntu
+                                    val success = ubuntuSshKeyManager.generateKeyPair()
 
                                     withContext(Dispatchers.Main) {
                                         if (success) {
-                                            publicKey = alpineSshKeyManager.getPublicKey() ?: ""
+                                            publicKey = ubuntuSshKeyManager.getPublicKey() ?: ""
                                             hasNewKeys = true
 
                                             Log.d("SshSetupDialog", "✅ ED25519 keys generated!")
@@ -211,12 +211,12 @@ fun SshSetupDialog(viewModel: GitViewModel, onDismiss: () -> Unit, onComplete: (
                                                     "Public key: ${publicKey.take(50)}..."
                                             )
 
-                                            // Auto-setup keys in Alpine
+                                            // Auto-setup keys in Ubuntu
                                             CoroutineScope(Dispatchers.IO).launch {
                                                 val privateKey =
-                                                        alpineSshKeyManager.getPrivateKeyPEM()
+                                                        ubuntuSshKeyManager.getPrivateKeyPEM()
                                                 if (privateKey != null && publicKey.isNotEmpty()) {
-                                                    alpineGitHelper.setupSshKeys(
+                                                    ubuntuGitHelper.setupSshKeys(
                                                             privateKey,
                                                             publicKey
                                                     )

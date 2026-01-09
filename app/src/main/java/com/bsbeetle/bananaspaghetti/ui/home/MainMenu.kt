@@ -436,7 +436,7 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "This is your Alpine Linux home directory. Make sure Linux is properly initialized before using file operations.",
+                            text = "This is your Ubuntu Linux home directory. Make sure Linux is properly initialized before using file operations.",
                             fontSize = 12.sp,
                             color = Color(0xFFAAAAAA)
                         )
