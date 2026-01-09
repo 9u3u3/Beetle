@@ -666,8 +666,28 @@ class EditorSession(context: Context, name: String = "Editor") :
     }
 
     fun setLanguage(slug: String, port: Int = 8081) {
-        val jsPath = "http://localhost:8080/plugins/$slug/$slug.js"
-        view?.evaluateJavascript("if(window.setLanguage) window.setLanguage('$slug', $port);", null)
+        Log.d("LSP-Debug", "setLanguage called with slug=$slug, port=$port")
+        
+        // Retry logic to ensure window.setLanguage exists before calling it
+        fun trySetLanguage(attemptsLeft: Int = 5) {
+            view?.evaluateJavascript("typeof window.setLanguage") { result ->
+                if (result == "\"function\"") {
+                    // Function exists, call it
+                    view?.evaluateJavascript("window.setLanguage('$slug', $port);", null)
+                    Log.d("LSP-Debug", "✓ Successfully called window.setLanguage('$slug', $port)")
+                } else if (attemptsLeft > 0) {
+                    // Function doesn't exist yet, retry after delay
+                    Log.d("LSP-Debug", "window.setLanguage not ready (type=$result), retrying... ($attemptsLeft attempts left)")
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        trySetLanguage(attemptsLeft - 1)
+                    }, 200) // 200ms delay between retries
+                } else {
+                    Log.e("LSP-Debug", "✗ Failed to call window.setLanguage after all retries - function does not exist")
+                }
+            }
+        }
+        
+        trySetLanguage()
     }
 
     fun setRootUri(rootUri: String) {
