@@ -75,6 +75,9 @@ class Tenebrio(private val context: Context, private val session: Session) {
         val ubuntuBash = File(ubuntu, "bin/bash")
 
         if (!ubuntuBash.exists()) {
+            // Get terminal session for progress messages
+            val terminalSession = session as? TerminalSession
+            
             // Use synchronized block to prevent multiple concurrent downloads
             synchronized(downloadLock) {
                 // Double-check after acquiring lock
@@ -91,6 +94,11 @@ class Tenebrio(private val context: Context, private val session: Session) {
             }
 
             Log.d("Tenebrio", "Ubuntu shell not found, downloading and extracting...")
+            
+            // Show installation message to user
+            terminalSession?.sendInstallationMessage("\u001b[36m[SYSTEM]\u001b[0m Starting Download...")
+            terminalSession?.sendInstallationMessage("\u001b[33m[INFO]\u001b[0m Installing Ubuntu Linux for the first time")
+            terminalSession?.sendInstallationMessage("\u001b[33m[INFO]\u001b[0m Downloading Ubuntu base system (~30MB)...")
 
             // Clean up any partial extraction
             if (dotDownloaded.exists()) {
@@ -101,6 +109,7 @@ class Tenebrio(private val context: Context, private val session: Session) {
             // Clean up corrupted ubuntu directory
             if (ubuntu.exists()) {
                 Log.d("Tenebrio", "Cleaning up corrupted ubuntu directory...")
+                terminalSession?.sendInstallationMessage("\u001b[33m[INFO]\u001b[0m Cleaning up previous installation...")
                 ubuntu.deleteRecursively()
             }
 
@@ -108,9 +117,13 @@ class Tenebrio(private val context: Context, private val session: Session) {
                 try {
                     if (file == null) {
                         Log.e("Tenebrio", "Failed to download Ubuntu root file system")
+                        terminalSession?.sendInstallationMessage("\u001b[31m[ERROR]\u001b[0m Download failed. Please check your internet connection.")
                         return@downloadFile
                     }
 
+                    terminalSession?.sendInstallationMessage("\u001b[32m[SUCCESS]\u001b[0m Download complete!")
+                    terminalSession?.sendInstallationMessage("\u001b[33m[INFO]\u001b[0m Extracting root filesystem...")
+                    
                     copyAssetsTo(PREFIX, "scripts/init-ubuntu.sh", context)
                     copyAssetsTo(PREFIX, "scripts/code-runner.sh", context)
                     Log.d("Tenebrio", "Download complete, starting extraction...")
@@ -234,6 +247,9 @@ class Tenebrio(private val context: Context, private val session: Session) {
                     }
 
                     Log.d("Tenebrio", "Extracted the rootfs successfully")
+                    
+                    terminalSession?.sendInstallationMessage("\u001b[32m[SUCCESS]\u001b[0m Extraction complete!")
+                    terminalSession?.sendInstallationMessage("\u001b[33m[INFO]\u001b[0m Setting up environment...")
 
                     val resolvconf: File = File(ubuntu, "/etc/resolv.conf")
                     resolvconf.createNewFile()
@@ -247,6 +263,9 @@ class Tenebrio(private val context: Context, private val session: Session) {
 
                     // Create marker ONLY after successful extraction
                     dotDownloaded.mkdirs()
+                    terminalSession?.sendInstallationMessage("\u001b[32m[SUCCESS]\u001b[0m Installation complete!")
+                    terminalSession?.sendInstallationMessage("\u001b[36m[SYSTEM]\u001b[0m Tap on the screen to start the shell")
+                    terminalSession?.sendInstallationMessage("")
                     Log.d("Tenebrio", "Ubuntu setup complete!")
                 } finally {
                     synchronized(downloadLock) { isDownloading = false }

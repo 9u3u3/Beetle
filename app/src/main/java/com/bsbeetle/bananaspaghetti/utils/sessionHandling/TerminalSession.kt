@@ -263,4 +263,16 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
     fun insertText(text: String) {
         writeToTerminal(text.toByteArray())
     }
+
+    /**
+     * Send installation progress message directly to terminal WebView.
+     * Used during Ubuntu installation when PTY doesn't exist yet.
+     */
+    fun sendInstallationMessage(message: String) {
+        view?.post {
+            val jsCommand = "term.write(${org.json.JSONObject.quote("$message\r\n")});"
+            view?.evaluateJavascript(jsCommand, null)
+            Log.d("TerminalSession", "Installation message: $message")
+        }
+    }
 }
