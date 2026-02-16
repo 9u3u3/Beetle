@@ -12,14 +12,16 @@ import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.pingPeriod
 import io.ktor.server.websocket.timeout
 import io.ktor.server.websocket.webSocket
+import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
+import io.ktor.websocket.close
 import io.ktor.websocket.readText
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -32,6 +34,8 @@ class LspServer(private val context: Context, private val port: Int = 8081) {
         init {
             System.loadLibrary("lsp-lib")
         }
+        private const val INITIAL_BUFFER_SIZE = 4 * 1024 * 1024  // 4MB
+        private const val MAX_BUFFER_SIZE = 16 * 1024 * 1024     // 16MB
     }
 
     external fun startNativeLsp(
@@ -52,13 +56,19 @@ class LspServer(private val context: Context, private val port: Int = 8081) {
     private var input: FileInputStream? = null
     private var output: FileOutputStream? = null
     private var server: io.ktor.server.engine.EmbeddedServer<*, *>? = null
-    
+
     // Single persistent reader scope
     private var readerScope: CoroutineScope? = null
-    
+
     // Current active WebSocket session (volatile for thread safety)
     @Volatile
     private var currentSession: DefaultWebSocketServerSession? = null
+
+    // Signals when the WebSocket server is ready to accept connections
+    val serverReady = CompletableDeferred<Unit>()
+
+    // Callback for when the LSP process dies unexpectedly
+    var onProcessDied: (() -> Unit)? = null
 
     private val nativeDir = context.applicationInfo.nativeLibraryDir
     private val PREFIX = context.filesDir
@@ -70,12 +80,6 @@ class LspServer(private val context: Context, private val port: Int = 8081) {
     private val prootLoader32 = File(nativeDir, "libproot32.so")
     private val proot = File(nativeDir, "libproot-xed.so")
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-        prettyPrint = false
-    }
-
     fun stop() {
         try {
             readerScope?.cancel()
@@ -85,8 +89,11 @@ class LspServer(private val context: Context, private val port: Int = 8081) {
             server = null
             input?.close()
             output?.close()
+            // Closing pfd closes the master FD, triggering proot's --kill-on-exit
             pfd?.close()
-            Log.d("LspServer", "LSP server stopped")
+            pfd = null
+            gMasterFd = 0
+            Log.d("LspServer", "LSP server stopped on port $port")
         } catch (e: Exception) {
             Log.e("LspServer", "Error stopping LSP server", e)
         }
@@ -116,7 +123,7 @@ class LspServer(private val context: Context, private val port: Int = 8081) {
         // Determine script path
         val scriptRelativePath = "plugins/$slug/$slug.sh"
         val targetScript = File(PREFIX, scriptRelativePath)
-        
+
         if (!targetScript.exists()) {
             Log.e("LspServer", "Script for $slug not found at ${targetScript.absolutePath}")
             return
@@ -124,7 +131,6 @@ class LspServer(private val context: Context, private val port: Int = 8081) {
         targetScript.setExecutable(true)
 
         // For Rust (rust-analyzer), auto-generate Cargo.toml if not exists
-        // This enables rust-analyzer to work with standalone .rs files
         if (slug == "rust") {
             try {
                 val cargoToml = File(ubuntu, "home/Cargo.toml")
@@ -150,13 +156,11 @@ path = "main.rs"
         }
 
         // For Java (jdtls), auto-generate Eclipse project files if not exists
-        // This enables jdtls to work with standalone .java files
         if (slug == "java") {
             try {
                 val homeDir = File(ubuntu, "home")
                 homeDir.mkdirs()
-                
-                // Create .project file (Eclipse project descriptor)
+
                 val projectFile = File(homeDir, ".project")
                 if (!projectFile.exists()) {
                     projectFile.writeText("""
@@ -178,8 +182,7 @@ path = "main.rs"
 """.trimIndent())
                     Log.d("LspServer", "Created .project at ${projectFile.absolutePath}")
                 }
-                
-                // Create .classpath file
+
                 val classpathFile = File(homeDir, ".classpath")
                 if (!classpathFile.exists()) {
                     classpathFile.writeText("""
@@ -198,7 +201,6 @@ path = "main.rs"
         }
 
         // For Go (gopls), auto-generate go.mod if not exists
-        // This enables gopls to work with standalone .go files
         if (slug == "go") {
             try {
                 val goMod = File(ubuntu, "home/go.mod")
@@ -242,25 +244,34 @@ go 1.21
         // Start persistent reader ONCE when LSP process starts
         readerScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         readerScope!!.launch {
-            val buffer = ByteArray(4 * 1024 * 1024) // 4MB buffer
+            // Growable buffer — starts at 4MB, doubles up to 16MB
+            var buffer = ByteArray(INITIAL_BUFFER_SIZE)
             var bufferSize = 0
             val readBuf = ByteArray(65536)
+            // Pre-compile regex outside the loop
+            val contentLengthRegex = Regex("Content-Length:\\s*(\\d+)", RegexOption.IGNORE_CASE)
 
             try {
                 while (true) {
                     val n = input!!.read(readBuf)
                     if (n <= 0) break
-                    
-                    // DEBUG: Log raw output to see what's coming from proot/bash
+
                     val rawOutput = String(readBuf, 0, n, Charsets.UTF_8)
                     Log.d("cLsp-RAW", "Read $n bytes: ${rawOutput.take(200)}")
-                    
-                    // Simple resize if needed (doubling)
+
+                    // Grow buffer if needed (double up to MAX_BUFFER_SIZE)
                     if (bufferSize + n > buffer.size) {
-                         Log.e("cLsp", "Buffer overflow, clearing buffer. Message too large?")
-                         bufferSize = 0 // Resetting is drastic but prevents crash. ideally we'd resize.
-                         // For now, let's assume 4MB is enough. If not, we drop data.
-                         continue
+                        if (buffer.size < MAX_BUFFER_SIZE) {
+                            val newSize = minOf(buffer.size * 2, MAX_BUFFER_SIZE)
+                            val newBuffer = ByteArray(newSize)
+                            System.arraycopy(buffer, 0, newBuffer, 0, bufferSize)
+                            buffer = newBuffer
+                            Log.d("cLsp", "Buffer grew to ${newSize / 1024}KB")
+                        } else {
+                            Log.e("cLsp", "Buffer exceeded ${MAX_BUFFER_SIZE / 1024 / 1024}MB, dropping data")
+                            bufferSize = 0
+                            continue
+                        }
                     }
 
                     System.arraycopy(readBuf, 0, buffer, bufferSize, n)
@@ -270,7 +281,7 @@ go 1.21
                         // Scan for \r\n\r\n
                         var headersEnd = -1
                         for (i in 0 until bufferSize - 3) {
-                            if (buffer[i] == 13.toByte() && buffer[i+1] == 10.toByte() && 
+                            if (buffer[i] == 13.toByte() && buffer[i+1] == 10.toByte() &&
                                 buffer[i+2] == 13.toByte() && buffer[i+3] == 10.toByte()) {
                                 headersEnd = i
                                 break
@@ -281,11 +292,10 @@ go 1.21
 
                         // Parse headers
                         val headersString = String(buffer, 0, headersEnd, Charsets.US_ASCII)
-                        val match = Regex("Content-Length:\\s*(\\d+)", RegexOption.IGNORE_CASE).find(headersString)
-                        
+                        val match = contentLengthRegex.find(headersString)
+
                         if (match == null) {
-                            // No Content-Length found in what looked like headers. 
-                            // Treat as garbage and skip past this \r\n\r\n
+                            // No Content-Length found — treat as garbage and skip past this \r\n\r\n
                             val consumed = headersEnd + 4
                             System.arraycopy(buffer, consumed, buffer, 0, bufferSize - consumed)
                             bufferSize -= consumed
@@ -306,7 +316,6 @@ go 1.21
                         val session = currentSession
                         if (session != null) {
                             try {
-                                // Log first 200 chars of message for debugging
                                 val preview = if (jsonBody.length > 200) jsonBody.take(200) + "..." else jsonBody
                                 Log.d("cLsp", "LSP response (len=${jsonBody.length}): $preview")
                                 session.outgoing.send(Frame.Text(jsonBody))
@@ -324,6 +333,10 @@ go 1.21
             } catch (e: Exception) {
                 Log.e("cLsp", "Reader loop error", e)
             }
+
+            // LSP process died — notify listener
+            Log.w("cLsp", "LSP reader loop exited for port $port")
+            onProcessDied?.invoke()
         }
 
         try {
@@ -337,42 +350,54 @@ go 1.21
 
                 routing {
                     webSocket("/clsp") {
-                        Log.d("cLsp", "Client connected to /clsp")
-                        
-                        // Register this session as the current one
+                        Log.d("cLsp", "Client connected to /clsp on port $port")
+
+                        // Evict previous session before registering new one
+                        val oldSession = currentSession
                         currentSession = this
+                        if (oldSession != null && oldSession != this) {
+                            try {
+                                oldSession.close(CloseReason(CloseReason.Codes.GOING_AWAY, "New client connected"))
+                            } catch (_: Exception) {}
+                        }
 
                         // Handle incoming messages from client
                         for (frame in incoming) {
                             if (frame is Frame.Text) {
                                 val text = frame.readText()
+                                val out = output ?: break
                                 try {
                                     val finalBytes = text.toByteArray(Charsets.UTF_8)
                                     val header = "Content-Length: ${finalBytes.size}\r\n\r\n"
-                                    synchronized(output!!) {
-                                        output!!.write(header.toByteArray(Charsets.UTF_8))
-                                        output!!.write(finalBytes)
-                                        output!!.flush()
+                                    synchronized(out) {
+                                        out.write(header.toByteArray(Charsets.UTF_8))
+                                        out.write(finalBytes)
+                                        out.flush()
                                     }
                                 } catch (e: Exception) {
                                     Log.e("cLsp", "Failed to write to LSP", e)
                                 }
                             }
                         }
-                        
+
                         // Client disconnected
                         if (currentSession == this) {
                             currentSession = null
                         }
-                        Log.d("cLsp", "Client disconnected from /clsp")
+                        Log.d("cLsp", "Client disconnected from /clsp on port $port")
                     }
                 }
             }.start(wait = false)
+
+            // Signal that the server is ready for connections
+            serverReady.complete(Unit)
+            Log.d("LspServer", "WebSocket server ready on port $port")
         } catch (e: java.net.BindException) {
             Log.w("LspServer", "Port $port already in use, server may already be running")
-            // Port is already bound, likely from a previous instance - that's OK
+            serverReady.complete(Unit) // Complete anyway so callers don't hang
         } catch (e: Exception) {
             Log.e("LspServer", "Failed to start WebSocket server on port $port", e)
+            serverReady.complete(Unit)
         }
     }
 }

@@ -14,7 +14,10 @@ import com.bsbeetle.bananaspaghetti.tenebrio.pty.Tenebrio
 import com.bsbeetle.bananaspaghetti.utils.AppConfig
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 import java.io.FileOutputStream
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -27,10 +30,14 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
     var rows: Int? = 24
     var cols: Int? = 80
     var onOutput: ((String) -> Unit)? = null
+    var onProcessExited: (() -> Unit)? = null
 
     // Track if this session has been counted in the service
     private var isRegisteredWithService = false
     var onCtrlUsed: (() -> Unit)? = null
+
+    // Session-scoped coroutines (cancelled on destroy)
+    private val sessionScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     // Observable state for UI to show loading until terminal is ready
     private val _isReady = kotlinx.coroutines.flow.MutableStateFlow(false)
@@ -43,67 +50,18 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
             tenebrio!!.init()
 
             // Start foreground service and register this session
-            // DISABLED - notification functionality removed
-            // if (!name.startsWith("Install-")) {
-            //     TerminalService.startService(context.applicationContext)
-            //     TerminalService.incrementSessionCount()
-            //     isRegisteredWithService = true
-            // }
+            if (!name.startsWith("Install-")) {
+                TerminalService.startService(context.applicationContext)
+                TerminalService.incrementSessionCount()
+                isRegisteredWithService = true
+            }
 
             // If initial directory is provided, we need to cd into it
-            // We delay this so it runs AFTER the shell's init script completes
+            // We detect shell readiness via prompt output instead of a hardcoded delay
             initialDir?.let { dir ->
                 Log.d("TerminalSession", "Setting up initial directory: $dir")
                 if (dir.startsWith("/")) {
-                    // Use a coroutine to delay the cd command
-                    GlobalScope.launch {
-                        // Wait for shell to initialize (initrc runs and does 'cd')
-                        delay(1500)
-
-                        // Convert the path to Ubuntu-friendly format
-                        val ubuntuPath =
-                                when {
-                                    // External storage - create symlink in /home
-                                    dir.startsWith("/storage/emulated/0/") -> {
-                                        val projectName =
-                                                dir.substringAfterLast("/").ifEmpty { "project" }
-                                        val symlinkPath = "/home/$projectName"
-                                        Log.d(
-                                                "TerminalSession",
-                                                "Creating symlink: $symlinkPath -> $dir"
-                                        )
-                                        // Export HOME=/home so that /home/project shows as
-                                        // ~/project
-                                        insertText(
-                                                "rm -f \"$symlinkPath\" 2>/dev/null; ln -sf \"$dir\" \"$symlinkPath\" && export HOME=/home && cd \"$symlinkPath\" && clear\n"
-                                        )
-                                        null // Already handled
-                                    }
-                                    // Ubuntu internal storage - exact home directory
-                                    // (e.g., /data/user/0/.../ubuntu/home)
-                                    dir.endsWith("/ubuntu/home") -> {
-                                        "/home"
-                                    }
-                                    // Ubuntu internal storage with subpath (e.g.,
-                                    // /data/user/0/.../ubuntu/home/Test)
-                                    dir.contains("/ubuntu/home/") -> {
-                                        // Extract the path after "ubuntu/home/" to get the relative
-                                        // path
-                                        val relativePath = dir.substringAfter("/ubuntu/home/")
-                                        "/home/$relativePath"
-                                    }
-                                    // Already a /home path
-                                    dir.startsWith("/home/") -> dir
-                                    // Other paths
-                                    else -> dir
-                                }
-
-                        // If we have a path to cd to (wasn't handled by symlink)
-                        ubuntuPath?.let { path ->
-                            Log.d("TerminalSession", "cd to: $path")
-                            insertText("export HOME=/home && cd \"$path\" && clear\n")
-                        }
-                    }
+                    setupInitialDirectory(dir)
                 }
             }
         } catch (e: Exception) {
@@ -111,20 +69,84 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
         }
     }
 
+    private fun setupInitialDirectory(dir: String) {
+        var prompted = false
+        val originalOnOutput = onOutput
+
+        // Watch for shell prompt to know when it's ready for commands
+        onOutput = { text ->
+            originalOnOutput?.invoke(text)
+            if (!prompted && (text.contains("$ ") || text.contains("# "))) {
+                prompted = true
+                onOutput = originalOnOutput // Restore original callback
+
+                sessionScope.launch {
+                    val cdCommand = buildCdCommand(dir)
+                    cdCommand?.let { insertText(it) }
+                }
+            }
+        }
+
+        // Safety fallback: if no prompt detected within 3 seconds, send cd anyway
+        sessionScope.launch {
+            delay(3000)
+            if (!prompted) {
+                prompted = true
+                onOutput = originalOnOutput
+                val cdCommand = buildCdCommand(dir)
+                cdCommand?.let { insertText(it) }
+            }
+        }
+    }
+
+    private fun buildCdCommand(dir: String): String? {
+        return when {
+            // External storage - create symlink in /home
+            dir.startsWith("/storage/emulated/0/") -> {
+                val projectName = dir.substringAfterLast("/").ifEmpty { "project" }
+                val symlinkPath = "/home/$projectName"
+                Log.d("TerminalSession", "Creating symlink: $symlinkPath -> $dir")
+                "rm -f \"$symlinkPath\" 2>/dev/null; ln -sf \"$dir\" \"$symlinkPath\" && export HOME=/home && cd \"$symlinkPath\" && clear\n"
+            }
+            // Ubuntu internal storage - exact home directory
+            dir.endsWith("/ubuntu/home") -> {
+                "export HOME=/home && cd /home && clear\n"
+            }
+            // Ubuntu internal storage with subpath
+            dir.contains("/ubuntu/home/") -> {
+                val relativePath = dir.substringAfter("/ubuntu/home/")
+                "export HOME=/home && cd \"/home/$relativePath\" && clear\n"
+            }
+            // Already a /home path
+            dir.startsWith("/home/") -> {
+                "export HOME=/home && cd \"$dir\" && clear\n"
+            }
+            // Other paths
+            else -> {
+                "export HOME=/home && cd \"$dir\" && clear\n"
+            }
+        }
+    }
+
     override fun destroy() {
         Log.d("TerminalSession", "Destroying terminal session: $name")
 
-        // Unregister from service if we were registered - DISABLED
-        // if (isRegisteredWithService) {
-        //     TerminalService.decrementSessionCount(context)
-        //     isRegisteredWithService = false
-        // }
+        // Cancel all session-scoped coroutines
+        sessionScope.cancel()
 
-        // Clean up tenebrio reference (no explicit destroy method)
+        // Unregister from service if we were registered
+        if (isRegisteredWithService) {
+            TerminalService.decrementSessionCount(context)
+            isRegisteredWithService = false
+        }
+
+        // Properly destroy tenebrio (closes FDs, kills process, stops reader thread)
+        tenebrio?.destroy()
         tenebrio = null
 
         // Clean up output callback
         onOutput = null
+        onProcessExited = null
 
         // Close file descriptor
         try {
@@ -193,7 +215,7 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
                                 fun getRowsCols(_rows: Int, _cols: Int) {
                                     rows = _rows
                                     cols = _cols
-                                    if (tenebrio?.gMasterFd ?: -1 < 0) {
+                                    if ((tenebrio?.gMasterFd ?: -1) < 0) {
                                         try {
                                             tenebrio!!.init()
                                             // Terminal is now ready - hide loading screen
@@ -252,9 +274,10 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
     @Synchronized
     private fun writeToTerminal(data: ByteArray) {
         if (data.isEmpty()) return
+        val fd = outputFd ?: return
         try {
-            outputFd?.write(data)
-            outputFd?.flush()
+            fd.write(data)
+            fd.flush()
         } catch (e: Exception) {
             Log.e("TerminalSession", "Failed to write to terminal", e)
         }

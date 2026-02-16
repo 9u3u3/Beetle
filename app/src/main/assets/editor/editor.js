@@ -1880,6 +1880,9 @@ function setupEditor() {
   const initializedPorts = new Set();
 
   window.connectLsp = function (port) {
+    // Clear initialization cache for this port — server may have been restarted
+    initializedPorts.delete(port);
+
     // Clear any pending reconnect attempts
     reconnectPort = port;
 

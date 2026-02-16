@@ -3,7 +3,6 @@ package com.bsbeetle.bananaspaghetti.viewmodel
 // Editor view model is only One in the whole app so it should switch up between all the webviews
 // Editor view model is made to only keep the webview persistent
 
-import android.annotation.SuppressLint
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -22,15 +21,15 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
     private val lspServers = mutableMapOf<String, LspServer>()
     // Map of slug -> Port
     private val lspPorts = mutableMapOf<String, Int>()
-    
+
     // LRU list to track usage (slugs)
     private val lruSlugs = mutableListOf<String>()
-    
+
     // Available ports (simple pool)
     private val availablePorts = mutableListOf(8081, 8082)
 
-    init { 
-        AssetServer(getApplication(), 8080).start() 
+    init {
+        AssetServer(getApplication(), 8080).start()
     }
 
     fun startLsp(slug: String): Int {
@@ -46,7 +45,7 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
             val victimSlug = lruSlugs.removeAt(0)
             val victimServer = lspServers.remove(victimSlug)
             val victimPort = lspPorts.remove(victimSlug)
-            
+
             victimServer?.stop()
             if (victimPort != null) {
                 availablePorts.add(victimPort)
@@ -71,26 +70,35 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
                 availablePorts.add(8081)
             }
         }
-        
+
         val port = availablePorts.removeAt(0)
         val newServer = LspServer(getApplication(), port)
-        
+
         viewModelScope.launch(Dispatchers.IO) {
             newServer.start(slug)
         }
-        
+
         lspServers[slug] = newServer
         lspPorts[slug] = port
         lruSlugs.add(slug)
-        
+
         return port
     }
+
+    /**
+     * Suspends until the LSP server for the given slug is ready to accept WebSocket connections.
+     * Call this after startLsp() before the editor tries to connect.
+     */
+    suspend fun awaitLspReady(slug: String) {
+        lspServers[slug]?.serverReady?.await()
+    }
+
     // IMPORTANT: Using StateFlow so UI recomposes when webView changes
     // StateFlow is the recommended pattern for ViewModels
     @Suppress("StaticFieldLeak")
     private val _webView = MutableStateFlow<CustomWebView?>(null)
     val webViewFlow: StateFlow<CustomWebView?> = _webView.asStateFlow()
-    
+
     // Direct access for compatibility (non-reactive)
     val webView: CustomWebView? get() = _webView.value
 

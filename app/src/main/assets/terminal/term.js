@@ -67,20 +67,6 @@ term.onData((data) => {
     }
   }
 
-  // Pass all keyboard input directly to the PTY
-  // The PTY and shell will handle all processing (echo, line editing, etc.)
-  // This ensures interactive CLI tools (like npm create) work correctly
-
-  // Log for debugging (can be removed later)
-  if (data.length === 1) {
-    const code = data.charCodeAt(0);
-    if (code === 0x0D) {
-    } else if (code === 0x1B) {
-    } else if (code < 0x20) {
-    }
-  } else if (data.charCodeAt(0) === 0x1B) {
-  }
-
   // Send everything directly to PTY
   AndroidTerminal.sendRaw(data);
 
@@ -104,19 +90,15 @@ function fireOnData(data) {
   return false;
 }
 
+// Send entire string at once instead of char-by-char
 window.insertText = function (text) {
   term.focus();
-  // Send each character to PTY, let it echo
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    AndroidTerminal.sendRaw(char);
-    currentCommand += char;
-  }
+  AndroidTerminal.sendRaw(text);
+  currentCommand += text;
 };
 
 window.performBackspace = function () {
   term.focus();
-  // Send backspace to PTY
   AndroidTerminal.sendRaw('\x7f');
   if (currentCommand.length > 0) {
     currentCommand = currentCommand.slice(0, -1);
@@ -125,7 +107,6 @@ window.performBackspace = function () {
 
 window.performEnter = function () {
   term.focus();
-  // Send carriage return to PTY
   AndroidTerminal.sendRaw('\r');
   currentCommand = '';
 };
@@ -138,15 +119,14 @@ window.performCopy = function () {
   }
 };
 
+// Send entire paste text at once instead of char-by-char
 window.performPaste = async function () {
   term.focus();
   try {
     const text = await navigator.clipboard.readText();
-    // Send each character to PTY
-    for (let i = 0; i < text.length; i++) {
-      const char = text[i];
-      AndroidTerminal.sendRaw(char);
-      currentCommand += char;
+    if (text) {
+      AndroidTerminal.sendRaw(text);
+      currentCommand += text;
     }
   } catch (e) {
     console.error("Paste failed:", e);
@@ -157,8 +137,6 @@ window.performCut = function () {
   const selection = term.getSelection();
   if (selection) {
     navigator.clipboard.writeText(selection);
-    // Terminal doesn't support cutting selected text easily
-    // So just copy it
   }
 };
 
@@ -172,21 +150,18 @@ window.performFind = function () {
 
 window.performCtrlC = function () {
   term.focus();
-  // Send Ctrl+C to PTY
   AndroidTerminal.sendRaw('\x03');
   currentCommand = '';
 };
 
 window.performCtrlD = function () {
   term.focus();
-  // Send EOF (Ctrl+D) to PTY
   AndroidTerminal.sendRaw('\x04');
   currentCommand = '';
 };
 
 window.performEscape = function () {
   term.focus();
-  // Send ESC to PTY
   AndroidTerminal.sendRaw('\x1B');
   currentCommand = '';
 };
@@ -221,17 +196,21 @@ window.fitTerminal = function () {
     }
   } catch (e) {
     console.error('Error in fitTerminal:', e);
-    // Retry on error
     setTimeout(window.fitTerminal, 200);
   }
 };
 
+// Use ResizeObserver for reliable fit instead of hardcoded timeout cascade
+const terminalContainer = document.getElementById('terminal');
+if (typeof ResizeObserver !== 'undefined' && terminalContainer) {
+  const resizeObserver = new ResizeObserver(() => {
+    window.fitTerminal();
+  });
+  resizeObserver.observe(terminalContainer);
+}
+
+// One initial call as fallback
 setTimeout(window.fitTerminal, 100);
-setTimeout(window.fitTerminal, 300);
-setTimeout(window.fitTerminal, 500);
-setTimeout(window.fitTerminal, 1000);
-setTimeout(window.fitTerminal, 2000);
-setTimeout(window.fitTerminal, 3000);
 
 window.addEventListener('resize', () => {
   setTimeout(window.fitTerminal, 100);
@@ -240,7 +219,6 @@ window.addEventListener('resize', () => {
 // Runtime font size change
 window.setFontSize = function (size) {
   term.options.fontSize = size;
-  // Re-fit terminal to recalculate rows/cols with new font size
   setTimeout(() => {
     window.fitTerminal();
   }, 50);
@@ -251,7 +229,6 @@ window.setBottomPadding = function (paddingPx) {
   const terminalEl = document.getElementById('terminal');
   if (terminalEl) {
     terminalEl.style.paddingBottom = paddingPx + 'px';
-    // Re-fit terminal to recalculate with new available space
     if (fitAddon) {
       setTimeout(() => {
         fitAddon.fit();
@@ -265,9 +242,7 @@ window.setBottomPadding = function (paddingPx) {
 };
 
 // Add extra scroll space at bottom - allows scrolling content above keyboard
-// This injects CSS that adds padding after the terminal content like Termux
 window.setExtraScrollSpace = function (amount) {
-  // Remove existing style if present
   const existingStyle = document.getElementById('extra-scroll-style');
   if (existingStyle) {
     existingStyle.remove();
@@ -276,8 +251,6 @@ window.setExtraScrollSpace = function (amount) {
   if (amount) {
     const style = document.createElement('style');
     style.id = 'extra-scroll-style';
-    // Add padding to xterm viewport to allow scrolling past the last line
-    // Use 50vh = half the screen for keyboard coverage
     style.textContent = `
       .xterm-viewport {
         padding-bottom: ${amount} !important;
@@ -293,14 +266,11 @@ window.setExtraScrollSpace = function (amount) {
 // Auto-enable extra scroll space in portrait mode
 const checkOrientation = () => {
   if (window.matchMedia("(orientation: portrait)").matches) {
-    // Portrait mode - add 50vh (half screen) for keyboard
     window.setExtraScrollSpace('50vh');
   } else {
-    // Landscape mode - no extra space needed
     window.setExtraScrollSpace(null);
   }
 };
 
-// Check on load and orientation change
 setTimeout(checkOrientation, 100);
 window.addEventListener('resize', checkOrientation);
