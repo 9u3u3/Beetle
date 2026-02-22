@@ -31,6 +31,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.bsbeetle.bananaspaghetti.*
 import com.bsbeetle.bananaspaghetti.data.KeyboardLayout
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.bsbeetle.bananaspaghetti.data.sidebar.Sidebar
 import com.bsbeetle.bananaspaghetti.data.sidebar.SidebarTab
 import com.bsbeetle.bananaspaghetti.ui.cmeditor.Editor
@@ -47,6 +50,7 @@ import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.viewmodel.*
 import kotlinx.coroutines.delay
+import androidx.compose.runtime.rememberCoroutineScope
 
 @SuppressLint("RememberReturnType")
 @Composable
@@ -66,9 +70,11 @@ fun InitialEditorUI(navController: NavController) {
     val editorViewModel: EditorViewModel = LocalEditorViewModel.current
     val bufferViewModel: BufferViewModel = LocalBufferViewModel.current
     val browserViewModel = LocalBrowserViewModel.current
+    val sshViewModel = LocalSshViewModel.current
     val lspViewModel: LspViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
     val gitViewModel: com.bsbeetle.bananaspaghetti.directGit.viewmodel.GitViewModel =
             androidx.lifecycle.viewmodel.compose.viewModel()
+    val scope = rememberCoroutineScope()
 
     // Sync fileViewModel with current session's projectRoot
     // This ensures each session shows its own folder in the file tree
@@ -172,6 +178,10 @@ fun InitialEditorUI(navController: NavController) {
     var runPendingFilePath by remember { mutableStateOf<String?>(null) }
     var expandBottomBar by remember { mutableStateOf(false) }
 
+    // SSH Remote States
+    var showSshConnectDialog by remember { mutableStateOf(false) }
+    var showRemoteFileBrowserDialog by remember { mutableStateOf(false) }
+
     // 🚀 File Load (with LSP check & Performance fix)
     LaunchedEffect(fileViewModel.selectedUri) {
         // Check if this is a NotebookSession - they handle their own content loading
@@ -212,9 +222,11 @@ fun InitialEditorUI(navController: NavController) {
                             // getSlugForExtension)
                             val installedSlug =
                                     LanguageRegistry.getInstalledSlugForExt(extType) ?: slug
-                            // Start LSP and get port
+                            // Start LSP and get port - show spinner while starting
+                            lspViewModel.setLspStarting(true)
                             lspPort = editorViewModel.startLsp(installedSlug)
-                            // Toast removed as requested
+                            editorViewModel.awaitLspReady(installedSlug)
+                            lspViewModel.setLspStarting(false)
                         }
                     }
                 } catch (e: Exception) {
@@ -328,6 +340,40 @@ fun InitialEditorUI(navController: NavController) {
         }
     }
 
+    // 🌐 Remote File Load (via SFTP when isRemoteMode)
+    LaunchedEffect(fileViewModel.currentRemotePath) {
+        val remotePath = fileViewModel.currentRemotePath ?: return@LaunchedEffect
+        if (!fileViewModel.isRemoteMode) return@LaunchedEffect
+
+        val sshFs = sshViewModel.fileSystem ?: return@LaunchedEffect
+
+        try {
+            val content = withContext(Dispatchers.IO) { sshFs.readFile(remotePath) }
+
+            loadContentWhenReady(editorViewModel.webView, content)
+            bufferViewModel.bufferLine[remotePath] = content
+
+            // Set up LSP for the remote file
+            val ext = remotePath.substringAfterLast(".", "")
+            val slug = LanguageRegistry.getSlugForExtension(ext)
+            val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
+            if (slug != "plaintext" && session is EditorSession) {
+                val sshConn = sshViewModel.connection
+                if (sshConn != null) {
+                    lspViewModel.setLspStarting(true)
+                    val lspPort = editorViewModel.startRemoteLsp(slug, sshConn)
+                    editorViewModel.awaitRemoteLspReady(slug)
+                    lspViewModel.setLspStarting(false)
+                    session.setRootUri("file://${fileViewModel.remoteBasePath ?: "/"}")
+                    session.setFilePath(remotePath)
+                    session.setLanguage(slug, lspPort)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("RemoteLoad", "Failed to load remote file: $remotePath", e)
+        }
+    }
+
     // Shared File Opening Logic
     val onFileOpened: (DocumentFile) -> Unit = { documentFile ->
         // Add file to buffer and load it
@@ -393,7 +439,40 @@ fun InitialEditorUI(navController: NavController) {
                     onMenuClick = { showSidebar = true },
                     showMenuIcon = !isLandscape,
                     showBranchButton = isLandscape,
-                    onSaveClick = { saveFile(fileViewModel, bufferViewModel, context) },
+                    onSaveClick = {
+                        if (fileViewModel.isRemoteMode) {
+                            val remotePath = fileViewModel.currentRemotePath
+                            val sshFs = sshViewModel.fileSystem
+                            if (remotePath != null && sshFs != null) {
+                                val webView = editorViewModel.webView
+                                webView?.evaluateJavascript(
+                                    "window.editor?.state?.doc?.toString() || ''"
+                                ) { result ->
+                                    val content = result
+                                        .removeSurrounding("\"")
+                                        .replace("\\n", "\n")
+                                        .replace("\\u003C", "<")
+                                        .replace("\\u003E", ">")
+                                        .replace("\\\"", "\"")
+                                    scope.launch(Dispatchers.IO) {
+                                        try {
+                                            sshFs.writeFile(remotePath, content)
+                                            withContext(Dispatchers.Main) {
+                                                bufferViewModel.markAsClean(remotePath)
+                                                android.widget.Toast.makeText(
+                                                    context, "File saved", android.widget.Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.e("RemoteSave", "Failed to save: $remotePath", e)
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            saveFile(fileViewModel, bufferViewModel, context)
+                        }
+                    },
                     onRunClick = {
                         // Run the current file
                         Log.d("CodeRunner", "Run button clicked")
@@ -544,7 +623,8 @@ fun InitialEditorUI(navController: NavController) {
                         },
                         onPushClick = { gitViewModel.push() },
                         onFileOpened = onFileOpened,
-                        onFolderOpened = onFolderOpened
+                        onFolderOpened = onFolderOpened,
+                        onSshRemote = { showSshConnectDialog = true }
                 )
 
                 // Only show custom keyboards if NOT using landscape IME mode
@@ -629,7 +709,7 @@ fun InitialEditorUI(navController: NavController) {
                         modifier =
                                 Modifier.constrainAs(editor) {
                                     top.linkTo(topMiddle.bottom)
-                                    bottom.linkTo(parent.bottom)
+                                    bottom.linkTo(bottomBarRef.top)
                                     // If using landscape IME mode, give full width to editor
                                     val showLeftKb =
                                             isLandscape &&
@@ -679,7 +759,7 @@ fun InitialEditorUI(navController: NavController) {
                         modifier =
                                 Modifier.constrainAs(editor) {
                                             top.linkTo(topMiddle.bottom)
-                                            bottom.linkTo(parent.bottom)
+                                            bottom.linkTo(bottomBarRef.top)
                                             start.linkTo(parent.start)
                                             end.linkTo(parent.end)
                                             width = Dimension.fillToConstraints
@@ -827,8 +907,51 @@ fun InitialEditorUI(navController: NavController) {
                 bufferViewModel = bufferViewModel,
                 fileViewModel = fileViewModel,
                 onFileOpened = onFileOpened,
-                onFolderOpened = onFolderOpened
+                onFolderOpened = onFolderOpened,
+                onSshRemote = {
+                    showFileMenu = false
+                    showSshConnectDialog = true
+                }
         )
+
+        // SSH Connect Dialog
+        if (showSshConnectDialog) {
+            com.bsbeetle.bananaspaghetti.ui.components.SshConnectDialog(
+                onDismiss = { showSshConnectDialog = false },
+                onConnected = {
+                    showSshConnectDialog = false
+                    showRemoteFileBrowserDialog = true
+                },
+                sshViewModel = sshViewModel
+            )
+        }
+
+        // Remote File Browser Dialog
+        if (showRemoteFileBrowserDialog) {
+            com.bsbeetle.bananaspaghetti.ui.components.RemoteFileBrowserDialog(
+                onDismiss = { showRemoteFileBrowserDialog = false },
+                onFolderSelected = { selectedPath ->
+                    showRemoteFileBrowserDialog = false
+                    val params = sshViewModel.connectionParams
+                    val sessionName = if (params != null)
+                        "${params.username}@${params.host}:${selectedPath.substringAfterLast("/")}"
+                    else "Remote"
+                    // Create new editor session for the remote folder
+                    val newSession = EditorSession(context.applicationContext, sessionName)
+                    editorViewModel.setEditorWebView(newSession.getOrInitView())
+                    // Set remote mode in FileViewModel
+                    fileViewModel.isRemoteMode = true
+                    fileViewModel.remoteBasePath = selectedPath
+                    fileViewModel.selectedFolderUri = null
+                    fileViewModel.currentRemotePath = null
+                    navController.navigate(Screen.OpenFolder.route) {
+                        popUpTo(Screen.Home.route) { inclusive = false }
+                    }
+                },
+                sshViewModel = sshViewModel,
+                initialPath = "/"
+            )
+        }
     }
 }
 

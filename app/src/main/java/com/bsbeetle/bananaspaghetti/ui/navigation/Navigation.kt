@@ -1,9 +1,12 @@
 package com.bsbeetle.bananaspaghetti.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.bsbeetle.bananaspaghetti.MainActivity
 import com.bsbeetle.bananaspaghetti.ui.Extension.ExtensionsScreen
 import com.bsbeetle.bananaspaghetti.ui.home.BrowserScreen
 import com.bsbeetle.bananaspaghetti.ui.home.HomeScreen
@@ -20,6 +23,16 @@ import com.bsbeetle.bananaspaghetti.ui.home.AuthScreen
 @Composable
 fun AppNavigation(startDestination: String = Screen.Home.route) {
     val navController = rememberNavController()
+
+    // Navigate to ZoomOut when notification is tapped (handles hot-start / onNewIntent)
+    val navigateToSessions = MainActivity.navigateToSessions.collectAsState()
+    LaunchedEffect(navigateToSessions.value) {
+        if (navigateToSessions.value) {
+            navController.navigate(Screen.ZoomOut.route) { launchSingleTop = true }
+            MainActivity.navigateToSessions.value = false
+        }
+    }
+
     NavHost(navController = navController, startDestination = startDestination) {
         composable(Screen.Auth.route){AuthScreen(navController)} // Auth Screen
         composable(Screen.Home.route){HomeScreen(navController)} // Home Screen (Default)

@@ -992,6 +992,12 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                         lastError = null,
                         operationInProgress = null
                 )
+        viewModelScope.launch {
+            delay(3000)
+            if (_uiState.value.lastSuccess == message) {
+                _uiState.value = _uiState.value.copy(lastSuccess = null)
+            }
+        }
     }
 
     fun showError(message: String, details: String? = null) {

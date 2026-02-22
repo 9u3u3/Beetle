@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsbeetle.bananaspaghetti.utils.assetHandling.AssetServer
 import com.bsbeetle.bananaspaghetti.utils.languageHandling.LspServer
+import com.bsbeetle.bananaspaghetti.utils.ssh.RemoteLspBridge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import android.util.Log
@@ -17,10 +18,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 
 class EditorViewModel(app: Application) : AndroidViewModel(app) {
-    // Map of slug -> LspServer
+    // Map of slug -> LspServer (local)
     private val lspServers = mutableMapOf<String, LspServer>()
-    // Map of slug -> Port
+    // Map of slug -> Port (local)
     private val lspPorts = mutableMapOf<String, Int>()
+
+    // Remote LSP bridges (slug -> bridge, always on port 8083)
+    private val remoteLspBridges = mutableMapOf<String, RemoteLspBridge>()
 
     // LRU list to track usage (slugs)
     private val lruSlugs = mutableListOf<String>()
@@ -29,7 +33,7 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
     private val availablePorts = mutableListOf(8081, 8082)
 
     init {
-        AssetServer(getApplication(), 8080).start()
+        AssetServer.startIfNotRunning(getApplication())
     }
 
     fun startLsp(slug: String): Int {
@@ -91,6 +95,36 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
      */
     suspend fun awaitLspReady(slug: String) {
         lspServers[slug]?.serverReady?.await()
+    }
+
+    /**
+     * Starts a remote LSP bridge for the given slug using an SSH session.
+     * The bridge proxies the remote LSP process's stdin/stdout over a local WebSocket on port 8083.
+     * @return The port (8083) the WebSocket server is listening on.
+     */
+    fun startRemoteLsp(slug: String, sshSession: com.jcraft.jsch.Session): Int {
+        val port = 8083
+        // Stop any existing bridge for this slug
+        remoteLspBridges[slug]?.stop()
+
+        val bridge = RemoteLspBridge(port)
+        viewModelScope.launch(Dispatchers.IO) {
+            bridge.start(slug, sshSession)
+        }
+        remoteLspBridges[slug] = bridge
+        Log.d("EditorViewModel", "Remote LSP bridge started for $slug on port $port")
+        return port
+    }
+
+    /** Suspends until the remote LSP bridge WebSocket server is ready. */
+    suspend fun awaitRemoteLspReady(slug: String) {
+        remoteLspBridges[slug]?.serverReady?.await()
+    }
+
+    /** Stops all remote LSP bridges (called when disconnecting from SSH). */
+    fun stopAllRemoteLsp() {
+        remoteLspBridges.values.forEach { it.stop() }
+        remoteLspBridges.clear()
     }
 
     // IMPORTANT: Using StateFlow so UI recomposes when webView changes

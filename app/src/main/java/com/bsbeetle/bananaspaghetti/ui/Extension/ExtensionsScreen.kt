@@ -29,9 +29,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.ImageLoader
 import coil.compose.AsyncImage
-import coil.decode.SvgDecoder
 import coil.request.ImageRequest
 import com.bsbeetle.bananaspaghetti.R
+import com.bsbeetle.bananaspaghetti.utils.resourceHandling.ImageLoaderSingleton
 
 @Composable
 fun ExtensionsScreen(navController: NavController, viewModel: ExtensionsViewModel = viewModel()) {
@@ -79,10 +79,8 @@ fun ExtensionsScreen(navController: NavController, viewModel: ExtensionsViewMode
         }
     }
 
-    // SVG Image Loader
-    val imageLoader = remember {
-        ImageLoader.Builder(context).components { add(SvgDecoder.Factory()) }.build()
-    }
+    // SVG Image Loader (singleton with disk + memory cache)
+    val imageLoader = ImageLoaderSingleton.get(context)
 
     LaunchedEffect(error) { error?.let { snackbarHostState.showSnackbar(it) } }
 

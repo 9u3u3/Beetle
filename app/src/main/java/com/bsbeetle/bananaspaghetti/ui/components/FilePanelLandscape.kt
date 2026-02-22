@@ -52,7 +52,8 @@ fun FileOptionsPanel(
         fileViewModel: FileViewModel?,
         bufferViewModel: BufferViewModel?,
         onFileOpened: (DocumentFile) -> Unit,
-        onFolderOpened: (DocumentFile) -> Unit
+        onFolderOpened: (DocumentFile) -> Unit,
+        onSshRemote: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     var currentAction by remember { mutableStateOf(FileMenuAction.NONE) }
@@ -399,6 +400,15 @@ fun FileOptionsPanel(
                                 openFolderLauncher.launch(null)
                             }
                     )
+                }
+                if (onSshRemote != null) {
+                    item {
+                        FileOptionItem(
+                                icon = R.drawable.network_intel,
+                                title = "SSH Remote",
+                                onClick = { onSshRemote() }
+                        )
+                    }
                 }
                 item {
                     HorizontalDivider(

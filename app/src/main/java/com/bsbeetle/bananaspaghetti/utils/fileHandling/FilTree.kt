@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,22 +21,52 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.documentfile.provider.DocumentFile
 import com.bsbeetle.bananaspaghetti.LocalFileViewModel
+import com.bsbeetle.bananaspaghetti.LocalSshViewModel
+import com.bsbeetle.bananaspaghetti.data.sidebar.FileItem
 import com.bsbeetle.bananaspaghetti.data.sidebar.FileTreeItem
 import com.bsbeetle.bananaspaghetti.data.sidebar.buildFileTree
+import com.bsbeetle.bananaspaghetti.data.sidebar.buildRemoteFileTree
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
-fun Tree (modifier: Modifier = Modifier) {
+fun Tree(modifier: Modifier = Modifier) {
 
     val fileViewModel = LocalFileViewModel.current
+    val sshViewModel = LocalSshViewModel.current
     val context = LocalContext.current
     var expandedFolders by remember { mutableStateOf(setOf<String>()) }
     val scrollState = rememberScrollState()
-    
+
     // Multi-select state from FileViewModel
     val isMultiSelectMode = fileViewModel.isMultiSelectMode
     val selectedFilePaths = fileViewModel.selectedFilePaths
 
-    val files = remember(fileViewModel.selectedFolderUri, expandedFolders, fileViewModel.fileTreeRefreshCounter) {
+    // Remote files loaded asynchronously (SFTP must not run on main thread)
+    var remoteFiles by remember { mutableStateOf<List<FileItem>>(emptyList()) }
+
+    LaunchedEffect(
+        fileViewModel.isRemoteMode,
+        fileViewModel.remoteBasePath,
+        expandedFolders,
+        fileViewModel.fileTreeRefreshCounter
+    ) {
+        if (fileViewModel.isRemoteMode) {
+            val sshFs = sshViewModel.fileSystem
+            val basePath = fileViewModel.remoteBasePath
+            if (sshFs != null && basePath != null) {
+                remoteFiles = withContext(Dispatchers.IO) {
+                    buildRemoteFileTree(sshFs, basePath, 0, expandedFolders)
+                }
+            } else {
+                remoteFiles = emptyList()
+            }
+        } else {
+            remoteFiles = emptyList()
+        }
+    }
+
+    val localFiles = remember(fileViewModel.selectedFolderUri, expandedFolders, fileViewModel.fileTreeRefreshCounter) {
         val rootUri = fileViewModel.selectedFolderUri
         if (rootUri != null) {
             val rootDoc = DocumentFile.fromTreeUri(context, rootUri)
@@ -45,12 +76,14 @@ fun Tree (modifier: Modifier = Modifier) {
         }
     }
 
+    val files = if (fileViewModel.isRemoteMode) remoteFiles else localFiles
+
     LazyColumn(
         modifier = modifier
             .fillMaxHeight()
             .horizontalScroll(scrollState)
     ) {
-        if (files.isEmpty() && fileViewModel.selectedFolderUri == null) {
+        if (files.isEmpty() && fileViewModel.selectedFolderUri == null && !fileViewModel.isRemoteMode) {
             item {
                 Text(
                     text = "No folder selected. Open a folder to see files.",
@@ -72,16 +105,23 @@ fun Tree (modifier: Modifier = Modifier) {
                             expandedFolders + file.path
                         }
                     },
-                    onFileClick = { fileViewModel.selectedUri = Uri.parse(file.path); fileViewModel.currentFilePath = file.path; },
-                    // Multi-select support
-                    isMultiSelectMode = isMultiSelectMode,
+                    onFileClick = {
+                        if (fileViewModel.isRemoteMode && !file.isDirectory) {
+                            fileViewModel.currentRemotePath = file.path
+                            fileViewModel.currentFilePath = file.path
+                        } else if (!fileViewModel.isRemoteMode) {
+                            fileViewModel.selectedUri = Uri.parse(file.path)
+                            fileViewModel.currentFilePath = file.path
+                        }
+                    },
+                    isMultiSelectMode = if (fileViewModel.isRemoteMode) false else isMultiSelectMode,
                     isMultiSelected = selectedFilePaths.contains(file.path),
                     onLongPress = {
-                        // Enter multi-select mode with this file selected
-                        fileViewModel.enterMultiSelectMode(file.path)
+                        if (!fileViewModel.isRemoteMode) {
+                            fileViewModel.enterMultiSelectMode(file.path)
+                        }
                     },
                     onMultiSelectTap = {
-                        // Toggle this file's selection
                         fileViewModel.toggleFileSelection(file.path)
                     }
                 )

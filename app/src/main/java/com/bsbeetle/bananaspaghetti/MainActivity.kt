@@ -4,6 +4,7 @@
 package com.bsbeetle.bananaspaghetti
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -11,6 +12,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import com.bsbeetle.bananaspaghetti.services.TerminalService
+import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,6 +39,7 @@ import com.bsbeetle.bananaspaghetti.viewmodel.ExpandViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.KeyboardViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.SliderViewModel
+import com.bsbeetle.bananaspaghetti.viewmodel.SshViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.TerminalViewModel
 
 val LocalFileViewModel = compositionLocalOf<FileViewModel> { error("No file view model provided") }
@@ -55,9 +59,16 @@ val LocalBrowserViewModel =
         compositionLocalOf<DevWebViewModel> { error("No browser view model provided") }
 val LocalAuthViewModel =
         compositionLocalOf<com.bsbeetle.bananaspaghetti.viewmodel.AuthViewModel> { error("No auth view model provided") }
+val LocalSshViewModel =
+        compositionLocalOf<SshViewModel> { error("No SSH view model provided") }
 
 class MainActivity : ComponentActivity() {
-    
+
+        companion object {
+            /** Emits true when the app should navigate to the sessions ZoomOut screen. */
+            val navigateToSessions = MutableStateFlow(false)
+        }
+
         // Notification permission launcher for Android 13+
         private val notificationPermissionLauncher = registerForActivityResult(
                 ActivityResultContracts.RequestPermission()
@@ -66,8 +77,19 @@ class MainActivity : ComponentActivity() {
                 android.util.Log.d("MainActivity", "Notification permission granted: $isGranted")
         }
         
+        override fun onNewIntent(intent: Intent) {
+                super.onNewIntent(intent)
+                if (intent.getBooleanExtra(TerminalService.EXTRA_NAVIGATE_TO_SESSIONS, false)) {
+                        navigateToSessions.value = true
+                }
+        }
+
         override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
+                // Handle cold-start from notification
+                if (intent?.getBooleanExtra(TerminalService.EXTRA_NAVIGATE_TO_SESSIONS, false) == true) {
+                        navigateToSessions.value = true
+                }
                 enableEdgeToEdge()
                 
                 // Request notification permission for Android 13+ (TIRAMISU)
@@ -98,6 +120,7 @@ class MainActivity : ComponentActivity() {
                                 val terminalViewModel: TerminalViewModel = viewModel()
                                 val browserViewModel: DevWebViewModel = viewModel()
                                 val authViewModel: com.bsbeetle.bananaspaghetti.viewmodel.AuthViewModel = viewModel()
+                                val sshViewModel: SshViewModel = viewModel()
                                 
                                 // Collect keyboard UI state for IME mode
                                 val keyboardUiState = keyboardViewModel.uiState.collectAsState()
@@ -136,7 +159,8 @@ class MainActivity : ComponentActivity() {
                                         LocalExpandViewModel provides expandViewModel,
                                         LocalTerminalViewModel provides terminalViewModel,
                                         LocalBrowserViewModel provides browserViewModel,
-                                        LocalAuthViewModel provides authViewModel
+                                        LocalAuthViewModel provides authViewModel,
+                                        LocalSshViewModel provides sshViewModel
                                 ) {
                                         // Check if portrait mode to apply navigation bar padding
                                         val configuration = LocalConfiguration.current

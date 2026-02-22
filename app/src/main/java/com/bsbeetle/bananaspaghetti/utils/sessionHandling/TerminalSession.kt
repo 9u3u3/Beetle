@@ -41,7 +41,7 @@ class TerminalSession(context: Context, name: String = "Terminal", val initialDi
 
     // Observable state for UI to show loading until terminal is ready
     private val _isReady = kotlinx.coroutines.flow.MutableStateFlow(false)
-    val isReady: kotlinx.coroutines.flow.StateFlow<Boolean> = _isReady.asStateFlow()
+    override val isReady: kotlinx.coroutines.flow.StateFlow<Boolean> = _isReady.asStateFlow()
 
     init {
         Log.d("TerminalSession", "Creating tenebrio for ID: $id, initialDir: $initialDir")

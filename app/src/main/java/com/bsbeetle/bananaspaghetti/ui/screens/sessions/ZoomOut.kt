@@ -663,7 +663,7 @@ fun SessionCard(
         onClick: () -> Unit,
         onClose: () -> Unit
 ) {
-        val isActive = SessionList.activeSessionIndex == session.id
+        val isActive = SessionList.sessions.indexOf(session) == SessionList.activeSessionIndex
 
         Box(
                 modifier =

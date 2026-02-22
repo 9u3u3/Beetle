@@ -28,6 +28,7 @@ class TerminalService : Service() {
         private const val NOTIFICATION_ID = 1001
         const val CHANNEL_ID = "beetle_terminal_channel"
         const val CHANNEL_NAME = "Terminal Sessions"
+        const val EXTRA_NAVIGATE_TO_SESSIONS = "navigate_to_sessions"
         
         private var instance: TerminalService? = null
         private val activeSessionCount = AtomicInteger(0)
@@ -134,7 +135,14 @@ class TerminalService : Service() {
             this,
             0,
             Intent(this, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                // SINGLE_TOP + CLEAR_TOP: bring existing MainActivity to front and call
+                // onNewIntent instead of recreating the activity (which would crash because
+                // the new EditorViewModel would try to bind AssetServer port 8080 while the
+                // old instance is still running)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(EXTRA_NAVIGATE_TO_SESSIONS, true)
             },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )

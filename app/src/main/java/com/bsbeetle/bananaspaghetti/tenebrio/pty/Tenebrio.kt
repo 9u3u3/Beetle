@@ -11,6 +11,9 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.nio.file.Files
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import org.json.JSONObject
 
@@ -362,6 +365,13 @@ class Tenebrio(private val context: Context, private val session: Session) {
             val flushLock = Any()
             val FLUSH_INTERVAL_NS = 16_000_000L // 16ms = ~60fps
 
+            // Scheduled executor for deferred flush — ensures the last batch always gets
+            // displayed even when no more data follows (e.g. shell prompt waiting for input)
+            val flushScheduler = Executors.newSingleThreadScheduledExecutor { r ->
+                Thread(r, "Tenebrio-flusher-${session.id}").apply { isDaemon = true }
+            }
+            var pendingFlush: ScheduledFuture<*>? = null
+
             readerThread = thread(name = "Tenebrio-reader-${session.id}") {
                 try {
                     val buffer = ByteArray(8192)
@@ -377,9 +387,30 @@ class Tenebrio(private val context: Context, private val session: Session) {
                             }
 
                             val now = System.nanoTime()
-                            if (now - lastFlush >= FLUSH_INTERVAL_NS) {
+                            // Check if more data is already available in the PTY buffer.
+                            // If not, this is likely the end of a command's output (e.g. the
+                            // shell prompt is the last thing sent). Flush immediately so the
+                            // prompt appears without waiting for the next timer tick.
+                            val moreDataAvailable = (input?.available() ?: 0) > 0
+
+                            if (!moreDataAvailable || now - lastFlush >= FLUSH_INTERVAL_NS) {
+                                // Either no more data buffered (prompt/idle) or rate limit
+                                // exceeded — flush immediately
+                                pendingFlush?.cancel(false)
+                                pendingFlush = null
                                 flushToWebView(terminalSession, accumulator, flushLock)
                                 lastFlush = now
+                            } else {
+                                // More data is already queued and within rate limit —
+                                // schedule a deferred flush to batch it
+                                if (pendingFlush == null || pendingFlush!!.isDone) {
+                                    val delayMs = ((FLUSH_INTERVAL_NS - (now - lastFlush)) / 1_000_000)
+                                        .coerceAtLeast(1)
+                                    pendingFlush = flushScheduler.schedule({
+                                        flushToWebView(terminalSession, accumulator, flushLock)
+                                        lastFlush = System.nanoTime()
+                                    }, delayMs, TimeUnit.MILLISECONDS)
+                                }
                             }
 
                             // Always invoke onOutput callback if set (for code runner to detect MISSING_PKG)
@@ -390,6 +421,7 @@ class Tenebrio(private val context: Context, private val session: Session) {
                     }
 
                     // Final flush of any remaining output
+                    pendingFlush?.cancel(false)
                     flushToWebView(terminalSession, accumulator, flushLock)
 
                 } catch (e: Exception) {

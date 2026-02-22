@@ -15,6 +15,11 @@ class FileViewModel : ViewModel() {
     var selectedUri by mutableStateOf<Uri?>(value = null) // Current file being edited
     var selectedFolderUri by mutableStateOf<Uri?>(value = null) // Root folder for sidebar
     var currentFilePath by mutableStateOf<String?>(value = null) // Path of current file for sidebar highlighting
+
+    // ========== Remote (SSH/SFTP) Mode ==========
+    var isRemoteMode by mutableStateOf(false)
+    var currentRemotePath by mutableStateOf<String?>(null) // Currently open remote file path
+    var remoteBasePath by mutableStateOf<String?>(null)    // Root folder path on remote host
     
     // Recent Files State
     var recentFiles by mutableStateOf<List<RecentFile>>(emptyList())

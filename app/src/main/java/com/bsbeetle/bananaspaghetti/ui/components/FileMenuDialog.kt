@@ -75,7 +75,8 @@ fun FileMenuDialog(
         bufferViewModel: BufferViewModel,
         fileViewModel: FileViewModel,
         onFileOpened: (DocumentFile) -> Unit,
-        onFolderOpened: (DocumentFile) -> Unit
+        onFolderOpened: (DocumentFile) -> Unit,
+        onSshRemote: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     var currentAction by remember { mutableStateOf(FileMenuAction.NONE) }
@@ -441,6 +442,19 @@ fun FileMenuDialog(
                                         openFolderLauncher.launch(null)
                                     }
                             )
+
+                            if (onSshRemote != null) {
+                                HorizontalDivider(
+                                        color = Color(0xFF3C3C3C),
+                                        modifier = Modifier.padding(vertical = 4.dp)
+                                )
+
+                                FileMenuItem(
+                                        icon = R.drawable.network_intel,
+                                        title = "SSH Remote",
+                                        onClick = { onSshRemote() }
+                                )
+                            }
 
                             HorizontalDivider(
                                     color = Color(0xFF3C3C3C),

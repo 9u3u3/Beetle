@@ -3,6 +3,9 @@ package com.bsbeetle.bananaspaghetti.utils.sessionHandling
 import android.content.Context
 import android.view.inputmethod.InputConnection
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 enum class SessionType {
     EDITOR,
@@ -16,9 +19,13 @@ abstract class Session(val context: Context, val type: SessionType, var name: St
     var id: Int? = null
     var view: CustomWebView? = null
     var _inputConnection: InputConnection? = null
-    
+
     // Project root folder for the session (used by EditorSession and NotebookSession)
     var projectRoot: androidx.documentfile.provider.DocumentFile? = null
+
+    // Ready state — overridden by terminal sessions; non-terminals are always "ready"
+    private val _defaultReady = MutableStateFlow(true)
+    open val isReady: StateFlow<Boolean> = _defaultReady.asStateFlow()
 
     init {
         // Register session

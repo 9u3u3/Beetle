@@ -41,7 +41,10 @@ import com.bsbeetle.bananaspaghetti.LocalAuthViewModel
 import com.bsbeetle.bananaspaghetti.LocalBufferViewModel
 import com.bsbeetle.bananaspaghetti.LocalEditorViewModel
 import com.bsbeetle.bananaspaghetti.LocalFileViewModel
+import com.bsbeetle.bananaspaghetti.LocalSshViewModel
 import com.bsbeetle.bananaspaghetti.LocalTerminalViewModel
+import com.bsbeetle.bananaspaghetti.ui.components.RemoteFileBrowserDialog
+import com.bsbeetle.bananaspaghetti.ui.components.SshConnectDialog
 import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.ui.components.SessionTypeSelectionDialog
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
@@ -96,6 +99,12 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
     val authViewModel = LocalAuthViewModel.current
     val userEmail by authViewModel.userEmail.collectAsState()
     
+    val sshViewModel = LocalSshViewModel.current
+
+    // State for SSH Remote flow
+    var showSshConnectDialog by remember { mutableStateOf(false) }
+    var showRemoteFileBrowserDialog by remember { mutableStateOf(false) }
+
     // State for session type selection
     var showSessionTypeDialog by remember { mutableStateOf(false) }
     var currentFileAction by remember { mutableStateOf<FileAction?>(null) }
@@ -293,6 +302,17 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
 
             Spacer(modifier = Modifier.height(10.dp))
 
+            // SSH Remote button
+            GlassButton(
+                text = "SSH Remote",
+                backdrop = backdrop,
+                fontSize = buttonFontSize,
+                modifier = Modifier.width(400.dp).height(50.dp),
+                onClick = { showSshConnectDialog = true }
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
             // Terminal button
             GlassButton(
                 text = "Terminal",
@@ -481,6 +501,43 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
         ReportIssueDialog(
             userEmail = userEmail,
             onDismiss = { showReportIssueDialog = false }
+        )
+    }
+
+    // SSH Connect Dialog (from home screen)
+    if (showSshConnectDialog) {
+        SshConnectDialog(
+            onDismiss = { showSshConnectDialog = false },
+            onConnected = {
+                showSshConnectDialog = false
+                showRemoteFileBrowserDialog = true
+            },
+            sshViewModel = sshViewModel
+        )
+    }
+
+    // Remote File Browser Dialog (from home screen)
+    if (showRemoteFileBrowserDialog) {
+        RemoteFileBrowserDialog(
+            onDismiss = { showRemoteFileBrowserDialog = false },
+            onFolderSelected = { selectedPath ->
+                showRemoteFileBrowserDialog = false
+                val params = sshViewModel.connectionParams
+                val sessionName = if (params != null)
+                    "${params.username}@${params.host}:${selectedPath.substringAfterLast("/")}"
+                else "Remote"
+                val newSession = EditorSession(context.applicationContext, sessionName)
+                editorViewModel.setEditorWebView(newSession.getOrInitView())
+                fileViewModel.isRemoteMode = true
+                fileViewModel.remoteBasePath = selectedPath
+                fileViewModel.selectedFolderUri = null
+                fileViewModel.currentRemotePath = null
+                navController.navigate(Screen.OpenFolder.route) {
+                    popUpTo(Screen.Home.route) { inclusive = false }
+                }
+            },
+            sshViewModel = sshViewModel,
+            initialPath = "/"
         )
     }
 }
