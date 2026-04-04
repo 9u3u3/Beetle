@@ -4,6 +4,7 @@
   <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher-playstore.png" alt="Beetle Icon" width="128"/>
   <h3>"Bring Ideas To Life"</h3>
   <p><i>Advanced Android IDE & Pseudo-Terminal Engineering Deep Dive</i></p>
+  <p><b>Licensed under the GNU General Public License v3.0</b></p>
 </div>
 
 ---
