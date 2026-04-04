@@ -27,7 +27,8 @@ data class LspStatus(
     val currentSymbol: String = "",
     val currentSymbolType: String = "",
     val diagnostics: List<DiagnosticItem> = emptyList(),
-    val breadcrumbs: List<BreadcrumbItem> = emptyList()
+    val breadcrumbs: List<BreadcrumbItem> = emptyList(),
+    val isLspStarting: Boolean = false
 )
 
 class LspViewModel : ViewModel() {
@@ -52,5 +53,9 @@ class LspViewModel : ViewModel() {
     
     fun updateBreadcrumbs(items: List<BreadcrumbItem>) {
         _lspStatus.update { it.copy(breadcrumbs = items) }
+    }
+
+    fun setLspStarting(starting: Boolean) {
+        _lspStatus.update { it.copy(isLspStarting = starting) }
     }
 }

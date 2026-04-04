@@ -15,6 +15,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.bsbeetle.bananaspaghetti.MainActivity
 import com.bsbeetle.bananaspaghetti.R
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Foreground service that keeps terminal sessions alive when the app is in background.
@@ -27,13 +28,17 @@ class TerminalService : Service() {
         private const val NOTIFICATION_ID = 1001
         const val CHANNEL_ID = "beetle_terminal_channel"
         const val CHANNEL_NAME = "Terminal Sessions"
+        const val EXTRA_NAVIGATE_TO_SESSIONS = "navigate_to_sessions"
         
         private var instance: TerminalService? = null
-        private var activeSessionCount = 0
+        private val activeSessionCount = AtomicInteger(0)
+        @Volatile
         private var installationInProgress: String? = null
-        
+
         fun isRunning(): Boolean = instance != null
-        
+
+        fun getSessionCount(): Int = activeSessionCount.get()
+
         fun startService(context: Context) {
             val intent = Intent(context, TerminalService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -42,27 +47,29 @@ class TerminalService : Service() {
                 context.startService(intent)
             }
         }
-        
+
         fun stopServiceIfNoSessions(context: Context) {
-            if (activeSessionCount <= 0 && installationInProgress == null) {
+            if (activeSessionCount.get() <= 0 && installationInProgress == null) {
                 val intent = Intent(context, TerminalService::class.java)
                 context.stopService(intent)
             }
         }
-        
+
         fun incrementSessionCount() {
-            activeSessionCount++
+            val count = activeSessionCount.incrementAndGet()
             instance?.updateNotification()
-            Log.d(TAG, "Session count increased to $activeSessionCount")
+            Log.d(TAG, "Session count increased to $count")
         }
-        
+
         fun decrementSessionCount(context: Context) {
-            activeSessionCount = maxOf(0, activeSessionCount - 1)
+            val count = activeSessionCount.decrementAndGet().coerceAtLeast(0)
+            // If decrementAndGet went below 0, reset to 0
+            activeSessionCount.compareAndSet(count, count.coerceAtLeast(0))
             instance?.updateNotification()
-            Log.d(TAG, "Session count decreased to $activeSessionCount")
+            Log.d(TAG, "Session count decreased to $count")
             stopServiceIfNoSessions(context)
         }
-        
+
         fun setInstallationInProgress(extensionName: String?) {
             installationInProgress = extensionName
             instance?.updateNotification()
@@ -128,7 +135,14 @@ class TerminalService : Service() {
             this,
             0,
             Intent(this, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                // SINGLE_TOP + CLEAR_TOP: bring existing MainActivity to front and call
+                // onNewIntent instead of recreating the activity (which would crash because
+                // the new EditorViewModel would try to bind AssetServer port 8080 while the
+                // old instance is still running)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(EXTRA_NAVIGATE_TO_SESSIONS, true)
             },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
@@ -136,14 +150,15 @@ class TerminalService : Service() {
         val title: String
         val text: String
         
+        val sessionCount = activeSessionCount.get()
         when {
             installationInProgress != null -> {
                 title = "Installing $installationInProgress"
                 text = "Extension installation in progress..."
             }
-            activeSessionCount > 0 -> {
+            sessionCount > 0 -> {
                 title = "Beetle Terminal"
-                text = "$activeSessionCount session${if (activeSessionCount > 1) "s" else ""} running"
+                text = "$sessionCount session${if (sessionCount > 1) "s" else ""} running"
             }
             else -> {
                 title = "Beetle Terminal"
@@ -178,7 +193,7 @@ class TerminalService : Service() {
             PowerManager.PARTIAL_WAKE_LOCK,
             "Beetle::TerminalWakeLock"
         ).apply {
-            acquire(10 * 60 * 1000L) // 10 minutes max, will be re-acquired if needed
+            acquire() // No timeout — foreground service lifecycle manages wake lock
         }
         Log.d(TAG, "WakeLock acquired")
     }

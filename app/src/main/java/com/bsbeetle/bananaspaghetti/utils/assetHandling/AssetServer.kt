@@ -1,6 +1,7 @@
 package com.bsbeetle.bananaspaghetti.utils.assetHandling
 
 import android.content.Context
+import android.util.Log
 import fi.iki.elonen.NanoHTTPD
 import java.io.InputStream
 import java.net.SocketException
@@ -8,6 +9,30 @@ import java.net.SocketTimeoutException
 import java.util.concurrent.Executors
 
 class AssetServer(private val context: Context, port: Int = 8080) : NanoHTTPD(port) {
+
+    companion object {
+        private const val TAG = "AssetServer"
+
+        @Volatile private var instance: AssetServer? = null
+
+        /**
+         * Start the AssetServer only if it isn't already running.
+         * Guards against EADDRINUSE when the ViewModel is recreated
+         * (e.g. after tapping the terminal notification).
+         */
+        fun startIfNotRunning(context: Context, port: Int = 8080) {
+            if (instance?.isAlive == true) return
+            synchronized(this) {
+                if (instance?.isAlive == true) return
+                try {
+                    instance = AssetServer(context.applicationContext, port).also { it.start() }
+                    Log.d(TAG, "AssetServer started on port $port")
+                } catch (e: Exception) {
+                    Log.w(TAG, "AssetServer failed to start on port $port — may already be bound", e)
+                }
+            }
+        }
+    }
 
     // Use a thread pool to handle multiple concurrent connections
     // This is critical for supporting multiple WebView instances

@@ -33,7 +33,7 @@ class NotebookSession(context: Context, name: String = "Notebook") :
 
     // Observable state for UI
     private val _isReady = MutableStateFlow(false)
-    val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
+    override val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
 
     // Unsaved changes indicator (save dot)
     private val _hasUnsavedChanges = MutableStateFlow(false)

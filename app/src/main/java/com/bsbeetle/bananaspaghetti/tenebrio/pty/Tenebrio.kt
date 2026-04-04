@@ -11,6 +11,9 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.nio.file.Files
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import org.json.JSONObject
 
@@ -59,10 +62,39 @@ class Tenebrio(private val context: Context, private val session: Session) {
     private val prootLoader32: File = File(nativeDir, "libproot32.so")
     private val proot: File = File(nativeDir, "libproot-xed.so")
 
+    // Lifecycle management
+    @Volatile
+    private var isRunning = true
+    private var readerThread: Thread? = null
+
     fun resizeTerminal(rows: Int, cols: Int) {
         if (gMasterFd > 0) {
             resizePty(gMasterFd, rows, cols)
         }
+    }
+
+    fun destroy() {
+        Log.d("Tenebrio", "Destroying tenebrio instance")
+        isRunning = false
+
+        // Close streams — this causes the reader thread to get EOF/IOException and exit
+        try { input?.close() } catch (e: Exception) { Log.w("Tenebrio", "Error closing input", e) }
+        try { output?.close() } catch (e: Exception) { Log.w("Tenebrio", "Error closing output", e) }
+        // Closing pfd closes the master FD, which triggers proot's --kill-on-exit
+        try { pfd?.close() } catch (e: Exception) { Log.w("Tenebrio", "Error closing pfd", e) }
+
+        input = null
+        output = null
+        pfd = null
+        gMasterFd = -1
+
+        // Wait briefly for reader thread to finish
+        try {
+            readerThread?.join(500)
+        } catch (e: InterruptedException) {
+            Log.w("Tenebrio", "Interrupted waiting for reader thread", e)
+        }
+        readerThread = null
     }
 
     fun init() {
@@ -77,7 +109,7 @@ class Tenebrio(private val context: Context, private val session: Session) {
         if (!ubuntuBash.exists()) {
             // Get terminal session for progress messages
             val terminalSession = session as? TerminalSession
-            
+
             // Use synchronized block to prevent multiple concurrent downloads
             synchronized(downloadLock) {
                 // Double-check after acquiring lock
@@ -94,7 +126,7 @@ class Tenebrio(private val context: Context, private val session: Session) {
             }
 
             Log.d("Tenebrio", "Ubuntu shell not found, downloading and extracting...")
-            
+
             // Show installation message to user
             terminalSession?.sendInstallationMessage("\u001b[36m[SYSTEM]\u001b[0m Starting Download...")
             terminalSession?.sendInstallationMessage("\u001b[33m[INFO]\u001b[0m Installing Ubuntu Linux for the first time")
@@ -123,7 +155,7 @@ class Tenebrio(private val context: Context, private val session: Session) {
 
                     terminalSession?.sendInstallationMessage("\u001b[32m[SUCCESS]\u001b[0m Download complete!")
                     terminalSession?.sendInstallationMessage("\u001b[33m[INFO]\u001b[0m Extracting root filesystem...")
-                    
+
                     copyAssetsTo(PREFIX, "scripts/init-ubuntu.sh", context)
                     copyAssetsTo(PREFIX, "scripts/code-runner.sh", context)
                     Log.d("Tenebrio", "Download complete, starting extraction...")
@@ -247,7 +279,7 @@ class Tenebrio(private val context: Context, private val session: Session) {
                     }
 
                     Log.d("Tenebrio", "Extracted the rootfs successfully")
-                    
+
                     terminalSession?.sendInstallationMessage("\u001b[32m[SUCCESS]\u001b[0m Extraction complete!")
                     terminalSession?.sendInstallationMessage("\u001b[33m[INFO]\u001b[0m Setting up environment...")
 
@@ -292,7 +324,6 @@ class Tenebrio(private val context: Context, private val session: Session) {
                 return
             }
 
-            // Global make it session wise
             val terminalSession = session as TerminalSession
             if (terminalSession.rows == null || terminalSession.cols == null) {
                 Log.d("Tenebrio", "Null sizes - waiting for WebView to report terminal dimensions")
@@ -329,32 +360,106 @@ class Tenebrio(private val context: Context, private val session: Session) {
 
             terminalSession.outputFd = output
 
-            thread {
+            // Output batching: accumulate chunks and flush at ~60fps to reduce JS bridge calls
+            val accumulator = StringBuilder()
+            val flushLock = Any()
+            val FLUSH_INTERVAL_NS = 16_000_000L // 16ms = ~60fps
+
+            // Scheduled executor for deferred flush — ensures the last batch always gets
+            // displayed even when no more data follows (e.g. shell prompt waiting for input)
+            val flushScheduler = Executors.newSingleThreadScheduledExecutor { r ->
+                Thread(r, "Tenebrio-flusher-${session.id}").apply { isDaemon = true }
+            }
+            var pendingFlush: ScheduledFuture<*>? = null
+
+            readerThread = thread(name = "Tenebrio-reader-${session.id}") {
                 try {
-                    val buffer = ByteArray(1024)
-                    while (true) {
-                        val bytesRead = input!!.read(buffer)
+                    val buffer = ByteArray(8192)
+                    var lastFlush = System.nanoTime()
+
+                    while (isRunning) {
+                        val bytesRead = input?.read(buffer) ?: break
                         if (bytesRead > 0) {
                             val text = String(buffer, 0, bytesRead)
-                            // Access view lazily - it may be created after init()
-                            val terminalWebView = terminalSession.view
-                            if (terminalWebView != null) {
-                                terminalWebView.post {
-                                    val jsCommand = "term.write(${JSONObject.quote(text)});"
-                                    terminalWebView.evaluateJavascript(jsCommand, null)
+
+                            synchronized(flushLock) {
+                                accumulator.append(text)
+                            }
+
+                            val now = System.nanoTime()
+                            // Check if more data is already available in the PTY buffer.
+                            // If not, this is likely the end of a command's output (e.g. the
+                            // shell prompt is the last thing sent). Flush immediately so the
+                            // prompt appears without waiting for the next timer tick.
+                            val moreDataAvailable = (input?.available() ?: 0) > 0
+
+                            if (!moreDataAvailable || now - lastFlush >= FLUSH_INTERVAL_NS) {
+                                // Either no more data buffered (prompt/idle) or rate limit
+                                // exceeded — flush immediately
+                                pendingFlush?.cancel(false)
+                                pendingFlush = null
+                                flushToWebView(terminalSession, accumulator, flushLock)
+                                lastFlush = now
+                            } else {
+                                // More data is already queued and within rate limit —
+                                // schedule a deferred flush to batch it
+                                if (pendingFlush == null || pendingFlush!!.isDone) {
+                                    val delayMs = ((FLUSH_INTERVAL_NS - (now - lastFlush)) / 1_000_000)
+                                        .coerceAtLeast(1)
+                                    pendingFlush = flushScheduler.schedule({
+                                        flushToWebView(terminalSession, accumulator, flushLock)
+                                        lastFlush = System.nanoTime()
+                                    }, delayMs, TimeUnit.MILLISECONDS)
                                 }
                             }
-                            // Always invoke onOutput callback if set (for code runner to detect
-                            // MISSING_PKG)
+
+                            // Always invoke onOutput callback if set (for code runner to detect MISSING_PKG)
                             terminalSession.onOutput?.invoke(text)
                         } else if (bytesRead < 0) {
                             break // EOF or error
                         }
                     }
+
+                    // Final flush of any remaining output
+                    pendingFlush?.cancel(false)
+                    flushToWebView(terminalSession, accumulator, flushLock)
+
                 } catch (e: Exception) {
-                    Log.e("TenebrioShell", "Error reading", e)
+                    if (isRunning) {
+                        Log.e("TenebrioShell", "Error reading", e)
+                    }
+                }
+
+                // Process exited — notify user if this wasn't an intentional destroy
+                if (isRunning) {
+                    Log.w("Tenebrio", "PTY process exited unexpectedly")
+                    val webView = terminalSession.view
+                    webView?.post {
+                        val msg = "\r\n\u001b[31m[Process exited]\u001b[0m\r\n"
+                        webView.evaluateJavascript(
+                            "term.write(${JSONObject.quote(msg)});", null
+                        )
+                    }
+                    terminalSession.onProcessExited?.invoke()
                 }
             }
+        }
+    }
+
+    private fun flushToWebView(
+        session: TerminalSession,
+        accumulator: StringBuilder,
+        lock: Any
+    ) {
+        val chunk: String
+        synchronized(lock) {
+            if (accumulator.isEmpty()) return
+            chunk = accumulator.toString()
+            accumulator.clear()
+        }
+        val webView = session.view ?: return
+        webView.post {
+            webView.evaluateJavascript("term.write(${JSONObject.quote(chunk)});", null)
         }
     }
 }

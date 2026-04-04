@@ -16,6 +16,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.documentfile.provider.DocumentFile
 import com.bsbeetle.bananaspaghetti.LocalFileViewModel
+import com.bsbeetle.bananaspaghetti.LocalSshViewModel
+import androidx.compose.ui.Alignment
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bsbeetle.bananaspaghetti.utils.ssh.SshFileSystem
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun FilesTab(
@@ -24,7 +30,8 @@ fun FilesTab(
 ) {
     val context = LocalContext.current
     val fileViewModel = LocalFileViewModel.current
-    
+    val sshViewModel = LocalSshViewModel.current
+
     // Multi-select state from FileViewModel
     val isMultiSelectMode = fileViewModel.isMultiSelectMode
     val selectedFilePaths = fileViewModel.selectedFilePaths
@@ -36,16 +43,72 @@ fun FilesTab(
     var expandedFolders by remember { mutableStateOf(setOf<String>()) }
     var searchQuery by remember { mutableStateOf("") }
 
-    // Get real files from the file system
-    val files = remember(fileViewModel.selectedFolderUri, expandedFolders, searchQuery, fileViewModel.fileTreeRefreshCounter) {
+    // Auto-expand the SSH root folder whenever remote mode is active or the base path changes.
+    // Without this, switching back to a remote session would show the root folder collapsed
+    // and the user would have to tap it before any files appear.
+    LaunchedEffect(fileViewModel.isRemoteMode, fileViewModel.remoteBasePath) {
+        val base = fileViewModel.remoteBasePath
+        if (fileViewModel.isRemoteMode && base != null) {
+            expandedFolders = expandedFolders + base
+        }
+    }
+
+    // Observe SSH session liveness — when the session drops we show a reconnect banner and
+    // stop attempting SFTP calls (which would otherwise spam onSessionDown callbacks).
+    val sessionDown by sshViewModel.sessionDown.collectAsStateWithLifecycle()
+    val sshConnecting by sshViewModel.connecting.collectAsStateWithLifecycle()
+
+    // Auto-reconnect as soon as the session drops (uses stored credentials).
+    LaunchedEffect(sessionDown) {
+        if (sessionDown) {
+            val params = sshViewModel.connectionParams
+            if (params != null) sshViewModel.connect(params, context)
+        }
+    }
+
+    // Remote files loaded asynchronously (SFTP must not run on main thread)
+    var remoteFiles by remember { mutableStateOf<List<FileItem>>(emptyList()) }
+
+    LaunchedEffect(
+        fileViewModel.isRemoteMode,
+        fileViewModel.remoteBasePath,
+        expandedFolders,
+        fileViewModel.fileTreeRefreshCounter,
+        sessionDown  // re-run when reconnect clears the flag so the tree reloads
+    ) {
+        if (!fileViewModel.isRemoteMode || sessionDown) {
+            remoteFiles = emptyList()
+            return@LaunchedEffect
+        }
+        val sshFs = sshViewModel.fileSystem
+        val basePath = fileViewModel.remoteBasePath
+        if (sshFs != null && basePath != null) {
+            remoteFiles = withContext(Dispatchers.IO) {
+                buildRemoteFileTree(sshFs, basePath, 0, expandedFolders)
+            }
+        } else {
+            remoteFiles = emptyList()
+        }
+    }
+
+    // Local files loaded synchronously (DocumentFile is fine on main thread)
+    val localFiles = remember(
+        fileViewModel.selectedFolderUri,
+        expandedFolders,
+        searchQuery,
+        fileViewModel.fileTreeRefreshCounter
+    ) {
         val rootUri = fileViewModel.selectedFolderUri
         if (rootUri != null) {
             val rootDoc = DocumentFile.fromTreeUri(context, rootUri)
-            rootDoc?.let { buildFileTree(it, 0, expandedFolders, searchQuery.isNotEmpty()) } ?: emptyList()
+            rootDoc?.let { buildFileTree(it, 0, expandedFolders, searchQuery.isNotEmpty()) }
+                ?: emptyList()
         } else {
             emptyList()
         }
     }
+
+    val files = if (fileViewModel.isRemoteMode) remoteFiles else localFiles
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -106,8 +169,44 @@ fun FilesTab(
                 searchQuery.isEmpty() || it.name.contains(searchQuery, ignoreCase = true)
             }
 
-//            if (filteredFiles.isEmpty() && fileViewModel.selectedUri == null) {
-            if (filteredFiles.isEmpty() && fileViewModel.selectedFolderUri == null) {
+            if (sessionDown && fileViewModel.isRemoteMode) {
+                // SSH session dropped — auto-reconnect is in progress; show status
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        if (sshConnecting) {
+                            Text(
+                                text = "Reconnecting…",
+                                color = Color(0xFFFFAA44),
+                                fontSize = 13.sp
+                            )
+                        } else {
+                            // Auto-reconnect failed — let the user retry manually
+                            Text(
+                                text = "SSH session disconnected",
+                                color = Color(0xFFFF6B6B),
+                                fontSize = 13.sp
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Button(
+                                onClick = {
+                                    val params = sshViewModel.connectionParams
+                                    if (params != null) sshViewModel.connect(params, context)
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF3A3A3A)
+                                )
+                            ) {
+                                Text("Reconnect", color = Color.White, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+            } else if (filteredFiles.isEmpty() && fileViewModel.selectedFolderUri == null && !fileViewModel.isRemoteMode) {
                 item {
                     Text(
                         text = "No folder selected. Open a folder to see files.",
@@ -129,16 +228,25 @@ fun FilesTab(
                                 expandedFolders + file.path
                             }
                         },
-                        onFileClick = { onFileSelected(file.path) },
-                        // Multi-select support
-                        isMultiSelectMode = isMultiSelectMode,
+                        onFileClick = {
+                            if (fileViewModel.isRemoteMode && !file.isDirectory) {
+                                // For remote files, set currentRemotePath — triggers
+                                // LaunchedEffect in InitialEditorUI to load content via SFTP
+                                fileViewModel.currentRemotePath = file.path
+                                fileViewModel.currentFilePath = file.path
+                            } else {
+                                onFileSelected(file.path)
+                            }
+                        },
+                        // Multi-select not supported in remote mode
+                        isMultiSelectMode = if (fileViewModel.isRemoteMode) false else isMultiSelectMode,
                         isMultiSelected = selectedFilePaths.contains(file.path),
                         onLongPress = {
-                            // Enter multi-select mode with this file selected
-                            fileViewModel.enterMultiSelectMode(file.path)
+                            if (!fileViewModel.isRemoteMode) {
+                                fileViewModel.enterMultiSelectMode(file.path)
+                            }
                         },
                         onMultiSelectTap = {
-                            // Toggle this file's selection
                             fileViewModel.toggleFileSelection(file.path)
                         }
                     )
@@ -148,6 +256,48 @@ fun FilesTab(
     }
 }
 
+
+// Helper to build remote file tree via SFTP — same FileItem type as local tree
+fun buildRemoteFileTree(
+    sshFs: SshFileSystem,
+    path: String,
+    level: Int,
+    expandedFolders: Set<String>
+): List<FileItem> {
+    val result = mutableListOf<FileItem>()
+
+    if (level == 0) {
+        // Add root folder itself
+        val rootName = path.substringAfterLast("/").ifEmpty { path }
+        result.add(FileItem(name = rootName, path = path, isDirectory = true, level = 0))
+        if (expandedFolders.contains(path)) {
+            result.addAll(buildRemoteFileTree(sshFs, path, 1, expandedFolders))
+        }
+        return result
+    }
+
+    val entries = try {
+        sshFs.listDirectory(path)
+    } catch (_: Exception) {
+        emptyList()
+    }
+
+    for (entry in entries) {
+        result.add(
+            FileItem(
+                name = entry.name,
+                path = entry.fullPath,
+                isDirectory = entry.isDir,
+                level = level
+            )
+        )
+        if (entry.isDir && expandedFolders.contains(entry.fullPath)) {
+            result.addAll(buildRemoteFileTree(sshFs, entry.fullPath, level + 1, expandedFolders))
+        }
+    }
+
+    return result
+}
 
 // Helper function to build file tree recursively
 fun buildFileTree(

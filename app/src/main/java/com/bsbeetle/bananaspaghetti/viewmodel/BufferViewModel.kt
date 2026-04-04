@@ -29,6 +29,9 @@ class BufferViewModel : ViewModel() {
     // Per-session file lists: Map<SessionKey, List<DocumentFile>>
     private val sessionFiles = mutableStateMapOf<String, MutableList<DocumentFile>>()
 
+    // Per-session remote (SSH) file paths: Map<SessionKey, List<String>>
+    private val sessionRemoteFiles = mutableStateMapOf<String, MutableList<String>>()
+
     // Per-session dirty files: Map<SessionKey, Set<URI>>
     private val sessionDirtyFiles = mutableStateMapOf<String, MutableSet<String>>()
 
@@ -37,6 +40,9 @@ class BufferViewModel : ViewModel() {
         get() = sessionBuffers.getOrPut(currentSessionKey ?: "UNKNOWN_-1") { mutableMapOf() }
 
     val filesOpenedList = mutableStateListOf<DocumentFile>()
+
+    // Remote (SSH) files open in this session — stored as absolute remote paths
+    val remoteFilesOpenedList = mutableStateListOf<String>()
 
     // Track currently active file
     var currentFile = mutableStateOf<DocumentFile?>(null)
@@ -66,10 +72,12 @@ class BufferViewModel : ViewModel() {
                 val savedDirty = dirtyFiles.toMutableSet()
                 sessionFiles[oldKey] = savedFiles
                 sessionDirtyFiles[oldKey] = savedDirty
+                sessionRemoteFiles[oldKey] = remoteFilesOpenedList.toMutableList()
             }
 
             // Clear current state
             filesOpenedList.clear()
+            remoteFilesOpenedList.clear()
             dirtyFiles.clear()
             currentFile.value = null
 
@@ -85,6 +93,10 @@ class BufferViewModel : ViewModel() {
 
             sessionDirtyFiles[newKey]?.let { loadedDirty ->
                 dirtyFiles.addAll(loadedDirty)
+            }
+
+            sessionRemoteFiles[newKey]?.let { loadedRemote ->
+                remoteFilesOpenedList.addAll(loadedRemote)
             }
         }
     }
@@ -190,6 +202,7 @@ class BufferViewModel : ViewModel() {
         sessionBuffers.remove(sessionKey)
         sessionFiles.remove(sessionKey)
         sessionDirtyFiles.remove(sessionKey)
+        sessionRemoteFiles.remove(sessionKey)
 
         // If this was the current session, clear current state too
         if (currentSessionKey == sessionKey) {
@@ -197,6 +210,7 @@ class BufferViewModel : ViewModel() {
             currentSessionId = null
             currentSessionType = null
             filesOpenedList.clear()
+            remoteFilesOpenedList.clear()
             currentFile.value = null
             dirtyFiles.clear()
         }
@@ -205,6 +219,7 @@ class BufferViewModel : ViewModel() {
     fun clear() {
         bufferLine.clear()
         filesOpenedList.clear()
+        remoteFilesOpenedList.clear()
         currentFile.value = null
         dirtyFiles.clear()
     }
@@ -214,10 +229,12 @@ class BufferViewModel : ViewModel() {
         sessionBuffers.clear()
         sessionFiles.clear()
         sessionDirtyFiles.clear()
+        sessionRemoteFiles.clear()
         currentSessionKey = null
         currentSessionId = null
         currentSessionType = null
         filesOpenedList.clear()
+        remoteFilesOpenedList.clear()
         currentFile.value = null
         dirtyFiles.clear()
     }

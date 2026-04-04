@@ -8,6 +8,7 @@ import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.compose.runtime.mutableStateListOf
 import com.bsbeetle.bananaspaghetti.utils.AppConfig
 import com.bsbeetle.bananaspaghetti.utils.webViewHandling.CustomWebView
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,14 +21,19 @@ class EditorSession(context: Context, name: String = "Editor") :
 
     private var currentFilePath: String? = null
 
+    // Per-session remote state — survives session switches
+    var isRemoteMode: Boolean = false
+    var remoteBasePath: String? = null
+    var currentRemotePath: String? = null
+
     // Observable state for UI to show loading until editor is ready
     private val _isReady = MutableStateFlow(false)
-    val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
+    override val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
 
     // projectRoot is inherited from Session base class
     // Terminal sessions linked to this editor session (bottom panel terminals)
     // Using mutableStateListOf so Compose can observe changes
-    val linkedTerminals = androidx.compose.runtime.mutableStateListOf<TerminalSession>()
+    val linkedTerminals = mutableStateListOf<Session>()
 
     // Runner terminal for code execution - lazy initialized on first run
     private var _runnerTerminal: TerminalSession? = null
@@ -45,8 +51,9 @@ class EditorSession(context: Context, name: String = "Editor") :
             _runnerTerminal = TerminalSession(ctx.applicationContext, "Runner-${name}")
             _runnerTerminal!!.createView()
             // Add to linkedTerminals so it shows in bottom panel
-            if (!linkedTerminals.contains(_runnerTerminal)) {
-                linkedTerminals.add(_runnerTerminal!!)
+            val t = _runnerTerminal!!
+            if (!linkedTerminals.contains(t)) {
+                linkedTerminals.add(t)
             }
         }
         return Pair(_runnerTerminal!!, wasNew)

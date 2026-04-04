@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <fcntl.h>
 #include <jni.h>
+#include <string>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <termios.h>
@@ -27,7 +28,21 @@ Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_startUbuntu(
   const char *PUBLIC = env->GetStringUTFChars(jPublic, nullptr);
   const char *UBUNTU_TMP = env->GetStringUTFChars(jUbuntuTmp, nullptr);
   const char *UBUNTU = env->GetStringUTFChars(jUbuntu, nullptr);
-  // const char *INIT_UBUNTU = env->GetStringUTFChars(jUbuntuInit, nullptr);
+  const char *INIT_UBUNTU = env->GetStringUTFChars(jUbuntuInit, nullptr);
+
+  // Helper macro to release all JNI strings before returning
+  #define RELEASE_JNI_STRINGS() do { \
+    env->ReleaseStringUTFChars(prefix, PREFIX); \
+    env->ReleaseStringUTFChars(jNativeDirPath, NATIVE_DIR); \
+    env->ReleaseStringUTFChars(jProotTmpDir, PROOT_TMP_DIR); \
+    env->ReleaseStringUTFChars(jProotLoader, PROOT_LOADER); \
+    env->ReleaseStringUTFChars(jProotLoader32, PROOT_LOADER32); \
+    env->ReleaseStringUTFChars(jProot, PROOT); \
+    env->ReleaseStringUTFChars(jPublic, PUBLIC); \
+    env->ReleaseStringUTFChars(jUbuntuTmp, UBUNTU_TMP); \
+    env->ReleaseStringUTFChars(jUbuntu, UBUNTU); \
+    env->ReleaseStringUTFChars(jUbuntuInit, INIT_UBUNTU); \
+  } while(0)
 
   // Setting the environment variables
   setenv("PREFIX", PREFIX, 1);
@@ -38,8 +53,8 @@ Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_startUbuntu(
   setenv("PROOT_LOADER32", PROOT_LOADER32, 1);
   setenv("PROOT", PROOT, 1);
 
-  char command[] =
-      ". /data/user/0/com.bsbeetle.bananaspaghetti/files/init-ubuntu.sh";
+  // Build command dynamically using the init script path parameter
+  std::string commandStr = std::string(". ") + INIT_UBUNTU;
 
   // Building proot command
   char *argv[] = {const_cast<char *>(PROOT),
@@ -106,33 +121,36 @@ Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_startUbuntu(
 
                   "/bin/bash",
                   "-c",
-                  command,
+                  const_cast<char *>(commandStr.c_str()),
                   NULL};
 
   // Create the master file descriptor
   int masterFd = open("/dev/ptmx", O_RDWR | O_NOCTTY);
   if (masterFd < 0) {
     ALOGE("Failed to open /dev/ptmx");
+    RELEASE_JNI_STRINGS();
     return -69;
   }
 
   if (grantpt(masterFd) < 0) {
     ALOGE("Failed to grantpt");
     close(masterFd);
+    RELEASE_JNI_STRINGS();
     return -69;
   }
 
   if (unlockpt(masterFd) < 0) {
     ALOGE("Failed to unlockpt");
     close(masterFd);
+    RELEASE_JNI_STRINGS();
     return -69;
   }
 
   // CRITICAL: Set initial window size before forking
   // This ensures child process starts with correct terminal dimensions
   struct winsize ws;
-  ws.ws_row = rows; // Start with reasonable default
-  ws.ws_col = cols; // Will be updated by fitTerminal() later
+  ws.ws_row = rows;
+  ws.ws_col = cols;
   ws.ws_xpixel = 0;
   ws.ws_ypixel = 0;
 
@@ -145,6 +163,7 @@ Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_startUbuntu(
   if (slave_name == NULL) {
     ALOGE("Failed ptsname");
     close(masterFd);
+    RELEASE_JNI_STRINGS();
     return -69;
   }
 
@@ -152,6 +171,7 @@ Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_startUbuntu(
   if (pid < 0) {
     ALOGE("Failed fork");
     close(masterFd);
+    RELEASE_JNI_STRINGS();
     return -69;
   }
 
@@ -217,6 +237,10 @@ Java_com_bsbeetle_bananaspaghetti_tenebrio_pty_Tenebrio_startUbuntu(
     ALOGE("Failed execv");
     exit(-1);
   }
+
+  // Parent process: release JNI strings and return master fd
+  RELEASE_JNI_STRINGS();
+  #undef RELEASE_JNI_STRINGS
 
   return masterFd;
 }

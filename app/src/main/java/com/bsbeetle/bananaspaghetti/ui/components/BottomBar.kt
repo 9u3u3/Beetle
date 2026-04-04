@@ -50,10 +50,14 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bsbeetle.bananaspaghetti.LocalFileViewModel
+import com.bsbeetle.bananaspaghetti.LocalSshViewModel
 import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.directGit.viewmodel.GitViewModel
 import com.bsbeetle.bananaspaghetti.ui.theme.codaRegular
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.Session
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SessionList
+import com.bsbeetle.bananaspaghetti.utils.sessionHandling.SshTerminalSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
 import com.bsbeetle.bananaspaghetti.viewmodel.DiagnosticItem
 import com.bsbeetle.bananaspaghetti.viewmodel.LspViewModel
@@ -123,7 +127,7 @@ fun BottomBar(
         // This ensures terminals persist when navigating away and back
         val panelTerminals =
                 currentEditorSession?.linkedTerminals
-                        ?: remember { mutableStateListOf<TerminalSession>() }
+                        ?: remember { mutableStateListOf<Session>() }
         var activeTerminalIndex by remember { mutableIntStateOf(0) }
 
         // Coroutine scope for async terminal creation
@@ -183,6 +187,15 @@ fun BottomBar(
                                                 fontSize = fontSize,
                                                 color = Color(0xFFFFFFFF)
                                         )
+
+                                        if (lspStatus.isLspStarting) {
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                androidx.compose.material3.CircularProgressIndicator(
+                                                        modifier = Modifier.size(9.dp),
+                                                        color = Color(0xFF007ACC),
+                                                        strokeWidth = 1.dp
+                                                )
+                                        }
 
                                         Spacer(modifier = Modifier.width(8.dp))
 
@@ -262,12 +275,15 @@ fun BottomBar(
 
                                         Spacer(modifier = Modifier.weight(1f))
 
-                                        // Center Swipe Up Icon
-                                        Image(
-                                                painter = painterResource(R.drawable.swipe_up),
-                                                contentDescription = "Swipe Up",
-                                                modifier = Modifier.size(12.dp),
-                                                alignment = Alignment.Center
+                                        // Drag handle pill indicator
+                                        Box(
+                                                modifier = Modifier
+                                                        .width(32.dp)
+                                                        .height(4.dp)
+                                                        .background(
+                                                                Color.White.copy(alpha = 0.3f),
+                                                                androidx.compose.foundation.shape.RoundedCornerShape(2.dp)
+                                                        )
                                         )
 
                                         Spacer(modifier = Modifier.weight(1f))
@@ -342,9 +358,8 @@ fun BottomBar(
 
                                 // Add terminal button (only show when on Terminal tab)
                                 if (selectedTab == BottomPanelTab.TERMINAL) {
-                                        val fileViewModel =
-                                                com.bsbeetle.bananaspaghetti.LocalFileViewModel
-                                                        .current
+                                        val fileViewModel = LocalFileViewModel.current
+                                        val sshViewModel = LocalSshViewModel.current
                                         Text(
                                                 text = "+",
                                                 color = Color(0xFFCCCCCC),
@@ -402,39 +417,29 @@ fun BottomBar(
                                                                                                         )
                                                                                                 }
 
-                                                                        val newTerminal =
-                                                                                TerminalSession(
-                                                                                        context.applicationContext,
-                                                                                        "bash ${panelTerminals.size + 1}",
-                                                                                        initialDir =
-                                                                                                currentPath
+                                                                        // In SSH remote mode, open an SSH shell terminal
+                                                                        val jschConn = sshViewModel.connection
+                                                                        val newTerminal: Session =
+                                                                            if (fileViewModel.isRemoteMode && jschConn != null) {
+                                                                                SshTerminalSession(
+                                                                                    context.applicationContext,
+                                                                                    "ssh ${panelTerminals.size + 1}",
+                                                                                    jschConn
                                                                                 )
-                                                                        // Add to list but DON'T
-                                                                        // switch to it yet
-                                                                        // This lets it load in the
-                                                                        // "background" while
-                                                                        // current view
-                                                                        // stays
+                                                                            } else {
+                                                                                TerminalSession(
+                                                                                    context.applicationContext,
+                                                                                    "bash ${panelTerminals.size + 1}",
+                                                                                    initialDir = currentPath
+                                                                                )
+                                                                            }
                                                                         val newIndex =
                                                                                 panelTerminals.size
-                                                                        panelTerminals.add(
-                                                                                newTerminal
-                                                                        )
+                                                                        panelTerminals.add(newTerminal)
 
-                                                                        // Wait for terminal to be
-                                                                        // ready, then switch to it
                                                                         scope.launch {
-                                                                                newTerminal
-                                                                                        .getOrInitView()
-                                                                                newTerminal.isReady
-                                                                                        .first {
-                                                                                                ready
-                                                                                                ->
-                                                                                                ready
-                                                                                        }
-                                                                                // Now safe to
-                                                                                // switch - terminal
-                                                                                // is fully loaded
+                                                                                newTerminal.getOrInitView()
+                                                                                newTerminal.isReady.first { it }
                                                                                 activeTerminalIndex =
                                                                                         newIndex
                                                                         }
@@ -649,7 +654,7 @@ private fun GitConsoleContent(terminalHistory: List<String>, onClear: () -> Unit
 
 @Composable
 private fun TerminalContent(
-        terminals: List<TerminalSession>,
+        terminals: List<Session>,
         activeIndex: Int,
         onTabClick: (Int) -> Unit,
         onClose: (Int) -> Unit,

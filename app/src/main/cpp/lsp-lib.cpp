@@ -1,7 +1,3 @@
-//
-// Created by harsh on 10/19/25.
-//
-
 #include <android/log.h>
 #include <cstdlib>
 #include <errno.h>
@@ -18,7 +14,7 @@
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_LspServer_startNativeLsp(
-    JNIEnv *env, jobject /*thizz nutz*/, jstring prefix, jstring jNativeDirPath,
+    JNIEnv *env, jobject /*this*/, jstring prefix, jstring jNativeDirPath,
     jstring jProotTmpDir, jstring jProotLoader, jstring jProotLoader32,
     jstring jProot, jstring jPublic, jstring jUbuntuTmp, jstring jUbuntu,
     jstring jScriptName) {
@@ -36,6 +32,20 @@ Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_LspServer_startNativeLs
   const char *UBUNTU = env->GetStringUTFChars(jUbuntu, nullptr);
   const char *SCRIPT_NAME = env->GetStringUTFChars(jScriptName, nullptr);
 
+  // Helper macro to release all JNI strings before returning
+  #define RELEASE_JNI_STRINGS() do { \
+    env->ReleaseStringUTFChars(prefix, PREFIX); \
+    env->ReleaseStringUTFChars(jNativeDirPath, NATIVE_DIR); \
+    env->ReleaseStringUTFChars(jProotTmpDir, PROOT_TMP_DIR); \
+    env->ReleaseStringUTFChars(jProotLoader, PROOT_LOADER); \
+    env->ReleaseStringUTFChars(jProotLoader32, PROOT_LOADER32); \
+    env->ReleaseStringUTFChars(jProot, PROOT); \
+    env->ReleaseStringUTFChars(jPublic, PUBLIC); \
+    env->ReleaseStringUTFChars(jUbuntuTmp, UBUNTU_TMP); \
+    env->ReleaseStringUTFChars(jUbuntu, UBUNTU); \
+    env->ReleaseStringUTFChars(jScriptName, SCRIPT_NAME); \
+  } while(0)
+
   setenv("PREFIX", PREFIX, 1);
   setenv("NATIVE_DIR", NATIVE_DIR, 1);
   setenv("LD_LIBRARY_PATH", PREFIX, 1);
@@ -45,7 +55,6 @@ Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_LspServer_startNativeLs
   setenv("PROOT", PROOT, 1);
 
   // Construct command dynamically using PREFIX and SCRIPT_NAME
-  // Add debug output to verify bash execution
   std::string cmd = std::string("echo '[LSP-BASH] Bash started' >&2; ") +
                     "echo '[LSP-BASH] Checking script at " + PREFIX + "/" +
                     SCRIPT_NAME + "' >&2; " + "if [ -f '" + PREFIX + "/" +
@@ -128,18 +137,21 @@ Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_LspServer_startNativeLs
   int masterFd = open("/dev/ptmx", O_RDWR | O_NOCTTY);
   if (masterFd < 0) {
     ALOGE("Failed to open /dev/ptmx");
+    RELEASE_JNI_STRINGS();
     return -69;
   }
 
   if (grantpt(masterFd) < 0) {
     ALOGE("Failed to grantpt");
     close(masterFd);
+    RELEASE_JNI_STRINGS();
     return -69;
   }
 
   if (unlockpt(masterFd) < 0) {
     ALOGE("Failed to unlockpt");
     close(masterFd);
+    RELEASE_JNI_STRINGS();
     return -69;
   }
 
@@ -147,6 +159,7 @@ Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_LspServer_startNativeLs
   if (slave_name == NULL) {
     ALOGE("Failed ptsname");
     close(masterFd);
+    RELEASE_JNI_STRINGS();
     return -69;
   }
 
@@ -154,6 +167,7 @@ Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_LspServer_startNativeLs
   if (pid < 0) {
     ALOGE("Failed fork");
     close(masterFd);
+    RELEASE_JNI_STRINGS();
     return -69;
   }
 
@@ -169,18 +183,13 @@ Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_LspServer_startNativeLs
     if (tcgetattr(slave_fd, &tio) == -1) {
       ALOGE("tcgetattr failed: %d", errno);
     } else {
-      // Prefer cfmakeraw if available:
-#ifdef __GLIBC__
-      cfmakeraw(&tio);
-#else
-      // manual raw flags fallback
+      // manual raw flags
       tio.c_iflag &=
           ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
       tio.c_oflag &= ~OPOST;
       tio.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
       tio.c_cflag &= ~(CSIZE | PARENB);
       tio.c_cflag |= CS8;
-#endif
 
       // disable ECHO explicitly
       tio.c_lflag &= ~ECHO;
@@ -214,6 +223,10 @@ Java_com_bsbeetle_bananaspaghetti_utils_languageHandling_LspServer_startNativeLs
     ALOGE("Failed execv");
     exit(-1);
   }
+
+  // Parent process: release JNI strings and return master fd
+  RELEASE_JNI_STRINGS();
+  #undef RELEASE_JNI_STRINGS
 
   return masterFd;
 }

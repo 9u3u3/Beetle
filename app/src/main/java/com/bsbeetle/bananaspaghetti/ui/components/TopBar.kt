@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -55,7 +56,10 @@ import com.bsbeetle.bananaspaghetti.utils.webViewHandling.loadContentWhenReady
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.FileViewModel
+import coil.compose.AsyncImage
 import com.bsbeetle.bananaspaghetti.LocalKeyboardViewModel
+import com.bsbeetle.bananaspaghetti.data.sidebar.FileIconUtils
+import com.bsbeetle.bananaspaghetti.utils.resourceHandling.ImageLoaderSingleton
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -267,6 +271,49 @@ fun TopBar(modifier: Modifier = Modifier, context: Context) {
                                                 }
                                         },
                                         context = context
+                                )
+                        }
+
+                        // Remote (SSH) file tabs
+                        items(
+                                items = bufferViewModel.remoteFilesOpenedList,
+                                key = { "remote:$it" }
+                        ) { remotePath ->
+                                RemoteBufferCard(
+                                        path = remotePath,
+                                        isSelected = fileViewModel.currentFilePath == remotePath,
+                                        isDirty = bufferViewModel.dirtyFiles.contains(remotePath),
+                                        onClick = {
+                                                // Load from buffer immediately, then trigger
+                                                // currentRemotePath change for LSP setup
+                                                val cached = bufferViewModel.bufferLine[remotePath]
+                                                if (cached != null) {
+                                                        webView?.let { loadContentWhenReady(it, cached) }
+                                                        fileViewModel.currentFilePath = remotePath
+                                                }
+                                                fileViewModel.currentRemotePath = remotePath
+                                        },
+                                        onClose = {
+                                                bufferViewModel.remoteFilesOpenedList.remove(remotePath)
+                                                bufferViewModel.bufferLine.remove(remotePath)
+                                                bufferViewModel.dirtyFiles.remove(remotePath)
+                                                if (fileViewModel.currentFilePath == remotePath) {
+                                                        val nextRemote =
+                                                                bufferViewModel.remoteFilesOpenedList.firstOrNull()
+                                                        if (nextRemote != null) {
+                                                                val cached = bufferViewModel.bufferLine[nextRemote]
+                                                                if (cached != null) {
+                                                                        webView?.let { loadContentWhenReady(it, cached) }
+                                                                        fileViewModel.currentFilePath = nextRemote
+                                                                }
+                                                                fileViewModel.currentRemotePath = nextRemote
+                                                        } else {
+                                                                fileViewModel.currentRemotePath = null
+                                                                fileViewModel.currentFilePath = null
+                                                                webView?.let { loadContentWhenReady(it, "") }
+                                                        }
+                                                }
+                                        }
                                 )
                         }
                 }
@@ -1013,4 +1060,80 @@ internal fun getPathFromUri(context: Context, uri: android.net.Uri): String? {
 
         android.util.Log.w("CodeRunner", "Could not extract path from URI: $uri")
         return null
+}
+
+@Composable
+private fun RemoteBufferCard(
+        path: String,
+        isSelected: Boolean,
+        isDirty: Boolean,
+        onClick: () -> Unit,
+        onClose: () -> Unit
+) {
+        val fileName = path.substringAfterLast("/").ifEmpty { path }
+        val context = LocalContext.current
+        androidx.compose.foundation.layout.Column(
+                modifier = androidx.compose.ui.Modifier
+                        .clickable(onClick = onClick)
+                        .background(Color(0xFF1B1B1B))
+        ) {
+                Row(
+                        modifier = androidx.compose.ui.Modifier
+                                .height(28.dp)
+                                .padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                        AsyncImage(
+                                model = FileIconUtils.getIconPath(fileName),
+                                imageLoader = ImageLoaderSingleton.get(context),
+                                contentDescription = null,
+                                modifier = androidx.compose.ui.Modifier.size(16.dp)
+                        )
+
+                        androidx.compose.material3.Text(
+                                text = fileName,
+                                color = if (isSelected) Color.White else Color(0xFFB0B0B0),
+                                fontSize = androidx.compose.ui.unit.TextUnit(12f, androidx.compose.ui.unit.TextUnitType.Sp),
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                modifier = androidx.compose.ui.Modifier.widthIn(max = 150.dp)
+                        )
+
+                        if (isDirty) {
+                                Box(
+                                        modifier = androidx.compose.ui.Modifier
+                                                .size(16.dp)
+                                                .padding(4.dp)
+                                                .background(
+                                                        Color.White,
+                                                        androidx.compose.foundation.shape.CircleShape
+                                                )
+                                                .clickable(onClick = onClose)
+                                )
+                        } else {
+                                androidx.compose.material3.IconButton(
+                                        onClick = onClose,
+                                        modifier = androidx.compose.ui.Modifier.size(16.dp)
+                                ) {
+                                        androidx.compose.material3.Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = "Close",
+                                                tint = if (isSelected) Color(0xFFB0B0B0)
+                                                else Color(0xFF6A6A6A),
+                                                modifier = androidx.compose.ui.Modifier.size(10.dp)
+                                        )
+                                }
+                        }
+                }
+
+                if (isSelected) {
+                        androidx.compose.material3.HorizontalDivider(
+                                modifier = androidx.compose.ui.Modifier
+                                        .widthIn(min = 20.dp)
+                                        .height(1.dp),
+                                color = Color(0xFF4379FF)
+                        )
+                }
+        }
 }

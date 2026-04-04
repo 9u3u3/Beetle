@@ -3,6 +3,7 @@ package com.bsbeetle.bananaspaghetti.ui.components
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import com.bsbeetle.bananaspaghetti.data.sidebar.FilesTab
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -116,7 +117,8 @@ fun TopRightBox(
         onCommitClick: (selectedFiles: List<String>) -> Unit = {},
         onPushClick: () -> Unit = {},
         onFileOpened: (DocumentFile) -> Unit = {},
-        onFolderOpened: (DocumentFile) -> Unit = {}
+        onFolderOpened: (DocumentFile) -> Unit = {},
+        onSshRemote: (() -> Unit)? = null
 ) {
     // Use LocalFileViewModel directly (same as GitTab) for live updates
     val localFileViewModel: FileViewModel = LocalFileViewModel.current
@@ -552,12 +554,21 @@ fun TopRightBox(
                     }
                     } // end else isGitConfigured
                 } else if (mode == TopRightMode.FILE) {
-                    FileOptionsPanel(
-                            fileViewModel = fileViewModel,
-                            bufferViewModel = bufferViewModel,
-                            onFileOpened = onFileOpened,
-                            onFolderOpened = onFolderOpened
-                    )
+                    if (localFileViewModel.isRemoteMode) {
+                        // In SSH remote mode: show the file tree instead of file options
+                        FilesTab(
+                            currentPath = localFileViewModel.currentFilePath,
+                            onFileSelected = {} // remote mode handles click internally
+                        )
+                    } else {
+                        FileOptionsPanel(
+                                fileViewModel = fileViewModel,
+                                bufferViewModel = bufferViewModel,
+                                onFileOpened = onFileOpened,
+                                onFolderOpened = onFolderOpened,
+                                onSshRemote = onSshRemote
+                        )
+                    }
                 }
             }
         }

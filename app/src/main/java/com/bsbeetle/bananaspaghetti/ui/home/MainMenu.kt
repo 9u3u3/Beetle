@@ -41,7 +41,10 @@ import com.bsbeetle.bananaspaghetti.LocalAuthViewModel
 import com.bsbeetle.bananaspaghetti.LocalBufferViewModel
 import com.bsbeetle.bananaspaghetti.LocalEditorViewModel
 import com.bsbeetle.bananaspaghetti.LocalFileViewModel
+import com.bsbeetle.bananaspaghetti.LocalSshViewModel
 import com.bsbeetle.bananaspaghetti.LocalTerminalViewModel
+import com.bsbeetle.bananaspaghetti.ui.components.RemoteFileBrowserDialog
+import com.bsbeetle.bananaspaghetti.ui.components.SshConnectDialog
 import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.ui.components.SessionTypeSelectionDialog
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
@@ -96,6 +99,12 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
     val authViewModel = LocalAuthViewModel.current
     val userEmail by authViewModel.userEmail.collectAsState()
     
+    val sshViewModel = LocalSshViewModel.current
+
+    // State for SSH Remote flow
+    var showSshConnectDialog by remember { mutableStateOf(false) }
+    var showRemoteFileBrowserDialog by remember { mutableStateOf(false) }
+
     // State for session type selection
     var showSessionTypeDialog by remember { mutableStateOf(false) }
     var currentFileAction by remember { mutableStateOf<FileAction?>(null) }
@@ -111,15 +120,22 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
                 val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 context.contentResolver.takePersistableUriPermission(uri, flags)
                 
+                // Always clear SSH remote state when opening a local file/folder
+                fileViewModel.isRemoteMode = false
+                fileViewModel.remoteBasePath = null
+                fileViewModel.currentRemotePath = null
+                editorViewModel.stopAllRemoteLsp()
+                bufferViewModel.remoteFilesOpenedList.clear()
+
                 if (DocumentsContract.isDocumentUri(context, uri)) {
                     // File selected - create Editor session
                     fileViewModel.selectedUri = uri
                     fileViewModel.selectedFolderUri = null
-                    
+
                     val fileName = getFileName(context, uri)
                     val session = SessionFactory.createSession(context.applicationContext, fileName, uri.toString())
                     session.id?.let { id -> bufferViewModel.setSessionId(id) }
-                    
+
                     val view = session.getOrInitView()
                     editorViewModel.setEditorWebView(view)
                     navController.navigate(Screen.OpenFile.route)
@@ -293,6 +309,17 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
 
             Spacer(modifier = Modifier.height(10.dp))
 
+            // SSH Remote button
+            GlassButton(
+                text = "SSH Remote",
+                backdrop = backdrop,
+                fontSize = buttonFontSize,
+                modifier = Modifier.width(400.dp).height(50.dp),
+                onClick = { showSshConnectDialog = true }
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
             // Terminal button
             GlassButton(
                 text = "Terminal",
@@ -300,11 +327,24 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
                 fontSize = buttonFontSize,
                 modifier = Modifier.width(400.dp).height(50.dp),
                 onClick = {
-                    val currentPath = fileViewModel.currentFilePath ?:
-                        (SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? EditorSession)?.projectRoot?.uri?.toString()
-
-                    TerminalSession(context.applicationContext, initialDir = currentPath)
-                    terminalViewModel.setTerminalWebView(SessionList.sessions[SessionList.activeSessionIndex!!].getOrInitView())
+                    val sshConn = sshViewModel.connection
+                    if (fileViewModel.isRemoteMode && sshConn != null) {
+                        // Open an SSH terminal connected to the remote machine
+                        com.bsbeetle.bananaspaghetti.utils.sessionHandling.SshTerminalSession(
+                            context.applicationContext,
+                            "SSH Terminal",
+                            sshConn
+                        )
+                    } else {
+                        // Open a local Ubuntu (proot) terminal
+                        val currentPath = fileViewModel.currentFilePath
+                            ?: (SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? EditorSession)
+                                ?.projectRoot?.uri?.toString()
+                        TerminalSession(context.applicationContext, initialDir = currentPath)
+                    }
+                    terminalViewModel.setTerminalWebView(
+                        SessionList.sessions[SessionList.activeSessionIndex!!].getOrInitView()
+                    )
                     navController.navigate(Screen.Terminal.route)
                 }
             )
@@ -481,6 +521,49 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
         ReportIssueDialog(
             userEmail = userEmail,
             onDismiss = { showReportIssueDialog = false }
+        )
+    }
+
+    // SSH Connect Dialog (from home screen)
+    if (showSshConnectDialog) {
+        SshConnectDialog(
+            onDismiss = { showSshConnectDialog = false },
+            onConnected = {
+                showSshConnectDialog = false
+                showRemoteFileBrowserDialog = true
+            },
+            sshViewModel = sshViewModel
+        )
+    }
+
+    // Remote File Browser Dialog (from home screen)
+    if (showRemoteFileBrowserDialog) {
+        RemoteFileBrowserDialog(
+            onDismiss = { showRemoteFileBrowserDialog = false },
+            onFolderSelected = { selectedPath ->
+                showRemoteFileBrowserDialog = false
+                // Clear any previous remote state (stale buffers / LSP from prior SSH session)
+                editorViewModel.stopAllRemoteLsp()
+                bufferViewModel.remoteFilesOpenedList.clear()
+                val params = sshViewModel.connectionParams
+                val sessionName = if (params != null)
+                    "${params.username}@${params.host}:${selectedPath.substringAfterLast("/")}"
+                else "Remote"
+                val newSession = EditorSession(context.applicationContext, sessionName)
+                // Persist remote state ON the session so it survives session switches
+                newSession.isRemoteMode = true
+                newSession.remoteBasePath = selectedPath
+                editorViewModel.setEditorWebView(newSession.getOrInitView())
+                fileViewModel.isRemoteMode = true
+                fileViewModel.remoteBasePath = selectedPath
+                fileViewModel.selectedFolderUri = null
+                fileViewModel.currentRemotePath = null
+                navController.navigate(Screen.OpenFolder.route) {
+                    popUpTo(Screen.Home.route) { inclusive = false }
+                }
+            },
+            sshViewModel = sshViewModel,
+            initialPath = "/"
         )
     }
 }
