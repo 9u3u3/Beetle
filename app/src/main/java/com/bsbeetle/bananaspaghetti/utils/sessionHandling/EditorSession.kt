@@ -21,6 +21,11 @@ class EditorSession(context: Context, name: String = "Editor") :
 
     private var currentFilePath: String? = null
 
+    // Per-session remote state — survives session switches
+    var isRemoteMode: Boolean = false
+    var remoteBasePath: String? = null
+    var currentRemotePath: String? = null
+
     // Observable state for UI to show loading until editor is ready
     private val _isReady = MutableStateFlow(false)
     override val isReady: StateFlow<Boolean> = _isReady.asStateFlow()

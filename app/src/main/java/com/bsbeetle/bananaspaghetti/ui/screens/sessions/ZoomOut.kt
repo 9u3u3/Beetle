@@ -235,16 +235,32 @@ fun ZoomOut(navController: NavController, viewModel: SessionViewModel = viewMode
                                                                 SessionList.sessions.indexOf(
                                                                         session
                                                                 )
-                                                        // Sync file tree with session's folder when
-                                                        // switching to
-                                                        // EditorSession
+                                                        // Restore per-session file-tree state so
+                                                        // SSH and local sessions don't bleed into
+                                                        // each other
                                                         if (session is EditorSession) {
-                                                                session.projectRoot?.let {
-                                                                        projectRoot ->
+                                                                fileViewModel.isRemoteMode =
+                                                                        session.isRemoteMode
+                                                                fileViewModel.remoteBasePath =
+                                                                        session.remoteBasePath
+                                                                fileViewModel.currentRemotePath =
+                                                                        session.currentRemotePath
+                                                                if (session.isRemoteMode) {
                                                                         fileViewModel
                                                                                 .selectedFolderUri =
-                                                                                projectRoot.uri
+                                                                                null
+                                                                } else {
+                                                                        session.projectRoot?.let {
+                                                                                projectRoot ->
+                                                                                fileViewModel
+                                                                                        .selectedFolderUri =
+                                                                                        projectRoot
+                                                                                                .uri
+                                                                        }
                                                                 }
+                                                                // Force the file tree to reload
+                                                                // after the session context changes
+                                                                fileViewModel.refreshFileTree()
                                                         }
                                                         navigateToSession(navController, session)
                                                 },

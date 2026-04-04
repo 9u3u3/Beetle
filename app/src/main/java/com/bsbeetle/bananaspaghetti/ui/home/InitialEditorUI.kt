@@ -76,15 +76,23 @@ fun InitialEditorUI(navController: NavController) {
             androidx.lifecycle.viewmodel.compose.viewModel()
     val scope = rememberCoroutineScope()
 
-    // Sync fileViewModel with current session's projectRoot
-    // This ensures each session shows its own folder in the file tree
+    // Restore per-session state into FileViewModel whenever the active session changes.
+    // Each EditorSession owns its own isRemoteMode/remoteBasePath/currentRemotePath so that
+    // switching between an SSH session and a local session never clobbers the other's context.
     LaunchedEffect(SessionList.activeSessionIndex) {
         val activeSession =
                 SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as?
-                        EditorSession
-        activeSession?.projectRoot?.let { projectRoot ->
-            fileViewModel.selectedFolderUri = projectRoot.uri
+                        EditorSession ?: return@LaunchedEffect
+        fileViewModel.isRemoteMode = activeSession.isRemoteMode
+        fileViewModel.remoteBasePath = activeSession.remoteBasePath
+        fileViewModel.currentRemotePath = activeSession.currentRemotePath
+        if (activeSession.isRemoteMode) {
+            fileViewModel.selectedFolderUri = null
+        } else {
+            activeSession.projectRoot?.let { fileViewModel.selectedFolderUri = it.uri }
         }
+        // Bump the counter so FilTree's LaunchedEffect always reloads for this session
+        fileViewModel.refreshFileTree()
     }
 
     // Restore content when screen appears (after navigation back)
@@ -345,6 +353,12 @@ fun InitialEditorUI(navController: NavController) {
         val remotePath = fileViewModel.currentRemotePath ?: return@LaunchedEffect
         if (!fileViewModel.isRemoteMode) return@LaunchedEffect
 
+        // Persist the current remote path back into the session so it survives session switches
+        val sessionForPath =
+                SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as?
+                        EditorSession
+        sessionForPath?.currentRemotePath = remotePath
+
         val sshFs = sshViewModel.fileSystem ?: return@LaunchedEffect
 
         try {
@@ -353,11 +367,18 @@ fun InitialEditorUI(navController: NavController) {
             loadContentWhenReady(editorViewModel.webView, content)
             bufferViewModel.bufferLine[remotePath] = content
 
+            // Register in remote tab bar (deduped)
+            if (!bufferViewModel.remoteFilesOpenedList.contains(remotePath)) {
+                bufferViewModel.remoteFilesOpenedList.add(remotePath)
+            }
+
             // Set up LSP for the remote file
             val ext = remotePath.substringAfterLast(".", "")
             val slug = LanguageRegistry.getSlugForExtension(ext)
             val session = SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1)
-            if (slug != "plaintext" && session is EditorSession) {
+            val hasRemoteLsp = slug != "plaintext" &&
+                com.bsbeetle.bananaspaghetti.utils.ssh.RemoteLspBridge.getLspCommand(slug) != null
+            if (hasRemoteLsp && session is EditorSession) {
                 val sshConn = sshViewModel.connection
                 if (sshConn != null) {
                     lspViewModel.setLspStarting(true)
@@ -368,6 +389,8 @@ fun InitialEditorUI(navController: NavController) {
                     session.setFilePath(remotePath)
                     session.setLanguage(slug, lspPort)
                 }
+            } else if (session is EditorSession) {
+                session.clearLanguage()
             }
         } catch (e: Exception) {
             Log.e("RemoteLoad", "Failed to load remote file: $remotePath", e)
@@ -394,6 +417,13 @@ fun InitialEditorUI(navController: NavController) {
         // Session auto-registers and sets activeSessionIndex in its init{}
         val newSession = EditorSession(context.applicationContext, folder.name ?: "Project")
         newSession.projectRoot = folder
+
+        // Reset remote mode — switching to local folder clears all SSH state
+        fileViewModel.isRemoteMode = false
+        fileViewModel.remoteBasePath = null
+        fileViewModel.currentRemotePath = null
+        editorViewModel.stopAllRemoteLsp()
+        bufferViewModel.remoteFilesOpenedList.clear()
 
         // Update FileViewModel to show new folder in file tree
         fileViewModel.selectedFolderUri = folder.uri
@@ -938,8 +968,11 @@ fun InitialEditorUI(navController: NavController) {
                     else "Remote"
                     // Create new editor session for the remote folder
                     val newSession = EditorSession(context.applicationContext, sessionName)
+                    // Persist remote state ON the session so it survives session switches
+                    newSession.isRemoteMode = true
+                    newSession.remoteBasePath = selectedPath
                     editorViewModel.setEditorWebView(newSession.getOrInitView())
-                    // Set remote mode in FileViewModel
+                    // Reflect into FileViewModel for the current navigation
                     fileViewModel.isRemoteMode = true
                     fileViewModel.remoteBasePath = selectedPath
                     fileViewModel.selectedFolderUri = null

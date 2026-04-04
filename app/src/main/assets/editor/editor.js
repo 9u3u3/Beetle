@@ -324,7 +324,7 @@ window.completionItems = [];
 const style = document.createElement('style');
 style.textContent = `
   .lsp-completion-list {
-  position: absolute;
+  position: fixed;
   background: #1e1e1e;
   border: 1px solid #333;
   border-radius: 4px;

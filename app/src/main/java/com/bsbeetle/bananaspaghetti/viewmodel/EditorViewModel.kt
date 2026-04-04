@@ -100,19 +100,25 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * Starts a remote LSP bridge for the given slug using an SSH session.
      * The bridge proxies the remote LSP process's stdin/stdout over a local WebSocket on port 8083.
+     * All bridges share port 8083, so all existing ones are stopped on the IO thread before the
+     * new one binds the port.
      * @return The port (8083) the WebSocket server is listening on.
      */
     fun startRemoteLsp(slug: String, sshSession: com.jcraft.jsch.Session): Int {
         val port = 8083
-        // Stop any existing bridge for this slug
-        remoteLspBridges[slug]?.stop()
+        // Collect all existing bridges to stop (they all share port 8083)
+        val oldBridges = remoteLspBridges.values.toList()
+        remoteLspBridges.clear()
 
         val bridge = RemoteLspBridge(port)
+        remoteLspBridges[slug] = bridge
+
         viewModelScope.launch(Dispatchers.IO) {
+            // Stop old bridges first so port 8083 is free before new bridge binds it
+            oldBridges.forEach { it.stop() }
             bridge.start(slug, sshSession)
         }
-        remoteLspBridges[slug] = bridge
-        Log.d("EditorViewModel", "Remote LSP bridge started for $slug on port $port")
+        Log.d("EditorViewModel", "Remote LSP bridge starting for $slug on port $port")
         return port
     }
 

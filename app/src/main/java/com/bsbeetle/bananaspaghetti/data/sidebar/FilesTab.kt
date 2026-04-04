@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.sp
 import androidx.documentfile.provider.DocumentFile
 import com.bsbeetle.bananaspaghetti.LocalFileViewModel
 import com.bsbeetle.bananaspaghetti.LocalSshViewModel
+import androidx.compose.ui.Alignment
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsbeetle.bananaspaghetti.utils.ssh.SshFileSystem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -41,6 +43,29 @@ fun FilesTab(
     var expandedFolders by remember { mutableStateOf(setOf<String>()) }
     var searchQuery by remember { mutableStateOf("") }
 
+    // Auto-expand the SSH root folder whenever remote mode is active or the base path changes.
+    // Without this, switching back to a remote session would show the root folder collapsed
+    // and the user would have to tap it before any files appear.
+    LaunchedEffect(fileViewModel.isRemoteMode, fileViewModel.remoteBasePath) {
+        val base = fileViewModel.remoteBasePath
+        if (fileViewModel.isRemoteMode && base != null) {
+            expandedFolders = expandedFolders + base
+        }
+    }
+
+    // Observe SSH session liveness — when the session drops we show a reconnect banner and
+    // stop attempting SFTP calls (which would otherwise spam onSessionDown callbacks).
+    val sessionDown by sshViewModel.sessionDown.collectAsStateWithLifecycle()
+    val sshConnecting by sshViewModel.connecting.collectAsStateWithLifecycle()
+
+    // Auto-reconnect as soon as the session drops (uses stored credentials).
+    LaunchedEffect(sessionDown) {
+        if (sessionDown) {
+            val params = sshViewModel.connectionParams
+            if (params != null) sshViewModel.connect(params, context)
+        }
+    }
+
     // Remote files loaded asynchronously (SFTP must not run on main thread)
     var remoteFiles by remember { mutableStateOf<List<FileItem>>(emptyList()) }
 
@@ -48,17 +73,18 @@ fun FilesTab(
         fileViewModel.isRemoteMode,
         fileViewModel.remoteBasePath,
         expandedFolders,
-        fileViewModel.fileTreeRefreshCounter
+        fileViewModel.fileTreeRefreshCounter,
+        sessionDown  // re-run when reconnect clears the flag so the tree reloads
     ) {
-        if (fileViewModel.isRemoteMode) {
-            val sshFs = sshViewModel.fileSystem
-            val basePath = fileViewModel.remoteBasePath
-            if (sshFs != null && basePath != null) {
-                remoteFiles = withContext(Dispatchers.IO) {
-                    buildRemoteFileTree(sshFs, basePath, 0, expandedFolders)
-                }
-            } else {
-                remoteFiles = emptyList()
+        if (!fileViewModel.isRemoteMode || sessionDown) {
+            remoteFiles = emptyList()
+            return@LaunchedEffect
+        }
+        val sshFs = sshViewModel.fileSystem
+        val basePath = fileViewModel.remoteBasePath
+        if (sshFs != null && basePath != null) {
+            remoteFiles = withContext(Dispatchers.IO) {
+                buildRemoteFileTree(sshFs, basePath, 0, expandedFolders)
             }
         } else {
             remoteFiles = emptyList()
@@ -143,8 +169,44 @@ fun FilesTab(
                 searchQuery.isEmpty() || it.name.contains(searchQuery, ignoreCase = true)
             }
 
-//            if (filteredFiles.isEmpty() && fileViewModel.selectedUri == null) {
-            if (filteredFiles.isEmpty() && fileViewModel.selectedFolderUri == null && !fileViewModel.isRemoteMode) {
+            if (sessionDown && fileViewModel.isRemoteMode) {
+                // SSH session dropped — auto-reconnect is in progress; show status
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        if (sshConnecting) {
+                            Text(
+                                text = "Reconnecting…",
+                                color = Color(0xFFFFAA44),
+                                fontSize = 13.sp
+                            )
+                        } else {
+                            // Auto-reconnect failed — let the user retry manually
+                            Text(
+                                text = "SSH session disconnected",
+                                color = Color(0xFFFF6B6B),
+                                fontSize = 13.sp
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Button(
+                                onClick = {
+                                    val params = sshViewModel.connectionParams
+                                    if (params != null) sshViewModel.connect(params, context)
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF3A3A3A)
+                                )
+                            ) {
+                                Text("Reconnect", color = Color.White, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+            } else if (filteredFiles.isEmpty() && fileViewModel.selectedFolderUri == null && !fileViewModel.isRemoteMode) {
                 item {
                     Text(
                         text = "No folder selected. Open a folder to see files.",

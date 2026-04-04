@@ -36,25 +36,29 @@ class RemoteLspBridge(val port: Int = 8083) {
         private const val INITIAL_BUFFER_SIZE = 4 * 1024 * 1024  // 4MB
         private const val MAX_BUFFER_SIZE = 16 * 1024 * 1024     // 16MB
 
-        fun getLspCommand(slug: String): String = when (slug) {
-            "python"     -> "pylsp"
-            "typescript" -> "typescript-language-server --stdio"
-            "javascript" -> "typescript-language-server --stdio"
-            "rust"       -> "rust-analyzer"
-            "go"         -> "gopls"
-            "c"          -> "clangd"
-            "cpp"        -> "clangd"
-            "java"       -> "jdtls"
-            "kotlin"     -> "kotlin-language-server"
-            "ruby"       -> "solargraph stdio"
-            "php"        -> "intelephense --stdio"
-            "html"       -> "vscode-html-language-server --stdio"
-            "css"        -> "vscode-css-language-server --stdio"
-            "json"       -> "vscode-json-language-server --stdio"
-            "yaml"       -> "yaml-language-server --stdio"
-            "lua"        -> "lua-language-server"
-            "bash"       -> "bash-language-server start"
-            else         -> slug
+        /**
+         * Returns the stdio LSP command for a given slug, or null if no LSP is known for it.
+         * Slugs come from LanguageRegistry.getSlugForExtension().
+         */
+        fun getLspCommand(slug: String): String? = when (slug) {
+            "python"                    -> "pylsp"
+            "typescript", "javascript" -> "typescript-language-server --stdio"
+            // LanguageRegistry returns "js" for .js/.ts and "react" for .tsx/.jsx
+            "js", "react"              -> "typescript-language-server --stdio"
+            "rust"                     -> "rust-analyzer"
+            "go"                       -> "gopls"
+            "c", "cpp"                 -> "clangd"
+            "java"                     -> "jdtls"
+            "kotlin"                   -> "kotlin-language-server"
+            "ruby"                     -> "solargraph stdio"
+            "php"                      -> "intelephense --stdio"
+            "html"                     -> "vscode-html-language-server --stdio"
+            "css"                      -> "vscode-css-language-server --stdio"
+            "json"                     -> "vscode-json-language-server --stdio"
+            "yaml"                     -> "yaml-language-server --stdio"
+            "lua"                      -> "lua-language-server"
+            "bash"                     -> "bash-language-server start"
+            else                       -> null  // No known LSP for this language
         }
     }
 
@@ -71,6 +75,11 @@ class RemoteLspBridge(val port: Int = 8083) {
         Log.d(TAG, "Starting remote LSP for $slug on port $port")
 
         val command = getLspCommand(slug)
+        if (command == null) {
+            Log.w(TAG, "No known LSP command for slug '$slug', skipping remote LSP")
+            serverReady.complete(Unit)
+            return
+        }
         Log.d(TAG, "Remote LSP command: $command")
 
         val channel = sshSession.openChannel("exec") as ChannelExec

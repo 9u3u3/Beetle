@@ -2,11 +2,17 @@ package com.bsbeetle.bananaspaghetti.utils.fileHandling
 
 import android.net.Uri
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -14,12 +20,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.documentfile.provider.DocumentFile
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsbeetle.bananaspaghetti.LocalFileViewModel
 import com.bsbeetle.bananaspaghetti.LocalSshViewModel
 import com.bsbeetle.bananaspaghetti.data.sidebar.FileItem
@@ -38,6 +46,26 @@ fun Tree(modifier: Modifier = Modifier) {
     var expandedFolders by remember { mutableStateOf(setOf<String>()) }
     val scrollState = rememberScrollState()
 
+    // Auto-expand the SSH root folder whenever remote mode is active or the base path changes.
+    LaunchedEffect(fileViewModel.isRemoteMode, fileViewModel.remoteBasePath) {
+        val base = fileViewModel.remoteBasePath
+        if (fileViewModel.isRemoteMode && base != null) {
+            expandedFolders = expandedFolders + base
+        }
+    }
+
+    // Observe SSH session liveness.
+    val sessionDown by sshViewModel.sessionDown.collectAsStateWithLifecycle()
+    val sshConnecting by sshViewModel.connecting.collectAsStateWithLifecycle()
+
+    // Auto-reconnect as soon as the session drops.
+    LaunchedEffect(sessionDown) {
+        if (sessionDown) {
+            val params = sshViewModel.connectionParams
+            if (params != null) sshViewModel.connect(params, context)
+        }
+    }
+
     // Multi-select state from FileViewModel
     val isMultiSelectMode = fileViewModel.isMultiSelectMode
     val selectedFilePaths = fileViewModel.selectedFilePaths
@@ -49,17 +77,18 @@ fun Tree(modifier: Modifier = Modifier) {
         fileViewModel.isRemoteMode,
         fileViewModel.remoteBasePath,
         expandedFolders,
-        fileViewModel.fileTreeRefreshCounter
+        fileViewModel.fileTreeRefreshCounter,
+        sessionDown
     ) {
-        if (fileViewModel.isRemoteMode) {
-            val sshFs = sshViewModel.fileSystem
-            val basePath = fileViewModel.remoteBasePath
-            if (sshFs != null && basePath != null) {
-                remoteFiles = withContext(Dispatchers.IO) {
-                    buildRemoteFileTree(sshFs, basePath, 0, expandedFolders)
-                }
-            } else {
-                remoteFiles = emptyList()
+        if (!fileViewModel.isRemoteMode || sessionDown) {
+            remoteFiles = emptyList()
+            return@LaunchedEffect
+        }
+        val sshFs = sshViewModel.fileSystem
+        val basePath = fileViewModel.remoteBasePath
+        if (sshFs != null && basePath != null) {
+            remoteFiles = withContext(Dispatchers.IO) {
+                buildRemoteFileTree(sshFs, basePath, 0, expandedFolders)
             }
         } else {
             remoteFiles = emptyList()
@@ -83,7 +112,43 @@ fun Tree(modifier: Modifier = Modifier) {
             .fillMaxHeight()
             .horizontalScroll(scrollState)
     ) {
-        if (files.isEmpty() && fileViewModel.selectedFolderUri == null && !fileViewModel.isRemoteMode) {
+        if (sessionDown && fileViewModel.isRemoteMode) {
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (sshConnecting) {
+                        Text(
+                            text = "Reconnecting…",
+                            color = Color(0xFFFFAA44),
+                            fontSize = 12.sp
+                        )
+                    } else {
+                        Text(
+                            text = "SSH session disconnected",
+                            color = Color(0xFFFF6B6B),
+                            fontSize = 12.sp
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Button(
+                            onClick = {
+                                val params = sshViewModel.connectionParams
+                                if (params != null) sshViewModel.connect(params, context)
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF3A3A3A)
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Reconnect", color = Color.White, fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+        } else if (files.isEmpty() && fileViewModel.selectedFolderUri == null && !fileViewModel.isRemoteMode) {
             item {
                 Text(
                     text = "No folder selected. Open a folder to see files.",

@@ -120,15 +120,22 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
                 val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 context.contentResolver.takePersistableUriPermission(uri, flags)
                 
+                // Always clear SSH remote state when opening a local file/folder
+                fileViewModel.isRemoteMode = false
+                fileViewModel.remoteBasePath = null
+                fileViewModel.currentRemotePath = null
+                editorViewModel.stopAllRemoteLsp()
+                bufferViewModel.remoteFilesOpenedList.clear()
+
                 if (DocumentsContract.isDocumentUri(context, uri)) {
                     // File selected - create Editor session
                     fileViewModel.selectedUri = uri
                     fileViewModel.selectedFolderUri = null
-                    
+
                     val fileName = getFileName(context, uri)
                     val session = SessionFactory.createSession(context.applicationContext, fileName, uri.toString())
                     session.id?.let { id -> bufferViewModel.setSessionId(id) }
-                    
+
                     val view = session.getOrInitView()
                     editorViewModel.setEditorWebView(view)
                     navController.navigate(Screen.OpenFile.route)
@@ -320,11 +327,24 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
                 fontSize = buttonFontSize,
                 modifier = Modifier.width(400.dp).height(50.dp),
                 onClick = {
-                    val currentPath = fileViewModel.currentFilePath ?:
-                        (SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? EditorSession)?.projectRoot?.uri?.toString()
-
-                    TerminalSession(context.applicationContext, initialDir = currentPath)
-                    terminalViewModel.setTerminalWebView(SessionList.sessions[SessionList.activeSessionIndex!!].getOrInitView())
+                    val sshConn = sshViewModel.connection
+                    if (fileViewModel.isRemoteMode && sshConn != null) {
+                        // Open an SSH terminal connected to the remote machine
+                        com.bsbeetle.bananaspaghetti.utils.sessionHandling.SshTerminalSession(
+                            context.applicationContext,
+                            "SSH Terminal",
+                            sshConn
+                        )
+                    } else {
+                        // Open a local Ubuntu (proot) terminal
+                        val currentPath = fileViewModel.currentFilePath
+                            ?: (SessionList.sessions.getOrNull(SessionList.activeSessionIndex ?: -1) as? EditorSession)
+                                ?.projectRoot?.uri?.toString()
+                        TerminalSession(context.applicationContext, initialDir = currentPath)
+                    }
+                    terminalViewModel.setTerminalWebView(
+                        SessionList.sessions[SessionList.activeSessionIndex!!].getOrInitView()
+                    )
                     navController.navigate(Screen.Terminal.route)
                 }
             )
@@ -522,11 +542,17 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
             onDismiss = { showRemoteFileBrowserDialog = false },
             onFolderSelected = { selectedPath ->
                 showRemoteFileBrowserDialog = false
+                // Clear any previous remote state (stale buffers / LSP from prior SSH session)
+                editorViewModel.stopAllRemoteLsp()
+                bufferViewModel.remoteFilesOpenedList.clear()
                 val params = sshViewModel.connectionParams
                 val sessionName = if (params != null)
                     "${params.username}@${params.host}:${selectedPath.substringAfterLast("/")}"
                 else "Remote"
                 val newSession = EditorSession(context.applicationContext, sessionName)
+                // Persist remote state ON the session so it survives session switches
+                newSession.isRemoteMode = true
+                newSession.remoteBasePath = selectedPath
                 editorViewModel.setEditorWebView(newSession.getOrInitView())
                 fileViewModel.isRemoteMode = true
                 fileViewModel.remoteBasePath = selectedPath

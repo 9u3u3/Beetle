@@ -35,15 +35,30 @@ class SshViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    /** True when the SSH session dropped mid-use (e.g. server timeout, network loss). */
+    private val _sessionDown = MutableStateFlow(false)
+    val sessionDown: StateFlow<Boolean> = _sessionDown.asStateFlow()
+
+    /** Called by SshFileSystem when it detects the session is no longer alive. */
+    fun markSessionDown() {
+        if (!_sessionDown.value) {
+            _sessionDown.value = true
+            _connected.value = false
+            Log.w(TAG, "SSH session detected as down — reconnect required")
+        }
+    }
+
     fun connect(params: SshConnectionParams, context: Context) {
+        if (_connecting.value) return  // already in-flight, skip duplicate call
         viewModelScope.launch(Dispatchers.IO) {
             _connecting.value = true
             _error.value = null
+            _sessionDown.value = false   // clear disconnected banner on fresh attempt
             try {
                 val manager = SshConnectionManager(context)
                 val session = manager.connect(params)
                 connection = session
-                fileSystem = SshFileSystem(session)
+                fileSystem = SshFileSystem(session) { markSessionDown() }
                 connectionParams = params
                 _connected.value = true
                 Log.d(TAG, "Connected to ${params.host}")
@@ -63,6 +78,7 @@ class SshViewModel : ViewModel() {
         fileSystem = null
         connectionParams = null
         _connected.value = false
+        _sessionDown.value = false
         Log.d(TAG, "Disconnected")
     }
 
