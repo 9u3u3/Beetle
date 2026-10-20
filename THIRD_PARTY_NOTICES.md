@@ -21,12 +21,16 @@ Beetle is licensed under the [GNU Affero General Public License v3.0 or later](L
 
 ## Fonts (`app/src/main/res/font/`)
 
-| Font | License |
-|---|---|
-| Iosevka | SIL Open Font License 1.1 |
-| Coda | SIL Open Font License 1.1 |
-| Born2bSporty FS | See the font author's terms |
-| Karmatic Arcade | See the font author's terms |
+| Font | Author | License |
+|---|---|---|
+| Iosevka | Renzhi Li (Belleve Invis) | SIL Open Font License 1.1 |
+| Coda | Vernon Adams | SIL Open Font License 1.1 |
+| Jersey 10 | The Soft Type Project Authors | SIL Open Font License 1.1 |
+| Karmatic Arcade | Vic Fieger, 2004 | Freeware from the author. See the author's terms. |
+
+The SIL Open Font License 1.1 text is at <https://openfontlicense.org/open-font-license-official-text/>.
+
+The fonts keep their own licenses. The AGPL-3.0-or-later license of Beetle does not apply to them.
 
 ## Downloaded at run time
 

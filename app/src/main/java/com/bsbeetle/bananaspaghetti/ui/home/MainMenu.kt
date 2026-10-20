@@ -51,7 +51,7 @@ import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.ui.components.SessionTypeSelectionDialog
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.ui.theme.KarmaticFont
-import com.bsbeetle.bananaspaghetti.ui.theme.born2bsporty
+import com.bsbeetle.bananaspaghetti.ui.theme.jersey10
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.getFileName
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.EditorSession
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.NotebookSession
@@ -252,7 +252,7 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
                         text = "v${versionName ?: "?"}",
                         color = Color(0xFF666666),
                         fontSize = 14.sp,
-                        fontFamily = born2bsporty
+                        fontFamily = jersey10
                     )
                 }
             }
@@ -609,7 +609,7 @@ private fun GlassButton(
             Text(
                 text = text,
                 fontSize = fontSize,
-                fontFamily = born2bsporty,
+                fontFamily = jersey10,
                 color = Color(0xFF989898),
                 style = TextStyle(shadow = Shadow(color = Color(0xFF989898), offset = Offset(0f, 0f), blurRadius = 15f)),
                 modifier = Modifier.padding(3.dp)

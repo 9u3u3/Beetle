@@ -65,7 +65,7 @@ import com.bsbeetle.bananaspaghetti.ui.components.beetleAscii
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
 import com.bsbeetle.bananaspaghetti.ui.theme.Black
 import com.bsbeetle.bananaspaghetti.ui.theme.KarmaticFont
-import com.bsbeetle.bananaspaghetti.ui.theme.born2bsporty
+import com.bsbeetle.bananaspaghetti.ui.theme.jersey10
 import com.bsbeetle.bananaspaghetti.ui.theme.codaRegular
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.fileLauncher
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.BrowserSession
@@ -286,7 +286,7 @@ fun HomeScreen(navController: NavController) {
 
                                 Text(
                                     text = "Clear",
-                                    fontFamily = born2bsporty,
+                                    fontFamily = jersey10,
                                     color = Color(0xFFAAAAAA),
                                     fontSize = 16.sp,
                                     modifier = Modifier
@@ -367,7 +367,7 @@ fun HomeScreen(navController: NavController) {
 
                                 Text(
                                     text = "Clear",
-                                    fontFamily = born2bsporty,
+                                    fontFamily = jersey10,
                                     color = Color(0xFFAAAAAA),
                                     fontSize = 14.sp,
                                     modifier = Modifier

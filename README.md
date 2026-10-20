@@ -12,7 +12,7 @@
 
 ---
 
-> **Status: alpha.** Beetle works on the devices we test, but expect bugs. Please
+> **Status: early release.** Beetle works on the devices we test, but expect some bugs. Please
 > [report them](https://github.com/9u3u3/Beetle/issues).
 
 ## Features
