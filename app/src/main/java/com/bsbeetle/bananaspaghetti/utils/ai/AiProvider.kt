@@ -32,8 +32,11 @@ data class AiRequest(
         val maxTokens: Int
 )
 
-/** Raised for failures that already carry a message fit to show the user. */
-class AiStreamException(message: String) : Exception(message)
+/**
+ * Raised for failures that already carry a message fit to show the user. [retryable] is true when
+ * the same request can work a moment later: rate limits and server errors.
+ */
+class AiStreamException(message: String, val retryable: Boolean = false) : Exception(message)
 
 /**
  * A BYOK chat backend.

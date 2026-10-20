@@ -9,6 +9,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -219,7 +221,7 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
     }
 
     Box(modifier = modifier.fillMaxSize().padding(10.dp), contentAlignment = Alignment.Center) {
-        Column {
+        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
             // Header with logo and title
             Row(
                 modifier = Modifier.width(400.dp).height(80.dp),
@@ -232,26 +234,30 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
                     modifier = Modifier.size(65.dp).clip(RoundedCornerShape(12.dp))
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = "Beetle",
-                    fontFamily = KarmaticFont,
-                    color = Color.White,
-                    fontSize = 45.sp,
-                    style = TextStyle(shadow = Shadow(color = Color(0xFFFFFFFF), offset = Offset(0f, 0f), blurRadius = 15f))
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Box(modifier = Modifier.fillMaxSize()) {
+                // The version sits under the title. At the right edge of the row, it went under
+                // the home screen icons on narrow portrait screens.
+                Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "v1.0.0",
+                        text = "Beetle",
+                        fontFamily = KarmaticFont,
+                        color = Color.White,
+                        fontSize = 45.sp,
+                        style = TextStyle(shadow = Shadow(color = Color(0xFFFFFFFF), offset = Offset(0f, 0f), blurRadius = 15f))
+                    )
+                    val versionName = remember {
+                        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
+                                .getOrNull()
+                    }
+                    Text(
+                        text = "v${versionName ?: "?"}",
                         color = Color(0xFF666666),
-                        fontSize = 18.sp,
-                        fontFamily = born2bsporty,
-                        modifier = Modifier.padding(top = 8.dp).align(Alignment.BottomEnd)
+                        fontSize = 14.sp,
+                        fontFamily = born2bsporty
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             val backgroundColor = Color(0xFFFFFFFF)
 
             val backdrop = rememberLayerBackdrop {
@@ -349,7 +355,8 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
                 }
             )
             
-            Spacer(modifier = Modifier.height(20.dp))
+            // The menu box is 390dp high. The content must fit in it, or the box cuts the last button.
+            Spacer(modifier = Modifier.height(8.dp))
             
             // Report Issue button - Red text with transparent background, smaller
             TextButton(

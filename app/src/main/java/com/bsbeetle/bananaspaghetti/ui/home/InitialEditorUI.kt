@@ -233,8 +233,10 @@ fun InitialEditorUI(navController: NavController) {
                         // Use isInstalledForExt to check both the slug and common aliases (e.g.,
                         // js/javascript)
                         if (!LanguageRegistry.isInstalledForExt(extType)) {
-                            missingLanguageExt = extType
-                            showLanguagePopup = true
+                            if (extType !in dismissedLanguageExts) {
+                                missingLanguageExt = extType
+                                showLanguagePopup = true
+                            }
                         } else {
                             // Get the actual installed slug (might be different from
                             // getSlugForExtension)
@@ -882,8 +884,9 @@ fun InitialEditorUI(navController: NavController) {
         }
 
         // Extra Keys Row - Shows in portrait mode OR in landscape mode when useLandscapeIme is
-        // enabled
-        val showExtraKeys = !isLandscape || uiState.useLandscapeIme
+        // enabled. Hidden while the AI panel is open: the keys act on the editor, and the row
+        // covers the bottom of the panel, where its input field is.
+        val showExtraKeys = (!isLandscape || uiState.useLandscapeIme) && !aiPanelOpen
         if (showExtraKeys) {
             val imeInsets = WindowInsets.ime
             val density = androidx.compose.ui.platform.LocalDensity.current
@@ -926,7 +929,10 @@ fun InitialEditorUI(navController: NavController) {
                     showLanguagePopup = false
                     navController.navigate(Screen.Extensions.route)
                 },
-                onDismiss = { showLanguagePopup = false }
+                onDismiss = {
+                    showLanguagePopup = false
+                    dismissedLanguageExts += missingLanguageExt
+                }
         )
 
         // Landscape Commit Dialog
@@ -1004,6 +1010,13 @@ fun InitialEditorUI(navController: NavController) {
 
     }
 }
+
+/**
+ * Extensions for which the user chose "Maybe later". The popup does not show again for them until
+ * the app restarts. The editor screen recomposes from scratch after each navigation, so this state
+ * lives outside it.
+ */
+private val dismissedLanguageExts = mutableSetOf<String>()
 
 @Composable
 fun SlideLanguagePopup(

@@ -72,16 +72,16 @@ private data class StreamDelta(
 object AnthropicProvider : AiProvider {
 
     private const val TAG = "AnthropicProvider"
-    private const val URL = "https://api.anthropic.com/v1/messages"
-    private const val VERSION = "2023-06-01"
+    internal const val URL = "https://api.anthropic.com/v1/messages"
+    internal const val VERSION = "2023-06-01"
     private const val DATA_PREFIX = "data:"
-    private const val FALLBACK_BETA = "server-side-fallback-2026-07-01"
+    internal const val FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
     /**
      * Models that accept `fallbacks: "default"`. Claude Haiku 5.5 has no server-side fallback, so
      * it is left out.
      */
-    private val FALLBACK_MODELS = setOf("claude-opus-5-5", "claude-sonnet-5-5")
+    internal val FALLBACK_MODELS = setOf("claude-opus-5-5", "claude-sonnet-5-5")
 
     private const val STREAM_REQUEST_TIMEOUT_MS = 30 * 60 * 1000L
     private const val STREAM_STALL_TIMEOUT_MS = 90_000L
@@ -266,7 +266,7 @@ object AnthropicProvider : AiProvider {
         )
     }
 
-    private fun describeError(status: Int, raw: String, model: String): String {
+    internal fun describeError(status: Int, raw: String, model: String): String {
         val detail =
                 runCatching { json.decodeFromString<AnthropicError>(raw) }.getOrNull()?.error?.message
 
