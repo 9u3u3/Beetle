@@ -3,16 +3,17 @@
   <h1>Beetle (BITL)</h1>
   <p><i>Bring Ideas To Life</i></p>
   <p>A code editor and Linux terminal for Android phones.</p>
+  <p><a href="https://beetleide.vercel.app">beetleide.vercel.app</a></p>
   <p>
     <a href="LICENSE"><img alt="License: AGPL v3" src="https://img.shields.io/badge/license-AGPLv3-blue.svg"></a>
-    <a href="https://github.com/9u3u3/bananaSpaghetti/actions/workflows/build.yml"><img alt="Build" src="https://github.com/9u3u3/bananaSpaghetti/actions/workflows/build.yml/badge.svg"></a>
+    <a href="https://github.com/9u3u3/Beetle/actions/workflows/build.yml"><img alt="Build" src="https://github.com/9u3u3/Beetle/actions/workflows/build.yml/badge.svg"></a>
   </p>
 </div>
 
 ---
 
 > **Status: alpha.** Beetle works on the devices we test, but expect bugs. Please
-> [report them](https://github.com/9u3u3/bananaSpaghetti/issues).
+> [report them](https://github.com/9u3u3/Beetle/issues).
 
 ## Features
 
@@ -40,8 +41,8 @@ The app has no `x86_64` build, so it does not run on most emulators. Use a real 
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/9u3u3/bananaSpaghetti.git
-   cd bananaSpaghetti
+   git clone https://github.com/9u3u3/Beetle.git
+   cd Beetle
    ```
 2. Build the editor bundles:
    ```bash

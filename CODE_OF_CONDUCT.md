@@ -60,7 +60,7 @@ representative at an online or offline event.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the community leaders responsible for enforcement through a private
-report on the [Security tab](https://github.com/9u3u3/bananaSpaghetti/security)
+report on the [Security tab](https://github.com/9u3u3/Beetle/security)
 of this repository (choose **Report a vulnerability** and start the title with
 "Code of Conduct"). All complaints will be reviewed and investigated promptly
 and fairly.

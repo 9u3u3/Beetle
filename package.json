@@ -10,16 +10,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/9u3u3/bananaSpaghetti.git"
+    "url": "git+https://github.com/9u3u3/Beetle.git"
   },
   "keywords": [],
   "author": "",
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "bugs": {
-    "url": "https://github.com/9u3u3/bananaSpaghetti/issues"
+    "url": "https://github.com/9u3u3/Beetle/issues"
   },
-  "homepage": "https://github.com/9u3u3/bananaSpaghetti#readme",
+  "homepage": "https://github.com/9u3u3/Beetle#readme",
   "dependencies": {
     "@codemirror/autocomplete": "^6.19.1",
     "@codemirror/commands": "^6.10.0",

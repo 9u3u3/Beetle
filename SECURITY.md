@@ -10,7 +10,7 @@ Do not open a public issue for a security problem.
 
 Report it privately through GitHub:
 
-1. Go to the [Security tab](https://github.com/9u3u3/bananaSpaghetti/security) of this repository.
+1. Go to the [Security tab](https://github.com/9u3u3/Beetle/security) of this repository.
 2. Click **Report a vulnerability**.
 3. Describe the problem, the steps that show it, and the effect.
 
