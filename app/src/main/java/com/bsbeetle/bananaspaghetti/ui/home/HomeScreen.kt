@@ -29,7 +29,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -139,6 +141,40 @@ fun HomeScreen(navController: NavController) {
         )
     }
     
+    // Crash reports from an earlier run. The user decides if they go to GitHub.
+    var pendingCrashes by remember {
+        mutableStateOf(com.bsbeetle.bananaspaghetti.utils.diagnostics.CrashReporter.pending(context))
+    }
+    if (pendingCrashes.isNotEmpty()) {
+        val crashReporter = com.bsbeetle.bananaspaghetti.utils.diagnostics.CrashReporter
+        AlertDialog(
+            onDismissRequest = {},
+            containerColor = Color(0xFF1E1E1E),
+            title = { Text("Beetle stopped with an error", color = Color.White) },
+            text = {
+                Text(
+                    "Beetle saved the error details on this phone. Report the error as a GitHub " +
+                        "issue to help us fix it. You see the details before you submit them.",
+                    color = Color(0xFFBBBBBB)
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val url = crashReporter.issueUrl(pendingCrashes.last(), pendingCrashes.size)
+                    com.bsbeetle.bananaspaghetti.utils.diagnostics.GitHubIssues.open(context, url)
+                    crashReporter.clearPending(context)
+                    pendingCrashes = emptyList()
+                }) { Text("Report on GitHub", color = Color(0xFF4EC9B0)) }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    crashReporter.clearPending(context)
+                    pendingCrashes = emptyList()
+                }) { Text("Discard", color = Color(0xFF9E9E9E)) }
+            }
+        )
+    }
+
     // Notification state
     var hasUnreadNotification by rememberSaveable { mutableStateOf(NotificationManager.hasUnread(context)) }
     val scope = rememberCoroutineScope()
@@ -146,9 +182,12 @@ fun HomeScreen(navController: NavController) {
     // Fetch latest update on screen load
     androidx.compose.runtime.LaunchedEffect(Unit) {
         scope.launch {
-            val update = UpdatesService.fetchLatestUpdate()
+            val currentVersion = runCatching {
+                context.packageManager.getPackageInfo(context.packageName, 0).versionName
+            }.getOrNull() ?: return@launch
+            val update = UpdatesService.fetchLatestUpdate(currentVersion)
             if (update != null) {
-                val isNew = NotificationManager.saveUpdate(context, update.id, update.title, update.description)
+                val isNew = NotificationManager.saveUpdate(context, update.id, update.title, update.description, update.url)
                 if (isNew) {
                     hasUnreadNotification = true
                 }

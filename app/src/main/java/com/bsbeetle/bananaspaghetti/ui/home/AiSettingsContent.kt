@@ -283,15 +283,16 @@ fun AiSettingsContent() {
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                            text = "Send crash reports",
+                            text = "Ask to report crashes",
                             color = AppColors.TextPrimary,
                             fontSize = 16.sp
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
                             text =
-                                    "Sends the stack trace, app version and device model when " +
-                                            "Beetle crashes. Never your code, files, or API keys.",
+                                    "After a crash, Beetle asks you to report it as a GitHub issue. " +
+                                            "You see the stack trace, app version and device model " +
+                                            "before you send anything. Never your code, files, or API keys.",
                             color = AppColors.TextSecondary,
                             fontSize = 13.sp
                     )

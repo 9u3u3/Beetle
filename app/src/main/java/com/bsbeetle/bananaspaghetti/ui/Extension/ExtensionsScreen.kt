@@ -511,7 +511,7 @@ fun ExtensionList(
         if (marketplace.isNotEmpty()) {
             item {
                 Text(
-                        "MARKETPLACE",
+                        "AVAILABLE",
                         color = Color(0xFFBBBBBB),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,

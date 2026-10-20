@@ -141,6 +141,25 @@ fun NotificationScreen(navController: NavController) {
                                 fontSize = 15.sp,
                                 lineHeight = 24.sp
                             )
+
+                            update.url?.let { url ->
+                                Spacer(modifier = Modifier.height(20.dp))
+                                Button(
+                                    onClick = {
+                                        runCatching {
+                                            context.startActivity(
+                                                android.content.Intent(
+                                                    android.content.Intent.ACTION_VIEW,
+                                                    android.net.Uri.parse(url)
+                                                )
+                                            )
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
+                                ) {
+                                    Text("Open the release on GitHub", color = TextPrimary)
+                                }
+                            }
                         }
                     }
                     

@@ -92,17 +92,17 @@ The app stores keys with `EncryptedSharedPreferences` (Android Keystore). Androi
 
 ## Privacy and network use
 
-Beetle sends data to these services:
+Beetle has no server of its own. It sends data only to these services:
 
 | Service | When | What it sends |
 |---|---|---|
-| `beetle-backend.vercel.app` | Update check, extension list | The request only |
-| `beetle-backend.vercel.app` | You submit **Report issue** | Your email, your description, and any image you attach |
-| `beetle-backend.vercel.app` | After a crash, on the next launch | Stack trace, exception message, app version, device model, Android version, and the email you entered. It does not send file contents, project source, or API keys. Turn it off in **Settings → AI**. |
+| GitHub API (`api.github.com`) | Home screen opens, to check for a new release | The request only |
+| GitHub (`github.com`), in your browser | You tap **Report issue**, or you agree to report a crash | Beetle fills in the issue form. You read it and submit it yourself. Crash reports hold the stack trace, exception message, app version, device model, and Android version. They never hold file contents, project source, or API keys. |
 | Anthropic or Google | Only when you use the AI assistant | Your messages and the content of the open file |
 | Ubuntu mirrors | First launch, and when you run `apt` | Package downloads |
+| Package mirrors (`apt`, `npm`, `pip`, and others) | You install a language extension | Package downloads for the language server |
 
-If you fork Beetle, change the backend URLs in `utils/UpdatesService.kt`, `utils/diagnostics/CrashReporter.kt`, `ui/Extension/ExtensionsViewModel.kt`, and `ui/home/ReportIssueDialog.kt`.
+The extension list and the extension files ship inside the app, in `app/src/main/assets/plugins`. If you fork Beetle, change the repository name in `utils/UpdatesService.kt` and `utils/diagnostics/GitHubIssues.kt`.
 
 ## Contributing
 

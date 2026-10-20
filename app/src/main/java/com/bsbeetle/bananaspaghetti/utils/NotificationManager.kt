@@ -14,6 +14,7 @@ object NotificationManager {
     private const val KEY_LAST_UPDATE_ID = "last_update_id"
     private const val KEY_LAST_UPDATE_TITLE = "last_update_title"
     private const val KEY_LAST_UPDATE_DESCRIPTION = "last_update_description"
+    private const val KEY_LAST_UPDATE_URL = "last_update_url"
     private const val KEY_HAS_UNREAD = "has_unread_notification"
     
     private fun getPrefs(context: Context): SharedPreferences {
@@ -24,7 +25,7 @@ object NotificationManager {
      * Saves the latest update and determines if it's new (unread)
      * Returns true if this is a new/different update
      */
-    fun saveUpdate(context: Context, id: Int, title: String, description: String): Boolean {
+    fun saveUpdate(context: Context, id: Int, title: String, description: String, url: String? = null): Boolean {
         val prefs = getPrefs(context)
         val lastId = prefs.getInt(KEY_LAST_UPDATE_ID, -1)
         
@@ -34,6 +35,7 @@ object NotificationManager {
             putInt(KEY_LAST_UPDATE_ID, id)
             putString(KEY_LAST_UPDATE_TITLE, title)
             putString(KEY_LAST_UPDATE_DESCRIPTION, description)
+            putString(KEY_LAST_UPDATE_URL, url)
             if (isNew) {
                 putBoolean(KEY_HAS_UNREAD, true)
             }
@@ -54,7 +56,8 @@ object NotificationManager {
         return UpdateData(
             id = id,
             title = prefs.getString(KEY_LAST_UPDATE_TITLE, "") ?: "",
-            description = prefs.getString(KEY_LAST_UPDATE_DESCRIPTION, "") ?: ""
+            description = prefs.getString(KEY_LAST_UPDATE_DESCRIPTION, "") ?: "",
+            url = prefs.getString(KEY_LAST_UPDATE_URL, null)
         )
     }
     
@@ -79,5 +82,6 @@ object NotificationManager {
 data class UpdateData(
     val id: Int,
     val title: String,
-    val description: String
+    val description: String,
+    val url: String? = null
 )

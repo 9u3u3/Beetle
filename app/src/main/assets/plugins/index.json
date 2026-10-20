@@ -1,0 +1,12 @@
+[
+  {"id": 1, "slug": "python", "name": "Python", "icon": "python", "description": "Python syntax highlighting and code help from pylsp (python-lsp-server)."},
+  {"id": 2, "slug": "cpp", "name": "C / C++", "icon": "cpp", "description": "C and C++ syntax highlighting and code help from clangd."},
+  {"id": 3, "slug": "javascript", "name": "JavaScript / TypeScript", "icon": "js", "description": "JavaScript and TypeScript syntax highlighting and code help from typescript-language-server."},
+  {"id": 4, "slug": "react", "name": "React (JSX / TSX)", "icon": "reactjs", "description": "JSX and TSX syntax highlighting and code help from typescript-language-server."},
+  {"id": 5, "slug": "html", "name": "HTML", "icon": "html", "description": "HTML syntax highlighting and code help from vscode-html-language-server."},
+  {"id": 6, "slug": "css", "name": "CSS", "icon": "css", "description": "CSS syntax highlighting and code help from vscode-css-language-server."},
+  {"id": 7, "slug": "java", "name": "Java", "icon": "java", "description": "Java syntax highlighting and code help from the Eclipse JDT language server (jdtls)."},
+  {"id": 8, "slug": "go", "name": "Go", "icon": "go", "description": "Go syntax highlighting and code help from gopls."},
+  {"id": 9, "slug": "rust", "name": "Rust", "icon": "rust", "description": "Rust syntax highlighting and code help from rust-analyzer."},
+  {"id": 10, "slug": "sql", "name": "SQL", "icon": "sql", "description": "SQL syntax highlighting and code help from sql-language-server."}
+]

@@ -4,20 +4,9 @@ import android.content.Context
 import android.os.Build
 import android.util.Log
 import com.bsbeetle.bananaspaghetti.BuildConfig
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
-import io.ktor.http.isSuccess
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -34,28 +23,25 @@ data class CrashReport(
         val threadName: String,
         val exceptionClass: String,
         val exceptionMessage: String?,
-        val stackTrace: String,
-        val email: String? = null
+        val stackTrace: String
 )
 
 /**
- * Captures uncaught exceptions and forwards them to the Beetle backend.
+ * Captures uncaught exceptions and keeps them on the device.
  *
- * Beetle runs a real Linux environment through proot on hardware we don't own and can't predict.
- * Without this, a crash on a user's phone produces a
- * logcat line nobody will ever read. It exists so the first wave of users generates signal instead
- * of silence.
+ * Beetle runs a real Linux environment through proot on phones we cannot test. Without this, a
+ * crash on a user's phone produces only a logcat line.
  *
- * **Why crashes are written to disk before they are sent.** The uncaught-exception handler runs
- * while the process is being torn down: starting a network request there usually loses the race. So
- * the handler does the one thing it can finish synchronously — write a file — and the upload happens
- * on the next launch, when there is a healthy process to do it in.
+ * **Why crashes go to a file.** The uncaught-exception handler runs while the process stops. So the
+ * handler only writes a file. On the next launch, the home screen asks the user to report the crash
+ * as a GitHub issue ([pending], [GitHubIssues]). Beetle sends nothing by itself.
  *
- * The original handler is always invoked afterwards, so the platform still terminates the process
- * and shows its normal crash UI. Swallowing it would leave the app wedged in an unusable state.
+ * The original handler always runs afterwards, so the platform still stops the process and shows
+ * its normal crash UI.
  *
- * Reporting is on by default and can be turned off in Settings ([isEnabled]). Reports carry the
- * stack trace, app version and device model — never file contents, project source, or the API key.
+ * The prompt is on by default and can be turned off in Settings ([isEnabled]). Reports carry the
+ * stack trace, app version and device model. They never carry file contents, project source, or
+ * the API key.
  */
 object CrashReporter {
 
@@ -64,9 +50,7 @@ object CrashReporter {
     private const val KEY_ENABLED = "crash_reporting_enabled"
     private const val CRASH_DIR = "crashes"
 
-    private const val ENDPOINT = "https://beetle-backend.vercel.app/api/reports/crash"
-
-    /** Stop unbounded growth if the device is offline through a crash loop. */
+    /** Stop unbounded growth through a crash loop that nobody reports. */
     private const val MAX_PENDING_REPORTS = 20
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -102,65 +86,41 @@ object CrashReporter {
         }
     }
 
-    /**
-     * Uploads anything captured by a previous run. Call after [install], from a scope tied to the
-     * application rather than a screen — a report is not worth cancelling because the user navigated.
-     */
-    fun uploadPending(context: Context, scope: CoroutineScope, email: String? = null) {
-        val appContext = context.applicationContext
-        if (!isEnabled(appContext)) return
-
-        scope.launch(Dispatchers.IO) {
-            val pending = crashDir(appContext).listFiles()?.sortedBy { it.name } ?: return@launch
-            if (pending.isEmpty()) return@launch
-
-            val client =
-                    HttpClient(OkHttp) {
-                        install(HttpTimeout) {
-                            requestTimeoutMillis = 20_000
-                            connectTimeoutMillis = 10_000
-                        }
-                    }
-
-            try {
-                for (file in pending) {
-                    val body = runCatching { file.readText() }.getOrNull()
-                    if (body.isNullOrBlank()) {
+    /** Returns the crash reports from earlier runs, oldest first. */
+    fun pending(context: Context): List<CrashReport> {
+        if (!isEnabled(context)) return emptyList()
+        return crashDir(context).listFiles()?.sortedBy { it.name }?.mapNotNull { file ->
+            runCatching { json.decodeFromString<CrashReport>(file.readText()) }
+                    .getOrElse {
                         file.delete()
-                        continue
+                        null
                     }
-
-                    val payload = if (email.isNullOrBlank()) body else withEmail(body, email)
-
-                    val sent =
-                            runCatching {
-                                        client.post(ENDPOINT) {
-                                                    contentType(ContentType.Application.Json)
-                                                    setBody(payload)
-                                                }
-                                                .status
-                                                .isSuccess()
-                                    }
-                                    .getOrElse { e ->
-                                        Log.w(TAG, "Crash upload failed; will retry next launch", e)
-                                        false
-                                    }
-
-                    // Only delete on success, so an offline launch doesn't discard the report.
-                    if (sent) file.delete()
-                }
-            } finally {
-                client.close()
-            }
-        }
+        } ?: emptyList()
     }
 
-    private fun withEmail(body: String, email: String): String =
-            runCatching {
-                        val report = json.decodeFromString<CrashReport>(body)
-                        json.encodeToString(CrashReport.serializer(), report.copy(email = email))
-                    }
-                    .getOrDefault(body)
+    /** Deletes all saved crash reports. */
+    fun clearPending(context: Context) {
+        crashDir(context).listFiles()?.forEach { it.delete() }
+    }
+
+    /** Builds the URL of a GitHub bug report for [report]. */
+    fun issueUrl(report: CrashReport, count: Int): String {
+        val summary = report.exceptionClass.substringAfterLast('.') +
+                (report.exceptionMessage?.let { ": $it" } ?: "")
+        val extra = if (count > 1) "\n\n$count crashes were saved. This is the latest one." else ""
+        return GitHubIssues.bugReportUrl(
+                title = "Crash: $summary",
+                fields = mapOf(
+                        "what-happened" to "Beetle stopped with an error on thread \"${report.threadName}\".$extra",
+                        "steps" to "Not known. Beetle saved this report after the crash. " +
+                                "Add the steps here if you remember them.",
+                        "device" to "${report.manufacturer} ${report.model}, Android ${report.androidRelease} " +
+                                "(API ${report.sdkInt}), ${report.abi}",
+                        "app-version" to "${report.versionName} (${report.versionCode})",
+                        "logs" to report.stackTrace
+                )
+        )
+    }
 
     private fun persist(context: Context, thread: Thread, throwable: Throwable) {
         val dir = crashDir(context)
@@ -195,8 +155,4 @@ object CrashReporter {
 
     private fun crashDir(context: Context): File =
             File(context.filesDir, CRASH_DIR).apply { if (!exists()) mkdirs() }
-
-    private fun clearPending(context: Context) {
-        crashDir(context).listFiles()?.forEach { it.delete() }
-    }
 }

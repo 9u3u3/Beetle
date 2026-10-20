@@ -1,24 +1,23 @@
 package com.bsbeetle.bananaspaghetti.ui.Extension
 
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+/** One language extension. The list and the files come from `assets/plugins` inside the app. */
 @Serializable
 data class ExtensionModel(
     val id: Int,
-    @SerialName("created_at") val createdAt: String,
     val name: String,
     val slug: String,
-    val version: String,
     val description: String,
-    val icon: String, // URL
-    @SerialName("js_module") val jsModule: String, // URL
-    @SerialName("lsp_script") val lspScript: String, // URL
-    val author: String,
-    
-    // Local state fields (not from API)
+    /** Name of an SVG file in `assets/file_icons`, without the extension. */
+    @kotlinx.serialization.SerialName("icon") val iconName: String,
+    val version: String = "1.0.0",
+    val author: String = "Beetle",
+
+    // Local state fields (not from the asset list)
     var installed: Boolean = false,
-    var isInstalling: Boolean = false,
-    var downloads: String = "0",
-    var stars: Int = 0
-)
+    var isInstalling: Boolean = false
+) {
+    val icon: String
+        get() = "file:///android_asset/file_icons/$iconName.svg"
+}
