@@ -5,37 +5,50 @@ import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.bsbeetle.bananaspaghetti.utils.ai.AiRequest
-import com.bsbeetle.bananaspaghetti.utils.ai.AiRole
+import com.bsbeetle.bananaspaghetti.utils.ai.AiProviders
 import com.bsbeetle.bananaspaghetti.utils.ai.AiStreamException
-import com.bsbeetle.bananaspaghetti.utils.ai.AiTurn
 import com.bsbeetle.bananaspaghetti.utils.ai.LineDiff
+import com.bsbeetle.bananaspaghetti.utils.ai.agent.AgentConversation
+import com.bsbeetle.bananaspaghetti.utils.ai.agent.AnthropicAgent
+import com.bsbeetle.bananaspaghetti.utils.ai.agent.CommandRunner
+import com.bsbeetle.bananaspaghetti.utils.ai.agent.FileChange
+import com.bsbeetle.bananaspaghetti.utils.ai.agent.GeminiAgent
+import com.bsbeetle.bananaspaghetti.utils.ai.agent.StopKind
+import com.bsbeetle.bananaspaghetti.utils.ai.agent.ToolCall
+import com.bsbeetle.bananaspaghetti.utils.ai.agent.ToolOutcome
+import com.bsbeetle.bananaspaghetti.utils.ai.agent.WorkspaceTools
 import com.bsbeetle.bananaspaghetti.utils.preferences.AiPreferences
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.serialization.kotlinx.json.json
+import java.io.File
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 /**
- * BYOK chat + apply-to-file engine for the editor. Two modes:
- * - [sendChat]: conversational coding help, streamed into [messages].
- * - [proposeEdit]: asks the model to return the FULL updated file; the result lands in
- *   [pendingEdit] for thumb diff-review (reuse DiffViewerSession) → accept writes it back.
+ * The AI agent for the editor.
  *
- * The ViewModel owns no managed key for any provider; everything runs on the user's own key via
- * [AiPreferences], so cost is the user's and predictable.
+ * The model works on the open project through [WorkspaceTools]: it lists, reads, searches and
+ * edits files, and it runs shell commands after the user allows each one. This class runs the
+ * loop: send the conversation, run the tools the model asks for, send the results back, and repeat
+ * until the model answers without a tool call.
  *
- * Provider-specific wire formats live behind
- * [com.bsbeetle.bananaspaghetti.utils.ai.AiProvider]; this class only decides *what* to ask and
- * where the answer goes. Adding a provider should not require touching this file.
+ * Beetle holds no managed key. Every request uses the user's own key from [AiPreferences].
  */
 class AiChatViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -43,78 +56,84 @@ class AiChatViewModel(application: Application) : AndroidViewModel(application) 
 
     private val client =
             HttpClient(OkHttp) {
-                install(ContentNegotiation) {
-                    json(
-                            Json {
-                                ignoreUnknownKeys = true
-                                isLenient = true
-                            }
-                    )
-                }
                 install(HttpTimeout) {
-                    // Providers override these per request; these are fallbacks.
+                    // Each request sets its own streaming timeouts. These are fallbacks.
                     requestTimeoutMillis = 120_000
                     connectTimeoutMillis = 30_000
                     socketTimeoutMillis = 120_000
                 }
             }
 
-    /**
-     * What an edit did, rendered in the transcript instead of a bare "applied".
-     *
-     * The model rewrites the whole file, so the only way to see the change is to diff it — the
-     * response itself gives no hint of which lines moved.
-     */
-    data class EditSummary(
-            val fileName: String,
-            val added: Int,
-            val removed: Int,
-            val preview: List<LineDiff.Line>
+    private val commandRunner = CommandRunner(application)
+
+    /** What the agent works on. The panel builds this from the open project and file. */
+    data class Workspace(
+            val rootPath: String,
+            val openFilePath: String?,
+            val openFileContent: String?
     )
 
-    /** A single turn in the chat panel. [id] is stable for LazyColumn keying. */
-    data class ChatUiMessage(
-            val role: Role,
-            val text: String,
-            val edit: EditSummary? = null,
-            val id: Long = idCounter.getAndIncrement()
-    ) {
-        enum class Role {
-            USER,
-            ASSISTANT
-        }
+    /** One row of the transcript. [id] is stable for LazyColumn keys. */
+    sealed interface Item {
+        val id: Long
 
-        companion object {
-            private val idCounter = java.util.concurrent.atomic.AtomicLong(0)
-        }
+        data class User(val text: String, override val id: Long = nextId()) : Item
+
+        data class Assistant(val text: String, override val id: Long = nextId()) : Item
+
+        /** A read-only tool call: list, read or search. */
+        data class Activity(
+                val label: String,
+                val detail: String?,
+                val state: State,
+                override val id: Long = nextId()
+        ) : Item
+
+        data class Edit(
+                val change: FileChange,
+                val added: Int,
+                val removed: Int,
+                val preview: List<LineDiff.Line>,
+                val undone: Boolean = false,
+                override val id: Long = nextId()
+        ) : Item
+
+        data class Command(
+                val command: String,
+                val state: State,
+                val output: String? = null,
+                override val id: Long = nextId()
+        ) : Item
+
+        data class Notice(val text: String, val isError: Boolean = false, override val id: Long = nextId()) : Item
     }
 
-    /** A proposed whole-file rewrite awaiting accept/reject in the diff viewer. */
-    data class PendingEdit(
-            val filePath: String,
-            val originalContent: String,
-            val proposedContent: String
-    )
+    enum class State {
+        WAITING_APPROVAL,
+        RUNNING,
+        DONE,
+        FAILED,
+        DENIED
+    }
 
-    val messages = mutableStateListOf<ChatUiMessage>()
+    val items = mutableStateListOf<Item>()
 
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    private val _isRunning = MutableStateFlow(false)
+    val isRunning: StateFlow<Boolean> = _isRunning.asStateFlow()
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error.asStateFlow()
+    /** Set while a command waits for the user. Allow or Deny completes it. */
+    private var approval: CompletableDeferred<Boolean>? = null
 
-    private val _pendingEdit = MutableStateFlow<PendingEdit?>(null)
-    val pendingEdit: StateFlow<PendingEdit?> = _pendingEdit.asStateFlow()
+    private val _allowAllCommands = MutableStateFlow(false)
+    val allowAllCommands: StateFlow<Boolean> = _allowAllCommands.asStateFlow()
 
     /**
-     * Whether the assistant is taking over the editor pane.
-     *
-     * Lives here rather than in the editor screen because the toggle lives in the top bar and the
-     * panel renders in the editor slot — two composables far apart in the tree, with no common
-     * owner short of the screen root. Keeping it in the shared ViewModel also means the panel
-     * survives a rotation with the conversation it belongs to.
+     * Each file write, for the panel to copy into an open editor. The panel owns the editor
+     * WebViews, so it does that part.
      */
+    private val _fileWrites = MutableSharedFlow<FileChange>(extraBufferCapacity = 32)
+    val fileWrites: SharedFlow<FileChange> = _fileWrites.asSharedFlow()
+
     private val _isPanelOpen = MutableStateFlow(false)
     val isPanelOpen: StateFlow<Boolean> = _isPanelOpen.asStateFlow()
 
@@ -126,247 +145,184 @@ class AiChatViewModel(application: Application) : AndroidViewModel(application) 
         _isPanelOpen.value = false
     }
 
-    /**
-     * The edit most recently written into the editor, kept only so it can be undone.
-     *
-     * Edits land in the file immediately rather than behind a confirm dialog — that is the whole
-     * point of asking the assistant to change a file, and a modal diff on a phone screen buries the
-     * result behind a second decision. Holding the pre-edit content here is what makes that safe:
-     * one tap puts the file back exactly as it was.
-     */
-    private val _lastApplied = MutableStateFlow<PendingEdit?>(null)
-    val lastApplied: StateFlow<PendingEdit?> = _lastApplied.asStateFlow()
-
-    fun noteApplied(edit: PendingEdit) {
-        _lastApplied.value = edit
-    }
-
-    fun clearApplied() {
-        _lastApplied.value = null
-    }
-
-    /** The in-flight request, so the user can stop a long generation. */
+    private var conversation: AgentConversation? = null
+    private var conversationKey: String? = null
+    private var tools: WorkspaceTools? = null
     private var activeJob: Job? = null
 
-    fun isConfigured(): Boolean = prefs.isConfigured()
+    /** The open file as the editor holds it. The agent reads this instead of the disk copy. */
+    private var liveFile: Pair<String, String>? = null
 
-    /** Shown in the chat header so it's obvious which provider is answering. */
-    fun activeProviderName(): String = prefs.provider.displayName
+    fun isConfigured(): Boolean = prefs.isConfigured()
 
     fun activeModelName(): String {
         val model = prefs.model
         return prefs.provider.models.firstOrNull { it.id == model }?.displayName ?: model
     }
 
-    fun clearError() {
-        _error.value = null
-    }
-
     fun clearConversation() {
-        cancelActive()
-        messages.clear()
+        stop()
+        items.clear()
+        conversation = null
+        conversationKey = null
+        _allowAllCommands.value = false
+        viewModelScope.launch { commandRunner.close() }
     }
 
-    fun dismissPendingEdit() {
-        _pendingEdit.value = null
+    fun answerApproval(allow: Boolean, allowAll: Boolean = false) {
+        if (allowAll) _allowAllCommands.value = true
+        approval?.complete(allow)
     }
 
-    /** Stops the current generation. Partial output already streamed is kept. */
-    fun cancelActive() {
+    /** Stops the agent. Work already done stays done. */
+    fun stop() {
         activeJob?.cancel()
         activeJob = null
-        _isLoading.value = false
+        approval?.cancel()
+        approval = null
+        _isRunning.value = false
     }
 
-    /** Conversational coding help. Optionally grounds the answer in the currently open file. */
-    fun sendChat(userText: String, fileName: String? = null, fileContent: String? = null) {
-        if (userText.isBlank()) return
+    fun send(text: String, workspace: Workspace) {
+        if (text.isBlank() || _isRunning.value) return
         if (!prefs.isConfigured()) {
-            _error.value = "Add a ${prefs.provider.displayName} API key in Settings → AI."
+            items += Item.Notice("Add a ${prefs.provider.displayName} API key in Settings → AI.", isError = true)
+            return
+        }
+        val root = File(workspace.rootPath)
+        if (!root.isDirectory || !root.canRead()) {
+            items += Item.Notice("Beetle cannot read ${workspace.rootPath}. Allow all files access for Beetle in Android settings.", isError = true)
             return
         }
 
-        messages.add(ChatUiMessage(ChatUiMessage.Role.USER, userText))
+        liveFile =
+                if (workspace.openFilePath != null && workspace.openFileContent != null)
+                        workspace.openFilePath to workspace.openFileContent
+                else null
 
-        // Send the full conversation so the model has context. Skip empty turns: a failed or
-        // stopped request, or an edit summary, leaves an assistant bubble with no text, and the
-        // providers reject a turn with empty content.
-        val turns =
-                messages.filter { it.text.isNotBlank() }.map {
-                    AiTurn(
-                            role =
-                                    if (it.role == ChatUiMessage.Role.USER) AiRole.USER
-                                    else AiRole.ASSISTANT,
-                            text = it.text
+        // A new project, provider or model starts a new conversation. The old one refers to
+        // other files, and one provider cannot read another provider's history.
+        val key = "${prefs.providerId}|${prefs.model}|${root.canonicalPath}"
+        if (conversation == null || key != conversationKey) {
+            if (conversation != null) items += Item.Notice("New conversation: the project or model changed.")
+            val workspaceTools =
+                    WorkspaceTools(
+                            root = root,
+                            liveContent = { path -> liveFile?.takeIf { it.first == path }?.second },
+                            runCommand = { command, cwd, timeout -> commandRunner.run(command, cwd, timeout) },
+                            approveCommand = ::askApproval,
+                            onFileChanged = ::recordWrite
                     )
-                }
-
-        // Placeholder assistant turn; deltas are written into it as they arrive.
-        val placeholder = ChatUiMessage(ChatUiMessage.Role.ASSISTANT, "")
-        messages.add(placeholder)
-        val slot = messages.lastIndex
-
-        run(
-                request =
-                        AiRequest(
-                                model = prefs.model,
-                                systemInstructions = CHAT_INSTRUCTIONS,
-                                fileName = fileName,
-                                fileContent = fileContent,
-                                turns = turns,
-                                maxTokens = MAX_TOKENS
-                        ),
-                onDelta = { soFar ->
-                    if (slot <= messages.lastIndex && messages[slot].id == placeholder.id) {
-                        messages[slot] = placeholder.copy(text = soFar)
-                    }
-                },
-                // The placeholder already holds the full text by the time the stream ends.
-                onComplete = {},
-                onFailure = { removeIfEmpty(placeholder.id) }
-        )
-    }
-
-    /**
-     * Ask the model to rewrite [fileContent] per [instruction] and return the FULL updated file.
-     * The result is staged in [pendingEdit] for diff review — it is NOT written to disk here.
-     */
-    fun proposeEdit(instruction: String, filePath: String, fileName: String, fileContent: String) {
-        if (instruction.isBlank()) return
-        if (!prefs.isConfigured()) {
-            _error.value = "Add a ${prefs.provider.displayName} API key in Settings → AI."
-            return
+            tools = workspaceTools
+            conversation = newConversation(systemPrompt(workspaceTools.root), workspaceTools)
+            conversationKey = key
         }
 
-        val userMsg = buildString {
-            append("File: `$fileName`\n\n")
-            append(fileContent)
-            append("\n\nInstruction: ")
-            append(instruction)
+        items += Item.User(text)
+        val prompt = buildString {
+            takeNotes()?.let { append("[$it]\n") }
+            workspace.openFilePath?.let { path ->
+                val rel = runCatching { File(path).relativeTo(root.canonicalFile).path }.getOrNull()
+                if (rel != null && !rel.startsWith("..")) append("[Open in the editor: $rel]\n\n")
+            }
+            append(text)
         }
-
-        // The transcript shows the instruction and the outcome, never the inlined file — echoing a
-        // whole file back into a phone-sized chat log buries everything else in it.
-        messages.add(ChatUiMessage(ChatUiMessage.Role.USER, instruction))
-        val placeholder = ChatUiMessage(ChatUiMessage.Role.ASSISTANT, "Editing $fileName…")
-        messages.add(placeholder)
-        val slot = messages.lastIndex
-
-        run(
-                request =
-                        AiRequest(
-                                model = prefs.model,
-                                systemInstructions = EDIT_INSTRUCTIONS,
-                                // The file is inlined in the user turn here rather than attached as
-                                // context, because the model is being asked to reproduce it rather
-                                // than reason about it.
-                                turns = listOf(AiTurn(AiRole.USER, userMsg)),
-                                maxTokens = MAX_TOKENS
-                        ),
-                onDelta = null,
-                onComplete = { raw ->
-                    val updated = extractFileContent(raw)
-                    val diff = LineDiff.of(fileContent, updated)
-                    if (slot <= messages.lastIndex && messages[slot].id == placeholder.id) {
-                        messages[slot] =
-                                placeholder.copy(
-                                        text =
-                                                if (diff.added == 0 && diff.removed == 0)
-                                                        "No changes needed in $fileName"
-                                                else "",
-                                        edit =
-                                                if (diff.added == 0 && diff.removed == 0) null
-                                                else
-                                                        EditSummary(
-                                                                fileName = fileName,
-                                                                added = diff.added,
-                                                                removed = diff.removed,
-                                                                preview = diff.preview
-                                                        )
-                                )
-                    }
-                    // Nothing changed: don't overwrite the file (and don't arm an undo that would
-                    // restore the same bytes) just to prove the model was asked.
-                    if (diff.added == 0 && diff.removed == 0) return@run
-
-                    _pendingEdit.value =
-                            PendingEdit(
-                                    filePath = filePath,
-                                    originalContent = fileContent,
-                                    proposedContent = updated
-                            )
-                },
-                onFailure = {
-                    val index = messages.indexOfFirst { it.id == placeholder.id }
-                    if (index >= 0) {
-                        messages[index] = placeholder.copy(text = "Edit of $fileName did not finish.")
-                    }
-                }
-        )
+        conversation!!.addUserText(prompt)
+        runLoop()
     }
 
-    /** Removes an assistant bubble that never received text, so it does not show as a blank box. */
-    private fun removeIfEmpty(id: Long) {
-        val index = messages.indexOfFirst { it.id == id }
-        if (index >= 0 && messages[index].text.isBlank() && messages[index].edit == null) {
-            messages.removeAt(index)
-        }
-    }
-
-    /**
-     * Runs a streaming request against the active provider. [onDelta] receives the accumulated text
-     * as it grows (null for modes that only care about the final result); [onComplete] receives the
-     * full text once.
-     *
-     * Collection happens on the main dispatcher while each provider's network read and parsing run
-     * on IO, so the Compose state writes in the callbacks stay on main.
-     */
-    private fun run(
-            request: AiRequest,
-            onDelta: ((String) -> Unit)?,
-            onComplete: (String) -> Unit,
-            onFailure: () -> Unit
-    ) {
-        cancelActive()
-
-        val provider = prefs.provider
+    private fun newConversation(system: String, tools: WorkspaceTools): AgentConversation {
         val apiKey = prefs.apiKey
+        val model = prefs.model
+        return when (prefs.providerId) {
+            AiProviders.GEMINI -> GeminiAgent(client, apiKey, model, system, tools.specs)
+            else -> AnthropicAgent(client, apiKey, model, system, tools.specs)
+        }
+    }
 
+    private fun runLoop() {
+        val conv = conversation ?: return
+        val workspaceTools = tools ?: return
         activeJob =
                 viewModelScope.launch {
-                    _isLoading.value = true
-                    _error.value = null
-
-                    val accumulated = StringBuilder()
+                    _isRunning.value = true
+                    // Tool calls of the last turn that still need a result. The API rejects a
+                    // history with an unanswered call, so a stop must answer them.
+                    var unanswered: List<ToolCall> = emptyList()
+                    val answered = mutableListOf<Pair<ToolCall, ToolOutcome>>()
                     try {
-                        provider.streamChat(client, apiKey, request).collect { chunk ->
-                            accumulated.append(chunk)
-                            onDelta?.invoke(accumulated.toString())
-                        }
+                        var rounds = 0
+                        while (true) {
+                            if (rounds++ >= MAX_ROUNDS) {
+                                items += Item.Notice("Stopped after $MAX_ROUNDS steps. Send \"continue\" to let it go on.")
+                                break
+                            }
+                            val textItem = Item.Assistant("")
+                            items += textItem
+                            val streamed = StringBuilder()
+                            val turn =
+                                    withRetry {
+                                        // A failed attempt adds nothing to the history. Clear its
+                                        // partial text before the next attempt.
+                                        streamed.clear()
+                                        replace(textItem.id) { (it as Item.Assistant).copy(text = "") }
+                                        conv.runTurn { delta ->
+                                            streamed.append(delta)
+                                            replace(textItem.id) { (it as Item.Assistant).copy(text = streamed.toString()) }
+                                        }
+                                    }
+                            if (streamed.isBlank()) remove(textItem.id)
 
-                        val text = accumulated.toString()
-                        if (text.isBlank()) {
-                            _error.value = "${provider.displayName} returned an empty response."
-                            onFailure()
-                        } else {
-                            onComplete(text)
+                            if (turn.toolCalls.isEmpty()) {
+                                if (turn.stop == StopKind.MAX_TOKENS) {
+                                    items += Item.Notice("The reply reached the length limit and is cut off.")
+                                }
+                                break
+                            }
+
+                            unanswered = turn.toolCalls
+                            answered.clear()
+                            for (call in turn.toolCalls) {
+                                val outcome =
+                                        if (turn.stop == StopKind.MAX_TOKENS) {
+                                            // The input may be cut off. Never run it.
+                                            ToolOutcome(
+                                                    "Your reply reached the output limit, so this tool call is incomplete and did not run. Do the work in smaller steps, for example several edit_file calls instead of one large write_file.",
+                                                    isError = true
+                                            )
+                                        } else {
+                                            runTool(call, workspaceTools)
+                                        }
+                                answered += call to outcome
+                            }
+                            conv.addToolResults(answered.toList())
+                            unanswered = emptyList()
                         }
                     } catch (e: CancellationException) {
-                        // Stop keeps partial chat output. An edit with no full file is not usable.
-                        if (onDelta == null || accumulated.isBlank()) onFailure()
+                        withContext(NonCancellable) {
+                            items += Item.Notice("Stopped.")
+                        }
                         throw e
                     } catch (e: AiStreamException) {
-                        _error.value = e.message
-                        if (onDelta == null || accumulated.isBlank()) onFailure()
+                        items += Item.Notice(e.message ?: "The AI request failed.", isError = true)
                     } catch (e: Exception) {
-                        Log.e(TAG, "AI request failed (${provider.id})", e)
-                        _error.value = "Request failed: ${e.message}"
-                        if (onDelta == null || accumulated.isBlank()) onFailure()
+                        Log.e(TAG, "Agent loop failed", e)
+                        items += Item.Notice("Request failed: ${e.message ?: e.javaClass.simpleName}", isError = true)
                     } finally {
-                        // A newer request may have replaced this one. Only the current job may
-                        // clear the shared state, or the newer request loses its Stop button.
+                        if (unanswered.isNotEmpty()) {
+                            val done = answered.map { it.first.id }.toSet()
+                            conv.addToolResults(
+                                    answered.toList() +
+                                            unanswered.filter { it.id !in done }.map {
+                                                it to ToolOutcome("The user stopped this before it ran.", isError = true)
+                                            }
+                            )
+                        }
+                        items.lastOrNull()?.let { last ->
+                            if (last is Item.Assistant && last.text.isBlank()) remove(last.id)
+                        }
                         if (activeJob === coroutineContext[Job]) {
-                            _isLoading.value = false
+                            _isRunning.value = false
                             activeJob = null
                         }
                     }
@@ -374,63 +330,202 @@ class AiChatViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     /**
-     * Pull the file body out of a model response.
-     *
-     * Models add a lead-in ("Here's the updated file:") and fence the code no matter how firmly
-     * they are told not to. The old version only stripped fences when the response *started* with
-     * one, so any prose before the fence was written into the source file verbatim — which is how
-     * shell commands and English sentences ended up in a .c file.
-     *
-     * So: if the response contains fenced blocks, the file is the largest of them. Only a response
-     * with no fences at all is taken literally.
+     * Runs [block] again after a short wait when it fails with a network error or a retryable
+     * service error. Phones often lose the network for a moment.
      */
-    internal fun extractFileContent(raw: String): String {
-        val blocks = mutableListOf<String>()
-        val buffer = StringBuilder()
-        var inFence = false
-
-        raw.lines().forEach { line ->
-            if (line.trimStart().startsWith("```")) {
-                if (inFence) {
-                    blocks += buffer.toString()
-                    buffer.setLength(0)
-                }
-                inFence = !inFence
-            } else if (inFence) {
-                buffer.append(line).append('\n')
+    private suspend fun <T> withRetry(block: suspend () -> T): T {
+        var attempt = 0
+        while (true) {
+            try {
+                return block()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val retryable = (e as? AiStreamException)?.retryable ?: isNetworkError(e)
+                if (!retryable || attempt >= RETRY_DELAYS_MS.size) throw e
+                val wait = RETRY_DELAYS_MS[attempt++]
+                Log.w(TAG, "Request failed, attempt $attempt. Trying again in $wait ms.", e)
+                val notice = Item.Notice("Connection problem. Trying again (${attempt}/${RETRY_DELAYS_MS.size}).")
+                items += notice
+                delay(wait)
+                remove(notice.id)
             }
         }
-        // An unterminated fence still holds the file — the model just ran out of tokens closing it.
-        if (inFence && buffer.isNotBlank()) blocks += buffer.toString()
+    }
 
-        val best = blocks.maxByOrNull { it.length }
-        return (best ?: raw).trim('\n')
+    private fun isNetworkError(e: Throwable): Boolean {
+        var cause: Throwable? = e
+        while (cause != null) {
+            if (cause is java.net.UnknownHostException ||
+                            cause is java.net.ConnectException ||
+                            cause is java.net.SocketException ||
+                            cause is javax.net.ssl.SSLException ||
+                            cause is java.io.EOFException
+            ) return true
+            cause = cause.cause
+        }
+        return false
+    }
+
+    private suspend fun runTool(call: ToolCall, workspaceTools: WorkspaceTools): ToolOutcome {
+        val input = call.input
+        fun arg(name: String) = (input?.get(name) as? JsonPrimitive)?.contentOrNull
+
+        return when (call.name) {
+            "edit_file", "write_file" -> {
+                val outcome = withContext(Dispatchers.IO) { workspaceTools.execute(call) }
+                if (outcome.isError) {
+                    items += Item.Activity("${if (call.name == "edit_file") "Edit" else "Write"} ${arg("path") ?: "?"}", outcome.content, State.FAILED)
+                }
+                outcome
+            }
+            "run_command" -> {
+                val item = Item.Command(arg("command") ?: call.rawInput, State.RUNNING)
+                items += item
+                currentCommandId = item.id
+                val outcome = workspaceTools.execute(call)
+                currentCommandId = null
+                replace(item.id) {
+                    val current = it as Item.Command
+                    if (current.state == State.DENIED) current
+                    else current.copy(state = if (outcome.isError) State.FAILED else State.DONE, output = outcome.content)
+                }
+                outcome
+            }
+            else -> {
+                val label =
+                        when (call.name) {
+                            "list_files" -> "List ${arg("path") ?: "project"}"
+                            "read_file" -> {
+                                val start = arg("start_line")?.takeIf { it != "1" }
+                                val end = arg("end_line")
+                                "Read ${arg("path") ?: "?"}" +
+                                        when {
+                                            start != null && end != null -> " lines $start-$end"
+                                            start != null -> " from line $start"
+                                            end != null -> " to line $end"
+                                            else -> ""
+                                        }
+                            }
+                            "search_files" -> "Search /${arg("pattern") ?: ""}/"
+                            else -> call.name
+                        }
+                val item = Item.Activity(label, null, State.RUNNING)
+                items += item
+                val outcome = withContext(Dispatchers.IO) { workspaceTools.execute(call) }
+                replace(item.id) {
+                    (it as Item.Activity).copy(
+                            state = if (outcome.isError) State.FAILED else State.DONE,
+                            detail = if (outcome.isError) outcome.content else null
+                    )
+                }
+                outcome
+            }
+        }
+    }
+
+    private var currentCommandId: Long? = null
+
+    private suspend fun askApproval(command: String): Boolean {
+        val id = currentCommandId
+        if (_allowAllCommands.value) return true
+        id?.let { replace(it) { item -> (item as Item.Command).copy(state = State.WAITING_APPROVAL) } }
+        val decision = CompletableDeferred<Boolean>()
+        approval = decision
+        val allowed = try {
+            decision.await()
+        } finally {
+            approval = null
+        }
+        id?.let {
+            replace(it) { item -> (item as Item.Command).copy(state = if (allowed) State.RUNNING else State.DENIED) }
+        }
+        return allowed
+    }
+
+    /** Runs on the IO thread inside a tool. Moves the UI work to the main thread. */
+    private fun recordWrite(change: FileChange) {
+        if (liveFile?.first == change.path) liveFile = change.path to change.after
+        viewModelScope.launch {
+            val diff = LineDiff.of(change.before ?: "", change.after)
+            items += Item.Edit(change, diff.added, diff.removed, diff.preview)
+            _fileWrites.emit(change)
+        }
+    }
+
+    /** Puts a file back as it was before an edit. A file the agent created is deleted. */
+    fun undo(edit: Item.Edit) {
+        if (edit.undone) return
+        viewModelScope.launch {
+            val change = edit.change
+            val file = File(change.path)
+            val ok =
+                    withContext(Dispatchers.IO) {
+                        runCatching {
+                                    if (change.before == null) file.delete()
+                                    else file.writeText(change.before, Charsets.UTF_8)
+                                }
+                                .isSuccess
+                    }
+            if (!ok) {
+                items += Item.Notice("Could not undo the change to ${change.relativePath}.", isError = true)
+                return@launch
+            }
+            replace(edit.id) { (it as Item.Edit).copy(undone = true) }
+            val restored = change.before ?: ""
+            if (liveFile?.first == change.path) liveFile = change.path to restored
+            _fileWrites.emit(FileChange(change.path, change.relativePath, change.after, restored))
+            // Tell the model at its next turn, so it does not build on the removed change.
+            pendingNotes += "The user undid your change to ${change.relativePath}."
+        }
+    }
+
+    private val pendingNotes = mutableListOf<String>()
+
+    /** Notes for the model about things the user did between messages, such as an undo. */
+    private fun takeNotes(): String? = pendingNotes.takeIf { it.isNotEmpty() }?.joinToString("\n")?.also { pendingNotes.clear() }
+
+    private fun replace(id: Long, transform: (Item) -> Item) {
+        val index = items.indexOfFirst { it.id == id }
+        if (index >= 0) items[index] = transform(items[index])
+    }
+
+    private fun remove(id: Long) {
+        val index = items.indexOfFirst { it.id == id }
+        if (index >= 0) items.removeAt(index)
     }
 
     override fun onCleared() {
         super.onCleared()
         client.close()
+        kotlinx.coroutines.runBlocking { commandRunner.close() }
     }
 
     companion object {
         private const val TAG = "AiChatViewModel"
+        private const val MAX_ROUNDS = 40
+        private val RETRY_DELAYS_MS = longArrayOf(2_000, 5_000)
+        private val idCounter = AtomicLong(0)
 
-        private const val CHAT_INSTRUCTIONS =
-                "You are a coding assistant inside Beetle, a mobile IDE running a real Linux " +
-                        "environment on the user's Android phone. Be concise — the user is on a " +
-                        "small screen. Prefer short, copy-pasteable code."
+        private fun nextId() = idCounter.getAndIncrement()
 
-        private const val EDIT_INSTRUCTIONS =
-                "You are a code-editing assistant. The user will give you a file and an " +
-                        "instruction. Respond with ONLY the complete, updated contents of the file — " +
-                        "no explanations, no commentary, and no markdown code fences. Preserve the " +
-                        "file's existing style and indentation. Your output is written straight " +
-                        "into the open editor buffer, so it must be the file itself: never a shell " +
-                        "command that writes the file (no `cat > file <<EOF`), never a build or run " +
-                        "command, and never a diff or patch."
+        private fun systemPrompt(root: File) =
+                """
+                You are the coding agent inside Beetle, a code editor on the user's Android phone.
+                You work on the user's project with tools. The project root is ${root.canonicalPath}. Tool paths are relative to that root.
 
-        // Streaming lifts the timeout ceiling that capped this before, so there is room for a whole
-        // rewritten file. Kept well below provider maximums to bound worst-case spend on the user's key.
-        private const val MAX_TOKENS = 32_000
+                How to work:
+                - Find out before you change. Use list_files, search_files and read_file to learn the code you touch.
+                - Change files with edit_file. Use write_file only for new files or full rewrites.
+                - After a change, check it when you can: build, run or test it with run_command. Each command needs the user's approval, so run only commands that help the task.
+                - run_command runs bash in Ubuntu 24.04 (arm64) through proot, as root. apt works. There is no GUI and no stdin.
+                - Do not run destructive commands (rm -rf, git reset --hard, force push) unless the user asks for them.
+                - If a request is unclear, ask one short question instead of guessing.
+
+                How to answer:
+                - The user reads your reply on a phone screen. Keep it short. Use short paragraphs and lists.
+                - Say what you changed and why, in a few lines. The app already shows each file change as a diff, so do not repeat the changed code.
+                - Use fenced code blocks only for code the user must see.
+                """.trimIndent()
     }
 }

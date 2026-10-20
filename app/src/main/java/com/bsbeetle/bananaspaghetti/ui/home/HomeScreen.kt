@@ -221,7 +221,13 @@ fun HomeScreen(navController: NavController) {
 
             MainMenu(
                     modifier =
-                            Modifier.size(390.dp)
+                            Modifier.then(
+                                            // Portrait: keep the menu clear of the icon column at
+                                            // the right edge. The menu moves up under that column
+                                            // when the recents panel opens.
+                                            if (isLandscape) Modifier.size(390.dp)
+                                            else Modifier.fillMaxWidth().height(390.dp).padding(end = 44.dp)
+                                    )
                                     .then(
                                             if (isLandscape)
                                                     Modifier.offset(x = mainMenuOffset, y = 0.dp)

@@ -232,21 +232,25 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
                     modifier = Modifier.size(65.dp).clip(RoundedCornerShape(12.dp))
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = "Beetle",
-                    fontFamily = KarmaticFont,
-                    color = Color.White,
-                    fontSize = 45.sp,
-                    style = TextStyle(shadow = Shadow(color = Color(0xFFFFFFFF), offset = Offset(0f, 0f), blurRadius = 15f))
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Box(modifier = Modifier.fillMaxSize()) {
+                // The version sits under the title. At the right edge of the row, it went under
+                // the home screen icons on narrow portrait screens.
+                Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "v1.0.0",
+                        text = "Beetle",
+                        fontFamily = KarmaticFont,
+                        color = Color.White,
+                        fontSize = 45.sp,
+                        style = TextStyle(shadow = Shadow(color = Color(0xFFFFFFFF), offset = Offset(0f, 0f), blurRadius = 15f))
+                    )
+                    val versionName = remember {
+                        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
+                                .getOrNull()
+                    }
+                    Text(
+                        text = "v${versionName ?: "?"}",
                         color = Color(0xFF666666),
-                        fontSize = 18.sp,
-                        fontFamily = born2bsporty,
-                        modifier = Modifier.padding(top = 8.dp).align(Alignment.BottomEnd)
+                        fontSize = 14.sp,
+                        fontFamily = born2bsporty
                     )
                 }
             }

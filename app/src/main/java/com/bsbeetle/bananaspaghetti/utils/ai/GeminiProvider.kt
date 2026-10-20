@@ -74,11 +74,11 @@ private data class GeminiErrorDetail(
 object GeminiProvider : AiProvider {
 
     private const val TAG = "GeminiProvider"
-    private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
+    internal const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
     private const val DATA_PREFIX = "data:"
 
     private const val STREAM_REQUEST_TIMEOUT_MS = 30 * 60 * 1000L
-    private const val STREAM_STALL_TIMEOUT_MS = 90_000L
+    internal const val STREAM_STALL_TIMEOUT_MS = 90_000L
 
     /** Encodes the request body here so the client's Json settings cannot change the wire format. */
     private val json = Json {
@@ -241,12 +241,12 @@ object GeminiProvider : AiProvider {
                     }
                     .flowOn(Dispatchers.IO)
 
-    private fun Throwable.isTimeout(): Boolean =
+    internal fun Throwable.isTimeout(): Boolean =
             this is HttpRequestTimeoutException ||
                     this is java.net.SocketTimeoutException ||
                     this is java.io.InterruptedIOException
 
-    private fun describeTimeout(model: String) =
+    internal fun describeTimeout(model: String) =
             "$model never responded (waited ${STREAM_STALL_TIMEOUT_MS / 1000}s for the first " +
                     "byte). Google stalls instead of erroring when a key has no quota for a " +
                     "model, so this usually means your key can't generate with $model — free " +
@@ -270,7 +270,7 @@ object GeminiProvider : AiProvider {
         }
     }
 
-    private fun describeError(status: Int, raw: String, model: String): String {
+    internal fun describeError(status: Int, raw: String, model: String): String {
         val detail =
                 runCatching { json.decodeFromString<GeminiErrorEnvelope>(raw) }
                         .getOrNull()
