@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -41,6 +42,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import androidx.navigation.NavController
+import com.bsbeetle.bananaspaghetti.LocalAiChatViewModel
 import com.bsbeetle.bananaspaghetti.LocalBrowserViewModel
 import com.bsbeetle.bananaspaghetti.LocalBufferViewModel
 import com.bsbeetle.bananaspaghetti.LocalEditorViewModel
@@ -621,6 +623,31 @@ private fun TopBarIconButton(icon: Int, onClick: () -> Unit, iconSize: androidx.
         }
 }
 
+/**
+ * Same affordance for a vector icon. The AI toggle needs a tint that reflects on/off state, which
+ * the drawable-backed overload above has no reason to carry.
+ */
+@Composable
+private fun TopBarIconButton(
+        icon: androidx.compose.ui.graphics.vector.ImageVector,
+        onClick: () -> Unit,
+        tint: Color = Color(0xFFCCCCCC),
+        iconSize: androidx.compose.ui.unit.Dp = 14.dp
+) {
+        Box(
+                modifier =
+                        Modifier.clickable { onClick() }.fillMaxHeight().padding(horizontal = 4.dp),
+                contentAlignment = Alignment.Center
+        ) {
+                Icon(
+                        imageVector = icon,
+                        contentDescription = "AI assistant",
+                        tint = tint,
+                        modifier = Modifier.size(iconSize)
+                )
+        }
+}
+
 @Composable
 fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
         val configuration = LocalConfiguration.current
@@ -631,7 +658,9 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
         val bufferViewModel = LocalBufferViewModel.current
         val keyboardViewModel = LocalKeyboardViewModel.current
         val uiState by keyboardViewModel.uiState.collectAsStateWithLifecycle()
-        
+        val aiChatViewModel = LocalAiChatViewModel.current
+        val aiPanelOpen by aiChatViewModel.isPanelOpen.collectAsStateWithLifecycle()
+
         // Scale bar height based on settings
         val baseHeight = if (isLandscape) 18.dp else 28.dp
         val barHeight = baseHeight * uiState.topBarScale
@@ -695,6 +724,21 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
                                         }
                                 )
                         }
+
+                        VerticalDivider(
+                                modifier = Modifier.fillMaxHeight().width(1.dp),
+                                color = Color(0xFF3E3E42)
+                        )
+
+                        // AI assistant toggle. Takes over the editor pane rather than opening a
+                        // sheet, so it reads as a mode switch and is tinted while it is active.
+                        TopBarIconButton(
+                                icon = androidx.compose.material.icons.Icons.Outlined.AutoAwesome,
+                                tint =
+                                        if (aiPanelOpen) Color(0xFF007ACC)
+                                        else Color(0xFFCCCCCC),
+                                onClick = { aiChatViewModel.togglePanel() }
+                        )
 
                         VerticalDivider(
                                 modifier = Modifier.fillMaxHeight().width(1.dp),

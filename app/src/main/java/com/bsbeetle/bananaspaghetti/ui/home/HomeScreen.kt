@@ -63,6 +63,7 @@ import com.bsbeetle.bananaspaghetti.ui.components.LiquidGlassBox
 import com.bsbeetle.bananaspaghetti.ui.components.VignetteEffect
 import com.bsbeetle.bananaspaghetti.ui.components.beetleAscii
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
+import com.bsbeetle.bananaspaghetti.ui.theme.Black
 import com.bsbeetle.bananaspaghetti.ui.theme.KarmaticFont
 import com.bsbeetle.bananaspaghetti.ui.theme.born2bsporty
 import com.bsbeetle.bananaspaghetti.ui.theme.codaRegular
@@ -156,7 +157,10 @@ fun HomeScreen(navController: NavController) {
     }
 
     Box(
-            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primary),
+            // Deliberately the near-black canvas, not colorScheme.primary: primary is the blue
+            // accent that Material components tint themselves with, so reading it as a background
+            // paints the whole home screen blue. The grid and ASCII art are drawn for black.
+            modifier = Modifier.fillMaxSize().background(Black),
             contentAlignment = Alignment.Center
     ) {
         ConstraintLayout(modifier = Modifier.fillMaxSize()) {

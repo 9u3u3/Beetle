@@ -1,19 +1,28 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Backup / device-transfer rules for API 31+. Keep in sync with backup_rules.xml, which covers
+   API 30 and below.
+
+   Everything Keystore-backed is excluded from both paths. The stored ciphertext cannot be
+   decrypted on another device (the Keystore key never leaves the device that generated it), so
+   including it would leak credentials into cloud storage while restoring nothing usable.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <!-- BYOK Anthropic API key (billable credential) -->
+        <exclude domain="sharedpref" path="ai_secrets.xml" />
+        <!-- Git SSH private key + username -->
+        <exclude domain="sharedpref" path="git_ssh_keys.xml" />
+        <!-- Ubuntu-side SSH keys -->
+        <exclude domain="sharedpref" path="ubuntu_ssh_keys.xml" />
+        <!-- Waitlist authorization state -->
+        <exclude domain="sharedpref" path="auth_prefs.xml" />
     </cloud-backup>
-    <!--
+
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="sharedpref" path="ai_secrets.xml" />
+        <exclude domain="sharedpref" path="git_ssh_keys.xml" />
+        <exclude domain="sharedpref" path="ubuntu_ssh_keys.xml" />
+        <exclude domain="sharedpref" path="auth_prefs.xml" />
     </device-transfer>
-    -->
 </data-extraction-rules>

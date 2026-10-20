@@ -93,11 +93,10 @@ class EditorSession(context: Context, name: String = "Editor") :
         view?.evaluateJavascript("window.code_") { result ->
             if (result != null && result != "null" && result != "\"\"") {
                 savedContent =
-                        result.removeSurrounding("\"")
-                                .replace("\\n", "\n")
-                                .replace("\\u003C", "<")
-                                .replace("\\u003E", ">")
-                                .replace("\\\"", "\"")
+                        com.bsbeetle.bananaspaghetti.utils.webViewHandling.JsResult.decodeString(
+                                result
+                        )
+                                ?: return@evaluateJavascript
                 needsRestore = true
                 Log.d("EditorSession", "Content saved (${savedContent?.length ?: 0} chars)")
             }
@@ -306,27 +305,11 @@ class EditorSession(context: Context, name: String = "Editor") :
                                                                 result != "\"\""
                                                 ) {
                                                     try {
-                                                        var content =
-                                                                result.removeSurrounding("\"")
-                                                                        .replace("\\n", "\n")
-                                                                        .replace("\\t", "\t")
-                                                                        .replace("\\r", "\r")
-                                                                        .replace("\\\"", "\"")
-                                                                        .replace("\\\\", "\\")
-
-                                                        // Unescape Unicode sequences
-                                                        val unicodePattern =
-                                                                Regex("\\\\u([0-9a-fA-F]{4})")
-                                                        content =
-                                                                unicodePattern.replace(content) {
-                                                                        matchResult ->
-                                                                    val hexCode =
-                                                                            matchResult.groupValues[
-                                                                                    1]
-                                                                    hexCode.toInt(16)
-                                                                            .toChar()
-                                                                            .toString()
-                                                                }
+                                                        val content =
+                                                                com.bsbeetle.bananaspaghetti.utils
+                                                                        .webViewHandling.JsResult
+                                                                        .decodeString(result)
+                                                                        ?: return@evaluateJavascript
 
                                                         // Save to file
                                                         val resolver = context.contentResolver
@@ -657,6 +640,10 @@ class EditorSession(context: Context, name: String = "Editor") :
             webView.loadUrl("about:blank") // Clear the page
             webView.destroy()
         }
+        // Tear down runner / linked terminals so their PTYs and service sessions don't leak.
+        linkedTerminals.forEach { runCatching { it.destroy() } }
+        linkedTerminals.clear()
+        _runnerTerminal = null
         view = null
         super.destroy()
     }

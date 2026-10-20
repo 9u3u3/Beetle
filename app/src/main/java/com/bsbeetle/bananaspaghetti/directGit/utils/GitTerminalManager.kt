@@ -27,7 +27,8 @@ class GitTerminalManager(private val context: Context) {
     }
 
     private var terminalSession: TerminalSession? = null
-    private val commandHistory = mutableListOf<String>()
+    // Thread-safe: written from IO coroutines, iterated by the GitViewModel poll loop.
+    private val commandHistory = java.util.concurrent.CopyOnWriteArrayList<String>()
 
     /**
      * Initialize the terminal session (must be called before any operations) NOTE: TerminalSession

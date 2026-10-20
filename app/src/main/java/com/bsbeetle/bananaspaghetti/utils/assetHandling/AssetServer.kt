@@ -86,10 +86,13 @@ class AssetServer(private val context: Context, port: Int = 8080) : NanoHTTPD(po
                         uri.endsWith(".css") -> "text/css"
                         else -> "application/octet-stream"
                     }
-            newFixedLengthResponse(Response.Status.OK, mime, stream, stream.available().toLong())
+            // Read fully so Content-Length is the true asset size — InputStream.available()
+            // is NOT the file length and could serve truncated editor/terminal assets.
+            val bytes = stream.use { it.readBytes() }
+            newFixedLengthResponse(Response.Status.OK, mime, bytes.inputStream(), bytes.size.toLong())
         } catch (e: Exception) {
             if (e is SocketException || e is SocketTimeoutException) {
-                newFixedLengthResponse(Response.Status.NO_CONTENT, "text/plain", "")
+                return newFixedLengthResponse(Response.Status.NO_CONTENT, "text/plain", "")
             }
             newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "File not found")
         }

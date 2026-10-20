@@ -17,15 +17,15 @@ fun downloadFile(context: Context, url: String, fileName: String, onDone: (File?
             val connection = URL(url).openConnection() as HttpsURLConnection
             connection.connect()
 
-            val inputStream = connection.inputStream
-
-            // Save in filesDir
+            // Save in filesDir. Close the stream and disconnect even if the copy throws.
             val file = File(context.filesDir, fileName)
-            FileOutputStream(file).use { outputStream ->
-                inputStream.copyTo(outputStream)
+            try {
+                connection.inputStream.use { input ->
+                    FileOutputStream(file).use { output -> input.copyTo(output) }
+                }
+            } finally {
+                connection.disconnect()
             }
-
-            inputStream.close()
             onDone(file)
 
         } catch (e: Exception) {

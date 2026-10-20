@@ -169,24 +169,9 @@ class BufferViewModel : ViewModel() {
 
     private fun saveContentFromJsResult(file: DocumentFile, fileUri: String, result: String?) {
         if (result != null && result != "null" && result != "\"\"") {
-            var content = result.removeSurrounding("\"")
-
-            // Unescape common sequences first
-            content =
-                    content.replace("\\n", "\n")
-                            .replace("\\t", "\t")
-                            .replace("\\r", "\r")
-                            .replace("\\\"", "\"")
-                            .replace("\\'", "'")
-                            .replace("\\\\", "\\")
-
-            // Unescape ALL Unicode sequences (\uXXXX)
-            val unicodePattern = Regex("\\\\u([0-9a-fA-F]{4})")
-            content =
-                    unicodePattern.replace(content) { matchResult ->
-                        val hexCode = matchResult.groupValues[1]
-                        hexCode.toInt(16).toChar().toString()
-                    }
+            val content =
+                    com.bsbeetle.bananaspaghetti.utils.webViewHandling.JsResult.decodeString(result)
+                            ?: return
 
             bufferLine[fileUri] = content // Use URI as key
         }

@@ -32,6 +32,7 @@ import com.bsbeetle.bananaspaghetti.ui.DisableDefaultKeyboard
 import com.bsbeetle.bananaspaghetti.ui.EnterImmersiveMode
 import com.bsbeetle.bananaspaghetti.ui.navigation.AppNavigation
 import com.bsbeetle.bananaspaghetti.ui.theme.BeetleTheme
+import com.bsbeetle.bananaspaghetti.viewmodel.AiChatViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.BufferViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.DevWebViewModel
 import com.bsbeetle.bananaspaghetti.viewmodel.EditorViewModel
@@ -61,6 +62,8 @@ val LocalAuthViewModel =
         compositionLocalOf<com.bsbeetle.bananaspaghetti.viewmodel.AuthViewModel> { error("No auth view model provided") }
 val LocalSshViewModel =
         compositionLocalOf<SshViewModel> { error("No SSH view model provided") }
+val LocalAiChatViewModel =
+        compositionLocalOf<AiChatViewModel> { error("No AI chat view model provided") }
 
 class MainActivity : ComponentActivity() {
 
@@ -121,7 +124,8 @@ class MainActivity : ComponentActivity() {
                                 val browserViewModel: DevWebViewModel = viewModel()
                                 val authViewModel: com.bsbeetle.bananaspaghetti.viewmodel.AuthViewModel = viewModel()
                                 val sshViewModel: SshViewModel = viewModel()
-                                
+                                val aiChatViewModel: AiChatViewModel = viewModel()
+
                                 // Collect keyboard UI state for IME mode
                                 val keyboardUiState = keyboardViewModel.uiState.collectAsState()
                                 
@@ -144,11 +148,8 @@ class MainActivity : ComponentActivity() {
                                 
                                 DisableDefaultKeyboard(useLandscapeIme = keyboardUiState.value.useLandscapeIme)
 
-                                val startDestination = if (authViewModel.isAuthorized.value) {
+                                val startDestination =
                                     com.bsbeetle.bananaspaghetti.ui.navigation.Screen.Home.route
-                                } else {
-                                    com.bsbeetle.bananaspaghetti.ui.navigation.Screen.Auth.route
-                                }
 
                                 CompositionLocalProvider(
                                         LocalFileViewModel provides fileViewModel,
@@ -160,7 +161,8 @@ class MainActivity : ComponentActivity() {
                                         LocalTerminalViewModel provides terminalViewModel,
                                         LocalBrowserViewModel provides browserViewModel,
                                         LocalAuthViewModel provides authViewModel,
-                                        LocalSshViewModel provides sshViewModel
+                                        LocalSshViewModel provides sshViewModel,
+                                        LocalAiChatViewModel provides aiChatViewModel
                                 ) {
                                         // Check if portrait mode to apply navigation bar padding
                                         val configuration = LocalConfiguration.current

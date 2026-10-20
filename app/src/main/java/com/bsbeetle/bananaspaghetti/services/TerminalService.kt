@@ -62,9 +62,8 @@ class TerminalService : Service() {
         }
 
         fun decrementSessionCount(context: Context) {
-            val count = activeSessionCount.decrementAndGet().coerceAtLeast(0)
-            // If decrementAndGet went below 0, reset to 0
-            activeSessionCount.compareAndSet(count, count.coerceAtLeast(0))
+            // Clamp atomically so the counter can never go (or stay) negative.
+            val count = activeSessionCount.updateAndGet { (it - 1).coerceAtLeast(0) }
             instance?.updateNotification()
             Log.d(TAG, "Session count decreased to $count")
             stopServiceIfNoSessions(context)

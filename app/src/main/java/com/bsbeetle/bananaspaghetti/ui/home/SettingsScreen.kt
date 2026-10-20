@@ -151,6 +151,7 @@ fun SettingsScreen(navController: NavController) {
                                                         "Appearance",
                                                         "Editor",
                                                         "Git",
+                                                        "AI",
                                                         "General"
                                                 )
                                         categories.forEach { name ->
@@ -306,7 +307,8 @@ private fun SettingsSidebar(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Navigation items
-                val categories = listOf("Keyboard", "Appearance", "Editor", "Git", "General")
+                val categories =
+                        listOf("Keyboard", "Appearance", "Editor", "Git", "AI", "General")
 
                 categories.forEach { name ->
                         SidebarItem(
@@ -465,6 +467,7 @@ private fun SettingsContent(selectedCategory: String, keyboardViewModel: Keyboar
                         "Licenses" -> LicensesContent()
                         "Editor" -> EditorSettingsContent()
                         "Git" -> GitSettingsContent()
+                        "AI" -> AiSettingsContent()
                         "General" -> GeneralSettingsContent()
                 }
         }

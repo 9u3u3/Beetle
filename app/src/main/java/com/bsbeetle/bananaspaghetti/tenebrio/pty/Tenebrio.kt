@@ -428,6 +428,9 @@ class Tenebrio(private val context: Context, private val session: Session) {
                     if (isRunning) {
                         Log.e("TenebrioShell", "Error reading", e)
                     }
+                } finally {
+                    // Don't leak the flush scheduler thread when the reader loop ends.
+                    runCatching { flushScheduler.shutdownNow() }
                 }
 
                 // Process exited — notify user if this wasn't an intentional destroy

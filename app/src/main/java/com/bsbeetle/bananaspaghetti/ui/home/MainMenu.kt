@@ -520,6 +520,7 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
     if (showReportIssueDialog) {
         ReportIssueDialog(
             userEmail = userEmail,
+            onEmailChange = { authViewModel.setUserEmail(it) },
             onDismiss = { showReportIssueDialog = false }
         )
     }

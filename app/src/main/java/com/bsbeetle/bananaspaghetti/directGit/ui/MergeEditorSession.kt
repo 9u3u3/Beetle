@@ -175,13 +175,8 @@ class MergeEditorSession(
         webView?.evaluateJavascript("window.getMergedContent ? window.getMergedContent() : ''") {
                 result ->
             val content =
-                    if (result != null && result != "null") {
-                        result.removeSurrounding("\"")
-                                .replace("\\n", "\n")
-                                .replace("\\t", "\t")
-                                .replace("\\\"", "\"")
-                                .replace("\\\\", "\\")
-                    } else ""
+                    com.bsbeetle.bananaspaghetti.utils.webViewHandling.JsResult.decodeString(result)
+                            ?: ""
             callback(content)
         }
     }

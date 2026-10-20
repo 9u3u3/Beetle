@@ -40,11 +40,8 @@ fun saveFile(
         webView.evaluateJavascript("window.editor?.state?.doc?.toString() || window.code_ || ''") {
                 result ->
             val newCode =
-                    result.removeSurrounding("\"")
-                            .replace("\\n", "\n")
-                            .replace("\\u003C", "<")
-                            .replace("\\u003E", ">")
-                            .replace("\\\"", "\"")
+                    com.bsbeetle.bananaspaghetti.utils.webViewHandling.JsResult.decodeString(result)
+                            ?: return@evaluateJavascript
 
             saveContentToFile(newCode, fileViewModel, bufferViewModel, context)
         }

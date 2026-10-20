@@ -197,12 +197,10 @@ class NotebookSession(context: Context, name: String = "Notebook") :
                                                             result != "\"\""
                                             ) {
                                                 val content =
-                                                        result.removeSurrounding("\"")
-                                                                .replace("\\n", "\n")
-                                                                .replace("\\r", "\r")
-                                                                .replace("\\'", "'")
-                                                                .replace("\\\"", "\"")
-                                                                .replace("\\\\", "\\")
+                                                        com.bsbeetle.bananaspaghetti.utils
+                                                                .webViewHandling.JsResult
+                                                                .decodeString(result)
+                                                                ?: return@evaluateJavascript
                                                 saveNotebookContent(content)
                                                 _hasUnsavedChanges.value = false
                                                 // Use URI format to match BufferCard
@@ -432,12 +430,7 @@ class NotebookSession(context: Context, name: String = "Notebook") :
     fun getContent(callback: (String) -> Unit) {
         view?.evaluateJavascript("window.getContent ? window.getContent() : ''") { result ->
             val content =
-                    result?.removeSurrounding("\"")
-                            ?.replace("\\n", "\n")
-                            ?.replace("\\r", "\r")
-                            ?.replace("\\'", "'")
-                            ?.replace("\\\"", "\"")
-                            ?.replace("\\\\", "\\")
+                    com.bsbeetle.bananaspaghetti.utils.webViewHandling.JsResult.decodeString(result)
                             ?: ""
             callback(content)
         }

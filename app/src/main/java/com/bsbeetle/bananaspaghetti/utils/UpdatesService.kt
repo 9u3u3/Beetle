@@ -1,7 +1,7 @@
 package com.bsbeetle.bananaspaghetti.utils
 
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +24,7 @@ object UpdatesService {
     suspend fun fetchLatestUpdate(): UpdateResponse? {
         return try {
             withContext(Dispatchers.IO) {
-                val client = HttpClient(CIO)
+                val client = HttpClient(OkHttp)
                 val response = client.get("$BASE_URL/api/updates/latest")
                 client.close()
                 

@@ -117,7 +117,7 @@ fun SearchReplaceBar(
 
             webView.evaluateJavascript(jsCode) { result ->
                 try {
-                    val clean = result?.removeSurrounding("\"")?.replace("\\\"", "\"") ?: "{}"
+                    val clean = com.bsbeetle.bananaspaghetti.utils.webViewHandling.JsResult.decodeString(result) ?: result ?: "{}"
                     if (clean.contains("count")) {
                         val countMatch = Regex("\"count\":(\\d+)").find(clean)
                         val currentMatch2 = Regex("\"current\":(\\d+)").find(clean)
@@ -513,7 +513,7 @@ private fun animateColorAsState(
 
 private fun parseMatchResult(result: String?, callback: (count: Int, current: Int) -> Unit) {
     try {
-        val clean = result?.removeSurrounding("\"")?.replace("\\\"", "\"") ?: "{}"
+        val clean = com.bsbeetle.bananaspaghetti.utils.webViewHandling.JsResult.decodeString(result) ?: result ?: "{}"
         val countMatch = Regex("\"count\":(\\d+)").find(clean)
         val currentMatch = Regex("\"current\":(\\d+)").find(clean)
         val count = countMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0

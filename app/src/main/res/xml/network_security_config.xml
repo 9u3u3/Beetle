@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Beetle runs several servers on the device itself: AssetServer on 8080, the LSP bridges on
+   8081-8082, and the live-preview server on 5500. Those are plain HTTP over loopback.
+
+   The app previously enabled cleartext traffic globally to allow them, which also permitted
+   cleartext to any host on the internet. This scopes the exemption to loopback only, so
+   everything genuinely remote — the backend, the Anthropic API, Git remotes — is HTTPS-only
+   and cannot silently downgrade.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">::1</domain>
+    </domain-config>
+
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

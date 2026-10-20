@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
-import java.util.regex.Pattern
 
 /**
  * PythonExecutor manages a persistent headless Python REPL for notebook execution.
@@ -25,6 +24,13 @@ class PythonExecutor(private val context: Context) {
         private const val END_MARKER = ">>BEETLE_END<<"
         private const val ERROR_MARKER = ">>BEETLE_ERROR<<"
         private const val PLOT_MARKER = ">>BEETLE_PLOT:"
+        private const val PLOT_END_MARKER = ">>BEETLE_PLOT_END<<"
+        private const val READY_MARKER = ">>BEETLE_READY<<"
+
+        /** How long to wait for [READY_MARKER] before re-sending the bootstrap. */
+        private const val BOOTSTRAP_RETRY_MS = 2000L
+        private const val BOOTSTRAP_ATTEMPTS = 15
+        private const val BOOT_BUFFER_LIMIT = 32_768
         
         // Regex to strip ANSI escape codes and terminal control sequences
         private val ANSI_ESCAPE_REGEX = Regex("""\x1b\[[0-9;?]*[a-zA-Z]|\x1b\].*?\x07|\x1b\(B""")
@@ -41,6 +47,9 @@ class PythonExecutor(private val context: Context) {
     
     private var pythonSession: TerminalSession? = null
     private var outputBuffer = StringBuilder()
+
+    /** Pre-ready output, scanned for [READY_MARKER]. */
+    private val bootBuffer = StringBuilder()
     private var isExecuting = false
     private var currentCellId: String? = null
     private var executionStartTime = 0L
@@ -109,34 +118,40 @@ class PythonExecutor(private val context: Context) {
             |    import matplotlib.pyplot as plt
             |    import base64
             |    import io
-            |    
-            |    # Store original functions before overriding
-            |    _original_savefig = plt.savefig
-            |    _original_show = plt.show
-            |    
-            |    # Helper to emit plot as base64 for display (uses original savefig to avoid recursion)
-            |    def _beetle_emit_plot():
-            |        buf = io.BytesIO()
-            |        _original_savefig(buf, format='png', dpi=100, bbox_inches='tight', facecolor='#1e1e1e')
-            |        buf.seek(0)
-            |        b64 = base64.b64encode(buf.read()).decode('utf-8')
-            |        print(f'>>BEETLE_PLOT:{b64}')
-            |        return b64
-            |    
-            |    # Override plt.show to display plot
-            |    def _beetle_show(*args, **kwargs):
-            |        _beetle_emit_plot()
-            |        plt.close('all')
-            |    plt.show = _beetle_show
-            |    
-            |    # Override plt.savefig to also display the plot after saving
-            |    def _beetle_savefig(*args, **kwargs):
-            |        # First, do the actual save
-            |        result = _original_savefig(*args, **kwargs)
-            |        # Then emit the plot for display (don't close figures here, let user do that)
-            |        _beetle_emit_plot()
-            |        return result
-            |    plt.savefig = _beetle_savefig
+            |
+            |    # Patch exactly once, however many times this bootstrap runs.
+            |    #
+            |    # The wrappers resolve _beetle_original_savefig as a global at call time, not at
+            |    # definition time. So a second pass would rebind that global to the first pass's
+            |    # wrapper, and the wrapper would end up calling itself: RecursionError on the first
+            |    # plot. The bootstrap is re-sent until Python answers READY, so running twice is
+            |    # normal and this guard is what makes that safe.
+            |    if not getattr(plt, '_beetle_patched', False):
+            |        _beetle_original_savefig = plt.savefig
+            |        _beetle_original_show = plt.show
+            |
+            |        # Emits via the ORIGINAL savefig, so it never re-enters the wrapper below.
+            |        def _beetle_emit_plot():
+            |            buf = io.BytesIO()
+            |            _beetle_original_savefig(buf, format='png', dpi=100, bbox_inches='tight', facecolor='#1e1e1e')
+            |            buf.seek(0)
+            |            b64 = base64.b64encode(buf.read()).decode('utf-8')
+            |            print(f'>>BEETLE_PLOT:{b64}')
+            |            print('>>BEETLE_PLOT_END<<')
+            |            return b64
+            |
+            |        def _beetle_show(*args, **kwargs):
+            |            _beetle_emit_plot()
+            |            plt.close('all')
+            |
+            |        def _beetle_savefig(*args, **kwargs):
+            |            result = _beetle_original_savefig(*args, **kwargs)
+            |            _beetle_emit_plot()
+            |            return result
+            |
+            |        plt.show = _beetle_show
+            |        plt.savefig = _beetle_savefig
+            |        plt._beetle_patched = True
             |except ImportError:
             |    pass  # matplotlib not available
             |
@@ -194,17 +209,23 @@ class PythonExecutor(private val context: Context) {
         // We use a small bootstrap command to load the setup code
         val bootstrap = "import base64; exec(base64.b64decode('$setupBase64').decode('utf-8'))\n"
         
-        // Give python a moment to start
+        // Re-send until Python answers with READY, rather than assuming it has started.
+        //
+        // `python3 -i` under proot regularly takes longer than a second to come up on a phone. The
+        // old code fired the bootstrap once after 1s and declared the REPL ready after 3s no matter
+        // what — so on a slow start the setup line was eaten by the shell that was still in the
+        // foreground, `_beetle_exec` was never defined, and every later cell produced a NameError
+        // with no START marker. handleOutput only reports text between START and END, so the cell
+        // showed nothing at all: no output, no error.
         scope.launch {
-            delay(1000)
-            pythonSession?.insertText(bootstrap)
-        }
-        
-        // Mark as ready after Python starts
-        scope.launch {
-            delay(3000) // Give Python time to initialize
-            _isReady.value = true
-            Log.d(TAG, "Python REPL ready")
+            repeat(BOOTSTRAP_ATTEMPTS) {
+                if (_isReady.value) return@launch
+                pythonSession?.insertText(bootstrap)
+                delay(BOOTSTRAP_RETRY_MS)
+            }
+            if (!_isReady.value) {
+                Log.e(TAG, "Python REPL never signalled ready after $BOOTSTRAP_ATTEMPTS attempts")
+            }
         }
     }
     
@@ -256,6 +277,19 @@ class PythonExecutor(private val context: Context) {
     }
     
     private fun handleOutput(text: String) {
+        if (!_isReady.value) {
+            // The marker can straddle two PTY reads, so match against accumulated text.
+            bootBuffer.append(text)
+            if (bootBuffer.contains(READY_MARKER)) {
+                bootBuffer.setLength(0)
+                _isReady.value = true
+                Log.d(TAG, "Python REPL ready")
+            } else if (bootBuffer.length > BOOT_BUFFER_LIMIT) {
+                // Keep only a tail long enough to still contain a split marker.
+                bootBuffer.delete(0, bootBuffer.length - READY_MARKER.length)
+            }
+        }
+
         if (!isExecuting) return
         
         outputBuffer.append(text)
@@ -311,20 +345,29 @@ class PythonExecutor(private val context: Context) {
             outputType = "stderr"
         }
         
-        // Check for plots
-        val plotPattern = Pattern.compile("$PLOT_MARKER([A-Za-z0-9+/=]+)")
-        val plotMatcher = plotPattern.matcher(output)
-        
-        if (plotMatcher.find()) {
-            val base64Data = plotMatcher.group(1)
-            // Remove plot marker from text output
-            output = output.replace("$PLOT_MARKER$base64Data", "").trim()
-            
-            // Send plot to callback
-            currentCellId?.let { cellId ->
-                onPlotGenerated?.invoke(cellId, base64Data ?: "")
+        // Check for plots.
+        //
+        // Delimited rather than pattern-matched: the payload is tens of thousands of base64
+        // characters on one logical line, and anything the tty inserts into it — a CR, a wrap, an
+        // escape sequence — would end a character-class match early and hand the WebView a
+        // truncated PNG that silently fails to decode. Taking everything between the two markers
+        // and discarding whitespace survives all of that.
+        val plotStart = output.indexOf(PLOT_MARKER)
+        val plotEnd = if (plotStart == -1) -1 else output.indexOf(PLOT_END_MARKER, plotStart)
+
+        if (plotStart != -1 && plotEnd != -1) {
+            val raw = output.substring(plotStart + PLOT_MARKER.length, plotEnd)
+            val base64Data = stripAnsiCodes(raw).filterNot { it.isWhitespace() }
+
+            output =
+                    (output.substring(0, plotStart) +
+                                    output.substring(plotEnd + PLOT_END_MARKER.length))
+                            .trim()
+
+            if (base64Data.isNotEmpty()) {
+                currentCellId?.let { cellId -> onPlotGenerated?.invoke(cellId, base64Data) }
+                outputType = "image"
             }
-            outputType = "image"
         }
         
         finishExecution(output, outputType, executionTime)

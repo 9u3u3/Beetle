@@ -32,7 +32,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.bsbeetle.bananaspaghetti.ui.theme.KarmaticFont
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.request.forms.formData
 import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.client.statement.bodyAsText
@@ -43,16 +43,21 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Report Issue Dialog with email (pre-filled), description, and image picker
+ * Report Issue Dialog with email, description, and image picker.
+ *
+ * The email is pre-filled from the last one entered and stays editable — there is no sign-in
+ * flow that could supply it automatically.
  */
 @Composable
 fun ReportIssueDialog(
     userEmail: String,
+    onEmailChange: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
+    var email by remember { mutableStateOf(userEmail) }
     var description by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var isSubmitting by remember { mutableStateOf(false) }
@@ -144,7 +149,7 @@ fun ReportIssueDialog(
                     return@Column
                 }
                 
-                // Email field (read-only)
+                // Email field
                 Text(
                     text = "Email",
                     color = Color(0xFFBBBBBB),
@@ -153,12 +158,18 @@ fun ReportIssueDialog(
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 OutlinedTextField(
-                    value = userEmail,
-                    onValueChange = {},
-                    enabled = false,
-                    readOnly = true,
+                    value = email,
+                    onValueChange = { email = it },
+                    enabled = !isSubmitting,
+                    placeholder = { Text("you@example.com", color = Color(0xFF666666)) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color(0xFFDDDDDD),
+                        unfocusedTextColor = Color(0xFFDDDDDD),
+                        focusedBorderColor = Color(0xFF5C5C5C),
+                        unfocusedBorderColor = Color(0xFF3C3C3C),
+                        focusedContainerColor = Color(0xFF2A2A2A),
+                        unfocusedContainerColor = Color(0xFF2A2A2A),
                         disabledTextColor = Color(0xFF888888),
                         disabledBorderColor = Color(0xFF3C3C3C),
                         disabledContainerColor = Color(0xFF2A2A2A)
@@ -301,10 +312,15 @@ fun ReportIssueDialog(
                 // Submit button
                 Button(
                     onClick = {
+                        if (email.isBlank()) {
+                            submitError = "Please enter your email"
+                            return@Button
+                        }
                         if (selectedImageUri == null) {
                             submitError = "Please select a screenshot"
                             return@Button
                         }
+                        onEmailChange(email)
                         
                         scope.launch {
                             isSubmitting = true
@@ -323,13 +339,13 @@ fun ReportIssueDialog(
                                     return@launch
                                 }
                                 
-                                val client = HttpClient(CIO)
+                                val client = HttpClient(OkHttp)
                                 
                                 val response = withContext(Dispatchers.IO) {
                                     client.submitFormWithBinaryData(
                                         url = "https://beetle-backend.vercel.app/api/reports/submit",
                                         formData = formData {
-                                            append("email", userEmail)
+                                            append("email", email)
                                             append("description", description)
                                             append("image", imageBytes, Headers.build {
                                                 append(HttpHeaders.ContentType, "image/png")

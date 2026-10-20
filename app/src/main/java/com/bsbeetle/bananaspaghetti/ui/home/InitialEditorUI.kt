@@ -101,7 +101,17 @@ fun InitialEditorUI(navController: NavController) {
         currentSession?.restoreContent()
     }
 
+    val aiChatViewModel = com.bsbeetle.bananaspaghetti.LocalAiChatViewModel.current
+    val aiPanelOpen by aiChatViewModel.isPanelOpen.collectAsStateWithLifecycle()
+
     BackHandler {
+        // Back dismisses the assistant before it leaves the editor — the panel covers the editor,
+        // so treating back as "leave the screen" would skip the state the user is actually looking
+        // at and drop them on Home.
+        if (aiPanelOpen) {
+            aiChatViewModel.closePanel()
+            return@BackHandler
+        }
         // Save content before navigating away
         currentSession?.saveContent()
         navController.navigate(Screen.Home.route) {
@@ -478,12 +488,9 @@ fun InitialEditorUI(navController: NavController) {
                                 webView?.evaluateJavascript(
                                     "window.editor?.state?.doc?.toString() || ''"
                                 ) { result ->
-                                    val content = result
-                                        .removeSurrounding("\"")
-                                        .replace("\\n", "\n")
-                                        .replace("\\u003C", "<")
-                                        .replace("\\u003E", ">")
-                                        .replace("\\\"", "\"")
+                                    val content = com.bsbeetle.bananaspaghetti.utils.webViewHandling
+                                        .JsResult.decodeString(result)
+                                        ?: return@evaluateJavascript
                                     scope.launch(Dispatchers.IO) {
                                         try {
                                             sshFs.writeFile(remotePath, content)
@@ -758,8 +765,17 @@ fun InitialEditorUI(navController: NavController) {
                     // Show WebView immediately - it will load in the background
                     Editor(Modifier.fillMaxSize(), webView)
 
+                    // AI assistant takes the editor's place while open (top-bar toggle). Drawn
+                    // over the still-mounted WebView rather than swapped for it, so the editor
+                    // comes back exactly as it was left.
+                    if (aiPanelOpen) {
+                        com.bsbeetle.bananaspaghetti.ui.components.AiChatPanel(
+                                Modifier.fillMaxSize()
+                        )
+                    }
+
                     // Loading overlay - fades out when ready
-                    if (!isReady) {
+                    if (!isReady && !aiPanelOpen) {
                         Box(
                                 modifier = Modifier.fillMaxSize().background(Color(0xFF1E1E1E)),
                                 contentAlignment = Alignment.Center
@@ -985,6 +1001,7 @@ fun InitialEditorUI(navController: NavController) {
                 initialPath = "/"
             )
         }
+
     }
 }
 
