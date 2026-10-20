@@ -224,8 +224,9 @@ fun HomeScreen(navController: NavController) {
                             Modifier.then(
                                             // Portrait: keep the menu clear of the icon column at
                                             // the right edge. The menu moves up under that column
-                                            // when the recents panel opens.
-                                            if (isLandscape) Modifier.size(390.dp)
+                                            // when the recents panel opens. Landscape: the screen
+                                            // is lower than the menu, so the menu scrolls.
+                                            if (isLandscape) Modifier.width(390.dp).fillMaxHeight()
                                             else Modifier.fillMaxWidth().height(390.dp).padding(end = 44.dp)
                                     )
                                     .then(
@@ -536,16 +537,6 @@ fun HomeScreen(navController: NavController) {
                 }
             }
             
-            // Alpha version text - bottom left
-            Text(
-                    text = "Alpha version",
-                    color = Color(0xFF666666),
-                    fontSize = 10.sp,
-                    modifier = Modifier.constrainAs(createRef()) {
-                        bottom.linkTo(parent.bottom, margin = 16.dp)
-                        start.linkTo(parent.start, margin = 16.dp)
-                    }
-            )
         }
     }
 }

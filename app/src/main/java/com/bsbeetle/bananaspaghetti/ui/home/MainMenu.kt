@@ -9,6 +9,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -219,7 +221,7 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
     }
 
     Box(modifier = modifier.fillMaxSize().padding(10.dp), contentAlignment = Alignment.Center) {
-        Column {
+        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
             // Header with logo and title
             Row(
                 modifier = Modifier.width(400.dp).height(80.dp),
@@ -255,7 +257,7 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             val backgroundColor = Color(0xFFFFFFFF)
 
             val backdrop = rememberLayerBackdrop {
@@ -353,7 +355,8 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
                 }
             )
             
-            Spacer(modifier = Modifier.height(20.dp))
+            // The menu box is 390dp high. The content must fit in it, or the box cuts the last button.
+            Spacer(modifier = Modifier.height(8.dp))
             
             // Report Issue button - Red text with transparent background, smaller
             TextButton(
