@@ -24,7 +24,7 @@ import coil.decode.SvgDecoder
 import coil.request.ImageRequest
 import com.bsbeetle.bananaspaghetti.R
 import com.bsbeetle.bananaspaghetti.ui.navigation.Screen
-import com.bsbeetle.bananaspaghetti.ui.theme.born2bsporty
+import com.bsbeetle.bananaspaghetti.ui.theme.jersey10
 import com.bsbeetle.bananaspaghetti.utils.fileHandling.RecentFile
 
 @Composable
@@ -96,7 +96,7 @@ fun RecentFileItem(
                 text = file.name,
                 color = Color.White,
                 fontSize = 16.sp,
-                fontFamily = born2bsporty
+                fontFamily = jersey10
             )
             // URI display removed as requested
         }

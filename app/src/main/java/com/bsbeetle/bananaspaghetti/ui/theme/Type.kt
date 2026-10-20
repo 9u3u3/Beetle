@@ -20,8 +20,10 @@ val KarmaticFont = FontFamily(
     Font(R.font.karmatic_arcade_regular)
 )
 
-val born2bsporty = FontFamily(
-    Font(R.font.born2bsporty_fs_regular)
+// Jersey 10, SIL Open Font License 1.1. It replaces Born2bSporty FS, whose license does not
+// allow anyone but its designer to pass the font on.
+val jersey10 = FontFamily(
+    Font(R.font.jersey10_regular)
 )
 
 val codaRegular = FontFamily(
