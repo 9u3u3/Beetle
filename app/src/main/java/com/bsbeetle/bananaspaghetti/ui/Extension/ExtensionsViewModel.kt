@@ -4,16 +4,6 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.get
-import io.ktor.client.request.prepareGet
-import io.ktor.client.statement.bodyAsChannel
-import io.ktor.serialization.kotlinx.json.json
-import io.ktor.utils.io.copyTo
-import io.ktor.utils.io.jvm.javaio.toOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +11,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.io.FileOutputStream
 
 import com.bsbeetle.bananaspaghetti.utils.languageHandling.LanguageRegistry
 import com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
@@ -83,15 +72,7 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    private val client = HttpClient(OkHttp) {
-        install(ContentNegotiation) {
-            json(Json {
-                ignoreUnknownKeys = true
-                prettyPrint = true
-                isLenient = true
-            })
-        }
-    }
+    private val json = Json { ignoreUnknownKeys = true }
 
     init {
         LanguageRegistry.init(getApplication())
@@ -103,21 +84,18 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
             _isLoading.value = true
             _error.value = null
             try {
-                // Use production backend
-                val url = "https://beetle-backend.vercel.app/api/plugin/fetch"
-                
-                val fetchedExtensions: List<ExtensionModel> = client.get(url).body()
-                
-                // Check installation status
-                val updatedExtensions = fetchedExtensions.map { ext ->
+                // The list ships inside the app, so it works offline.
+                val text = getApplication<Application>().assets.open("plugins/index.json")
+                        .bufferedReader().use { it.readText() }
+                val bundled: List<ExtensionModel> = json.decodeFromString(text)
+
+                _extensions.value = bundled.map { ext ->
                     ext.copy(installed = LanguageRegistry.isInstalled(ext.slug))
                 }
-                
-                _extensions.value = updatedExtensions
-                Log.d("ExtensionsViewModel", "Fetched ${updatedExtensions.size} extensions")
+                Log.d("ExtensionsViewModel", "Loaded ${bundled.size} extensions")
             } catch (e: Exception) {
-                Log.e("ExtensionsViewModel", "Error fetching extensions", e)
-                _error.value = "Failed to fetch extensions. Please check your internet connection."
+                Log.e("ExtensionsViewModel", "Error loading extensions", e)
+                _error.value = "Failed to load the extension list."
             } finally {
                 _isLoading.value = false
             }
@@ -146,28 +124,23 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                 // TerminalService.setInstallationInProgress(extension.name)
                 
                 addInstallOutput("$ Starting installation of ${extension.name}...")
-                addInstallOutput("$ Downloading extension files from backend...")
                 
                 val pluginDir = File(context.filesDir, "plugins/${extension.slug}")
                 if (!pluginDir.exists()) {
                     pluginDir.mkdirs()
                 }
 
-                // REVERTED: Download from backend instead of using local assets
-                // Updated scripts are now available in the backend bucket
-                
-                // Download JS Module from backend
-                addInstallOutput("$ Downloading JS module from backend...")
+                // Copy the editor module and the LSP script from the app assets.
+                addInstallOutput("$ Copying the editor module...")
                 val jsFile = File(pluginDir, "${extension.slug}.js")
-                downloadFile(extension.jsModule, jsFile)
-                addInstallOutput("  ✓ JS module downloaded")
+                copyAsset("plugins/${extension.slug}/${extension.slug}.js", jsFile)
+                addInstallOutput("  ✓ Editor module copied")
 
-                // Download LSP Script from backend
-                addInstallOutput("$ Downloading LSP script from backend...")
+                addInstallOutput("$ Copying the LSP script...")
                 val scriptFile = File(pluginDir, "${extension.slug}.sh")
-                downloadFile(extension.lspScript, scriptFile)
+                copyAsset("plugins/${extension.slug}/${extension.slug}.sh", scriptFile)
                 scriptFile.setExecutable(true)
-                addInstallOutput("  ✓ LSP script downloaded and made executable")
+                addInstallOutput("  ✓ LSP script copied and made executable")
 
                 // --- Installation Logic ---
                 addInstallOutput("$ Preparing installation environment...")
@@ -187,8 +160,11 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                     # Pre-configure tzdata to avoid prompts
                     ln -fs /usr/share/zoneinfo/UTC /etc/localtime 2>/dev/null || true
                     # Run the installation script in install-only mode
-                    /public/${tempScript.name} --install-only
-                    echo "INSTALLATION_COMPLETE"
+                    if /public/${tempScript.name} --install-only; then
+                        echo "INSTALLATION_COMPLETE"
+                    else
+                        echo "INSTALLATION_FAILED"
+                    fi
                 """.trimIndent())
                 wrapperFile.setExecutable(true)
 
@@ -206,12 +182,14 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                     val cleanOutput = output
                         .replace(Regex("\\x1B\\[[0-9;]*[a-zA-Z]"), "") // Remove ANSI codes
                         .trim()
-                    if (cleanOutput.isNotEmpty() && !cleanOutput.contains("INSTALLATION_COMPLETE")) {
+                    if (cleanOutput.isNotEmpty() && !cleanOutput.contains("INSTALLATION_")) {
                         addInstallOutput(cleanOutput)
                     }
-                    
+
                     if (output.contains("INSTALLATION_COMPLETE")) {
                         installComplete.complete(true)
+                    } else if (output.contains("INSTALLATION_FAILED")) {
+                        installComplete.complete(false)
                     }
                 }
 
@@ -220,14 +198,16 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                 
                 session.insertText("/public/${wrapperFile.name}\n")
 
-                withTimeout(600000) { // 10 minutes timeout for slow package installations
-                    installComplete.await()
+                // The first install of a language can take more than 10 minutes, because apt is
+                // slow inside proot.
+                val succeeded = try {
+                    withTimeout(30 * 60 * 1000L) { installComplete.await() }
+                } finally {
+                    tempScript.delete()
+                    wrapperFile.delete()
+                    session.destroy()
                 }
-
-                // Cleanup
-                tempScript.delete()
-                wrapperFile.delete()
-                session.destroy()
+                if (!succeeded) throw IllegalStateException("The install script failed. Read the output above.")
                 // --------------------------
 
                 addInstallOutput("")
@@ -313,11 +293,9 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    private suspend fun downloadFile(url: String, destination: File) {
-        val response = client.prepareGet(url).execute()
-        val bytes = response.body<ByteArray>()
-        val outputStream = FileOutputStream(destination)
-        outputStream.write(bytes)
-        outputStream.close()
+    private fun copyAsset(assetPath: String, destination: File) {
+        getApplication<Application>().assets.open(assetPath).use { input ->
+            destination.outputStream().use { input.copyTo(it) }
+        }
     }
 }

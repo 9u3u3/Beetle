@@ -39,7 +39,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.documentfile.provider.DocumentFile
 import androidx.navigation.NavController
-import com.bsbeetle.bananaspaghetti.LocalAuthViewModel
 import com.bsbeetle.bananaspaghetti.LocalBufferViewModel
 import com.bsbeetle.bananaspaghetti.LocalEditorViewModel
 import com.bsbeetle.bananaspaghetti.LocalFileViewModel
@@ -98,8 +97,6 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
     
     // State for Report Issue dialog
     var showReportIssueDialog by remember { mutableStateOf(false) }
-    val authViewModel = LocalAuthViewModel.current
-    val userEmail by authViewModel.userEmail.collectAsState()
     
     val sshViewModel = LocalSshViewModel.current
 
@@ -525,11 +522,7 @@ fun MainMenu(modifier: Modifier = Modifier, navController: NavController) {
     
     // Report Issue dialog
     if (showReportIssueDialog) {
-        ReportIssueDialog(
-            userEmail = userEmail,
-            onEmailChange = { authViewModel.setUserEmail(it) },
-            onDismiss = { showReportIssueDialog = false }
-        )
+        ReportIssueDialog(onDismiss = { showReportIssueDialog = false })
     }
 
     // SSH Connect Dialog (from home screen)
