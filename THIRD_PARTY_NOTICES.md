@@ -1,6 +1,6 @@
 # Third-party notices
 
-Beetle is licensed under the [GNU General Public License v3.0](LICENSE). It includes or depends on the third-party software below. Each part keeps its own license.
+Beetle is licensed under the [GNU Affero General Public License v3.0 or later](LICENSE). It includes or depends on the third-party software below. Each part keeps its own license.
 
 ## Bundled native binaries (`app/src/main/jniLibs/`)
 

@@ -57,4 +57,4 @@ For a security problem, follow [SECURITY.md](SECURITY.md) and do not open a publ
 
 ## License of contributions
 
-Beetle uses the [GNU General Public License v3.0](LICENSE). When you send a pull request, you agree that your contribution uses the same license.
+Beetle uses the [GNU Affero General Public License v3.0 or later](LICENSE). When you send a pull request, you agree that your contribution uses the same license.

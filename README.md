@@ -4,7 +4,7 @@
   <p><i>Bring Ideas To Life</i></p>
   <p>A code editor and Linux terminal for Android phones.</p>
   <p>
-    <a href="LICENSE"><img alt="License: GPL v3" src="https://img.shields.io/badge/license-GPLv3-blue.svg"></a>
+    <a href="LICENSE"><img alt="License: AGPL v3" src="https://img.shields.io/badge/license-AGPLv3-blue.svg"></a>
     <a href="https://github.com/9u3u3/bananaSpaghetti/actions/workflows/build.yml"><img alt="Build" src="https://github.com/9u3u3/bananaSpaghetti/actions/workflows/build.yml/badge.svg"></a>
   </p>
 </div>
@@ -111,6 +111,17 @@ To report a security problem, follow [SECURITY.md](SECURITY.md). Do not open a p
 
 ## License
 
-Beetle is free software under the [GNU General Public License v3.0](LICENSE).
+Copyright (C) 2025-2026 The Beetle authors.
+
+Beetle is free software under the [GNU Affero General Public License v3.0 or later](LICENSE) (`AGPL-3.0-or-later`).
+
+In short, if you share Beetle or a changed version of it, you must:
+
+- give the full source code, under the same license, to everyone who gets the app;
+- keep the copyright and license notices;
+- mark the changes that you made;
+- give the source code to users who use your changed version over a network, for example through a hosted service.
+
+You can use and change Beetle privately without publishing your changes. The license text in [LICENSE](LICENSE) is the legal reference. This summary is not legal advice.
 
 Beetle includes third-party software under other licenses. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
