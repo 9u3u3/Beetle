@@ -1,7 +1,8 @@
 {
-  "name": "bananaspaghetti",
+  "name": "beetle",
   "version": "1.0.0",
-  "description": "",
+  "private": true,
+  "description": "Web bundles (CodeMirror editor, notebook, Git views) for the Beetle Android app",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -9,16 +10,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/HarshF40/bananaSpaghetti.git"
+    "url": "git+https://github.com/9u3u3/bananaSpaghetti.git"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "GPL-3.0-only",
   "type": "module",
   "bugs": {
-    "url": "https://github.com/HarshF40/bananaSpaghetti/issues"
+    "url": "https://github.com/9u3u3/bananaSpaghetti/issues"
   },
-  "homepage": "https://github.com/HarshF40/bananaSpaghetti#readme",
+  "homepage": "https://github.com/9u3u3/bananaSpaghetti#readme",
   "dependencies": {
     "@codemirror/autocomplete": "^6.19.1",
     "@codemirror/commands": "^6.10.0",

@@ -1,103 +1,116 @@
-# Beetle (BITL) - Technical Architecture Reference
-
 <div align="center">
-  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher-playstore.png" alt="Beetle Icon" width="128"/>
-  <h3>"Bring Ideas To Life"</h3>
-  <p><i>Advanced Android IDE & Pseudo-Terminal Engineering Deep Dive</i></p>
-  <p><b>Licensed under the GNU General Public License v3.0</b></p>
+  <img src="app/src/main/ic_launcher-playstore.png" alt="Beetle icon" width="128"/>
+  <h1>Beetle (BITL)</h1>
+  <p><i>Bring Ideas To Life</i></p>
+  <p>A code editor and Linux terminal for Android phones.</p>
+  <p>
+    <a href="LICENSE"><img alt="License: GPL v3" src="https://img.shields.io/badge/license-GPLv3-blue.svg"></a>
+    <a href="https://github.com/9u3u3/bananaSpaghetti/actions/workflows/build.yml"><img alt="Build" src="https://github.com/9u3u3/bananaSpaghetti/actions/workflows/build.yml/badge.svg"></a>
+  </p>
 </div>
 
 ---
 
-Beetle (BITL) is not just a standard wrapper app—it is a heavy engineering project designed to run native Linux binaries, custom proot filesystems, and complex Language Server Protocol (LSP) networks internally on an Android environment that actively restricts standard OS-level execution. This README breaks down the specific architectural pathways used to accomplish this.
+> **Status: alpha.** Beetle works on the devices we test, but expect bugs. Please
+> [report them](https://github.com/9u3u3/bananaSpaghetti/issues).
 
-## � System Architecture Overview
+## Features
 
-The UI layer is built exclusively on **Jetpack Compose** following an **MVVM** pattern. Given the complexity of overlapping components (File Trees, Editors, Terminal Sheets), dependencies are deeply injected using `CompositionLocalProvider` (`LocalEditorViewModel`, `LocalTerminalViewModel`, etc.), allowing highly nested composable trees to avoid prop drilling.
+- **Code editor.** CodeMirror 6 in a WebView, with syntax highlighting, search and replace, undo and redo, and a split keyboard for landscape mode.
+- **Linux terminal.** An Ubuntu 24.04 base system runs through `proot`, with a real PTY and `bash`. A foreground service keeps sessions alive when the app is in the background.
+- **Language servers (LSP).** Completion and diagnostics from servers that run inside the Ubuntu environment.
+- **Git.** Clone, commit, branch, merge, and push through JGit, with SSH keys stored in the Android Keystore.
+- **SSH.** Connect to remote machines, browse their files, and open remote terminals.
+- **Python notebook.** Cells that run in the local Python environment.
+- **Live preview.** A local HTTP and WebSocket server, plus an in-app browser.
+- **AI assistant (optional).** Chat about the open file, or ask for an edit. You bring your own Anthropic or Google Gemini API key (see [AI assistant](#ai-assistant)).
 
----
+## Requirements
 
-## 📝 1. The CodeMirror 6 Bridge (`EditorSession`)
+| Item | Version |
+|---|---|
+| Android device | Android 8.0 (API 26) or later, `arm64-v8a` or `armeabi-v7a` |
+| JDK | 17 (the code targets Java 11) |
+| Android SDK | API 36, CMake 3.22.1, NDK |
+| Node.js | 20 or later, for the editor bundles |
 
-Beetle embeds a custom, highly modular CodeMirror 6 environment within a headless Android `WebView` (`CustomWebView`).
+The app has no `x86_64` build, so it does not run on most emulators. Use a real device.
 
-**Technical Implementation:**
-- **Dynamic Language Loading:** `editor.js` leverages `@codemirror/lang-*` implementations and asynchronous `import()` to load custom plugin bundles.
-- **Bi-Directional Bridging:** Kotlin interfaces via `@JavascriptInterface` (`AndroidEditor`, `AndroidInterface`) to handle saves, dirty states, and cursor positions. Memory stats (Java Heap size, Available Memory) are calculated in Kotlin and injected dynamically into JS to prevent OOM errors inside the WebView.
-- **Input Mode Hijacking:** Native CodeMirror struggles with Android IME inputs due to Composition events. `editor.js` listens to screen orientations and dynamically swaps `inputmode` between `text` and `none` to force specific software keyboard behaviors, mitigating layout thrashing.
-- **DOM Injection:** Floating tooltips, autocomplete dialogs, and LSP error widgets (`.lsp-doc-popup`) are injected directly into the DOM tree, bypassing default CM6 plugin restrictions for maximum touch compatibility.
+## Build from source
 
----
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/9u3u3/bananaSpaghetti.git
+   cd bananaSpaghetti
+   ```
+2. Build the editor bundles:
+   ```bash
+   npm ci
+   npm start
+   ```
+   Run `npm start` again each time you change `app/src/main/assets/editor/editor.js` or `notebook.js`.
+3. Build and install the debug APK on a connected device:
+   ```bash
+   ./gradlew installDebug
+   ```
+4. Run the unit tests:
+   ```bash
+   ./gradlew testDebugUnitTest
+   ```
 
-## 💻 2. The Native Pseudo-Terminal (`Tenebrio` & `pty-lib`)
+### Release builds
 
-Standard Android APIs lock down access to hardware-level `/dev/pts`. Beetle employs a custom C++ library to simulate a real TTY.
+`./gradlew assembleRelease` builds an unsigned APK. To sign it, put a `keystore.properties` file in the repository root, or set the `BEETLE_KEYSTORE_FILE`, `BEETLE_KEYSTORE_PASSWORD`, `BEETLE_KEY_ALIAS`, and `BEETLE_KEY_PASSWORD` environment variables. Git ignores `keystore.properties`, `*.jks`, and `*.keystore`. Never commit signing keys.
 
-**Technical Implementation:**
-- **JNI Binding:** `pty-lib.cpp` binds to `Tenebrio.kt`. It leverages Linux kernel calls: `open("/dev/ptmx")`, `grantpt()`, and `unlockpt()`.
-- **Termios TTY Flags:** Through `#include <termios.h>`, `pty-lib` manually constructs the terminal behavior using raw `TCSANOW` manipulations (`tio.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG...)`). This forces raw character processing back to the UI rather than processing through the Dalvik shell.
-- **Foreground Service Pipeline:** Android memory managers rapidly kill intensive background apps. The `TerminalService` maintains a constant WakeLock and creates a persistable Notification, keeping the daemonized `proot` shells alive even when Android minimizes the app.
+On first launch, the app downloads the Ubuntu base system (about 30 MB).
 
----
+## Architecture
 
-## 🐧 3. Native Proot Environment Execution
+The UI uses Jetpack Compose with the MVVM pattern. `CompositionLocal` values give ViewModels to the composable tree (`LocalEditorViewModel`, `LocalTerminalViewModel`, and others).
 
-To bypass the fact that `/system/bin` only contains limited Android shells (mksh), Beetle runs binaries compiled for GNU/Linux using `proot`.
+| Part | Where | What it does |
+|---|---|---|
+| Editor | `assets/editor/`, `utils/sessionHandling/EditorSession.kt` | CodeMirror 6, bundled with Rollup. Kotlin and JavaScript talk through `@JavascriptInterface` bridges. |
+| Terminal | `tenebrio/pty/`, `cpp/pty-lib.cpp` | A C++ JNI library opens `/dev/ptmx` and starts `proot` with the Ubuntu root file system. |
+| LSP | `cpp/lsp-lib.cpp`, `utils/languageHandling/` | Starts language servers inside Ubuntu and bridges them to the editor on ports 8081–8082. |
+| Git | `directGit/` | JGit, with SSH through JSch. JSch cannot make ED25519 keys, so the app makes RSA-4096 keys. |
+| Live server | `liveserver/` | Ktor HTTP and WebSocket preview server. |
+| Assets | `utils/assetHandling/AssetServer.kt` | Serves the editor and terminal pages on `localhost:8080`. |
+| AI | `utils/ai/`, `viewmodel/AiChatViewModel.kt` | Provider interface with Anthropic and Gemini implementations. |
 
-**Technical Implementation:**
-- **Filesystem Remapping (`-b` bindings):** `proot` intercepts syscalls, forcing the kernel to translate fake filesystem paths to actual Android storage.
-- **Mount Vectors:** 
-    - `/proc/self/fd/0` -> `/dev/stdin`
-    - `/sdcard` -> Real scoped storage
-    - `PREFIX` & `UBUNTU_TMP` -> Isolated application directories `/data/data/.../files/ubuntu`.
-- Due to strict linker permissions, we dynamically inject `LD_LIBRARY_PATH` natively inside the C++ fork before `execv()` executes the payload.
+All Kotlin source is in `app/src/main/java/com/bsbeetle/bananaspaghetti/`.
 
----
+## AI assistant
 
-## 🧠 4. Language Server Protocol (LSP) Engine (`lsp-lib.cpp`)
+The AI assistant is off until you add an API key in **Settings → AI**. Beetle has no AI key of its own. Your requests go from your phone straight to the provider you choose, and the provider bills you directly.
 
-To bring desktop-class autocompletion, Beetle spawns real Language Servers (like standard `clangd` or NodeJS-based `pyright`).
+- **Anthropic (Claude):** get a key at <https://console.anthropic.com/settings/keys>.
+- **Google (Gemini):** get a key at <https://aistudio.google.com/apikey>. Gemini has a free tier.
 
-**Technical Implementation:**
-- **The Execution Wrapper:** Setting up an LSP requires raw binary execution outside the shell. `lsp-lib` functions identically to `pty-lib` but bypasses the UI shell. 
-- **The `[LSP-BASH]` Subprocess:** Instead of arbitrary binary invocation, `lsp-lib` creates an isolated `/bin/bash` instance executing wrapper scripts (`. ./script_name`).
-- **WebSockets & Asynchronous Parsers:** `LiveServerManager` sets up Ktor CIO engines natively exposing ports **8081-8082**. CodeMirror bridges connections locally. `EditorSession` parses stderr output via `WebChromeClient` intercepts `onConsoleMessage`, converting string tokens (`[LSP-STATUS] line:1 col:1`) to JVM state flows synchronously.
+The app stores keys with `EncryptedSharedPreferences` (Android Keystore). Android backups do not include the keys.
 
----
+## Privacy and network use
 
-## 🔒 5. Secure SSH & Isolated Environment Networks
+Beetle sends data to these services:
 
-Beetle acts as its own SSH manager, avoiding reliance on external Termux configurations.
+| Service | When | What it sends |
+|---|---|---|
+| `beetle-backend.vercel.app` | Update check, extension list | The request only |
+| `beetle-backend.vercel.app` | You submit **Report issue** | Your email, your description, and any image you attach |
+| `beetle-backend.vercel.app` | After a crash, on the next launch | Stack trace, exception message, app version, device model, Android version, and the email you entered. It does not send file contents, project source, or API keys. Turn it off in **Settings → AI**. |
+| Anthropic or Google | Only when you use the AI assistant | Your messages and the content of the open file |
+| Ubuntu mirrors | First launch, and when you run `apt` | Package downloads |
 
-**Technical Implementation:**
-- **`UbuntuSshKeyManager`**: Generates and parses pure `id_ed25519` key pairs natively via JVM libraries but outputs them precisely inside the mapped `ubuntu/home/.ssh/` tree to fake out GNU SSH commands ran inside `proot`.
-- **Isolated JVM Sessions**: Remote SSH logic and local workspace logic are segregated at the `Session` superclass level. A `TerminalSession` can be spawned with a specific `sshConn` argument, which spins up a completely unique PTY process ensuring local host variables do not bleed into the SSH environment.
+If you fork Beetle, change the backend URLs in `utils/UpdatesService.kt`, `utils/diagnostics/CrashReporter.kt`, `ui/Extension/ExtensionsViewModel.kt`, and `ui/home/ReportIssueDialog.kt`.
 
----
+## Contributing
 
-## � 6. Asset Builds and App Compilation
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before you open a pull request. Everyone in this project follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-Because the CodeMirror web bundles must be static for file inclusion (`file:///android_asset/`), we bundle NPM dependencies via `Rollup`.
+To report a security problem, follow [SECURITY.md](SECURITY.md). Do not open a public issue for it.
 
-**Compiling the Editor UI:**
-```bash
-npm install
-npm start # Compiles rollups: editor.bundle.js & notebook.bundle.js
-```
+## License
 
-**Compiling the APK System:**
-```bash
-# Debug target
-./gradlew assembleDebug
+Beetle is free software under the [GNU General Public License v3.0](LICENSE).
 
-# Release explicitly targeted against beetle-release-keystore.jks
-./gradlew assembleRelease
-```
-
----
-
-## 🚀 Future Development Roadmap
-
-While the core architecture is stable, the following major features are currently in the pipeline:
-- **Agentic AI Integration:** Implementing advanced LLM-driven agent capabilities tailored for direct codebase manipulation and analysis right inside the editor.
-- **Cloud-Based Remote Systems:** Extending the SSH architecture to support seamless syncing and execution on managed, scalable cloud instances directly from the mobile UI.
+Beetle includes third-party software under other licenses. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

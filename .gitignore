@@ -18,3 +18,25 @@ app/src/main/assets/editor/editor.bundle.js
 app/src/main/assets/editor/editor.bundle.js.map
 app/src/main/assets/editor/notebook.bundle.js
 app/src/main/assets/editor/notebook.bundle.js.map
+
+# Local scratch file: ready-to-copy commit message (maintained by Claude, not committed)
+commit.txt
+
+# Release signing credentials — never commit. See app/build.gradle.kts; CI supplies these
+# as BEETLE_KEYSTORE_* environment variables instead.
+keystore.properties
+*.jks
+*.keystore
+
+# Kotlin compiler daemon logs
+.kotlin/
+
+# Old scratch copies of the Git web assets. The live files are in app/src/main/assets/git/.
+/temp/
+
+# Private maintainer notes. They stay on the maintainer's disk and are not published.
+/CLAUDE.md
+/PRODUCT_STRATEGY.md
+/GAPS.md
+/FEATURE_LOG.md
+/TESTING.md
