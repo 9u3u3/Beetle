@@ -16,7 +16,6 @@ Beetle is licensed under the [GNU Affero General Public License v3.0 or later](L
 |---|---|---|
 | `terminal/xterm.js`, `terminal/xterm-addon-fit.js`, `terminal/xterm.css` | [xterm.js](https://github.com/xtermjs/xterm.js) | MIT |
 | `editor/*.bundle.js`, `git/*.bundle.js` | [CodeMirror 6](https://codemirror.net/) and the npm packages in `package.json` | MIT (CodeMirror). See each package for the others. |
-| `plugins/*/*.js` | The `@codemirror/lang-*` language packages and [Lezer](https://lezer.codemirror.net/) parsers | MIT |
 | `eruda.js` | [eruda](https://github.com/liriliri/eruda) | MIT |
 | `file_icons/` | File-type icons. See the source project of each icon set. | See the source project |
 

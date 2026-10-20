@@ -6,6 +6,13 @@ import { keymap, drawSelection, lineNumbers, highlightActiveLineGutter, highligh
 import { linter, lintGutter, forceLinting, setDiagnostics } from "@codemirror/lint"
 import { cpp } from "@codemirror/lang-cpp"
 import { python } from "@codemirror/lang-python"
+import { html } from "@codemirror/lang-html"
+import { css } from "@codemirror/lang-css"
+import { javascript } from "@codemirror/lang-javascript"
+import { java } from "@codemirror/lang-java"
+import { go } from "@codemirror/lang-go"
+import { rust } from "@codemirror/lang-rust"
+import { sql } from "@codemirror/lang-sql"
 import { insertNewlineAndIndent, deleteCharBackward, undo, redo } from "@codemirror/commands"
 import { openSearchPanel, closeSearchPanel } from "@codemirror/search"
 import { bracketMatching } from "@codemirror/language"
@@ -261,18 +268,24 @@ window.setLanguage = async function (slug, port = 8081) {
 
   let langModule;
   try {
-    if (slug === 'cpp') {
-      langModule = cpp();
-    } else if (slug === 'python') {
-      langModule = python();
-    } else {
-      // Dynamic import
-      const moduleUrl = `http://localhost:8080/plugins/${slug}/${slug}.js`;
-      const module = await import(moduleUrl);
-
-      // Check if default export is a function or the extension itself
-      langModule = typeof module.default === 'function' ? module.default() : module.default;
-    }
+    // The language packages are part of this bundle. A separately bundled module would carry its
+    // own copy of @codemirror/state, and the editor cannot use it.
+    const languages = {
+      cpp: () => cpp(),
+      python: () => python(),
+      html: () => html(),
+      css: () => css(),
+      javascript: () => javascript({ typescript: true }),
+      js: () => javascript({ typescript: true }),
+      react: () => javascript({ jsx: true, typescript: true }),
+      java: () => java(),
+      go: () => go(),
+      rust: () => rust(),
+      sql: () => sql(),
+    };
+    const make = languages[slug];
+    if (!make) throw new Error(`No language support for ${slug}`);
+    langModule = make();
 
     if (window.view && langModule) {
       window.view.dispatch({

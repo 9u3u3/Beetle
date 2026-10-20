@@ -130,12 +130,8 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
                     pluginDir.mkdirs()
                 }
 
-                // Copy the editor module and the LSP script from the app assets.
-                addInstallOutput("$ Copying the editor module...")
-                val jsFile = File(pluginDir, "${extension.slug}.js")
-                copyAsset("plugins/${extension.slug}/${extension.slug}.js", jsFile)
-                addInstallOutput("  ✓ Editor module copied")
-
+                // The editor bundle holds the syntax highlighting. The extension adds the
+                // language server, which the LSP script installs and starts.
                 addInstallOutput("$ Copying the LSP script...")
                 val scriptFile = File(pluginDir, "${extension.slug}.sh")
                 copyAsset("plugins/${extension.slug}/${extension.slug}.sh", scriptFile)
