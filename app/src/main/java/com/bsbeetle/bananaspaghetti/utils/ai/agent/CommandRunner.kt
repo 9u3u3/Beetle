@@ -127,17 +127,23 @@ class CommandRunner(context: Context) {
     }
 
     /** Stops the shell. The next command starts a new one. */
-    suspend fun close() {
+    suspend fun close() = withContext(Dispatchers.Main.immediate) { release() }
+
+    /**
+     * Stops the shell now. Call it on the main thread.
+     *
+     * Do not wrap close() in runBlocking on the main thread instead. close() then waits for the
+     * main thread, the main thread waits for close(), and the app shows a white screen.
+     */
+    fun release() {
         val terminal = session ?: return
         session = null
         shellReady = false
-        withContext(Dispatchers.Main) {
-            val active = SessionList.activeSessionIndex
-            terminal.destroy()
-            // destroy() moves the active tab to the last one. Put it back.
-            SessionList.activeSessionIndex =
-                    active?.takeIf { it < SessionList.sessions.size } ?: SessionList.activeSessionIndex
-        }
+        val active = SessionList.activeSessionIndex
+        terminal.destroy()
+        // destroy() moves the active tab to the last one. Put it back.
+        SessionList.activeSessionIndex =
+                active?.takeIf { it < SessionList.sessions.size } ?: SessionList.activeSessionIndex
     }
 
     companion object {
