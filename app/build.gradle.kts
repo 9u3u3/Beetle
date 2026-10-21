@@ -44,8 +44,8 @@ android {
         // Bump versionCode on every build you hand to anyone — Android refuses to install an
         // APK whose versionCode is not greater than the installed one, and UpdatesService has
         // nothing to compare against otherwise.
-        versionCode = 4
-        versionName = "1.1.1"
+        versionCode = 5
+        versionName = "1.1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
