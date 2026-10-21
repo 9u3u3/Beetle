@@ -498,7 +498,9 @@ class AiChatViewModel(application: Application) : AndroidViewModel(application) 
     override fun onCleared() {
         super.onCleared()
         client.close()
-        kotlinx.coroutines.runBlocking { commandRunner.close() }
+        // onCleared runs on the main thread. This also stops the "Beetle Terminal" notification
+        // when the agent shell is the last terminal.
+        commandRunner.release()
     }
 
     companion object {
