@@ -214,6 +214,25 @@ fun SearchReplaceBar(
 
                     Spacer(Modifier.width(8.dp))
 
+                    // Close button
+                    IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close search",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                // Match navigation and option toggles on their own row: next to the input they left it
+                // only a few dp of width on a phone, so the typed query was invisible
+                Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                ) {
+                    Spacer(Modifier.width(40.dp))
+
                     // Navigation buttons
                     Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                         NavigationButton(
@@ -255,18 +274,6 @@ fun SearchReplaceBar(
                         PremiumOptionToggle("Aa", "Match Case", matchCase) { matchCase = it }
                         PremiumOptionToggle("Ab", "Whole Word", wholeWord) { wholeWord = it }
                         PremiumOptionToggle(".*", "Regex", useRegex) { useRegex = it }
-                    }
-
-                    Spacer(Modifier.width(12.dp))
-
-                    // Close button
-                    IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close search",
-                                tint = TextSecondary,
-                                modifier = Modifier.size(18.dp)
-                        )
                     }
                 }
 
