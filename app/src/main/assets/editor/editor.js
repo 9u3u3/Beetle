@@ -1343,6 +1343,20 @@ function setupEditor() {
   window.view = view; // Expose globally
   window.editor = view; // Alias for compatibility
 
+  // The editor is only as tall as its text, so a tap on the empty area below a short (or empty)
+  // file hit nothing: no focus, no keyboard, and typed spaces scrolled the page instead.
+  // Treat a tap outside the editor as a tap below the last line.
+  const scrollWrapper = document.getElementById('scroll-wrapper');
+  if (scrollWrapper && !window.tapToFocusInstalled) {
+    window.tapToFocusInstalled = true;
+    scrollWrapper.addEventListener('click', (e) => {
+      const v = window.view;
+      if (!v || e.target.closest('.cm-editor')) return;
+      v.focus();
+      v.dispatch({ selection: { anchor: v.state.doc.length }, scrollIntoView: true });
+    });
+  }
+
   window.isEditorReady = true
 
   // Notify Android that CM6 is ready so loading screen can be hidden
