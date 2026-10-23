@@ -60,7 +60,13 @@ object LanguageRegistry {
 
     /** Save JSON to file */
     private fun persist() {
-        registryFile.writeText(json.toString(4))
+        // Write a temp file and rename it so a kill mid-write cannot leave a truncated registry
+        val temp = File(registryFile.parentFile, "$FILE_NAME.tmp")
+        temp.writeText(json.toString(4))
+        if (!temp.renameTo(registryFile)) {
+            registryFile.writeText(json.toString(4))
+            temp.delete()
+        }
     }
 
     fun getSlugForExtension(ext: String): String {
