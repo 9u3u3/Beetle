@@ -3,6 +3,7 @@ package com.bsbeetle.bananaspaghetti.utils.ssh
 import android.content.Context
 import android.util.Log
 import com.bsbeetle.bananaspaghetti.directGit.utils.GitSshKeyManager
+import com.bsbeetle.bananaspaghetti.directGit.utils.UbuntuSshKeyManager
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.Session
 import com.jcraft.jsch.SocketFactory
@@ -38,8 +39,11 @@ class SshConnectionManager(private val context: Context) {
 
         when (params.authType) {
             SshConnectionParams.AuthType.APP_SSH_KEYS -> {
-                val keyManager = GitSshKeyManager(context)
-                val privateKeyBytes = keyManager.getPrivateKeyBytes()
+                // Settings generates the ED25519 key with ssh-keygen (UbuntuSshKeyManager). The
+                // older RSA key (GitSshKeyManager) is only used when that one is missing.
+                val privateKeyBytes =
+                    UbuntuSshKeyManager(context).getPrivateKeyPEM()?.toByteArray()
+                        ?: GitSshKeyManager(context).getPrivateKeyBytes()
                 if (privateKeyBytes != null) {
                     jsch.addIdentity(
                         "beetle-ssh-key",
