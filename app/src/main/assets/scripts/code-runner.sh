@@ -75,7 +75,7 @@ case "$EXT" in
     
     # === TYPESCRIPT ===
     ts)
-        check_pkg npx nodejs
+        check_pkg npx npm
         echo "> npx ts-node $FILENAME"
         npx ts-node "$FILE"
         ;;
@@ -94,7 +94,7 @@ case "$EXT" in
     
     # === JAVA ===
     java)
-        check_pkg javac openjdk17
+        check_pkg javac openjdk-17-jdk
         echo "> javac $FILENAME"
         if javac "$FILE" 2>&1; then
             echo "> java $NAME"
@@ -108,14 +108,14 @@ case "$EXT" in
     
     # === GO ===
     go)
-        check_pkg go go
+        check_pkg go golang-go
         echo "> go run $FILENAME"
         go run "$FILE"
         ;;
     
     # === RUST ===
     rs)
-        check_pkg rustc rust
+        check_pkg rustc rustc
         compile_and_run rustc "" "$FILE" "$NAME"
         ;;
     
@@ -134,7 +134,7 @@ case "$EXT" in
     
     # === PHP ===
     php)
-        check_pkg php php
+        check_pkg php php-cli
         echo "> php $FILENAME"
         php "$FILE"
         ;;
