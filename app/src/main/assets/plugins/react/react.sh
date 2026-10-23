@@ -75,7 +75,7 @@ if ! command -v typescript-language-server >/dev/null 2>&1; then
     # A failed earlier run can leave partial folders, and npm then stops with ENOTEMPTY.
     NPM_ROOT=$(npm root -g 2>/dev/null || echo /usr/local/lib/node_modules)
     rm -rf "$NPM_ROOT/typescript" "$NPM_ROOT"/.typescript-* "$NPM_ROOT/typescript-language-server" "$NPM_ROOT"/.typescript-language-server-*
-    run_silent npm install -g --cache /tmp/beetle-npm-cache --no-fund --no-audit typescript typescript-language-server || true
+    run_silent npm install -g --ignore-scripts --cache /tmp/beetle-npm-cache --no-fund --no-audit typescript typescript-language-server || true
 fi
 
 if ! command -v typescript-language-server >/dev/null 2>&1; then
@@ -89,7 +89,7 @@ if ! command -v vscode-eslint-language-server >/dev/null 2>&1; then
     # A failed earlier run can leave partial folders, and npm then stops with ENOTEMPTY.
     NPM_ROOT=$(npm root -g 2>/dev/null || echo /usr/local/lib/node_modules)
     rm -rf "$NPM_ROOT/vscode-langservers-extracted" "$NPM_ROOT"/.vscode-langservers-extracted-*
-    run_silent npm install -g --cache /tmp/beetle-npm-cache --no-fund --no-audit vscode-langservers-extracted || true
+    run_silent npm install -g --ignore-scripts --cache /tmp/beetle-npm-cache --no-fund --no-audit vscode-langservers-extracted || true
 fi
 
 # If install-only mode, exit now without starting LSP
