@@ -204,5 +204,7 @@ dependencies {
     // JGit pulls in the original JSch, which would clash with the maintained fork below
     implementation(libs.jgit.ssh.jsch) { exclude(group = "com.jcraft", module = "jsch") }
     implementation(libs.jsch)
+    // JSch's ED25519 support needs a provider that Android does not offer to apps
+    implementation(libs.bouncycastle.prov)
     implementation(libs.androidx.security.crypto)
 }

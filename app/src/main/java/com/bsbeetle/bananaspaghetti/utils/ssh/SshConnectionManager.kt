@@ -16,6 +16,14 @@ class SshConnectionManager(private val context: Context) {
     companion object {
         private const val TAG = "SshConnectionManager"
         private const val CONNECT_TIMEOUT_MS = 15_000
+
+        init {
+            // Android has no EdDSA provider for apps, so use JSch's Bouncy Castle implementation
+            // for the ED25519 keys that Settings generates.
+            JSch.setConfig("ssh-ed25519", "com.jcraft.jsch.bc.SignatureEd25519")
+            JSch.setConfig("keypairgen.eddsa", "com.jcraft.jsch.bc.KeyPairGenEdDSA")
+            JSch.setConfig("keypairgen_fromprivate.eddsa", "com.jcraft.jsch.bc.KeyPairGenEdDSA")
+        }
     }
 
     /**

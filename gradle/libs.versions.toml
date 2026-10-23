@@ -17,6 +17,7 @@ foundationVersion = "1.9.5"
 animation = "1.9.5"
 jgit = "6.8.0.202311291450-r"
 jsch = "0.2.21"
+bouncycastle = "1.78.1"
 securityCrypto = "1.1.0-alpha06"
 
 [libraries]
@@ -45,6 +46,7 @@ jgit = { group = "org.eclipse.jgit", name = "org.eclipse.jgit", version.ref = "j
 jgit-ssh-jsch = { group = "org.eclipse.jgit", name = "org.eclipse.jgit.ssh.jsch", version.ref = "jgit" }
 # Maintained fork of JSch that keeps the com.jcraft.jsch API and adds ED25519 keys
 jsch = { group = "com.github.mwiede", name = "jsch", version.ref = "jsch" }
+bouncycastle-prov = { group = "org.bouncycastle", name = "bcprov-jdk18on", version.ref = "bouncycastle" }
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 
 [plugins]
