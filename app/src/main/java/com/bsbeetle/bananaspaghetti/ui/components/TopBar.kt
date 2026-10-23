@@ -809,7 +809,7 @@ fun RightTopBar(modifier: Modifier = Modifier, navController: NavController) {
 
                                                         // Install then re-run
                                                         val installCmd =
-                                                                "apk add $pkgToInstall && clear && bash \$PREFIX/code-runner.sh \"$fileToRun\"\n"
+                                                                "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y $pkgToInstall && clear && bash \$PREFIX/code-runner.sh \"$fileToRun\"\n"
                                                         terminal.insertText(installCmd)
 
                                                         android.widget.Toast.makeText(
