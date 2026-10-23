@@ -42,4 +42,13 @@ class GitUrlConverterTest {
         assertTrue(GitUrlConverter.isHttpsUrl("https://github.com/u/r.git"))
         assertFalse(GitUrlConverter.isHttpsUrl("git@github.com:u/r.git"))
     }
+
+    @Test
+    fun `ignores whitespace around a pasted url`() {
+        assertEquals("git@github.com:u/r.git", GitUrlConverter.ensureSsh("  https://github.com/u/r.git\n"))
+        assertEquals("git@github.com:u/r.git", GitUrlConverter.httpsToSsh("https://github.com/u/r.git "))
+        assertEquals("https://github.com/u/r.git", GitUrlConverter.sshToHttps("\tgit@github.com:u/r.git"))
+        assertTrue(GitUrlConverter.isHttpsUrl(" https://github.com/u/r.git"))
+        assertTrue(GitUrlConverter.isSshUrl("git@github.com:u/r.git\n"))
+    }
 }

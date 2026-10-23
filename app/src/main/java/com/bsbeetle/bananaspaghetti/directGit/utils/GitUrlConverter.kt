@@ -44,7 +44,8 @@ object GitUrlConverter {
      * // Returns: "git@gitlab.com:user/repo.git"
      * ```
      */
-    fun httpsToSsh(url: String): String {
+    fun httpsToSsh(rawUrl: String): String {
+        val url = rawUrl.trim()
         return when {
             // GitHub
             url.startsWith("https://github.com/") -> {
@@ -83,7 +84,8 @@ object GitUrlConverter {
      * // Returns: "https://github.com/user/repo.git"
      * ```
      */
-    fun sshToHttps(url: String): String {
+    fun sshToHttps(rawUrl: String): String {
+        val url = rawUrl.trim()
         return when {
             // GitHub
             url.startsWith("git@github.com:") -> {
@@ -121,7 +123,7 @@ object GitUrlConverter {
      * ```
      */
     fun isSshUrl(url: String): Boolean {
-        return url.startsWith("git@")
+        return url.trim().startsWith("git@")
     }
 
     /**
@@ -137,7 +139,7 @@ object GitUrlConverter {
      * ```
      */
     fun isHttpsUrl(url: String): Boolean {
-        return url.startsWith("https://")
+        return url.trim().startsWith("https://")
     }
 
     /**
