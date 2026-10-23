@@ -91,9 +91,14 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
         }
     }
     var permissionCheckTrigger by remember { mutableStateOf(0) }
+    // Only repositories on shared storage need "All files access". Projects inside the app's own
+    // storage (such as the Ubuntu home) are always readable, so don't gate them behind it.
     val currentHasPermission =
-            remember(permissionCheckTrigger) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            remember(permissionCheckTrigger, uiState.rootPath) {
+                val onSharedStorage =
+                        uiState.rootPath.startsWith("/storage/") ||
+                                uiState.rootPath.startsWith("/sdcard")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && onSharedStorage) {
                     Environment.isExternalStorageManager()
                 } else {
                     true
@@ -289,7 +294,11 @@ fun GitTab(viewModel: GitViewModel = viewModel()) {
                 onDelete = { name, deleteRemote ->
                     viewModel.deleteBranchWithRemote(name, deleteRemote)
                 },
-                onNewBranch = { showNewBranchDialog = true }
+                onNewBranch = { showNewBranchDialog = true },
+                onMerge = { name ->
+                    viewModel.mergeBranch(name)
+                    showBranchDialog = false
+                }
         )
     }
 

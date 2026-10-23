@@ -89,7 +89,7 @@ class GitTerminalManager(private val context: Context) {
                                             Exception("Terminal not initialized")
                                     )
 
-                    addToHistory("🔑 Setting up SSH keys in Alpine...")
+                    addToHistory("🔑 Setting up SSH keys in Ubuntu...")
 
                     // Create .ssh directory
                     Log.d(TAG, "📁 Creating ~/.ssh directory...")
@@ -346,7 +346,7 @@ class GitTerminalManager(private val context: Context) {
     private var gitInstallChecked = false
     private var safeDirectoryConfigured = false
 
-    /** Ensure git is installed in Alpine */
+    /** Ensure git is installed in the Ubuntu environment */
     private suspend fun ensureGitInstalled(
             session: com.bsbeetle.bananaspaghetti.utils.sessionHandling.TerminalSession
     ) {
@@ -355,19 +355,32 @@ class GitTerminalManager(private val context: Context) {
             Log.d(TAG, "📦 Checking if git is installed...")
             addToHistory("📦 Checking git installation...")
 
-            // Check if git is installed
+            // Check if git and the ssh client are installed (the Ubuntu base image has neither)
             val gitCheckFile = File(context.filesDir, "ubuntu/usr/bin/git")
-            if (!gitCheckFile.exists()) {
+            val sshCheckFile = File(context.filesDir, "ubuntu/usr/bin/ssh")
+            if (!gitCheckFile.exists() || !sshCheckFile.exists()) {
                 Log.d(TAG, "📥 Git not found, installing...")
                 addToHistory("📥 Installing git...")
 
                 // Install git
-                session.insertText("apk update && apk add git openssh\n")
+                session.insertText(
+                        "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y git openssh-client\n"
+                )
 
-                // Wait for installation to complete
-                delay(10000) // 10 seconds for package installation
+                // apt can take minutes on a slow connection, so wait for the binaries to appear
+                // instead of a fixed delay (give up after 5 minutes)
+                var waitedMs = 0
+                while ((!gitCheckFile.exists() || !sshCheckFile.exists()) && waitedMs < 300_000) {
+                    delay(1000)
+                    waitedMs += 1000
+                }
+                delay(3000) // let dpkg finish configuring the packages
 
-                addToHistory("✅ Git installed successfully")
+                if (gitCheckFile.exists() && sshCheckFile.exists()) {
+                    addToHistory("✅ Git installed successfully")
+                } else {
+                    addToHistory("❌ Git installation did not finish")
+                }
             } else {
                 Log.d(TAG, "✅ Git already installed")
             }

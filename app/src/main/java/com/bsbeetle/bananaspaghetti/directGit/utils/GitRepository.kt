@@ -166,13 +166,22 @@ class GitRepository(private val rootDir: File) {
         }
     }
 
-    fun commit(message: String): GitResult<String> {
+    fun commit(
+            message: String,
+            authorName: String = "",
+            authorEmail: String = ""
+    ): GitResult<String> {
         GitLogger.log("git commit -m \"$message\"", LogType.COMMAND)
         if (message.isBlank()) {
             return GitResult.Error("Commit message cannot be empty")
         }
         return try {
-            val result = git?.commit()?.setMessage(message)?.call()
+            val command = git?.commit()?.setMessage(message)
+            // Without an explicit identity JGit falls back to the OS user ("root")
+            if (authorName.isNotBlank() && authorEmail.isNotBlank()) {
+                command?.setAuthor(authorName, authorEmail)?.setCommitter(authorName, authorEmail)
+            }
+            val result = command?.call()
             val shortHash = result?.abbreviate(7)?.name() ?: "unknown"
             GitLogger.log("Committed $shortHash", LogType.SUCCESS)
             GitResult.Success(shortHash, "Committed: $shortHash - ${message.take(30)}...")
@@ -568,6 +577,8 @@ class GitRepository(private val rootDir: File) {
                         )
                 )
             }
+        } catch (e: org.eclipse.jgit.api.errors.NoHeadException) {
+            // A repository with no commits yet has no history, which is not an error
         } catch (e: Exception) {
             Log.e("GitRepository", "Failed to get commit log", e)
         }

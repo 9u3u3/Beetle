@@ -10,6 +10,7 @@ import com.bsbeetle.bananaspaghetti.directGit.utils.GitSshKeyManager
 import com.bsbeetle.bananaspaghetti.directGit.utils.GitSshSessionFactory
 import com.bsbeetle.bananaspaghetti.directGit.utils.GitUrlConverter
 import com.bsbeetle.bananaspaghetti.utils.git.*
+import com.bsbeetle.bananaspaghetti.utils.preferences.EditorPreferences
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -23,6 +24,7 @@ import org.eclipse.jgit.transport.SshSessionFactory
 
 data class GitUiState(
         val isInitialized: Boolean = false,
+        val rootPath: String = "",
         val modifiedFiles: List<String> = emptyList(),
         val stagedFiles: List<String> = emptyList(),
         val untrackedFiles: List<String> = emptyList(),
@@ -75,6 +77,9 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
 
     // Ubuntu Git Helper for terminal-based Git operations
     private val ubuntuGitHelper = UbuntuGitHelper(application)
+
+    // Commit author set in Settings -> Git
+    private val editorPrefs = EditorPreferences(application)
 
     private var isGitInitialized = false
 
@@ -255,6 +260,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
 
         if (currentRoot != file) {
             currentRoot = file
+            _uiState.value = _uiState.value.copy(rootPath = file.absolutePath)
             repository?.close()
             Log.d("GitViewModel", "🔄 Creating new GitRepository for: ${file.absolutePath}")
             repository = GitRepository(file)
@@ -412,7 +418,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
-            when (val result = repository?.commit(message)) {
+            when (val result = repository?.commit(message, editorPrefs.gitUserName, editorPrefs.gitUserEmail)) {
                 is GitResult.Success -> showSuccess(result.message)
                 is GitResult.Error -> showError(result.message, result.details)
                 null -> showError("No repository")
@@ -444,7 +450,7 @@ class GitViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
-            when (val result = repository?.commit(message)) {
+            when (val result = repository?.commit(message, editorPrefs.gitUserName, editorPrefs.gitUserEmail)) {
                 is GitResult.Success -> {
                     // Then push
                     _uiState.value = _uiState.value.copy(operationInProgress = "Pushing...")

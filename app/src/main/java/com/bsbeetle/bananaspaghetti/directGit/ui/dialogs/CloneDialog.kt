@@ -78,7 +78,7 @@ fun CloneDialog(
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            "Tip: Use internal storage for better compatibility with Alpine Linux",
+            "Tip: Use internal storage for better compatibility with the Ubuntu terminal",
             color = GitTheme.TextTertiary,
             fontSize = 10.sp,
             fontStyle = FontStyle.Italic

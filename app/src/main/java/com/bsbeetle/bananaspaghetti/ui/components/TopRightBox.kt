@@ -335,7 +335,11 @@ fun TopRightBox(
                 onDelete = { name, deleteRemote ->
                     gitViewModel?.deleteBranchWithRemote(name, deleteRemote)
                 },
-                onNewBranch = { showNewBranchDialog = true }
+                onNewBranch = { showNewBranchDialog = true },
+                onMerge = { name ->
+                    gitViewModel?.mergeBranch(name)
+                    showBranchDialog = false
+                }
         )
     }
 

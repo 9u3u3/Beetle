@@ -27,7 +27,8 @@ fun BranchDialog(
     onDismiss: () -> Unit,
     onCheckout: (String) -> Unit,
     onDelete: (String, Boolean) -> Unit,
-    onNewBranch: () -> Unit
+    onNewBranch: () -> Unit,
+    onMerge: ((String) -> Unit)? = null
 ) {
     StyledDialog(title = "Branches", onDismiss = onDismiss) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -52,7 +53,7 @@ fun BranchDialog(
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
                 }
-                items(local) { b -> BranchItem(b, onCheckout, onDelete) }
+                items(local) { b -> BranchItem(b, onCheckout, onDelete, onMerge) }
             }
             if (remote.isNotEmpty()) {
                 item {
@@ -64,7 +65,7 @@ fun BranchDialog(
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
                 }
-                items(remote) { b -> BranchItem(b, onCheckout, onDelete) }
+                items(remote) { b -> BranchItem(b, onCheckout, onDelete, onMerge) }
             }
         }
     }
@@ -74,7 +75,8 @@ fun BranchDialog(
 private fun BranchItem(
     branch: BranchInfo,
     onCheckout: (String) -> Unit,
-    onDelete: (String, Boolean) -> Unit
+    onDelete: (String, Boolean) -> Unit,
+    onMerge: ((String) -> Unit)?
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var deleteFromRemote by remember { mutableStateOf(false) }
@@ -141,6 +143,18 @@ private fun BranchItem(
             fontSize = 13.sp,
             modifier = Modifier.weight(1f)
         )
+
+        if (!branch.isCurrent && !branch.isRemote && onMerge != null) {
+            IconButton(onClick = { onMerge(branch.name) }, modifier = Modifier.size(24.dp)) {
+                Icon(
+                    Icons.Rounded.CallMerge,
+                    "Merge into current branch",
+                    tint = GitTheme.AccentBlue.copy(alpha = 0.8f),
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+        }
 
         if (!branch.isCurrent && !branch.isRemote) {
             IconButton(onClick = { showDeleteDialog = true }, modifier = Modifier.size(24.dp)) {
