@@ -17,7 +17,13 @@ object LanguageRegistry {
         registryFile = File(context.filesDir, FILE_NAME)
 
         if (registryFile.exists()) {
-            json = JSONObject(registryFile.readText())
+            // A truncated or corrupt file must not crash the app on every launch
+            json = try {
+                JSONObject(registryFile.readText())
+            } catch (e: org.json.JSONException) {
+                registryFile.writeText("{}")
+                JSONObject()
+            }
         } else {
             registryFile.writeText("{}")
             json = JSONObject()
