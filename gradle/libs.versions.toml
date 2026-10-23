@@ -16,7 +16,7 @@ ui = "1.9.5"
 foundationVersion = "1.9.5"
 animation = "1.9.5"
 jgit = "6.8.0.202311291450-r"
-jsch = "0.1.55"
+jsch = "0.2.21"
 securityCrypto = "1.1.0-alpha06"
 
 [libraries]
@@ -43,7 +43,8 @@ androidx-foundation = { group = "androidx.compose.foundation", name = "foundatio
 androidx-compose-animation = { group = "androidx.compose.animation", name = "animation", version.ref = "animation" }
 jgit = { group = "org.eclipse.jgit", name = "org.eclipse.jgit", version.ref = "jgit" }
 jgit-ssh-jsch = { group = "org.eclipse.jgit", name = "org.eclipse.jgit.ssh.jsch", version.ref = "jgit" }
-jsch = { group = "com.jcraft", name = "jsch", version.ref = "jsch" }
+# Maintained fork of JSch that keeps the com.jcraft.jsch API and adds ED25519 keys
+jsch = { group = "com.github.mwiede", name = "jsch", version.ref = "jsch" }
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 
 [plugins]

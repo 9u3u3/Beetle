@@ -201,7 +201,8 @@ dependencies {
     implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
     implementation(libs.jgit)
-    implementation(libs.jgit.ssh.jsch)
+    // JGit pulls in the original JSch, which would clash with the maintained fork below
+    implementation(libs.jgit.ssh.jsch) { exclude(group = "com.jcraft", module = "jsch") }
     implementation(libs.jsch)
     implementation(libs.androidx.security.crypto)
 }
