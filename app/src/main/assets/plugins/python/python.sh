@@ -54,9 +54,11 @@ if [ ! -f /linkerconfig/ld.config.txt ]; then
     touch /linkerconfig/ld.config.txt 2>/dev/null || true
 fi
 
-# Check if pylsp is installed, install if not
-if ! command -v pylsp > /dev/null 2>&1; then
-    log_msg "[PYLSP] pylsp not found, installing..."
+# Check if pylsp and its linters are installed, install if not.
+# The base python-lsp-server package ships without pyflakes/pycodestyle, so without them pylsp
+# starts fine but never reports any diagnostics.
+if ! command -v pylsp > /dev/null 2>&1 || ! python3 -c "import pyflakes, pycodestyle" > /dev/null 2>&1; then
+    log_msg "[PYLSP] pylsp or its linters not found, installing..."
     
     # Ensure pip is available
     if ! command -v pip3 > /dev/null 2>&1 && ! command -v pip > /dev/null 2>&1; then
@@ -69,11 +71,11 @@ if ! command -v pylsp > /dev/null 2>&1; then
         fi
     fi
     
-    # Install python-lsp-server
+    # Install python-lsp-server with the linters that produce its diagnostics
     if command -v pip3 > /dev/null 2>&1; then
-        run_silent pip3 install --user --break-system-packages python-lsp-server
+        run_silent pip3 install --user --break-system-packages "python-lsp-server[pyflakes,pycodestyle]"
     else
-        run_silent pip install --user --break-system-packages python-lsp-server
+        run_silent pip install --user --break-system-packages "python-lsp-server[pyflakes,pycodestyle]"
     fi
     
     log_msg "[PYLSP] Installation complete."

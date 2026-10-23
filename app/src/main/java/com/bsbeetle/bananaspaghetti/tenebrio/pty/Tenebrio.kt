@@ -100,8 +100,9 @@ class Tenebrio(private val context: Context, private val session: Session) {
     fun init() {
         Log.d("Tenebrio", "Initializing")
 
-        // Always copy the code-runner script so updates take effect immediately
+        // Always copy the shell scripts so updates take effect immediately
         copyAssetsTo(PREFIX, "scripts/code-runner.sh", context)
+        copyAssetsTo(PREFIX, "scripts/init-ubuntu.sh", context)
 
         // Check if Ubuntu is properly extracted by verifying /bin/bash exists
         val ubuntuBash = File(ubuntu, "bin/bash")

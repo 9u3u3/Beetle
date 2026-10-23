@@ -128,6 +128,14 @@ class LspServer(private val context: Context, private val port: Int = 8081) {
             Log.e("LspServer", "Script for $slug not found at ${targetScript.absolutePath}")
             return
         }
+        // Refresh the script from the bundled copy so fixes reach extensions installed by an older version
+        try {
+            context.assets.open(scriptRelativePath).use { input ->
+                targetScript.outputStream().use { output -> input.copyTo(output) }
+            }
+        } catch (e: Exception) {
+            Log.w("LspServer", "Could not refresh $scriptRelativePath from assets", e)
+        }
         targetScript.setExecutable(true)
 
         // For Rust (rust-analyzer), auto-generate Cargo.toml if not exists

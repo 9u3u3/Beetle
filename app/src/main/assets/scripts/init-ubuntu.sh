@@ -12,11 +12,14 @@ if ! grep -q "^inet:" /etc/group 2>/dev/null; then
     cat >> /etc/group << 'GROUPS'
 inet:x:3003:
 everybody:x:9997:
-u0_a721:x:10721:
-u0_a721_cache:x:20721:
-all_a721:x:50721:
 GROUPS
 fi
+# The app's own group IDs depend on its uid (u0_aNNN), so name whichever ones this process carries
+for gid in $(id -G 2>/dev/null); do
+    if ! grep -q "^[^:]*:[^:]*:$gid:" /etc/group 2>/dev/null; then
+        echo "android_$gid:x:$gid:" >> /etc/group
+    fi
+done
 
 # Setup apt sources.list if missing (base rootfs doesn't include it)
 if [ ! -f /etc/apt/sources.list ] || [ ! -s /etc/apt/sources.list ]; then
