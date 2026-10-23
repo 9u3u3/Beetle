@@ -70,7 +70,7 @@ if ! command -v vscode-css-language-server >/dev/null 2>&1; then
     # A failed earlier run can leave partial folders, and npm then stops with ENOTEMPTY.
     NPM_ROOT=$(npm root -g 2>/dev/null || echo /usr/local/lib/node_modules)
     rm -rf "$NPM_ROOT/vscode-langservers-extracted" "$NPM_ROOT"/.vscode-langservers-extracted-*
-    run_silent npm install -g --cache /tmp/beetle-npm-cache --no-fund --no-audit vscode-langservers-extracted
+    run_silent npm install -g --ignore-scripts --cache /tmp/beetle-npm-cache --no-fund --no-audit vscode-langservers-extracted
     log_msg "[CSS] Installation complete."
 fi
 
