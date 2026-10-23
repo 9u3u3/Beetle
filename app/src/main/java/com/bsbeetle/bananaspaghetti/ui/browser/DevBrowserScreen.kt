@@ -335,6 +335,14 @@ fun CompactTextFieldAlternative(
                     setText(value)
                     setSingleLine(true)
 
+                    // Enter from a hardware keyboard or the system IME. The custom keyboard sends a
+                    // trailing newline instead, which the TextWatcher below handles.
+                    imeOptions = EditorInfo.IME_ACTION_GO
+                    setOnEditorActionListener { _, _, _ ->
+                        onEnterPressed()
+                        true
+                    }
+
                     editTextRef.value = this
 
                     addTextChangedListener(

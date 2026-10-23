@@ -5,6 +5,7 @@ import android.app.Application
 import android.graphics.Bitmap
 import android.util.Log
 import android.webkit.ConsoleMessage
+import com.bsbeetle.bananaspaghetti.utils.UrlResolver
 import android.webkit.WebChromeClient
 import android.webkit.WebViewClient
 import androidx.lifecycle.AndroidViewModel
@@ -226,11 +227,7 @@ class DevWebViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun loadUrl(url: String) {
-        var finalUrl = url.trim()
-        if (!finalUrl.startsWith("http://") && !finalUrl.startsWith("https://")) {
-            finalUrl = "https://$finalUrl"
-        }
-        webView?.loadUrl(finalUrl)
+        webView?.loadUrl(UrlResolver.resolve(url))
     }
 
     fun goBack() {
