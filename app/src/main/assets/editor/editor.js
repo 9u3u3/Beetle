@@ -302,10 +302,7 @@ window.clearLanguage = function () {
   currentLanguageId = 'plaintext';
 
   // Close any existing LSP connection
-  if (window.ws) {
-    try { window.ws.close(); } catch (e) { }
-    window.ws = null;
-  }
+  if (window.disconnectLsp) window.disconnectLsp();
 
   // Reconfigure to empty (no syntax highlighting)
   if (window.view) {
@@ -2150,6 +2147,23 @@ function setupEditor() {
       }
       intentionalClose = false; // Reset for next time
     };
+  };
+
+  // Drop the language server connection, e.g. for a file type that has no server installed.
+  // clearLanguage() used to close window.ws, which nothing sets, so the old server stayed
+  // attached and kept reporting diagnostics for the wrong kind of file.
+  window.disconnectLsp = function () {
+    intentionalClose = true; // Don't reconnect on this close
+    if (ws) {
+      try { ws.close(); } catch (e) { }
+      ws = null;
+    }
+    isInitialized = false;
+    openedDocumentUri = null;
+    if (view) {
+      view.dispatch(setDiagnostics(view.state, []));
+      console.log('[LSP-STATUS] line:1 col:1 err:0 warn:0');
+    }
   };
 
   // Initial connection (default)
