@@ -1,6 +1,7 @@
 package com.bsbeetle.bananaspaghetti.utils.fileHandling
 
 import android.content.Context
+import android.provider.DocumentsContract
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.getValue
@@ -251,7 +252,29 @@ object FileOperations {
 
         try {
             var successCount = 0
+            val destId = runCatching { DocumentsContract.getDocumentId(destFolder.uri) }.getOrNull()
             filesToPaste.forEach { source ->
+                val sourceId =
+                        runCatching { DocumentsContract.getDocumentId(source.uri) }.getOrNull()
+                if (source.isDirectory && sourceId != null && destId != null &&
+                                DocumentIds.isSameOrDescendant(sourceId, destId)
+                ) {
+                    // Copying a folder into itself would recurse without end
+                    Toast.makeText(
+                                    context,
+                                    "Can't paste '${source.name}' into itself",
+                                    Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    return@forEach
+                }
+                if (operation == ClipboardOp.CUT && sourceId != null && destId != null &&
+                                DocumentIds.isDirectChild(destId, sourceId)
+                ) {
+                    // Moving an item into the folder it is already in changes nothing
+                    successCount++
+                    return@forEach
+                }
                 try {
                     if (source.isDirectory) {
                         copyFolderRecursive(context, source, destFolder)
