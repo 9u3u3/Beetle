@@ -189,27 +189,22 @@ class Tenebrio(private val context: Context, private val session: Session) {
                         Log.e("Tenebrio", "Failed to create libtalloc symlink", e)
                     }
 
-                    // Use proot with --link2symlink to extract (handles symlinks on Android)
-                    // proot translates symlinks to work on Android's restricted filesystem
+                    // Use proot with --link2symlink to extract: Android refuses hard links in app
+                    // storage (the base image has some, e.g. perl and gunzip) and proot turns them
+                    // into symlinks. Do not give proot the new root file system with -r: it would
+                    // look for tar inside it while it is still empty ("tar not found"). Run the
+                    // system tar instead and point it at the target folder.
                     val pb =
                             ProcessBuilder(
                                     proot.absolutePath,
                                     "--link2symlink",
                                     "-0",
-                                    "-r",
-                                    ubuntu.absolutePath,
-                                    "-b",
-                                    "/dev",
-                                    "-b",
-                                    "/proc",
-                                    "-b",
-                                    "/sys",
-                                    "-w",
-                                    "/",
                                     "tar",
                                     "--no-same-owner",
                                     "-xzf",
-                                    "${PREFIX}/ubuntu.tar.gz"
+                                    "${PREFIX}/ubuntu.tar.gz",
+                                    "-C",
+                                    ubuntu.absolutePath
                             )
                     pb.environment()
                             .putAll(
