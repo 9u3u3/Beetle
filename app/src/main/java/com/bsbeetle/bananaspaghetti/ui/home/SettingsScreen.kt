@@ -1727,6 +1727,11 @@ private fun GitSettingsContent() {
 private fun GeneralSettingsContent() {
         val context = androidx.compose.ui.platform.LocalContext.current
         var showClearCacheConfirm by remember { mutableStateOf(false) }
+        val appName = remember { context.applicationInfo.loadLabel(context.packageManager).toString() }
+        val versionName = remember {
+                runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
+                        .getOrNull()
+        }
 
         SettingsCard(title = "About") {
                 Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
@@ -1735,7 +1740,7 @@ private fun GeneralSettingsContent() {
                                 horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                                 Text("App Name", color = TextPrimary, fontSize = 16.sp)
-                                Text("BananaSpaghetti", color = TextSecondary, fontSize = 16.sp)
+                                Text(appName, color = TextSecondary, fontSize = 16.sp)
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(
@@ -1743,7 +1748,7 @@ private fun GeneralSettingsContent() {
                                 horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                                 Text("Version", color = TextPrimary, fontSize = 16.sp)
-                                Text("1.0.0", color = TextSecondary, fontSize = 16.sp)
+                                Text(versionName ?: "?", color = TextSecondary, fontSize = 16.sp)
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(
